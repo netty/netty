@@ -17,12 +17,12 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.compression.ZlibWrapper;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -522,14 +522,14 @@ public class HttpContentCompressorTest {
             if (message == null) {
                 break;
             }
-            ReferenceCountUtil.release(message);
+            Resource.dispose(message);
         }
         for (;;) {
             Object message = ch.readInbound();
             if (message == null) {
                 break;
             }
-            ReferenceCountUtil.release(message);
+            Resource.dispose(message);
         }
     }
 

@@ -16,7 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -35,4 +35,7 @@ public interface DnsRawRecord extends DnsRecord, Resource<DnsRawRecord> {
 
     @Override
     DnsRawRecord touch(Object hint);
+
+    @Override
+    DnsRawRecord copy();
 }

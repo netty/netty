@@ -19,7 +19,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.dns.DnsQuestion;
 import io.netty5.handler.codec.dns.DnsRecord;
 import io.netty5.handler.codec.dns.DnsRecordType;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.UnknownHostException;
@@ -55,7 +54,8 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
 
     @Override
     DnsRecord convertRecord(DnsRecord record, String hostname, DnsRecord[] additionals, EventLoop eventLoop) {
-        return ReferenceCountUtil.retain(record);
+        // The given record is a shared object, but we need to give back a record that has its own life time.
+        return record.copy();
     }
 
     @Override

@@ -35,6 +35,7 @@ import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtens
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateEncoder.EMPTY_DEFLATE_BLOCK;
 import static io.netty5.util.CharsetUtil.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -374,7 +375,7 @@ public class PerMessageDeflateDecoderTest {
         ContinuationWebSocketFrame uncompressedFrame2 = decoderChannel.readInbound();
         ContinuationWebSocketFrame uncompressedFrame3 = decoderChannel.readInbound();
         ContinuationWebSocketFrame uncompressedExtraData = decoderChannel.readInbound();
-        assertFalse(uncompressedExtraData.binaryData().readableBytes() > 0);
+        assertThat(uncompressedExtraData.binaryData().readableBytes()).isZero();
 
         Buffer uncompressedPayload = encoderChannel.bufferAllocator()
                 .allocate(uncompressedFrame1.binaryData().readableBytes() +

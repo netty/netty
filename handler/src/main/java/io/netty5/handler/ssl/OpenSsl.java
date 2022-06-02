@@ -21,9 +21,8 @@ import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.util.Resource;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.NativeLibraryLoader;
 import io.netty5.util.internal.PlatformDependent;
@@ -680,9 +679,9 @@ public final class OpenSsl {
         return Library.initialize("provided", engine);
     }
 
-    static void releaseIfNeeded(ReferenceCounted counted) {
-        if (counted.refCnt() > 0) {
-            ReferenceCountUtil.safeRelease(counted);
+    static void releaseIfNeeded(Object obj) {
+        if (Resource.isAccessible(obj, false)) {
+            Resource.dispose(obj, logger);
         }
     }
 

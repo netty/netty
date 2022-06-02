@@ -31,7 +31,7 @@ import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Timeout;
@@ -195,8 +195,8 @@ public class SslErrorTest {
             }
             group.shutdownGracefully();
 
-            ReferenceCountUtil.release(sslServerCtx);
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslServerCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 

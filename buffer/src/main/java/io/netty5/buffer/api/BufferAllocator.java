@@ -18,6 +18,7 @@ package io.netty5.buffer.api;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.buffer.api.pool.PooledBufferAllocator;
 import io.netty5.util.SafeCloseable;
+import io.netty5.util.Send;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;

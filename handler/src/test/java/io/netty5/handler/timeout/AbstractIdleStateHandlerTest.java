@@ -16,6 +16,7 @@
 package io.netty5.handler.timeout;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOutboundBuffer;
@@ -307,7 +308,7 @@ public abstract class AbstractIdleStateHandlerTest {
 
     private static void assertNotNullAndRelease(Object msg) {
         assertNotNull(msg);
-        ReferenceCountUtil.release(msg);
+        Resource.dispose(msg);
     }
 
     private interface Action {

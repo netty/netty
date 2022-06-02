@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -34,7 +35,6 @@ import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.CleartextHttp2ServerUpgradeHandler.PriorKnowledgeUpgradeEvent;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -254,7 +254,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         Object userEvent = userEvents.get(0);
         assertTrue(userEvent instanceof UpgradeEvent);
         assertEquals("h2c", ((UpgradeEvent) userEvent).protocol());
-        ReferenceCountUtil.release(userEvent);
+        Resource.dispose(userEvent);
 
         assertEquals(100, http2ConnectionHandler.connection().local().maxActiveStreams());
         assertEquals(65535, http2ConnectionHandler.connection().local().flowController().initialWindowSize());

@@ -18,7 +18,7 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
@@ -389,6 +389,11 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         public Send<FullHttpRequest> send() {
             return payload().send().map(FullHttpRequest.class,
                     p -> new AggregatedFullHttpRequest(this, p, trailingHeaders()));
+        }
+
+        @Override
+        public FullHttpRequest copy() {
+            return new AggregatedFullHttpRequest(this, payload().copy(), trailingHeaders().copy());
         }
 
         @Override

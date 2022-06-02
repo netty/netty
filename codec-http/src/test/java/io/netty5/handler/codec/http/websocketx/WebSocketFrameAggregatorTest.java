@@ -19,7 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -143,7 +143,7 @@ public class WebSocketFrameAggregatorTest {
             if (msg == null) {
                 break;
             }
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
         }
         channel.finish();
     }

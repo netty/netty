@@ -29,7 +29,7 @@ import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -318,9 +318,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                     Buffer buf = (Buffer) e.content();
                     if (UnixChannelUtil.isBufferCopyNeededForWrite(buf)) {
                         try {
-                            return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(buf), inetRecipient);
+                            return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(null, buf), inetRecipient);
                         } finally {
-                            ReferenceCountUtil.release(e);
+                            Resource.dispose(e);
                         }
                     }
                     return e;

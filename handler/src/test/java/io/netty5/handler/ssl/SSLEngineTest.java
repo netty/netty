@@ -37,7 +37,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -1382,7 +1382,7 @@ public abstract class SSLEngineTest {
 
                             @Override
                             public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-                                ReferenceCountUtil.release(msg);
+                                Resource.dispose(msg);
                                 // The server then attempts to trigger a flush operation once the application data is
                                 // received from the client. The flush will encrypt all data and should not result in
                                 // deadlock.
@@ -1449,7 +1449,7 @@ public abstract class SSLEngineTest {
 
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                ReferenceCountUtil.release(msg);
+                                Resource.dispose(msg);
                                 // Simulate a request that the server's application logic will think is invalid.
                                 ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] { 102 }));
                                 ctx.pipeline().get(SslHandler.class).renegotiate();

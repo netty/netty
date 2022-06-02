@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.TypeParameterMatcher;
 
 /**
@@ -36,8 +36,7 @@ import io.netty5.util.internal.TypeParameterMatcher;
  * </pre>
  *
  * Be aware that depending of the constructor parameters it will release all handled events by passing them to
- * {@link ReferenceCountUtil#release(Object)}. In this case you may need to use
- * {@link ReferenceCountUtil#retain(Object)} if you pass the object to the next handler in the {@link ChannelPipeline}.
+ * {@link Resource#dispose(Object)}.
  */
 public abstract class SimpleUserEventChannelHandler<I> implements ChannelHandler {
 
@@ -55,7 +54,7 @@ public abstract class SimpleUserEventChannelHandler<I> implements ChannelHandler
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      *
      * @param autoRelease   {@code true} if handled events should be released automatically by passing them to
-     *                      {@link ReferenceCountUtil#release(Object)}.
+     *                      {@link Resource#dispose(Object)}.
      */
     protected SimpleUserEventChannelHandler(boolean autoRelease) {
         matcher = TypeParameterMatcher.find(this, SimpleUserEventChannelHandler.class, "I");
@@ -74,7 +73,7 @@ public abstract class SimpleUserEventChannelHandler<I> implements ChannelHandler
      *
      * @param eventType      The type of events to match
      * @param autoRelease    {@code true} if handled events should be released automatically by passing them to
-     *                       {@link ReferenceCountUtil#release(Object)}.
+     *                       {@link Resource#dispose(Object)}.
      */
     protected SimpleUserEventChannelHandler(Class<? extends I> eventType, boolean autoRelease) {
         matcher = TypeParameterMatcher.get(eventType);
@@ -103,7 +102,7 @@ public abstract class SimpleUserEventChannelHandler<I> implements ChannelHandler
             }
         } finally {
             if (autoRelease && release) {
-                ReferenceCountUtil.release(evt);
+                Resource.dispose(evt);
             }
         }
     }

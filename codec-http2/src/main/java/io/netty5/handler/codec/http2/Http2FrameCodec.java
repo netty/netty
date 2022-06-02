@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -25,7 +26,6 @@ import io.netty5.handler.codec.http2.Http2Connection.PropertyKey;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
@@ -254,7 +254,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             ctx.executor().execute(() -> ctx.fireUserEventTriggered(evt));
         } else if (evt instanceof UpgradeEvent) {
             try (UpgradeEvent upgrade = (UpgradeEvent) evt) {
-                ctx.fireUserEventTriggered(evt);
+                ctx.fireUserEventTriggered(upgrade.copy());
                 Http2Stream stream = connection().stream(HTTP_UPGRADE_STREAM_ID);
                 if (stream.getProperty(streamKey) == null) {
                     // TODO: improve handler/stream lifecycle so that stream isn't active before handler added.
@@ -308,7 +308,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             if (connection().streamMayHaveExisted(id)) {
                 return encoder().writeRstStream(ctx, rstFrame.stream().id(), rstFrame.errorCode());
             } else {
-                ReferenceCountUtil.release(rstFrame);
+                Resource.dispose(rstFrame);
                 return ctx.newFailedFuture(Http2Exception.streamError(
                         rstFrame.stream().id(), Http2Error.PROTOCOL_ERROR, "Stream never existed"));
             }
@@ -337,7 +337,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         } else if (!(msg instanceof Http2Frame)) {
             return ctx.write(msg);
         } else {
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
             return ctx.newFailedFuture(new UnsupportedMessageTypeException(msg));
         }
     }

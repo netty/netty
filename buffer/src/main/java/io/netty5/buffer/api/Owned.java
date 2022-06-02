@@ -15,6 +15,9 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
+
 /**
  * This interface encapsulates the ownership of a {@link Resource}, and exposes a method that may be used to transfer
  * this ownership to the specified recipient thread.

@@ -20,7 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
@@ -37,7 +37,6 @@ import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.timeout.IdleStateEvent;
 import io.netty5.handler.timeout.IdleStateHandler;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -129,7 +128,7 @@ public class FlowControlHandlerTest {
         ChannelHandler handler = new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 // We're turning off auto reading in the hope that no
                 // new messages are being sent but that is not true.
                 ctx.channel().config().setAutoRead(false);
@@ -262,7 +261,7 @@ public class FlowControlHandlerTest {
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
 
                 // Disable auto reading after each message
                 ctx.channel().config().setAutoRead(false);
@@ -521,7 +520,7 @@ public class FlowControlHandlerTest {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 //consume this msg
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
             }
         };
 

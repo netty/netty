@@ -17,11 +17,11 @@ package io.netty5.handler.stream;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -230,7 +230,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                     queue.remove();
 
                     if (message != null) {
-                        ReferenceCountUtil.release(message);
+                        Resource.dispose(message);
                     }
 
                     closeInput(chunks);
@@ -337,7 +337,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
         }
 
         void fail(Throwable cause) {
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
             promise.tryFailure(cause);
         }
 

@@ -90,6 +90,11 @@ public final class DefaultDnsOptEcsRecord extends AbstractDnsOptPseudoRrRecord i
     }
 
     @Override
+    public DefaultDnsOptEcsRecord copy() {
+        return this;
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = toStringBuilder();
         sb.setLength(sb.length() - 1);

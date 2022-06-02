@@ -16,7 +16,7 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -296,7 +296,7 @@ public class JdkSslContext extends SslContext {
                     }
                 }
             } finally {
-                ReferenceCountUtil.release(engine);
+                Resource.dispose(engine);
             }
         }
 

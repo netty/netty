@@ -25,4 +25,6 @@ public interface DnsPtrRecord extends DnsRecord {
      */
     String hostname();
 
+    @Override
+    DnsPtrRecord copy();
 }

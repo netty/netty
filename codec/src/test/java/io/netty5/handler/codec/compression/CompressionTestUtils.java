@@ -18,7 +18,7 @@ package io.netty5.handler.codec.compression;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import io.netty5.channel.embedded.EmbeddedChannel;
 
 import java.util.ArrayList;

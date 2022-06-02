@@ -15,11 +15,10 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 
 import java.util.ArrayList;
@@ -128,6 +127,10 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
             return upgradeRequest.send().map(UpgradeEvent.class, req -> new UpgradeEvent(protocol, req));
         }
 
+        public UpgradeEvent copy() {
+            return new UpgradeEvent(protocol, upgradeRequest.copy());
+        }
+
         @Override
         public void close() {
             upgradeRequest.close();
@@ -205,7 +208,7 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
     }
 
     @Override
-    protected void decode(final ChannelHandlerContext ctx, HttpObject msg)
+    protected void decodeAndClose(final ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
 
         if (!handlingUpgrade) {
@@ -216,12 +219,10 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
                     shouldHandleUpgradeRequest(req)) {
                     handlingUpgrade = true;
                 } else {
-                    ReferenceCountUtil.retain(msg);
                     ctx.fireChannelRead(msg);
                     return;
                 }
             } else {
-                ReferenceCountUtil.retain(msg);
                 ctx.fireChannelRead(msg);
                 return;
             }
@@ -233,7 +234,7 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
             tryUpgrade(ctx, fullRequest);
         } else {
             // Call the base class to handle the aggregation of the full request.
-            super.decode(new DelegatingChannelHandlerContext(ctx) {
+            super.decodeAndClose(new DelegatingChannelHandlerContext(ctx) {
                 @Override
                 public ChannelHandlerContext fireChannelRead(Object msg) {
                     // Finished aggregating the full request, get it from the output list.

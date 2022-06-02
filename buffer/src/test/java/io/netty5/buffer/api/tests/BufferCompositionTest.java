@@ -21,7 +21,7 @@ import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.Drop;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import org.junit.jupiter.api.Test;

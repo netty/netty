@@ -19,8 +19,8 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -41,7 +41,6 @@ import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.ResourcesUtil;
@@ -269,8 +268,8 @@ public class ParameterizedSslHandlerTest {
             }
             group.shutdownGracefully();
 
-            ReferenceCountUtil.release(sslServerCtx);
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslServerCtx);
+            Resource.dispose(sslClientCtx);
             ssc.delete();
         }
     }
@@ -370,8 +369,8 @@ public class ParameterizedSslHandlerTest {
             }
             group.shutdownGracefully();
 
-            ReferenceCountUtil.release(sslServerCtx);
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslServerCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -460,7 +459,7 @@ public class ParameterizedSslHandlerTest {
                                         if (closeSent.get()) {
                                             // Drop data on the floor so we will get a timeout while waiting for the
                                             // close_notify.
-                                            ReferenceCountUtil.release(msg);
+                                            Resource.dispose(msg);
                                         } else {
                                             ctx.fireChannelRead(msg);
                                         }
@@ -505,8 +504,8 @@ public class ParameterizedSslHandlerTest {
             }
             group.shutdownGracefully();
 
-            ReferenceCountUtil.release(sslServerCtx);
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslServerCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -620,8 +619,8 @@ public class ParameterizedSslHandlerTest {
                 sc.close().syncUninterruptibly();
             }
 
-            ReferenceCountUtil.release(sslServerCtx);
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslServerCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 

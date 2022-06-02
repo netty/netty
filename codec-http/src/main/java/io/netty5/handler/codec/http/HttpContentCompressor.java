@@ -130,12 +130,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
         this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
-        this.brotliOptions = null;
-        this.gzipOptions = null;
-        this.deflateOptions = null;
-        this.zstdOptions = null;
-        this.factories = null;
-        this.supportsCompressionOptions = false;
+        brotliOptions = null;
+        gzipOptions = null;
+        deflateOptions = null;
+        zstdOptions = null;
+        factories = null;
+        supportsCompressionOptions = false;
     }
 
     /**
@@ -200,34 +200,34 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.brotliOptions = brotliOptions;
         this.zstdOptions = zstdOptions;
 
-        this.factories = new HashMap<>();
+        factories = new HashMap<>();
 
         if (this.gzipOptions != null) {
-            this.factories.put("gzip", ZlibCompressor.newFactory(
+            factories.put("gzip", ZlibCompressor.newFactory(
                     ZlibWrapper.GZIP, gzipOptions.compressionLevel()));
         }
         if (this.deflateOptions != null) {
-            this.factories.put("deflate", ZlibCompressor.newFactory(
+            factories.put("deflate", ZlibCompressor.newFactory(
                     ZlibWrapper.ZLIB, deflateOptions.compressionLevel()));
         }
 
         if (Brotli.isAvailable() && this.brotliOptions != null) {
-            this.factories.put("br", BrotliCompressor.newFactory(brotliOptions.parameters()));
+            factories.put("br", BrotliCompressor.newFactory(brotliOptions.parameters()));
         }
         if (this.zstdOptions != null) {
-            this.factories.put("zstd", ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
+            factories.put("zstd", ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
         }
 
-        this.compressionLevel = -1;
-        this.windowBits = -1;
-        this.memLevel = -1;
+        compressionLevel = -1;
+        windowBits = -1;
+        memLevel = -1;
         supportsCompressionOptions = true;
     }
 
     @Override
     protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
-        if (this.contentSizeThreshold > 0) {
+        if (contentSizeThreshold > 0) {
             if (httpResponse instanceof HttpContent &&
                     ((HttpContent<?>) httpResponse).payload().readableBytes() < contentSizeThreshold) {
                 return null;
@@ -308,27 +308,27 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
         }
         if (brQ > 0.0f || zstdQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (brQ != -1.0f && brQ >= zstdQ && this.brotliOptions != null) {
+            if (brQ != -1.0f && brQ >= zstdQ && brotliOptions != null) {
                 return "br";
-            } else if (zstdQ != -1.0f && zstdQ >= gzipQ && this.zstdOptions != null) {
+            } else if (zstdQ != -1.0f && zstdQ >= gzipQ && zstdOptions != null) {
                 return "zstd";
-            } else if (gzipQ != -1.0f && gzipQ >= deflateQ && this.gzipOptions != null) {
+            } else if (gzipQ != -1.0f && gzipQ >= deflateQ && gzipOptions != null) {
                 return "gzip";
-            } else if (deflateQ != -1.0f && this.deflateOptions != null) {
+            } else if (deflateQ != -1.0f && deflateOptions != null) {
                 return "deflate";
             }
         }
         if (starQ > 0.0f) {
-            if (brQ == -1.0f && this.brotliOptions != null) {
+            if (brQ == -1.0f && brotliOptions != null) {
                 return "br";
             }
-            if (zstdQ == -1.0f && this.zstdOptions != null) {
+            if (zstdQ == -1.0f && zstdOptions != null) {
                 return "zstd";
             }
-            if (gzipQ == -1.0f && this.gzipOptions != null) {
+            if (gzipQ == -1.0f && gzipOptions != null) {
                 return "gzip";
             }
-            if (deflateQ == -1.0f && this.deflateOptions != null) {
+            if (deflateQ == -1.0f && deflateOptions != null) {
                 return "deflate";
             }
         }

@@ -16,9 +16,8 @@
 
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -68,7 +67,7 @@ public class PemEncodedTest {
         try {
             assertTrue(context instanceof ReferenceCountedOpenSslContext);
         } finally {
-            ReferenceCountUtil.release(context);
+            Resource.dispose(context);
             assertRelease(pemKey);
             assertRelease(pemCert);
         }

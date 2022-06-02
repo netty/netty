@@ -24,7 +24,7 @@ import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOutboundInvoker;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -401,7 +401,7 @@ public class EmbeddedChannelTest {
       EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
           @Override
           public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-              ReferenceCountUtil.release(msg);
+              Resource.dispose(msg);
               latch.countDown();
           }
 

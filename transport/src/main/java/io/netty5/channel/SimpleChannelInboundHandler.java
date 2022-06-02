@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.TypeParameterMatcher;
 
 /**
@@ -36,8 +36,7 @@ import io.netty5.util.internal.TypeParameterMatcher;
  * </pre>
  *
  * Be aware that depending of the constructor parameters it will release all handled messages by passing them to
- * {@link ReferenceCountUtil#release(Object)}. In this case you may need to use
- * {@link ReferenceCountUtil#retain(Object)} if you pass the object to the next handler in the {@link ChannelPipeline}.
+ * {@link Resource#dispose(Object)}.
  */
 public abstract class SimpleChannelInboundHandler<I> implements ChannelHandler {
 
@@ -55,7 +54,7 @@ public abstract class SimpleChannelInboundHandler<I> implements ChannelHandler {
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      *
      * @param autoRelease   {@code true} if handled messages should be released automatically by passing them to
-     *                      {@link ReferenceCountUtil#release(Object)}.
+     *                      {@link Resource#dispose(Object)}.
      */
     protected SimpleChannelInboundHandler(boolean autoRelease) {
         matcher = TypeParameterMatcher.find(this, SimpleChannelInboundHandler.class, "I");
@@ -74,7 +73,7 @@ public abstract class SimpleChannelInboundHandler<I> implements ChannelHandler {
      *
      * @param inboundMessageType    The type of messages to match
      * @param autoRelease           {@code true} if handled messages should be released automatically by passing them to
-     *                              {@link ReferenceCountUtil#release(Object)}.
+     *                              {@link Resource#dispose(Object)}.
      */
     protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType, boolean autoRelease) {
         matcher = TypeParameterMatcher.get(inboundMessageType);
@@ -103,7 +102,7 @@ public abstract class SimpleChannelInboundHandler<I> implements ChannelHandler {
             }
         } finally {
             if (autoRelease && release) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
             }
         }
     }

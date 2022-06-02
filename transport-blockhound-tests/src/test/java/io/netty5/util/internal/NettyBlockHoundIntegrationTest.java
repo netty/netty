@@ -17,6 +17,7 @@ package io.netty5.util.internal;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -37,7 +38,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.resolver.dns.DnsNameResolverBuilder;
 import io.netty5.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty5.util.HashedWheelTimer;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -72,7 +73,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -275,7 +275,8 @@ public class NettyBlockHoundIntegrationTest {
                                  .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                  .sslProvider(SslProvider.JDK)
                                  .build();
-        final SslHandler sslHandler = sslClientCtx.newHandler(offHeapAllocator());
+        BufferAllocator alloc = offHeapAllocator();
+        final SslHandler sslHandler = sslClientCtx.newHandler(alloc);
         final EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         final CountDownLatch activeLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<>();
@@ -319,7 +320,7 @@ public class NettyBlockHoundIntegrationTest {
                         }
                     })
                     .connect(sc.localAddress())
-                    .addListener(future -> future.get().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 })))
+                    .addListener(future -> future.get().writeAndFlush(alloc.copyOf(new byte [] { 1, 2, 3, 4 })))
                     .get();
 
             assertTrue(activeLatch.await(5, TimeUnit.SECONDS));
@@ -332,7 +333,7 @@ public class NettyBlockHoundIntegrationTest {
                 sc.close().syncUninterruptibly();
             }
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -481,7 +482,7 @@ public class NettyBlockHoundIntegrationTest {
                 sc.close().syncUninterruptibly();
             }
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 

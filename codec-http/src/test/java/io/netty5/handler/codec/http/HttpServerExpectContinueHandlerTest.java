@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
@@ -48,11 +48,11 @@ public class HttpServerExpectContinueHandlerTest {
 
         assertThat(response.status(), is(HttpResponseStatus.CONTINUE));
         assertThat(response.headers().get("foo"), is("bar"));
-        ReferenceCountUtil.release(response);
+        Resource.dispose(response);
 
         HttpRequest processedRequest = channel.readInbound();
         assertFalse(processedRequest.headers().contains(HttpHeaderNames.EXPECT));
-        ReferenceCountUtil.release(processedRequest);
+        Resource.dispose(processedRequest);
         assertFalse(channel.finishAndReleaseAll());
     }
 
@@ -81,7 +81,7 @@ public class HttpServerExpectContinueHandlerTest {
         HttpResponse response = channel.readOutbound();
 
         assertThat(response.status(), is(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE));
-        ReferenceCountUtil.release(response);
+        Resource.dispose(response);
 
         // request was swallowed
         assertTrue(channel.inboundMessages().isEmpty());

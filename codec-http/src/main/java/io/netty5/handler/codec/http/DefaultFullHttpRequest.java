@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Send;
-import io.netty5.util.IllegalReferenceCountException;
+import io.netty5.buffer.api.BufferClosedException;
+import io.netty5.util.Send;
 
 import static java.util.Objects.requireNonNull;
 
@@ -29,7 +29,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     private final HttpHeaders trailingHeader;
 
     /**
-     * Used to cache the value of the hash code and avoid {@link IllegalReferenceCountException}.
+     * Used to cache the value of the hash code and avoid {@link BufferClosedException}.
      */
     private int hash;
 
@@ -80,6 +80,12 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
+    public FullHttpRequest copy() {
+        return new DefaultFullHttpRequest(
+                protocolVersion(), method(), uri(), payload.copy(), headers(), trailingHeader.copy());
+    }
+
+    @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeader;
     }
@@ -110,8 +116,8 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
             if (payload.isAccessible()) {
                 try {
                     hash = 31 + payload.hashCode();
-                } catch (IllegalReferenceCountException | io.netty.util.IllegalReferenceCountException ignored) {
-                    // Handle race condition between checking refCnt() == 0 and using the object.
+                } catch (BufferClosedException ignored) {
+                    // Handle race condition between liveness checking and using the object.
                     hash = 31;
                 }
             } else {

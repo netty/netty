@@ -17,10 +17,12 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -32,6 +34,7 @@ import static java.util.Objects.requireNonNull;
  * based on the first message received.
  */
 public class OptionalSslHandler extends ByteToMessageDecoderForBuffer {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OptionalSslHandler.class);
 
     private final SslContext sslContext;
 
@@ -61,7 +64,7 @@ public class OptionalSslHandler extends ByteToMessageDecoderForBuffer {
             // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
             // transferred to the SslHandler.
             if (sslHandler != null) {
-                ReferenceCountUtil.safeRelease(sslHandler.engine());
+                Resource.dispose(sslHandler.engine(), logger);
             }
         }
     }

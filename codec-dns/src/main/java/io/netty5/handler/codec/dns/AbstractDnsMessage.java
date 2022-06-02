@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.dns;
 
+import io.netty5.util.Resource;
 import io.netty5.util.AbstractReferenceCounted;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ResourceLeakDetector;
 import io.netty5.util.ResourceLeakDetectorFactory;
 import io.netty5.util.ResourceLeakTracker;
@@ -338,14 +338,14 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     private void clear(int section) {
         final Object recordOrList = sectionAt(section);
         setSection(section, null);
-        if (ReferenceCountUtil.isReferenceCounted(recordOrList)) {
-            ReferenceCountUtil.release(recordOrList);
+        if (Resource.isAccessible(recordOrList, false)) {
+            Resource.dispose(recordOrList);
         } else if (recordOrList instanceof List) {
             @SuppressWarnings("unchecked")
             List<DnsRecord> list = (List<DnsRecord>) recordOrList;
             if (!list.isEmpty()) {
                 for (Object r : list) {
-                    ReferenceCountUtil.release(r);
+                    Resource.dispose(r);
                 }
             }
         }

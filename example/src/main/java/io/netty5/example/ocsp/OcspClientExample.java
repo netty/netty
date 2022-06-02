@@ -43,7 +43,7 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.ocsp.OcspClientHandler;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Promise;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
@@ -100,7 +100,7 @@ public class OcspClientExample {
 
                 try {
                     FullHttpResponse response = promise.asFuture().get();
-                    ReferenceCountUtil.release(response);
+                    Resource.dispose(response);
                 } finally {
                     channel.close();
                 }
@@ -183,7 +183,7 @@ public class OcspClientExample {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof FullHttpResponse) {
                 if (!promise.trySuccess((FullHttpResponse) msg)) {
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 }
                 return;
             }

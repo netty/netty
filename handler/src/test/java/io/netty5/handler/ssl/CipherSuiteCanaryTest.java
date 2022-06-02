@@ -19,6 +19,7 @@ package io.netty5.handler.ssl;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -33,7 +34,6 @@ import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
@@ -229,10 +229,10 @@ public class CipherSuiteCanaryTest {
                     server.close().sync();
                 }
             } finally {
-                ReferenceCountUtil.release(sslClientContext);
+                Resource.dispose(sslClientContext);
             }
         } finally {
-            ReferenceCountUtil.release(sslServerContext);
+            Resource.dispose(sslServerContext);
 
             if (executorService != null) {
                 executorService.shutdown();

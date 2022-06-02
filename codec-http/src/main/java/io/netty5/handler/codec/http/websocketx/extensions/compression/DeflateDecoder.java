@@ -18,7 +18,8 @@ package io.netty5.handler.codec.http.websocketx.extensions.compression;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CodecException;
@@ -78,7 +79,12 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
     protected abstract int newRsv(WebSocketFrame msg);
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
+    protected final void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
+        throw new UnsupportedOperationException("DeflateDecoder uses decodeAndClose().");
+    }
+
+    @Override
+    protected void decodeAndClose(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
         final Buffer decompressedContent = decompressContent(ctx, msg);
 
         final WebSocketFrame outMsg;
@@ -89,6 +95,9 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
         } else if (msg instanceof ContinuationWebSocketFrame) {
             outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), newRsv(msg), decompressedContent);
         } else {
+            if (Resource.isAccessible(msg, false)) {
+                Resource.dispose(msg);
+            }
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
 

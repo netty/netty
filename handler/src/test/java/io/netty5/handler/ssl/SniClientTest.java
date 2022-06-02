@@ -30,7 +30,7 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.ThrowableUtil;
@@ -206,8 +206,8 @@ public class SniClientTest {
                 sc.close().syncUninterruptibly();
             }
 
-            ReferenceCountUtil.release(sslServerContext);
-            ReferenceCountUtil.release(sslClientContext);
+            Resource.dispose(sslServerContext);
+            Resource.dispose(sslClientContext);
 
             cert.delete();
 
@@ -455,8 +455,8 @@ public class SniClientTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            ReferenceCountUtil.release(sslServerContext);
-            ReferenceCountUtil.release(sslClientContext);
+            Resource.dispose(sslServerContext);
+            Resource.dispose(sslClientContext);
 
             cert.delete();
 

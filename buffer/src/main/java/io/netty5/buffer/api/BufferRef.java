@@ -15,6 +15,8 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.util.Send;
+
 import java.lang.invoke.VarHandle;
 
 /**

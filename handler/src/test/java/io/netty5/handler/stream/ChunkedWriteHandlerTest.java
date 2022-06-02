@@ -18,11 +18,11 @@ package io.netty5.handler.stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.internal.PlatformDependent;
@@ -326,10 +326,10 @@ public class ChunkedWriteHandlerTest {
 
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                if (++this.passedWrites < 4) {
+                if (++passedWrites < 4) {
                     return ctx.write(msg);
                 }
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 return ctx.newFailedFuture(new RuntimeException());
             }
         };
@@ -459,7 +459,7 @@ public class ChunkedWriteHandlerTest {
         ChannelHandler noOpWrites = new ChannelHandler() {
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 return ctx.newFailedFuture(new RuntimeException());
             }
         };
@@ -615,7 +615,7 @@ public class ChunkedWriteHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 // Calling close so we will drop all queued messages in the ChunkedWriteHandler.
                 ctx.close();
                 return ctx.newSucceededFuture();
@@ -682,7 +682,7 @@ public class ChunkedWriteHandlerTest {
         ChannelHandler noOpWrites = new ChannelHandler() {
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 return ctx.newFailedFuture(new RuntimeException());
             }
         };
@@ -704,8 +704,8 @@ public class ChunkedWriteHandlerTest {
                 if (alreadyFailed) {
                     return ctx.write(msg);
                 }
-                this.alreadyFailed = true;
-                ReferenceCountUtil.release(msg);
+                alreadyFailed = true;
+                Resource.dispose(msg);
                 return ctx.newFailedFuture(new RuntimeException());
             }
         };

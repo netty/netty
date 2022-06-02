@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.util.CharsetUtil;
@@ -28,13 +27,12 @@ import java.util.concurrent.ExecutionException;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- */
 public class HttpRequestEncoderTest {
 
     private static Buffer[] getBuffers() {
@@ -132,12 +130,10 @@ public class HttpRequestEncoderTest {
     public void testEmptyReleasedBufferShouldNotWriteEmptyBufferToChannel() {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         final EmbeddedChannel channel = new EmbeddedChannel(encoder);
-        final ByteBuf buf = Unpooled.buffer();
-        buf.release();
+        Buffer buf = preferredAllocator().allocate(10);
+        buf.close();
         ExecutionException e = assertThrows(ExecutionException.class, () -> channel.writeAndFlush(buf).get());
-        Throwable cause = e.getCause().getCause();
-        assertTrue(cause instanceof IllegalReferenceCountException ||
-                   cause instanceof io.netty.util.IllegalReferenceCountException);
+        assertThat(e.getCause()).hasCauseInstanceOf(BufferClosedException.class);
 
         channel.finishAndReleaseAll();
     }
@@ -146,10 +142,10 @@ public class HttpRequestEncoderTest {
     public void testEmptyBufferShouldPassThrough() throws Exception {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
-        ByteBuf buffer = Unpooled.buffer();
-        channel.writeAndFlush(buffer).get();
+        Buffer buf = preferredAllocator().allocate(0);
+        channel.writeAndFlush(buf).get();
         channel.finishAndReleaseAll();
-        assertEquals(0, buffer.refCnt());
+        assertFalse(buf.isAccessible());
     }
 
     @Test

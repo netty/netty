@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -53,7 +54,6 @@ import java.util.function.Consumer;
 import static io.netty5.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty5.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
-import static io.netty5.util.ReferenceCountUtil.release;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -416,7 +416,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("hello world"), 0, false);
         Http2DataFrame dataFrame0 = inboundHandler.readInbound();
         assertNotNull(dataFrame0);
-        release(dataFrame0);
+        Resource.dispose(dataFrame0);
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
@@ -450,7 +450,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("hello world"), 0, false);
         Http2DataFrame dataFrame0 = inboundHandler.readInbound();
         assertNotNull(dataFrame0);
-        release(dataFrame0);
+        Resource.dispose(dataFrame0);
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
@@ -1329,7 +1329,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             Http2StreamFrame frame = inboundHandler.readInbound();
             assertNotNull(frame, i + " out of " + numFrames + " received");
             assertEquals(streamChannel.stream(), frame.stream());
-            release(frame);
+            Resource.dispose(frame);
         }
         assertNull(inboundHandler.readInbound());
     }

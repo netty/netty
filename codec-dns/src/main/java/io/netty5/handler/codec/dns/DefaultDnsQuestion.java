@@ -69,4 +69,9 @@ public class DefaultDnsQuestion extends AbstractDnsRecord implements DnsQuestion
 
         return buf.toString();
     }
+
+    @Override
+    public DnsQuestion copy() {
+        return this;
+    }
 }

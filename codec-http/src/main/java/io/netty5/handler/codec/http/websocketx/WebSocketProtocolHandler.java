@@ -18,7 +18,7 @@ package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.MessageToMessageDecoder;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
@@ -59,7 +59,12 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
+        throw new UnsupportedOperationException("WebSocketProtocolHandler use decodeAndClose().");
+    }
+
+    @Override
+    protected void decodeAndClose(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (frame instanceof PingWebSocketFrame) {
             // We need to `send` the binary data to the pong frame, because the MessageToMessageDecoder
             // is going to close the ping frame, which would otherwise cause the data to be freed.
@@ -101,7 +106,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     @Override
     public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
         if (closeSent != null) {
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
             return ctx.newFailedFuture(new ClosedChannelException());
         }
         if (msg instanceof CloseWebSocketFrame) {

@@ -22,7 +22,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -115,7 +115,7 @@ public class LocalTransportThreadModelTest2 {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             count.incrementAndGet();
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
         }
     }
 }

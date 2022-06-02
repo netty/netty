@@ -34,7 +34,7 @@ import io.netty5.handler.codec.http.HttpRequestDecoder;
 import io.netty5.handler.codec.http.HttpResponseEncoder;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -299,7 +299,9 @@ public class WebSocketServerProtocolHandlerTest {
         closeMessage.close();
 
         client.close();
-        assertTrue(ReferenceCountUtil.release(client.readOutbound()));
+        Object obj = client.readOutbound();
+        Resource.dispose(obj);
+        assertFalse(Resource.isAccessible(obj, true));
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());
     }
@@ -324,7 +326,9 @@ public class WebSocketServerProtocolHandlerTest {
         closeMessage.close();
 
         client.close();
-        assertTrue(ReferenceCountUtil.release(client.readOutbound()));
+        Object obj = client.readOutbound();
+        Resource.dispose(obj);
+        assertFalse(Resource.isAccessible(obj, true));
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());
     }
@@ -490,7 +494,7 @@ public class WebSocketServerProtocolHandlerTest {
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             assertNull(content);
             content = "processed: " + ((TextWebSocketFrame) msg).text();
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
         }
 
         String getContent() {

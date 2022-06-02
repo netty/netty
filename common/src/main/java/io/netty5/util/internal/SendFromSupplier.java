@@ -13,20 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.buffer.api.internal;
+package io.netty5.util.internal;
 
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 
 import java.lang.invoke.VarHandle;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import static io.netty5.buffer.api.internal.Statics.findVarHandle;
 import static java.lang.invoke.MethodHandles.lookup;
 
 public class SendFromSupplier<T extends Resource<T>> implements Send<T> {
-    private static final VarHandle GATE = findVarHandle(lookup(), SendFromSupplier.class, "gate", boolean.class);
+    private static final VarHandle GATE;
+    static {
+        try {
+            GATE = lookup().findVarHandle(SendFromSupplier.class, "gate", boolean.class);
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     private final Class<T> concreteObjectType;
     private final Supplier<? extends T> supplier;
 

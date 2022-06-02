@@ -17,8 +17,8 @@ package io.netty5.buffer.api.internal;
 
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 
 import java.lang.invoke.VarHandle;
 

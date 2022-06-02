@@ -21,7 +21,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.flow.FlowControlHandler;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -160,7 +160,7 @@ public class WebSocketProtocolHandlerTest {
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
                 Future<Void> future = ctx.newPromise().asFuture();
                 ref.set(future);
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 return future;
             }
         }, handler);

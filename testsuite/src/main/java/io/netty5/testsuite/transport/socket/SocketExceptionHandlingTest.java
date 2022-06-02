@@ -18,14 +18,13 @@ package io.netty5.testsuite.transport.socket;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -91,7 +90,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
             if (msg instanceof Resource<?>) {
                 ((Resource<?>) msg).close();
             } else {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
             }
             throw new NullPointerException("I am a bug!");
         }

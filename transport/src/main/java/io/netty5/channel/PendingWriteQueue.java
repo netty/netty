@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.PromiseCombiner;
@@ -157,7 +157,7 @@ public final class PendingWriteQueue {
 
     /**
      * Remove all pending write operation and fail them with the given {@link Throwable}. The message will be released
-     * via {@link ReferenceCountUtil#safeRelease(Object)}.
+     * via {@link Resource#dispose(Object, InternalLogger)}.
      */
     public void removeAndFailAll(Throwable cause) {
         assert ctx.executor().inEventLoop();
@@ -170,7 +170,7 @@ public final class PendingWriteQueue {
             bytes = 0;
             while (write != null) {
                 PendingWrite next = write.next;
-                ReferenceCountUtil.safeRelease(write.msg);
+                Resource.dispose(write.msg, logger);
                 Promise<Void> promise = write.promise;
                 recycle(write, false);
                 safeFail(promise, cause);
@@ -182,7 +182,7 @@ public final class PendingWriteQueue {
 
     /**
      * Remove a pending write operation and fail it with the given {@link Throwable}. The message will be released via
-     * {@link ReferenceCountUtil#safeRelease(Object)}.
+     * {@link Resource#dispose(Object, InternalLogger)}.
      */
     public void removeAndFail(Throwable cause) {
         assert ctx.executor().inEventLoop();
@@ -192,7 +192,7 @@ public final class PendingWriteQueue {
         if (write == null) {
             return;
         }
-        ReferenceCountUtil.safeRelease(write.msg);
+        Resource.dispose(write.msg, logger);
         Promise<Void> promise = write.promise;
         safeFail(promise, cause);
         recycle(write, true);
@@ -225,7 +225,7 @@ public final class PendingWriteQueue {
     }
 
     /**
-     * Removes a pending write operation and release it's message via {@link ReferenceCountUtil#safeRelease(Object)}.
+     * Removes a pending write operation and release it's message via {@link Resource#dispose(Object, InternalLogger)}.
      *
      * @return  {@link Promise} of the pending write or {@code null} if the queue is empty.
      *
@@ -237,7 +237,7 @@ public final class PendingWriteQueue {
             return null;
         }
         Promise<Void> promise = write.promise;
-        ReferenceCountUtil.safeRelease(write.msg);
+        Resource.dispose(write.msg, logger);
         recycle(write, true);
         return promise;
     }

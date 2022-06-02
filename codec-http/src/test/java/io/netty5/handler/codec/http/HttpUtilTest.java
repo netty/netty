@@ -16,7 +16,7 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -303,7 +303,7 @@ public class HttpUtilTest {
 
     private static void run100ContinueTest(final HttpMessage message, final boolean expected) {
         assertEquals(expected, HttpUtil.is100ContinueExpected(message));
-        ReferenceCountUtil.release(message);
+        Resource.dispose(message);
     }
 
     @Test
@@ -333,7 +333,7 @@ public class HttpUtilTest {
 
     private static void runUnsupportedExpectationTest(final HttpMessage message, final boolean expected) {
         assertEquals(expected, HttpUtil.isUnsupportedExpectation(message));
-        ReferenceCountUtil.release(message);
+        Resource.dispose(message);
     }
 
     @Test

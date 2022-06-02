@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.embedded;
 
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -303,7 +303,7 @@ public class EmbeddedChannel extends AbstractChannel {
     public <T> T readInbound() {
         T message = (T) poll(inboundMessages);
         if (message != null) {
-            ReferenceCountUtil.touch(message, "Caller of readInbound() will handle the message from this point");
+            Resource.touch(message, "Caller of readInbound() will handle the message from this point");
         }
         return message;
     }
@@ -315,7 +315,7 @@ public class EmbeddedChannel extends AbstractChannel {
     public <T> T readOutbound() {
         T message =  (T) poll(outboundMessages);
         if (message != null) {
-            ReferenceCountUtil.touch(message, "Caller of readOutbound() will handle the message from this point.");
+            Resource.touch(message, "Caller of readOutbound() will handle the message from this point.");
         }
         return message;
     }
@@ -511,15 +511,13 @@ public class EmbeddedChannel extends AbstractChannel {
                 if (msg == null) {
                     break;
                 }
-                if (!ReferenceCountUtil.release(msg) && msg instanceof AutoCloseable) {
-                    try {
-                        ((AutoCloseable) msg).close();
-                    } catch (Exception e) {
-                        if (closeFailed == null) {
-                            closeFailed = e;
-                        } else {
-                            closeFailed.addSuppressed(e);
-                        }
+                try {
+                    Resource.dispose(msg);
+                } catch (Exception e) {
+                    if (closeFailed == null) {
+                        closeFailed = e;
+                    } else {
+                        closeFailed.addSuppressed(e);
                     }
                 }
             }

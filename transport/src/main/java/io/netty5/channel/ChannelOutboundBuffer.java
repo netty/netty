@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;
@@ -268,7 +268,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
-            safeDispose(msg);
+            Resource.dispose(msg, logger);
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
@@ -303,7 +303,9 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, fail and decrement if it was not canceled before.
-            safeDispose(msg);
+            if (Resource.isAccessible(msg, false)) {
+                Resource.dispose(msg, logger);
+            }
 
             safeFail(promise, cause);
             decrementPendingOutboundBytes(size, false, notifyWritability);
@@ -313,14 +315,6 @@ public final class ChannelOutboundBuffer {
         e.recycle();
 
         return true;
-    }
-
-    private static void safeDispose(Object msg) {
-        try {
-            Resource.dispose(msg);
-        } catch (Exception e) {
-            logger.warn("Failed to dispose of message: " + msg, e);
-        }
     }
 
     private void removeEntry(Entry e) {
@@ -749,7 +743,7 @@ public final class ChannelOutboundBuffer {
                 TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
 
                 if (!e.cancelled) {
-                    safeDispose(e.msg);
+                    Resource.dispose(e.msg, logger);
                     safeFail(e.promise, cause);
                 }
                 e = e.recycleAndGetNext();
@@ -880,7 +874,7 @@ public final class ChannelOutboundBuffer {
                 int pSize = pendingSize;
 
                 // release message and replace with an empty buffer
-                safeDispose(msg);
+                Resource.dispose(msg, logger);
                 msg = Unpooled.EMPTY_BUFFER;
 
                 pendingSize = 0;

@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.FileRegion;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.util.CharsetUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.Iterator;
@@ -78,7 +79,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private float trailersEncodedSizeAccumulator = 256;
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+    protected void encodeAndClose(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         Buffer buf = null;
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
@@ -110,7 +111,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         //
         // See https://github.com/netty/netty/issues/2983 for more information.
         if (msg instanceof Buffer && ((Buffer) msg).readableBytes() == 0) {
-            out.add(((Buffer) msg).split());
+            out.add(msg);
             return;
         }
 
@@ -125,6 +126,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                         if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
                             // merge into other buffer for performance reasons
                             buf.writeBytes(((HttpContent<?>) msg).payload());
+                            Resource.dispose(msg);
                             out.add(buf);
                         } else {
                             if (buf != null) {
@@ -247,8 +249,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             return ((HttpContent<?>) msg).payload();
         }
         if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).retain();
+            return msg;
         }
+        Resource.dispose(msg);
         throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 
@@ -262,6 +265,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();
         }
+        Resource.dispose(msg);
         throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
     }
 

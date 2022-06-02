@@ -85,7 +85,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, Http2StreamFrame frame) throws Exception {
+    protected void decodeAndClose(ChannelHandlerContext ctx, Http2StreamFrame frame) throws Exception {
         if (frame instanceof Http2HeadersFrame) {
             Http2HeadersFrame headersFrame = (Http2HeadersFrame) frame;
             Http2Headers headers = headersFrame.headers();
@@ -157,7 +157,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
      * @throws Exception    is thrown if an error occurs
      */
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject obj, List<Object> out) throws Exception {
+    protected void encodeAndClose(ChannelHandlerContext ctx, HttpObject obj, List<Object> out) throws Exception {
         // 100-continue is typically a FullHttpResponse, but the decoded
         // Http2HeadersFrame should not be marked as endStream=true
         if (obj instanceof HttpResponse) {

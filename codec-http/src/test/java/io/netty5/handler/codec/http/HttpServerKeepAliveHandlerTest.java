@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.AsciiString;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -93,13 +93,13 @@ public class HttpServerKeepAliveHandlerTest {
         assertTrue(channel.writeInbound(request));
         Object requestForwarded = channel.readInbound();
         assertEquals(request, requestForwarded);
-        ReferenceCountUtil.release(requestForwarded);
+        Resource.dispose(requestForwarded);
         channel.writeAndFlush(response);
         HttpResponse writtenResponse = channel.readOutbound();
 
         assertEquals(isKeepAliveResponseExpected, channel.isOpen(), "channel.isOpen");
         assertEquals(isKeepAliveResponseExpected, isKeepAlive(writtenResponse), "response keep-alive");
-        ReferenceCountUtil.release(writtenResponse);
+        Resource.dispose(writtenResponse);
         assertFalse(channel.finishAndReleaseAll());
     }
 
@@ -130,7 +130,7 @@ public class HttpServerKeepAliveHandlerTest {
         HttpResponse writtenResponse = channel.readOutbound();
 
         assertFalse(channel.isOpen());
-        ReferenceCountUtil.release(writtenResponse);
+        Resource.dispose(writtenResponse);
         assertFalse(channel.finishAndReleaseAll());
     }
 

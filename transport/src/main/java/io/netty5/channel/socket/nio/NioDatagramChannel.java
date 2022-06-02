@@ -18,7 +18,7 @@ package io.netty5.channel.socket.nio;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.channel.AddressedEnvelope;
@@ -235,14 +235,12 @@ public final class NioDatagramChannel
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
-        DatagramChannelConfig config = config();
         RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
 
         return doReadBufferMessages(allocHandle, buf);
     }
 
     private int doReadBufferMessages(Handle allocHandle, List<Object> buf) throws IOException {
-        DatagramChannel ch = javaChannel();
         Buffer data = allocHandle.allocate(config.getBufferAllocator());
         allocHandle.attemptedBytesRead(data.writableBytes());
         boolean free = true;

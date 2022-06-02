@@ -17,7 +17,7 @@ package io.netty5.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.ResourceLeakHint;

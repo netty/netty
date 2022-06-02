@@ -18,7 +18,7 @@ package io.netty5.channel.epoll;
 import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
@@ -32,7 +32,6 @@ import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.Errors.NativeIoException;
 import io.netty5.channel.unix.SegmentedDatagramPacket;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -415,7 +414,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         try {
                             return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(buf), recipient);
                         } finally {
-                            ReferenceCountUtil.release(e);
+                            Resource.dispose(e);
                         }
                     }
                     return e;
@@ -598,14 +597,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private static void releaseAndRecycle(Object buffer, RecyclableArrayList packetList) {
-        if (ReferenceCountUtil.isReferenceCounted(buffer)) {
-            ReferenceCountUtil.release(buffer);
-        } else if (buffer instanceof Resource<?>) {
-            ((Resource<?>) buffer).close();
-        }
+        Resource.dispose(buffer);
         if (packetList != null) {
             for (int i = 0; i < packetList.size(); i++) {
-                ReferenceCountUtil.release(packetList.get(i));
+                Resource.dispose(packetList.get(i));
             }
             packetList.recycle();
         }

@@ -20,7 +20,7 @@ import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;

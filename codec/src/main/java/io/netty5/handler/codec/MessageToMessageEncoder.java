@@ -19,8 +19,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.PromiseCombiner;
@@ -30,25 +29,29 @@ import io.netty5.util.internal.TypeParameterMatcher;
 import java.util.List;
 
 /**
- * {@link ChannelHandler} which encodes from one message to an other message
+ * {@link ChannelHandler} which encodes from one message to another message
  *
  * For example here is an implementation which decodes an {@link Integer} to an {@link String}.
  *
- * <pre>
+ * <pre>{@code
  *     public class IntegerToStringEncoder extends
- *             {@link MessageToMessageEncoder}&lt;{@link Integer}&gt; {
+ *             MessageToMessageEncoder<Integer> {
  *
- *         {@code @Override}
- *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} message, List&lt;Object&gt; out)
- *                 throws {@link Exception} {
+ *         @Override
+ *         public void encode(ChannelHandlerContext ctx, Integer message, List<Object> out)
+ *                 throws Exception {
  *             out.add(message.toString());
  *         }
  *     }
- * </pre>
+ * }</pre>
  *
- * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
- * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageEncoder} will call
- * {@link ReferenceCounted#release()} on encoded messages.
+ * Note that messages passed to {@link #encode(ChannelHandlerContext, Object, List)} will be
+ * {@linkplain Resource#dispose(Object) disposed of} automatically.
+ * <p>
+ * To take control of the message lifetime, you should instead override the
+ * {@link #encodeAndClose(ChannelHandlerContext, Object, List)} method.
+ * <p>
+ * Do not override both.
  */
 public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
 
@@ -88,11 +91,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                 I cast = (I) msg;
                 Promise<Void> promise = ctx.newPromise();
                 try {
-                    try {
-                        encode(ctx, cast, out);
-                    } finally {
-                        ReferenceCountUtil.release(cast);
-                    }
+                    encodeAndClose(ctx, cast, out);
 
                     if (out.isEmpty()) {
                         throw new EncoderException(
@@ -112,7 +111,8 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
         } catch (EncoderException e) {
             return ctx.newFailedFuture(e);
         } catch (Throwable t) {
-            return ctx.newFailedFuture(new EncoderException(t));
+            return ctx.newFailedFuture(new EncoderException(
+                    "Unhandled exception in encoder " + getClass().getName(), t));
         } finally {
             if (out != null) {
                 out.recycle();
@@ -129,14 +129,43 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
     }
 
     /**
-     * Encode from one message to an other. This method will be called for each written message that can be handled
+     * Encode from one message to another. This method will be called for each written message that can be handled
      * by this encoder.
+     * <p>
+     * The message will be {@linkplain Resource#dispose(Object) disposed of} after this call.
+     * <p>
+     * Subclasses that wish to sometimes pass messages through, should instead override the
+     * {@link #encodeAndClose(ChannelHandlerContext, Object, List)} method.
      *
-     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
-     * @param msg           the message to encode to an other one
-     * @param out           the {@link List} into which the encoded msg should be added
-     *                      needs to do some kind of aggregation
-     * @throws Exception    is thrown if an error occurs
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to.
+     * @param msg           the message to encode to another one.
+     * @param out           the {@link List} into which produced output messages should be added.
+     * @throws Exception    is thrown if an error occurs.
      */
-    protected abstract void encode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
+    protected void encode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
+        throw new CodecException(getClass().getName() + " must override either encode() or encodeAndClose().");
+    }
+
+    /**
+     * Encode from one message to another. This method will be called for each written message that can be handled
+     * by this encoder.
+     * <p>
+     * The message will not be automatically {@linkplain Resource#dispose(Object) disposed of} after this call.
+     * Instead, the responsibility of ensuring that messages are disposed of falls upon the implementor of this method.
+     * <p>
+     * Subclasses that wish to have incoming messages automatically disposed of should instead override the
+     * {@link #encode(ChannelHandlerContext, Object, List)} method.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to.
+     * @param msg           the message to encode to another one.
+     * @param out           the {@link List} into which produced output messages should be added.
+     * @throws Exception    is thrown if an error occurs.
+     */
+    protected void encodeAndClose(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
+        try {
+            encode(ctx, msg, out);
+        } finally {
+            Resource.dispose(msg);
+        }
+    }
 }

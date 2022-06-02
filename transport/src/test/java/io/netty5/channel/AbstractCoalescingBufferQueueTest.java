@@ -17,8 +17,8 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.Resource;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +46,7 @@ public class AbstractCoalescingBufferQueueTest {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 return ctx.newSucceededFuture();
             }
         }, new ChannelHandlerAdapter() { });

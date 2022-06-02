@@ -17,6 +17,7 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.CorruptedFrameException;
@@ -30,7 +31,6 @@ import io.netty5.handler.codec.dns.DnsResponse;
 import io.netty5.handler.codec.dns.DnsResponseCode;
 import io.netty5.handler.codec.dns.DnsSection;
 import io.netty5.util.NetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
@@ -213,7 +213,7 @@ abstract class DnsResolveContext<T> {
                         final List<T> result = future.getNow();
                         if (!promise.trySuccess(result)) {
                             for (T item : result) {
-                                ReferenceCountUtil.safeRelease(item);
+                                Resource.dispose(item, logger);
                             }
                         }
                     } else {
@@ -434,7 +434,7 @@ abstract class DnsResolveContext<T> {
                 // return null as well as the Future will be failed with a CancellationException.
                 AddressedEnvelope<DnsResponse, InetSocketAddress> result = future.getNow();
                 if (result != null) {
-                    ReferenceCountUtil.release(result);
+                    Resource.dispose(result);
                 }
                 return;
             }
@@ -609,7 +609,7 @@ abstract class DnsResolveContext<T> {
                 }
             }
         } finally {
-            ReferenceCountUtil.safeRelease(envelope);
+            Resource.dispose(envelope, logger);
         }
     }
 
@@ -837,7 +837,7 @@ abstract class DnsResolveContext<T> {
             found = true;
 
             if (shouldRelease) {
-                ReferenceCountUtil.release(converted);
+                Resource.dispose(converted);
             }
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
         }
@@ -998,7 +998,7 @@ abstract class DnsResolveContext<T> {
                 final List<T> result = filterResults(finalResult);
                 if (!DnsNameResolver.trySuccess(promise, result)) {
                     for (T item : result) {
-                        ReferenceCountUtil.safeRelease(item);
+                        Resource.dispose(item, logger);
                     }
                 }
             }

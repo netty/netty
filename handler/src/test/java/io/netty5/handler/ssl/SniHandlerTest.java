@@ -19,6 +19,7 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -40,12 +41,13 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.DomainNameMapping;
 import io.netty5.util.DomainNameMappingBuilder;
 import io.netty5.util.Mapping;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ResourcesUtil;
 import io.netty5.util.internal.StringUtil;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -78,6 +80,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 public class SniHandlerTest {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SniHandlerTest.class);
 
     private static ApplicationProtocolConfig newApnConfig() {
         return new ApplicationProtocolConfig(
@@ -523,12 +526,12 @@ public class SniHandlerTest {
                                     success = true;
                                 } finally {
                                     if (!success) {
-                                        ReferenceCountUtil.safeRelease(sslEngine);
+                                        Resource.dispose(sslEngine, logger);
                                     }
                                 }
                             } finally {
                                 if (!success) {
-                                    ReferenceCountUtil.safeRelease(sslContext);
+                                    Resource.dispose(sslContext, logger);
                                     releasePromise.cancel();
                                 }
                             }
@@ -576,7 +579,7 @@ public class SniHandlerTest {
                         sc.close().syncUninterruptibly();
                     }
                     if (sslContext != null) {
-                        ReferenceCountUtil.release(sslContext);
+                        Resource.dispose(sslContext);
                     }
                     group.shutdownGracefully();
 
@@ -606,13 +609,13 @@ public class SniHandlerTest {
         @Override
         public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
             super.handlerRemoved0(ctx);
-            ReferenceCountUtil.release(sslContext);
+            Resource.dispose(sslContext);
         }
     }
 
     private static void releaseAll(SslContext... contexts) {
         for (SslContext ctx: contexts) {
-            ReferenceCountUtil.release(ctx);
+            Resource.dispose(ctx);
         }
     }
 

@@ -15,10 +15,10 @@
  */
 package io.netty5.channel;
 
+import io.netty5.util.Resource;
 import io.netty5.channel.socket.ChannelOutputShutdownEvent;
 import io.netty5.channel.socket.ChannelOutputShutdownException;
 import io.netty5.util.DefaultAttributeMap;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.DefaultPromise;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -673,7 +673,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (outboundBuffer == null) {
                 try {
                     // release message now to prevent resource-leak
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 } finally {
                     // If the outboundBuffer is null we know the channel was closed and so
                     // need to fail the future right away. If it is not null the handling of the rest
@@ -697,7 +697,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
             } catch (Throwable t) {
                 try {
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 } catch (Throwable inner) {
                     t.addSuppressed(inner);
                 } finally {

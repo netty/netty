@@ -82,4 +82,10 @@ public interface DnsRecord {
      * Returns the time to live after reading for this resource record.
      */
     long timeToLive();
+
+    /**
+     * Return a copy of this record object.
+     * Immutable record objects may return themselves.
+     */
+    DnsRecord copy();
 }

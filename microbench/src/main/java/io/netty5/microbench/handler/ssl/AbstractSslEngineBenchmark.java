@@ -16,12 +16,12 @@
 package io.netty5.microbench.handler.ssl;
 
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.Resource;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Param;
 
@@ -148,8 +148,8 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
     }
 
     protected final void destroyEngines() {
-        ReferenceCountUtil.release(clientEngine);
-        ReferenceCountUtil.release(serverEngine);
+        Resource.dispose(clientEngine);
+        Resource.dispose(serverEngine);
     }
 
     protected final void initHandshakeBuffers() {

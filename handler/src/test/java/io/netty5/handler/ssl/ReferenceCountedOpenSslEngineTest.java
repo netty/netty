@@ -18,6 +18,7 @@ package io.netty5.handler.ssl;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -41,22 +42,22 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     @Override
     protected void cleanupClientSslContext(SslContext ctx) {
-        ReferenceCountUtil.release(ctx);
+        Resource.dispose(ctx);
     }
 
     @Override
     protected void cleanupClientSslEngine(SSLEngine engine) {
-        ReferenceCountUtil.release(unwrapEngine(engine));
+        Resource.dispose(unwrapEngine(engine));
     }
 
     @Override
     protected void cleanupServerSslContext(SslContext ctx) {
-        ReferenceCountUtil.release(ctx);
+        Resource.dispose(ctx);
     }
 
     @Override
     protected void cleanupServerSslEngine(SSLEngine engine) {
-        ReferenceCountUtil.release(unwrapEngine(engine));
+        Resource.dispose(unwrapEngine(engine));
     }
 
     @MethodSource("newTestParams")

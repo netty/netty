@@ -16,7 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
@@ -65,8 +65,8 @@ public class TcpDnsTest {
                 DnsRecordType.A, TTL, onHeapAllocator().copyOf(QUERY_RESULT));
         assertThat(readResponse.recordAt(DnsSection.ANSWER), is((DnsRecord) record));
         assertThat(readResponse.<DnsRawRecord>recordAt(DnsSection.ANSWER).content(), is(record.content()));
-        ReferenceCountUtil.release(readResponse);
-        ReferenceCountUtil.release(record);
+        Resource.dispose(readResponse);
+        Resource.dispose(record);
         query.release();
         assertFalse(channel.finish());
     }

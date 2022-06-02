@@ -19,6 +19,7 @@ import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.SafeCloseable;
+import io.netty5.util.Send;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

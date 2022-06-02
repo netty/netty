@@ -38,7 +38,7 @@ import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -130,7 +130,7 @@ public class OcspTest {
                 engine.release();
             }
         } finally {
-            ReferenceCountUtil.release(context);
+            Resource.dispose(context);
         }
     }
 
@@ -164,7 +164,7 @@ public class OcspTest {
                     engine.release();
                 }
             } finally {
-                ReferenceCountUtil.release(context);
+                Resource.dispose(context);
             }
         } finally {
             ssc.delete();
@@ -200,7 +200,7 @@ public class OcspTest {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 try {
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 } finally {
                     latch.countDown();
                 }
@@ -293,7 +293,7 @@ public class OcspTest {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 try {
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 } finally {
                     latch.countDown();
                 }
@@ -387,10 +387,10 @@ public class OcspTest {
                         group.shutdownGracefully(1L, 1L, TimeUnit.SECONDS);
                     }
                 } finally {
-                    ReferenceCountUtil.release(clientSslContext);
+                    Resource.dispose(clientSslContext);
                 }
             } finally {
-                ReferenceCountUtil.release(serverSslContext);
+                Resource.dispose(serverSslContext);
             }
         } finally {
             ssc.delete();

@@ -114,6 +114,11 @@ public abstract class AbstractDnsRecord implements DnsRecord {
     }
 
     @Override
+    public DnsRecord copy() {
+        return this; // Most record objects are immutable.
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
