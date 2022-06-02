@@ -614,8 +614,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return sslWrote;
     }
 
-    public void bioSetFd(int fd) {
-        SSL.bioSetFd(this.ssl, fd);
+   synchronized void bioSetFd(int fd) {
+        if (!isDestroyed()) {
+            SSL.bioSetFd(this.ssl, fd);
+        }
     }
 
     /**

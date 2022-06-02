@@ -914,7 +914,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean wrapNonAppData(final ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         ByteBufAllocator alloc = ctx.alloc();
-
         try {
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
@@ -2143,14 +2142,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        Channel c = this.ctx.channel();
-        if (c instanceof UnixChannel) {
-          UnixChannel uc = (UnixChannel) c;
-          int fd = uc.fd().intValue();
-          if (this.engine instanceof ReferenceCountedOpenSslEngine) {
-            ReferenceCountedOpenSslEngine rcEngine = (ReferenceCountedOpenSslEngine) this.engine;
-            rcEngine.bioSetFd(fd);
-          }
+        Channel c = ctx.channel();
+        if (c instanceof UnixChannel && engine instanceof ReferenceCountedOpenSslEngine) {
+            ((ReferenceCountedOpenSslEngine) engine).bioSetFd(((UnixChannel) c).fd().intValue());
         }
         if (!startTls) {
             startHandshakeProcessing(true);
