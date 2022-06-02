@@ -1977,6 +1977,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         this.ctx = ctx;
 
         Channel channel = ctx.channel();
+        setOpensslEngineSocketFd(channel);
         pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16);
         boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
         boolean active = channel.isActive();
@@ -2137,15 +2138,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ctx.flush();
     }
 
+     private void setOpensslEngineSocketFd(Channel c) {
+         if (c instanceof UnixChannel && engine instanceof ReferenceCountedOpenSslEngine) {
+             ((ReferenceCountedOpenSslEngine) engine).bioSetFd(((UnixChannel) c).fd().intValue());
+         }
+     }
+
     /**
      * Issues an initial TLS handshake once connected when used in client-mode
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        Channel c = ctx.channel();
-        if (c instanceof UnixChannel && engine instanceof ReferenceCountedOpenSslEngine) {
-            ((ReferenceCountedOpenSslEngine) engine).bioSetFd(((UnixChannel) c).fd().intValue());
-        }
+        setOpensslEngineSocketFd(ctx.channel());
         if (!startTls) {
             startHandshakeProcessing(true);
         }
