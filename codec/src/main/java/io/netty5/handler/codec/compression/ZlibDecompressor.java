@@ -47,7 +47,7 @@ public final class ZlibDecompressor implements Decompressor {
     /**
      * Maximum allowed size of the decompression buffer.
      */
-    protected final int maxAllocation;
+    private final int maxAllocation;
 
     private enum GzipState {
         HEADER_START,
@@ -551,14 +551,13 @@ public final class ZlibDecompressor implements Decompressor {
             return buf;
         }
 
-        // TODO:
-        buffer.ensureWritable(preferredSize);
-        if (buffer.writableBytes() < preferredSize) {
+        if (buffer.implicitCapacityLimit() < preferredSize) {
             decompressionBufferExhausted(buffer);
             buffer.skipReadable(buffer.readableBytes());
             throw new DecompressionException(
-                    "Decompression buffer has reached maximum size: " + buffer.capacity());
+                    "Decompression buffer has reached maximum size: " + buffer.implicitCapacityLimit());
         }
+        buffer.ensureWritable(preferredSize);
         return buffer;
     }
 
