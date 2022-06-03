@@ -887,18 +887,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.junit.vintage</groupId>
-        <artifactId>junit-vintage-engine</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.13.1</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-build-common</artifactId>
         <version>${netty.build.version}</version>
@@ -1031,16 +1019,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-build-common</artifactId>
       <scope>test</scope>
@@ -1147,6 +1125,12 @@
                   <code>java.field.removed</code>
                   <classQualifiedName>io.netty.util.internal.InternalThreadLocalMap</classQualifiedName>
                   <justification>Ignore cache padding.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method java.lang.String io.netty.testsuite.util.TestUtils::testMethodName(org.junit.rules.TestName)</old>
+                  <justification>This should be test-only, and we're removing support for JUnit 4.</justification>
                 </item>
               </differences>
             </revapi.differences>
