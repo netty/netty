@@ -19,7 +19,6 @@ import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.rules.TestName;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
 
@@ -72,17 +71,6 @@ public final class TestUtils {
      */
     public static String testMethodName(TestInfo testInfo) {
         String testMethodName = testInfo.getTestMethod().map(Method::getName).orElse("[unknown method]");
-        if (testMethodName.contains("[")) {
-            testMethodName = testMethodName.substring(0, testMethodName.indexOf('['));
-        }
-        return testMethodName;
-    }
-
-    /**
-     * Returns the method name of the current test.
-     */
-    public static String testMethodName(TestName testName) {
-        String testMethodName = testName.getMethodName();
         if (testMethodName.contains("[")) {
             testMethodName = testMethodName.substring(0, testMethodName.indexOf('['));
         }

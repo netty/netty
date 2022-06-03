@@ -17,10 +17,10 @@ package io.netty5.channel.unix.tests;
 
 import io.netty5.channel.unix.Buffer;
 import io.netty5.channel.unix.Socket;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -127,10 +127,10 @@ public abstract class SocketTest<T extends Socket> {
     }
 
     protected int level() {
-        throw new AssumptionViolatedException("Not supported");
+        throw new TestAbortedException("Not supported");
     }
 
     protected int optname() {
-        throw new AssumptionViolatedException("Not supported");
+        throw new TestAbortedException("Not supported");
     }
 }

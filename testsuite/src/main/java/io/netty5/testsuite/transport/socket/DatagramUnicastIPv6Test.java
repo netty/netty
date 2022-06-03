@@ -16,8 +16,8 @@
 package io.netty5.testsuite.transport.socket;
 
 import io.netty5.channel.socket.InternetProtocolFamily;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.BeforeAll;
+import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.net.StandardProtocolFamily;
@@ -32,7 +32,7 @@ public class DatagramUnicastIPv6Test extends DatagramUnicastInetTest {
             Channel channel = SelectorProvider.provider().openDatagramChannel(StandardProtocolFamily.INET6);
             channel.close();
         } catch (UnsupportedOperationException e) {
-           throw new AssumptionViolatedException("IPv6 not supported", e);
+           throw new TestAbortedException("IPv6 not supported", e);
         } catch (IOException ignore) {
             // Ignore
         }
