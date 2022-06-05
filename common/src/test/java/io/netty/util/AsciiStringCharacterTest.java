@@ -38,6 +38,16 @@ public class AsciiStringCharacterTest {
     private static final Random r = new Random();
 
     @Test
+    public void testNonAsciiCharsReplacedByQuestionMark() {
+        AsciiString asciiString = new AsciiString(new char[]{0, 1, 255, 256, Character.MAX_VALUE});
+        assertEquals(0, asciiString.charAt(0));
+        assertEquals(1, asciiString.charAt(1));
+        assertEquals(255, asciiString.charAt(2));
+        assertEquals('?', asciiString.charAt(3));
+        assertEquals('?', asciiString.charAt(4));
+    }
+
+    @Test
     public void testContentEqualsIgnoreCase() {
         byte[] bytes = { 32, 'a' };
         AsciiString asciiString = new AsciiString(bytes, 1, 1, false);
