@@ -290,7 +290,7 @@ public abstract class LifecycleTracer {
 
         @Override
         public Trace apply(Stream<StackWalker.StackFrame> frames) {
-            this.frames = frames.limit(TRACE_LIFECYCLE_DEPTH + 1).toArray(StackWalker.StackFrame[]::new);
+            this.frames = frames.skip(2).limit(TRACE_LIFECYCLE_DEPTH + 1).toArray(StackWalker.StackFrame[]::new);
             return this;
         }
 
