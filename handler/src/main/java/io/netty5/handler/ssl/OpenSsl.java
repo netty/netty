@@ -26,6 +26,7 @@ import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.NativeLibraryLoader;
 import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -681,7 +682,7 @@ public final class OpenSsl {
 
     static void releaseIfNeeded(Object obj) {
         if (Resource.isAccessible(obj, false)) {
-            Resource.dispose(obj, logger);
+            SilentDispose.dispose(obj, logger);
         }
     }
 

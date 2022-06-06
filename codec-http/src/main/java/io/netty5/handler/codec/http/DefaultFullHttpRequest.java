@@ -82,7 +82,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest copy() {
         return new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(), payload.copy(), headers(), trailingHeader.copy());
+                protocolVersion(), method(), uri(), payload.copy(), headers().copy(), trailingHeader.copy());
     }
 
     @Override

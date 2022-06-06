@@ -26,6 +26,7 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
 import io.netty5.util.internal.PromiseNotificationUtil;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -268,7 +269,9 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
-            Resource.dispose(msg, logger);
+            if (Resource.isAccessible(msg, false)) {
+                SilentDispose.dispose(msg, logger);
+            }
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
@@ -304,7 +307,7 @@ public final class ChannelOutboundBuffer {
         if (!e.cancelled) {
             // only release message, fail and decrement if it was not canceled before.
             if (Resource.isAccessible(msg, false)) {
-                Resource.dispose(msg, logger);
+                SilentDispose.dispose(msg, logger);
             }
 
             safeFail(promise, cause);
@@ -743,7 +746,7 @@ public final class ChannelOutboundBuffer {
                 TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
 
                 if (!e.cancelled) {
-                    Resource.dispose(e.msg, logger);
+                    SilentDispose.dispose(e.msg, logger);
                     safeFail(e.promise, cause);
                 }
                 e = e.recycleAndGetNext();
@@ -874,7 +877,7 @@ public final class ChannelOutboundBuffer {
                 int pSize = pendingSize;
 
                 // release message and replace with an empty buffer
-                Resource.dispose(msg, logger);
+                SilentDispose.dispose(msg, logger);
                 msg = Unpooled.EMPTY_BUFFER;
 
                 pendingSize = 0;

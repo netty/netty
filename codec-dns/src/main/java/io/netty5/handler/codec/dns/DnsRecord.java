@@ -84,7 +84,7 @@ public interface DnsRecord {
     long timeToLive();
 
     /**
-     * Return a copy of this record object.
+     * Returns a copy of this record object.
      * Immutable record objects may return themselves.
      */
     DnsRecord copy();

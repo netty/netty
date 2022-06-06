@@ -254,7 +254,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             ctx.executor().execute(() -> ctx.fireUserEventTriggered(evt));
         } else if (evt instanceof UpgradeEvent) {
             try (UpgradeEvent upgrade = (UpgradeEvent) evt) {
-                ctx.fireUserEventTriggered(upgrade.copy());
+                ctx.fireUserEventTriggered(upgrade.copy()); // TODO try to avoid full copy (maybe make it read-only?)
                 Http2Stream stream = connection().stream(HTTP_UPGRADE_STREAM_ID);
                 if (stream.getProperty(streamKey) == null) {
                     // TODO: improve handler/stream lifecycle so that stream isn't active before handler added.

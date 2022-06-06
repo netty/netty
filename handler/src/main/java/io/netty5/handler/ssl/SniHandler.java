@@ -16,7 +16,6 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.AsyncMapping;
@@ -24,6 +23,7 @@ import io.netty5.util.DomainNameMapping;
 import io.netty5.util.Mapping;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -141,7 +141,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
             // transferred to the SslHandler.
             // See https://github.com/netty/netty/issues/5678
             if (sslHandler != null) {
-                Resource.dispose(sslHandler.engine(), logger);
+                SilentDispose.dispose(sslHandler.engine(), logger);
             }
         }
     }

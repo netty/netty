@@ -35,6 +35,7 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.ThrowableUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -213,7 +214,7 @@ abstract class DnsResolveContext<T> {
                         final List<T> result = future.getNow();
                         if (!promise.trySuccess(result)) {
                             for (T item : result) {
-                                Resource.dispose(item, logger);
+                                SilentDispose.dispose(item, logger);
                             }
                         }
                     } else {
@@ -609,7 +610,7 @@ abstract class DnsResolveContext<T> {
                 }
             }
         } finally {
-            Resource.dispose(envelope, logger);
+            SilentDispose.dispose(envelope, logger);
         }
     }
 
@@ -998,7 +999,7 @@ abstract class DnsResolveContext<T> {
                 final List<T> result = filterResults(finalResult);
                 if (!DnsNameResolver.trySuccess(promise, result)) {
                     for (T item : result) {
-                        Resource.dispose(item, logger);
+                        SilentDispose.dispose(item, logger);
                     }
                 }
             }

@@ -45,6 +45,7 @@ import io.netty5.util.ReferenceCounted;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ResourcesUtil;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -526,12 +527,12 @@ public class SniHandlerTest {
                                     success = true;
                                 } finally {
                                     if (!success) {
-                                        Resource.dispose(sslEngine, logger);
+                                        SilentDispose.dispose(sslEngine, logger);
                                     }
                                 }
                             } finally {
                                 if (!success) {
-                                    Resource.dispose(sslContext, logger);
+                                    SilentDispose.dispose(sslContext, logger);
                                     releasePromise.cancel();
                                 }
                             }

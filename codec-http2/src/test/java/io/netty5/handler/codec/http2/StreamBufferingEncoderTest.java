@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
@@ -29,6 +28,7 @@ import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -547,7 +547,7 @@ public class StreamBufferingEncoderTest {
     private static Answer<Future<Void>> successAnswer() {
         return invocation -> {
             for (Object a : invocation.getArguments()) {
-                Resource.dispose(a, logger);
+                SilentDispose.dispose(a, logger);
             }
 
             return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);

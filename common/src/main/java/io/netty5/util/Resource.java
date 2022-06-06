@@ -15,9 +15,6 @@
  */
 package io.netty5.util;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import org.jetbrains.annotations.Nullable;
-
 /**
  * A resource that has a life-time, and can be {@linkplain #close() closed}.
  * Resources are initially {@linkplain #isAccessible() accessible}, but closing them makes them inaccessible.
@@ -93,31 +90,6 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
             }
         } else if (ReferenceCountUtil.isReferenceCounted(obj)) {
             ReferenceCountUtil.release(obj);
-        }
-    }
-
-    /**
-     * Attempt to dispose of whatever the given object is.
-     * <p>
-     * If the object is {@link AutoCloseable}, such as anything that implements {@link Resource},
-     * then it will be closed.
-     * If the object is {@link ReferenceCounted}, then it will be released once.
-     * <p>
-     * Any exceptions caused by this will be logged using the given logger.
-     * The exception will be logged at log-level {@link io.netty5.util.internal.logging.InternalLogLevel#WARN WARN}.
-     *
-     * @param obj The object to dispose of.
-     * @param logger The logger to use for recording any exceptions thrown by the disposal.
-     */
-    static void dispose(Object obj, InternalLogger logger) {
-        try {
-            if (obj instanceof AutoCloseable) {
-                ((AutoCloseable) obj).close();
-            } else if (ReferenceCountUtil.isReferenceCounted(obj)) {
-                ReferenceCountUtil.release(obj);
-            }
-        } catch (Throwable throwable) {
-            logger.warn("Failed to dispose object: {}.", obj, throwable);
         }
     }
 

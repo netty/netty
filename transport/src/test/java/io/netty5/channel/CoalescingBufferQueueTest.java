@@ -16,11 +16,11 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -278,7 +278,7 @@ public class CoalescingBufferQueueTest {
     private String dequeue(int numBytes, Promise<Void> aggregatePromise) {
         Buffer removed = writeQueue.remove(numBytes, aggregatePromise);
         String result = removed.toString(US_ASCII);
-        Resource.dispose(removed, logger);
+        SilentDispose.dispose(removed, logger);
         return result;
     }
 }

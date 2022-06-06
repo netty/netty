@@ -17,10 +17,10 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -64,7 +64,7 @@ public class OptionalSslHandler extends ByteToMessageDecoderForBuffer {
             // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
             // transferred to the SslHandler.
             if (sslHandler != null) {
-                Resource.dispose(sslHandler.engine(), logger);
+                SilentDispose.dispose(sslHandler.engine(), logger);
             }
         }
     }

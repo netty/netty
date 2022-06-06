@@ -17,10 +17,10 @@ package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -220,7 +220,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             pendingStream.frames.add(new DataFrame(data, padding, endOfStream, promise));
             return promise.asFuture();
         } else {
-            Resource.dispose(data, logger);
+            SilentDispose.dispose(data, logger);
             return ctx.newFailedFuture(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
     }
@@ -376,7 +376,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         @Override
         void release(Throwable t) {
             super.release(t);
-            Resource.dispose(data, logger);
+            SilentDispose.dispose(data, logger);
         }
 
         @Override

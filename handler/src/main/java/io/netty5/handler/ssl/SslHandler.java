@@ -41,6 +41,7 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.ImmediateExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -625,7 +626,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
         if (!(msg instanceof Buffer)) {
             UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, Buffer.class);
             logger.warn(exception);
-            Resource.dispose(msg, logger);
+            SilentDispose.dispose(msg, logger);
             return ctx.newFailedFuture(exception);
         }
         if (pendingUnencryptedWrites == null) {
