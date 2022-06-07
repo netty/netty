@@ -88,6 +88,12 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
+    public DefaultFullHttpResponse copy() {
+        return new DefaultFullHttpResponse(
+                protocolVersion(), status(), payload.copy(), headers().copy(), trailingHeaders);
+    }
+
+    @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeaders;
     }

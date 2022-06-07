@@ -36,6 +36,11 @@ public final class EmptyLastHttpContent implements LastHttpContent<EmptyLastHttp
     }
 
     @Override
+    public EmptyLastHttpContent copy() {
+        return new EmptyLastHttpContent(allocator);
+    }
+
+    @Override
     public Send<EmptyLastHttpContent> send() {
         return Send.sending(EmptyLastHttpContent.class, () -> new EmptyLastHttpContent(allocator));
     }

@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.MessageToMessageCodec;
 import io.netty5.handler.codec.compression.Compressor;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.StringUtil;
 
@@ -106,11 +105,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
         acceptEncodingQueue.add(acceptEncoding);
         ctx.fireChannelRead(msg);
-    }
-
-    @Override
-    protected final void encode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
-        throw new UnsupportedOperationException("HttpContentEncoder uses encodeAndClose().");
     }
 
     @Override

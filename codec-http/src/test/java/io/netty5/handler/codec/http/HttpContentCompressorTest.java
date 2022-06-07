@@ -710,6 +710,11 @@ public class HttpContentCompressorTest {
         }
 
         @Override
+        public AssembledHttpResponse copy() {
+            return new AssembledHttpResponse(protocolVersion(), status(), headers().copy(), payload.copy());
+        }
+
+        @Override
         public void close() {
             payload.close();
         }

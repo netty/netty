@@ -28,6 +28,4 @@ public interface FullHttpRequest extends HttpRequest, FullHttpMessage<FullHttpRe
 
     @Override
     FullHttpRequest setUri(String uri);
-
-    FullHttpRequest copy();
 }

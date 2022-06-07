@@ -47,6 +47,11 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
+    public DefaultHttpContent copy() {
+        return new DefaultHttpContent(payload.copy());
+    }
+
+    @Override
     public void close() {
         payload.close();
     }

@@ -35,4 +35,11 @@ public interface HttpContent<R extends HttpContent<R>> extends HttpObject, Resou
      * @return The {@link Buffer} representing the payload of the HTTP message.
      */
     Buffer payload();
+
+    /**
+     * Create a copy of this HTTP content instance, and return it.
+     *
+     * @return A copy of this HTTP content object.
+     */
+    R copy();
 }

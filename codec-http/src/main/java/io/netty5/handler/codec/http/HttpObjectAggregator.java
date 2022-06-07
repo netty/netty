@@ -392,7 +392,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         }
 
         @Override
-        public FullHttpRequest copy() {
+        public AggregatedFullHttpRequest copy() {
             return new AggregatedFullHttpRequest(this, payload().copy(), trailingHeaders().copy());
         }
 
@@ -447,6 +447,11 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         public Send<FullHttpResponse> send() {
             return payload().send().map(FullHttpResponse.class,
                     p -> new AggregatedFullHttpResponse(this, p, trailingHeaders()));
+        }
+
+        @Override
+        public AggregatedFullHttpResponse copy() {
+            return new AggregatedFullHttpResponse(this, payload().copy(), trailingHeaders());
         }
 
         @Override
