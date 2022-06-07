@@ -95,7 +95,7 @@ public final class RtspHeaderNames {
      */
     public static final AsciiString CSEQ = AsciiString.cached("cseq");
     /**
-     * {@code "cate"}
+     * {@code "date"}
      */
     public static final AsciiString DATE = HttpHeaderNames.DATE;
     /**
