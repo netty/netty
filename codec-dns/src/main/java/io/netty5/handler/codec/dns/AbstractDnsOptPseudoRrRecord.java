@@ -61,11 +61,6 @@ public abstract class AbstractDnsOptPseudoRrRecord extends AbstractDnsRecord imp
         return toStringBuilder().toString();
     }
 
-    @Override
-    public AbstractDnsOptPseudoRrRecord copy() {
-        return this;
-    }
-
     final StringBuilder toStringBuilder() {
         return new StringBuilder(64)
                 .append(StringUtil.simpleClassName(this))
