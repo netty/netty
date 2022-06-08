@@ -269,9 +269,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
-            if (Resource.isAccessible(msg, false)) {
-                SilentDispose.dispose(msg, logger);
-            }
+            SilentDispose.trySilentDispose(msg, logger);
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
@@ -306,9 +304,7 @@ public final class ChannelOutboundBuffer {
 
         if (!e.cancelled) {
             // only release message, fail and decrement if it was not canceled before.
-            if (Resource.isAccessible(msg, false)) {
-                SilentDispose.dispose(msg, logger);
-            }
+            SilentDispose.trySilentDispose(msg, logger);
 
             safeFail(promise, cause);
             decrementPendingOutboundBytes(size, false, notifyWritability);

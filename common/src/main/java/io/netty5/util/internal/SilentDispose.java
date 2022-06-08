@@ -48,6 +48,41 @@ public final class SilentDispose {
         }
     }
 
+    /**
+     * Attempt to dispose of whatever the given object is, but only if it is disposable.
+     * <p>
+     * This method works similarly to {@link #dispose(Object, InternalLogger)}, except the object is only disposed of
+     * if it is {@linkplain Resource#isAccessible(Object, boolean) accessible}.
+     * <p>
+     * Any exceptions caused by the disposal of the object will be logged using the given logger.
+     * The exception will be logged at log-level {@link io.netty5.util.internal.logging.InternalLogLevel#WARN WARN}.
+     *
+     * @param obj The object to dispose of.
+     * @param logger The logger to use for recording any exceptions thrown by the disposal.
+     */
+    public static void trySilentDispose(Object obj, InternalLogger logger) {
+        if (Resource.isAccessible(obj, false)) {
+            dispose(obj, logger);
+        }
+    }
+
+    /**
+     * Attempt to dispose of whatever the given object is, but only if it is disposable.
+     * <p>
+     * This method works similarly to {@link Resource#dispose(Object)}, except the object is only disposed of if it is
+     * {@linkplain Resource#isAccessible(Object, boolean) accessible}.
+     * <p>
+     * Any exceptions caused the disposal will be allowed to propagate from this method, which is in contrast to how
+     * {@link #dispose(Object, InternalLogger)} and {@link #trySilentDispose(Object, InternalLogger)} works.
+     *
+     * @param obj The object to dispose of.
+     */
+    public static void tryPropagatingDispose(Object obj) {
+        if (Resource.isAccessible(obj, false)) {
+            Resource.dispose(obj);
+        }
+    }
+
     private SilentDispose() {
     }
 }

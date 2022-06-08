@@ -681,9 +681,7 @@ public final class OpenSsl {
     }
 
     static void releaseIfNeeded(Object obj) {
-        if (Resource.isAccessible(obj, false)) {
-            SilentDispose.dispose(obj, logger);
-        }
+        SilentDispose.trySilentDispose(obj, logger);
     }
 
     static boolean isTlsv13Supported() {

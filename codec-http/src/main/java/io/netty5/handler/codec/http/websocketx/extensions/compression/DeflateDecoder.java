@@ -31,6 +31,7 @@ import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
+import io.netty5.util.internal.SilentDispose;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -95,9 +96,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
         } else if (msg instanceof ContinuationWebSocketFrame) {
             outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), newRsv(msg), decompressedContent);
         } else {
-            if (Resource.isAccessible(msg, false)) {
-                Resource.dispose(msg);
-            }
+            SilentDispose.tryPropagatingDispose(msg);
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
 
