@@ -77,7 +77,7 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
 
     @Override
     public DefaultLastHttpContent copy() {
-        return new DefaultLastHttpContent(payload.copy(), trailingHeaders);
+        return new DefaultLastHttpContent(payload.copy(), trailingHeaders.copy());
     }
 
     @Override

@@ -451,7 +451,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
 
         @Override
         public AggregatedFullHttpResponse copy() {
-            return new AggregatedFullHttpResponse(this, payload().copy(), trailingHeaders());
+            return new AggregatedFullHttpResponse(this, payload().copy(), trailingHeaders().copy());
         }
 
         @Override
