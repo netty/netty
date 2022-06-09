@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http.websocketx.extensions.compression;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -141,18 +140,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
                 partUncompressedContent.close();
                 continue;
             }
-            if (partUncompressedContent.readerOffset() != 0) {
-                // We can't compose buffers that will have reader-offset gaps.
-                partUncompressedContent.readSplit(0).close(); // Trim off already-read bytes at the beginning.
-            }
-            if (partUncompressedContent.writableBytes() > 0) {
-                // We also can't compose buffers that will have writer-offset gaps.
-                // Trim off the excess with split.
-                bufferList.add(partUncompressedContent.split().send());
-                partUncompressedContent.close();
-            } else {
-                bufferList.add(partUncompressedContent.send());
-            }
+            bufferList.add(partUncompressedContent.send());
         }
         CompositeBuffer compositeDecompressedContent = ctx.bufferAllocator().compose(bufferList);
 
