@@ -33,7 +33,7 @@ import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -237,9 +237,9 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                     Buffer buf = (Buffer) e.content();
                     if (UnixChannelUtil.isBufferCopyNeededForWrite(buf)) {
                         try {
-                            return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(buf), domainRecipient);
+                            return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(null, buf), domainRecipient);
                         } finally {
-                            ReferenceCountUtil.release(e);
+                            Resource.dispose(e);
                         }
                     }
                     return e;

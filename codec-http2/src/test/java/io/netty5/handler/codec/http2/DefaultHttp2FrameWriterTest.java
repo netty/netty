@@ -19,7 +19,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import org.junit.jupiter.api.AfterEach;
@@ -77,7 +77,7 @@ public class DefaultHttp2FrameWriterTest {
             if (msg instanceof ByteBuf) {
                 outbound.writeBytes((ByteBuf) msg);
             }
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
             return future;
         };
         when(ctx.write(any())).then(answer);

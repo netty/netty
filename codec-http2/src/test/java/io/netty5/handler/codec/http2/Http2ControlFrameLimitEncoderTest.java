@@ -17,12 +17,12 @@ package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.DefaultMessageSizeEstimator;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -112,7 +112,7 @@ public class Http2ControlFrameLimitEncoderTest {
                 });
         when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class)))
                 .thenAnswer((Answer<Future<Void>>) invocationOnMock -> {
-                    ReferenceCountUtil.release(invocationOnMock.getArgument(3));
+                    Resource.dispose(invocationOnMock.getArgument(3));
                     Promise<Void> promise =  ImmediateEventExecutor.INSTANCE.newPromise();
                     goAwayPromises.offer(promise);
                     return promise.asFuture();

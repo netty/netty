@@ -172,11 +172,11 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
         boolean upgraded;
 
         @Override
-        protected void encode(
+        protected void encodeAndClose(
                 ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
 
             if (upgraded) {
-                out.add(ReferenceCountUtil.retain(msg));
+                out.add(msg);
                 return;
             }
 
@@ -184,7 +184,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
                 queue.offer(((HttpRequest) msg).method());
             }
 
-            super.encode(ctx, msg, out);
+            super.encodeAndClose(ctx, msg, out);
 
             if (failOnMissingResponse && !done) {
                 // check if the request is chunked if so do not increment

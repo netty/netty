@@ -28,8 +28,8 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.util.AbstractReferenceCounted;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -87,7 +87,7 @@ public class DefaultChannelPipelineTest {
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
             }
         });
 
@@ -1342,7 +1342,7 @@ public class DefaultChannelPipelineTest {
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
                 executionMask |= MASK_WRITE;
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 return ctx.newSucceededFuture();
             }
 

@@ -223,7 +223,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void decodeAndClose(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (serverConfig.handleCloseFrames() && frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
@@ -236,7 +236,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             }
             return;
         }
-        super.decode(ctx, frame);
+        super.decodeAndClose(ctx, frame);
     }
 
     @Override

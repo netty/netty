@@ -15,6 +15,8 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.util.Resource;
+
 /**
  * An interface used by {@link Resource} instances to implement their resource disposal mechanics.
  * The {@link #drop(Object)} method will be called by the resource when they are closed.

@@ -44,7 +44,7 @@ import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.resolver.dns.TestDnsServer.TestResourceRecord;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
@@ -1119,7 +1119,7 @@ public class DnsNameResolverTest {
                     buf.append(' ');
                     buf.append(DnsResolveContext.decodeDomainName(recordContent));
 
-                    ReferenceCountUtil.release(r);
+                    Resource.dispose(r);
                 }
 
                 logger.info("{} has the following MX records:{}", hostname, buf);
@@ -2774,7 +2774,7 @@ public class DnsNameResolverTest {
             }
             assertTrue(txts.contains(txt1));
             assertTrue(txts.contains(txt2));
-            ReferenceCountUtil.release(envelope);
+            Resource.dispose(envelope);
         } finally {
             resolver.close();
             server.stop();
@@ -2867,7 +2867,7 @@ public class DnsNameResolverTest {
                     .syncUninterruptibly().getNow();
             assertEquals(2, resolvedAddresses.size());
             for (DnsRecord record: resolvedAddresses) {
-                ReferenceCountUtil.release(record);
+                Resource.dispose(record);
             }
         } finally {
             dnsServer2.stop();
@@ -3127,7 +3127,8 @@ public class DnsNameResolverTest {
             } else {
                 assertTrue(envelope.content().isTruncated());
             }
-            assertTrue(ReferenceCountUtil.release(envelope));
+            Resource.dispose(envelope);
+            assertFalse(Resource.isAccessible(envelope, true));
         } finally {
             dnsServer2.stop();
             if (resolver != null) {
@@ -3470,7 +3471,7 @@ public class DnsNameResolverTest {
         List<DnsRecord> records = recordsFuture.get();
         assertFalse(records.isEmpty());
         for (DnsRecord record : records) {
-            ReferenceCountUtil.release(record);
+            Resource.dispose(record);
         }
     }
 

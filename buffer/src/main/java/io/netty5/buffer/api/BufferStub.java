@@ -16,6 +16,7 @@
 package io.netty5.buffer.api;
 
 import io.netty5.buffer.api.ComponentIterator.Next;
+import io.netty5.util.Send;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

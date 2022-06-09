@@ -24,7 +24,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +53,7 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
-                                ReferenceCountUtil.release(msg);
+                                Resource.dispose(msg);
                             }
                         });
                 DatagramChannel datagramChannel = (DatagramChannel) udpBootstrap

@@ -17,6 +17,7 @@
 package io.netty5.channel;
 
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 
 import java.net.SocketAddress;
 
@@ -24,7 +25,7 @@ import java.net.SocketAddress;
  * A message that wraps another message with a sender address and a recipient address.
  *
  * @implNote AddressedEnvelope implementors likely also implement either {@link ReferenceCounted}
- * or {@link io.netty5.buffer.api.Resource}. Users should be mindful to release or close any address envelopes if
+ * or {@link Resource}. Users should be mindful to release or close any address envelopes if
  * that's the case.
  *
  * @param <M> the type of the wrapped message

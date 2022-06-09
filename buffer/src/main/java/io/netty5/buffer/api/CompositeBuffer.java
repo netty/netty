@@ -15,6 +15,9 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 

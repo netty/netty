@@ -18,7 +18,7 @@ package io.netty5.handler.codec.http2;
 import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -44,7 +44,6 @@ import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -160,7 +159,7 @@ public class Http2MultiplexTransportTest {
                             serverAckOneLatch.countDown();
                             serverAckAllLatch.countDown();
                         }
-                        ReferenceCountUtil.release(msg);
+                        Resource.dispose(msg);
                     }
                 });
             }
@@ -181,7 +180,7 @@ public class Http2MultiplexTransportTest {
                         if (msg instanceof Http2SettingsFrame) {
                             clientSettingsLatch.countDown();
                         }
-                        ReferenceCountUtil.release(msg);
+                        Resource.dispose(msg);
                     }
                 });
             }
@@ -234,7 +233,7 @@ public class Http2MultiplexTransportTest {
                                     });
                                 }, 500, MILLISECONDS);
                             }
-                            ReferenceCountUtil.release(msg);
+                            Resource.dispose(msg);
                         }
                     }));
                 }
@@ -260,7 +259,7 @@ public class Http2MultiplexTransportTest {
                     if (msg instanceof Http2DataFrame && ((Http2DataFrame) msg).isEndStream()) {
                         latch.countDown();
                     }
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 }
             });
             Http2StreamChannel streamChannel = h2Bootstrap.open().syncUninterruptibly().getNow();
@@ -511,7 +510,7 @@ public class Http2MultiplexTransportTest {
                                                            true));
                                            });
                                     }
-                                    ReferenceCountUtil.release(msg);
+                                    Resource.dispose(msg);
                                 }
                             }));
                         }
@@ -558,7 +557,7 @@ public class Http2MultiplexTransportTest {
                                             if (msg instanceof Http2DataFrame && ((Http2DataFrame) msg).isEndStream()) {
                                                 latch.countDown();
                                             }
-                                            ReferenceCountUtil.release(msg);
+                                            Resource.dispose(msg);
                                         }
                                     });
                                     h2Bootstrap.open().addListener(future -> {

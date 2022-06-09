@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.flow;
 
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;

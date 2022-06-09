@@ -17,8 +17,8 @@ package io.netty5.buffer.api.internal;
 
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.util.internal.UnstableApi;
 
 import java.util.Objects;
@@ -104,8 +104,10 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         }
         int acq = acquires;
         acquires--;
-        tracer.close(acq);
-        if (acq == 0) {
+        if (acq != 0) {
+            // Only record a CLOSE if we're not going to record a DROP.
+            tracer.close(acq);
+        } else {
             // The 'acquires' was 0, now decremented to -1, which means we need to drop.
             tracer.drop(0);
             try {

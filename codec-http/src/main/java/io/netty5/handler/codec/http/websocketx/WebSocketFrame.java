@@ -17,8 +17,8 @@ package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferHolder;
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 
 import static java.nio.charset.Charset.defaultCharset;

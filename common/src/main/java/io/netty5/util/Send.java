@@ -13,10 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.buffer.api;
+package io.netty5.util;
 
-import io.netty5.buffer.api.internal.SendFromSupplier;
-import io.netty5.util.SafeCloseable;
+import io.netty5.util.internal.SendFromSupplier;
 
 import java.util.function.Function;
 import java.util.function.Supplier;

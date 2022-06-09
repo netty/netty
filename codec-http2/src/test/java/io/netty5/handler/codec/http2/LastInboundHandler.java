@@ -20,7 +20,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
@@ -195,7 +195,7 @@ public class LastInboundHandler implements ChannelHandler {
         checkException();
         Object o;
         while ((o = readInboundMessageOrUserEvent()) != null) {
-            ReferenceCountUtil.release(o);
+            Resource.dispose(o);
         }
     }
 

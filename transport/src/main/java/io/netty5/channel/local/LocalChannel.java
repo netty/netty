@@ -16,7 +16,7 @@
 package io.netty5.channel.local;
 
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AbstractChannel;
@@ -393,7 +393,7 @@ public class LocalChannel extends AbstractChannel {
         Queue<Object> inboundBuffer = this.inboundBuffer;
         Object msg;
         while ((msg = inboundBuffer.poll()) != null) {
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
         }
     }
 

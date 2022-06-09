@@ -21,7 +21,7 @@ import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -84,7 +84,8 @@ public abstract class AbstractIntegrationTest {
     }
 
     @Test
-    @Ignore("Fails due extending a composite with a composite while the reader index is not 0 of the underlying buffer")
+    @Disabled("Fails due extending a composite with a composite while the reader index is not 0 of the underlying " +
+              "buffer")
     public void testLargeRandom() throws Exception {
         final byte[] data = new byte[1024 * 1024];
         rand.nextBytes(data);

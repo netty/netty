@@ -20,6 +20,7 @@ import io.netty5.buffer.api.internal.LeakDetection;
 import io.netty5.buffer.api.internal.MemoryManagerLoader;
 import io.netty5.buffer.api.internal.MemoryManagerOverride;
 import io.netty5.buffer.api.internal.WrappingAllocation;
+import io.netty5.util.Resource;
 import io.netty5.util.SafeCloseable;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;

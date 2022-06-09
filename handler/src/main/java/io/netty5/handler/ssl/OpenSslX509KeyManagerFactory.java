@@ -18,7 +18,7 @@ package io.netty5.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -225,7 +225,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                 @Override
                 void destroy() {
                     for (Object material: materialMap.values()) {
-                        ReferenceCountUtil.release(material);
+                        Resource.dispose(material);
                     }
                     materialMap.clear();
                 }

@@ -19,7 +19,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty5.handler.codec.http.HttpResponseStatus.CONTINUE;
@@ -78,7 +78,7 @@ public class HttpServerExpectContinueHandler implements ChannelHandler {
                 if (accept == null) {
                     // the expectation failed so we refuse the request.
                     HttpResponse rejection = rejectResponse(ctx.bufferAllocator(), req);
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                     ctx.writeAndFlush(rejection).addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
                     return;
                 }

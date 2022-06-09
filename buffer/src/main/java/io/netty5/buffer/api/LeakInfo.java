@@ -16,6 +16,7 @@
 package io.netty5.buffer.api;
 
 import io.netty5.buffer.api.LeakInfo.TracePoint;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.UnstableApi;
 
 import java.util.function.Consumer;

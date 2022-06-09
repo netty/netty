@@ -40,4 +40,7 @@ public interface DnsOptEcsRecord extends DnsOptPseudoRecord {
      * Returns the bytes of the {@link InetAddress} to use.
      */
     byte[] address();
+
+    @Override
+    DnsOptEcsRecord copy();
 }

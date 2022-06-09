@@ -21,7 +21,7 @@ import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,7 +49,7 @@ public class WebSocketServerHandshakerFactoryTest {
         assertTrue(HttpUtil.isContentLengthSet(response));
         assertEquals(0, HttpUtil.getContentLength(response));
 
-        ReferenceCountUtil.release(response);
+        Resource.dispose(response);
         assertFalse(ch.finish());
     }
 }

@@ -20,7 +20,7 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
@@ -28,7 +28,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.RecvBufferAllocator;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -135,7 +134,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
             if (msg instanceof Resource<?>) {
                 ((Resource<?>) msg).close();
             } else {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
             }
             if (count.incrementAndGet() == 1) {
                 ctx.channel().config().setAutoRead(false);

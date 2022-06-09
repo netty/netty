@@ -33,8 +33,8 @@ import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.AsciiString;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -898,7 +898,7 @@ public class Http2FrameCodecTest {
                         }
                     });
                 }
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
             }
         });
 

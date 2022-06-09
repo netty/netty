@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -33,7 +34,6 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty5.util.AsciiString;
 import io.netty5.util.IllegalReferenceCountException;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -642,7 +642,7 @@ public class Http2ConnectionRoundtripTest {
             clientChannel.pipeline().addFirst(new ChannelHandler() {
                 @Override
                 public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
 
                     try {
                         // Ensure we update the window size so we will try to write the rest of the frame while

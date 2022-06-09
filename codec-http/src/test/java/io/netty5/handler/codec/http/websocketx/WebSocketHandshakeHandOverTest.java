@@ -26,6 +26,7 @@ import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -60,12 +61,13 @@ public class WebSocketHandshakeHandOverTest {
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+        protected void decodeAndClose(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
             if (frame instanceof CloseWebSocketFrame) {
                 serverReceivedCloseHandshake = true;
+                Resource.dispose(frame);
                 return;
             }
-            super.decode(ctx, frame);
+            super.decodeAndClose(ctx, frame);
         }
     }
 

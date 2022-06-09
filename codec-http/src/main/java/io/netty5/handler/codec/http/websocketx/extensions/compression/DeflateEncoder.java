@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CodecException;
@@ -93,7 +93,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     protected abstract boolean removeFrameTail(WebSocketFrame msg);
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+    protected void encodeAndClose(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final Buffer compressedContent;
         if (msg.binaryData().readableBytes() > 0) {
             compressedContent = compressContent(ctx, msg);

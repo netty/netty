@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;

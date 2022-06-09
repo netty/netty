@@ -18,7 +18,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 
 public abstract class EmbeddedChannelWriteReleaseHandlerContext extends EmbeddedChannelHandlerContext {
@@ -45,8 +45,8 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> write(Object msg) {
         try {
-            if (ReferenceCountUtil.isReferenceCounted(msg)) {
-                ReferenceCountUtil.release(msg);
+            if (Resource.isAccessible(msg, false)) {
+                Resource.dispose(msg);
                 return channel().newSucceededFuture();
             }
             return channel().write(msg);
@@ -59,8 +59,8 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
         try {
-            if (ReferenceCountUtil.isReferenceCounted(msg)) {
-                ReferenceCountUtil.release(msg);
+            if (Resource.isAccessible(msg, false)) {
+                Resource.dispose(msg);
                 return channel().newSucceededFuture();
             }
             return channel().writeAndFlush(msg);

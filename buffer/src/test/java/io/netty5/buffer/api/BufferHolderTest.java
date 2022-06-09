@@ -15,6 +15,7 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import static io.netty5.buffer.api.BufferAllocator.offHeapUnpooled;

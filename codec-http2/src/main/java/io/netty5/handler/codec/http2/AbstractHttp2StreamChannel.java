@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
@@ -31,7 +32,6 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty5.util.DefaultAttributeMap;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
@@ -400,7 +400,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     void fireChildRead(Http2Frame frame) {
         assert executor().inEventLoop();
         if (!isActive()) {
-            ReferenceCountUtil.release(frame);
+            Resource.dispose(frame);
         } else if (readStatus != ReadStatus.IDLE) {
             // If a read is in progress or has been requested, there cannot be anything in the queue,
             // otherwise we would have drained it from the queue and processed it during the read cycle.
@@ -538,7 +538,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     if (msg == null) {
                         break;
                     }
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 }
                 inboundBuffer = null;
             }
@@ -755,14 +755,14 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         public void write(Object msg, Promise<Void> promise) {
             // After this point its not possible to cancel a write anymore.
             if (!promise.setUncancellable()) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 return;
             }
 
             if (!isActive() ||
                     // Once the outbound side was closed we should not allow header / data frames
                     outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
                 promise.setFailure(new ClosedChannelException());
                 return;
             }
@@ -773,7 +773,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     writeHttp2StreamFrame(frame, promise);
                 } else {
                     String msgStr = msg.toString();
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                     promise.setFailure(new IllegalArgumentException(
                             "Message must be an " + StringUtil.simpleClassName(Http2StreamFrame.class) +
                                     ": " + msgStr));
@@ -785,7 +785,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         private void writeHttp2StreamFrame(Http2StreamFrame frame, Promise<Void> promise) {
             if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
-                ReferenceCountUtil.release(frame);
+                Resource.dispose(frame);
                 promise.setFailure(
                     new IllegalArgumentException("The first frame must be a headers frame. Was: "
                         + frame.name()));
@@ -864,7 +864,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private Http2StreamFrame validateStreamFrame(Http2StreamFrame frame) {
             if (frame.stream() != null && frame.stream() != stream) {
                 String msgString = frame.toString();
-                ReferenceCountUtil.release(frame);
+                Resource.dispose(frame);
                 throw new IllegalArgumentException(
                         "Stream " + frame.stream() + " must not be set on the frame: " + msgString);
             }

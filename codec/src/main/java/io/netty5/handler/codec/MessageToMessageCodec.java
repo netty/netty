@@ -18,6 +18,7 @@ package io.netty5.handler.codec;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.TypeParameterMatcher;
 
@@ -63,8 +64,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
 
         @Override
         @SuppressWarnings("unchecked")
-        protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-            MessageToMessageCodec.this.encode(ctx, (OUTBOUND_IN) msg, out);
+        protected void encodeAndClose(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+            MessageToMessageCodec.this.encodeAndClose(ctx, (OUTBOUND_IN) msg, out);
         }
     };
 
@@ -77,8 +78,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
 
         @Override
         @SuppressWarnings("unchecked")
-        protected void decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-            MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg);
+        protected void decodeAndClose(ChannelHandlerContext ctx, Object msg) throws Exception {
+            MessageToMessageCodec.this.decodeAndClose(ctx, (INBOUND_IN) msg);
         }
     };
 
@@ -137,12 +138,37 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
     /**
      * @see MessageToMessageEncoder#encode(ChannelHandlerContext, Object, List)
      */
-    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, List<Object> out)
-            throws Exception;
+    protected void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, List<Object> out)
+            throws Exception {
+        throw new CodecException(getClass().getName() + " must override either encode() or encodeAndClose().");
+    }
+
+    /**
+     * @see MessageToMessageEncoder#encodeAndClose(ChannelHandlerContext, Object, List)
+     */
+    protected void encodeAndClose(ChannelHandlerContext ctx, OUTBOUND_IN msg, List<Object> out) throws Exception {
+        try {
+            encode(ctx, msg, out);
+        } finally {
+            Resource.dispose(msg);
+        }
+    }
 
     /**
      * @see MessageToMessageDecoder#decode(ChannelHandlerContext, Object)
      */
-    protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg)
-            throws Exception;
+    protected void decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
+        throw new CodecException(getClass().getName() + " must override either decode() or decodeAndClose().");
+    }
+
+    /**
+     * @see MessageToMessageDecoder#decodeAndClose(ChannelHandlerContext, Object)
+     */
+    protected void decodeAndClose(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
+        try {
+            decode(ctx, msg);
+        } finally {
+            Resource.dispose(msg);
+        }
+    }
 }

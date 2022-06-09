@@ -19,6 +19,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.util.Resource;
 
 import java.net.URI;
 import java.util.Objects;
@@ -361,12 +362,13 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void decodeAndClose(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (clientConfig.handleCloseFrames() && frame instanceof CloseWebSocketFrame) {
+            Resource.dispose(frame);
             ctx.close();
             return;
         }
-        super.decode(ctx, frame);
+        super.decodeAndClose(ctx, frame);
     }
 
     @Override

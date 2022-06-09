@@ -22,6 +22,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.mockito.Mockito;
@@ -32,9 +33,9 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
-import static io.netty5.util.ReferenceCountUtil.release;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -422,11 +423,11 @@ public final class Http2TestUtil {
         try {
             assertEquals(expected, actual);
         } finally {
-            release(expected);
-            release(actual);
-            // Will return -1 when not implements ReferenceCounted.
-            assertTrue(ReferenceCountUtil.refCnt(expected) <= 0);
-            assertTrue(ReferenceCountUtil.refCnt(actual) <= 0);
+            Resource.dispose(expected);
+            Resource.dispose(actual);
+            // Will return 'false' when not implements Resource or ReferenceCounted.
+            assertFalse(Resource.isAccessible(expected, false));
+            assertFalse(Resource.isAccessible(actual, false));
         }
     }
 

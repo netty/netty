@@ -15,7 +15,7 @@
  */
 package io.netty5.util.internal;
 
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool.Handle;
 
@@ -57,7 +57,7 @@ public final class PendingWrite {
      * Fails the underlying {@link Promise} with the given cause and recycle this instance.
      */
     public boolean failAndRecycle(Throwable cause) {
-        ReferenceCountUtil.release(msg);
+        Resource.dispose(msg);
         if (promise != null) {
             promise.setFailure(cause);
         }

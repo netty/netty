@@ -18,7 +18,7 @@ package io.netty5.handler.codec.http;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -40,7 +40,6 @@ import org.junit.jupiter.api.Test;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 
-import static io.netty5.util.ReferenceCountUtil.release;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -252,7 +251,7 @@ public class HttpClientCodecTest {
             if (msg == null) {
                 break;
             }
-            release(msg);
+            Resource.dispose(msg);
         }
         for (;;) {
             Object msg = ch.readInbound();
@@ -260,7 +259,7 @@ public class HttpClientCodecTest {
                 break;
             }
             responseConsumer.onResponse(msg);
-            release(msg);
+            Resource.dispose(msg);
         }
     }
 

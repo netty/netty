@@ -44,8 +44,8 @@ import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.IllegalReferenceCountException;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.ImmediateExecutor;
@@ -414,7 +414,7 @@ public class SslHandlerTest {
                 assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
                 assertEquals(0, ((ReferenceCounted) sslEngine).refCnt());
             } finally {
-                ReferenceCountUtil.release(sslContext);
+                Resource.dispose(sslContext);
             }
         } finally {
             cert.delete();
@@ -765,8 +765,8 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
 
-            ReferenceCountUtil.release(sslServerCtx);
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslServerCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -827,8 +827,8 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
 
-            ReferenceCountUtil.release(sslServerCtx);
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslServerCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -912,7 +912,7 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
 
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -983,7 +983,7 @@ public class SslHandlerTest {
                 sc.close().syncUninterruptibly();
             }
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -1175,7 +1175,7 @@ public class SslHandlerTest {
                 sc.close().syncUninterruptibly();
             }
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -1254,7 +1254,7 @@ public class SslHandlerTest {
                 sc.close().syncUninterruptibly();
             }
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -1368,7 +1368,7 @@ public class SslHandlerTest {
                 sc.close().syncUninterruptibly();
             }
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -1665,7 +1665,7 @@ public class SslHandlerTest {
                     not(instanceOf(ClosedChannelException.class)));
         } finally {
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
+            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -1758,8 +1758,8 @@ public class SslHandlerTest {
             assertEquals(0, serverCompletionEvents.size());
         } finally {
             group.shutdownGracefully();
-            ReferenceCountUtil.release(sslClientCtx);
-            ReferenceCountUtil.release(sslServerCtx);
+            Resource.dispose(sslClientCtx);
+            Resource.dispose(sslServerCtx);
         }
     }
 

@@ -436,11 +436,9 @@ public class HttpContentEncoderTest {
             @Override
             protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
                 return new Result("myencoding", new Compressor() {
-                    private Buffer input;
 
                     @Override
                     public Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException {
-                        this.input = input;
                         return input.copy();
                     }
 
@@ -461,9 +459,6 @@ public class HttpContentEncoderTest {
 
                     @Override
                     public void close() {
-                        if (input != null) {
-                            input.close();
-                        }
                         throw new EncoderException();
                     }
                 });
@@ -483,7 +478,7 @@ public class HttpContentEncoderTest {
         assertTrue(channel.writeOutbound(new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK)));
         HttpContent<?> content = new DefaultHttpContent(preferredAllocator().copyOf(new byte[10]));
         assertTrue(channel.writeOutbound(content));
-        assertTrue(content.isAccessible());
+        assertFalse(content.isAccessible());
         assertThrows(CodecException.class, channel::finishAndReleaseAll);
 
         assertTrue(channelInactiveCalled.get());

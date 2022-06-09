@@ -17,7 +17,7 @@ package io.netty5.buffer.api.internal;
 
 import io.netty5.buffer.api.ComponentIterator;
 import io.netty5.buffer.api.ComponentIterator.Next;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 
 import java.lang.ref.Reference;
 

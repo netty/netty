@@ -13,9 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.buffer.api;
-
-import io.netty5.util.ReferenceCountUtil;
+package io.netty5.util;
 
 /**
  * A resource that has a life-time, and can be {@linkplain #close() closed}.
@@ -74,7 +72,7 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
      * <p>
      * If the object is {@link AutoCloseable}, such as anything that implements {@link Resource},
      * then it will be closed.
-     * If the object is {@link io.netty5.util.ReferenceCounted}, then it will be released once.
+     * If the object is {@link ReferenceCounted}, then it will be released once.
      * <p>
      * Any exceptions caused by this will be left to bubble up, and checked exceptions will be wrapped in a
      * {@link RuntimeException}.
@@ -92,6 +90,46 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
             }
         } else if (ReferenceCountUtil.isReferenceCounted(obj)) {
             ReferenceCountUtil.release(obj);
+        }
+    }
+
+    /**
+     * Check if an object is accessible. This returns {@code true} if the object is a {@linkplain Resource resource}
+     * that {@linkplain Resource#isAccessible() is accessible}, or if the object is
+     * {@linkplain ReferenceCounted reference counted} and has a positive
+     * {@linkplain ReferenceCounted#refCnt() reference count}.
+     * <p>
+     * If the object is neither of these types, then the expected default value is returned.
+     *
+     * @param obj The object to check.
+     * @param expectedDefault The value to return if the object is neither a resource, nor reference counted.
+     * @return If the object is accessible.
+     */
+    static boolean isAccessible(Object obj, boolean expectedDefault) {
+        if (obj instanceof Resource) {
+            return ((Resource<?>) obj).isAccessible();
+        }
+        if (obj instanceof io.netty.util.ReferenceCounted) {
+            return ((io.netty.util.ReferenceCounted) obj).refCnt() > 0;
+        }
+        return expectedDefault;
+    }
+
+    /**
+     * Record the current access location for debugging purposes.
+     * This information may be included if the resource throws a life-cycle related exception, or if it leaks.
+     * If this resource has already been closed, then this method has no effect.
+     * <p>
+     * If the given object is not a resource, or not reference counted, then this method has no effect.
+     *
+     * @param obj The object to annotate.
+     * @param hint An optional hint about this access and its context. May be {@code null}.
+     */
+    static void touch(Object obj, Object hint) {
+        if (obj instanceof Resource) {
+            ((Resource<?>) obj).touch(hint);
+        } else if (obj instanceof io.netty.util.ReferenceCounted) {
+            ((io.netty.util.ReferenceCounted) obj).touch(hint);
         }
     }
 }

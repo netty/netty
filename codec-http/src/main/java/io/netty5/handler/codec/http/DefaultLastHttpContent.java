@@ -16,7 +16,7 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import io.netty5.handler.codec.DefaultHeaders.NameValidator;
 import io.netty5.util.internal.StringUtil;
 
@@ -73,6 +73,11 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     public Send<DefaultLastHttpContent> send() {
         return payload.send().map(DefaultLastHttpContent.class,
                 payload -> new DefaultLastHttpContent(payload, trailingHeaders));
+    }
+
+    @Override
+    public DefaultLastHttpContent copy() {
+        return new DefaultLastHttpContent(payload.copy(), trailingHeaders.copy());
     }
 
     @Override

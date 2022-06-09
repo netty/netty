@@ -98,7 +98,7 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+    protected void encodeAndClose(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final Buffer data = msg.binaryData();
         byte[] mask;
 

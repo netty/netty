@@ -21,7 +21,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.MessageToMessageCodec;
 import io.netty5.handler.codec.compression.Compressor;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
@@ -76,6 +76,11 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
+        throw new UnsupportedOperationException("HttpContentEncoder use decodeAndClose().");
+    }
+
+    @Override
+    protected void decodeAndClose(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
         CharSequence acceptEncoding;
         List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
         switch (acceptEncodingHeaders.size()) {
@@ -99,12 +104,13 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
 
         acceptEncodingQueue.add(acceptEncoding);
-        ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
+        ctx.fireChannelRead(msg);
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
+    protected void encodeAndClose(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         final boolean isFull = msg instanceof HttpResponse && msg instanceof LastHttpContent;
+        boolean dispose = true;
         switch (state) {
             case AWAIT_HEADERS: {
                 ensureHeaders(msg);
@@ -141,6 +147,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                  */
                 if (isPassthru(res.protocolVersion(), code, acceptEncoding)) {
                     out.add(res);
+                    dispose = false;
                     if (!isFull) {
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
@@ -151,6 +158,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 // Pass through the full response with empty content and continue waiting for the next resp.
                 if (isFull && ((LastHttpContent<?>) res).payload().readableBytes() == 0) {
                     out.add(res);
+                    dispose = false;
                     break;
                 }
 
@@ -161,6 +169,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 // If unable to encode, pass through.
                 if (result == null) {
                     out.add(res);
+                    dispose = false;
                     if (!isFull) {
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
@@ -190,6 +199,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
                     out.add(res);
+                    dispose = false;
                     state = State.AWAIT_CONTENT;
                     if (!(msg instanceof HttpContent)) {
                         // only break out the switch statement if we have not content to process
@@ -209,12 +219,16 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             case PASS_THROUGH: {
                 ensureContent(msg);
                 out.add(msg);
+                dispose = false;
                 // Passed through all following contents of the current response.
                 if (msg instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
             }
+        }
+        if (dispose) {
+            Resource.dispose(msg);
         }
     }
 

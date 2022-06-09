@@ -24,12 +24,11 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.compression.Brotli;
-import io.netty5.handler.codec.compression.DecompressionException;
 import io.netty5.handler.codec.compression.Decompressor;
 import io.netty5.handler.codec.compression.ZlibCodecFactory;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -42,8 +41,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
-import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -51,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -387,7 +385,7 @@ public class HttpContentDecoderTest {
                         ((FullHttpRequest) msg).close();
                     }
                 } else {
-                    ReferenceCountUtil.release(msg);
+                    Resource.dispose(msg);
                 }
             }
         });
@@ -654,13 +652,10 @@ public class HttpContentDecoderTest {
             @Override
             protected Decompressor newContentDecoder(String contentEncoding) {
                 return new Decompressor() {
-                    private Buffer input;
                     @Override
-                    public Buffer decompress(Buffer input, BufferAllocator allocator) throws DecompressionException {
+                    public Buffer decompress(Buffer input, BufferAllocator allocator) {
                         if (input.readableBytes() > 0) {
-                            final Buffer slice = input.split();
-                            this.input = input;
-                            return slice;
+                            return input.split();
                         }
                         return null;
                     }
@@ -677,10 +672,12 @@ public class HttpContentDecoderTest {
 
                     @Override
                     public void close() {
-                        if (input != null) {
-                            input.close();
-                        }
-                        throw new DecoderException();
+                        throw new DecoderException("Fake exception") {
+                            @Override
+                            public synchronized Throwable fillInStackTrace() {
+                                return this; // Less logging.
+                            }
+                        };
                     }
                 };
             }
@@ -697,13 +694,8 @@ public class HttpContentDecoderTest {
         assertTrue(channel.writeInbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
         HttpContent<?> content = new DefaultHttpContent(preferredAllocator().copyOf(new byte[10]));
         assertTrue(channel.writeInbound(content));
-        assertTrue(content.isAccessible());
-        try {
-            channel.finishAndReleaseAll();
-            fail();
-        } catch (CodecException expected) {
-            // expected
-        }
+        assertFalse(content.isAccessible()); // Our decoder do not "retain" the content, so it must be freed.
+        assertThrows(CodecException.class, channel::finishAndReleaseAll);
         assertTrue(channelInactiveCalled.get());
         assertFalse(content.isAccessible());
     }

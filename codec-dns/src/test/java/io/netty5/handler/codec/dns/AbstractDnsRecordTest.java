@@ -25,40 +25,51 @@ public class AbstractDnsRecordTest {
     @Test
     public void testValidDomainName() {
         String name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
+        AbstractDnsRecord record = new TestDnsRecord(name, DnsRecordType.A, 0);
         assertEquals(name + '.', record.name());
     }
 
     @Test
     public void testValidDomainNameUmlaut() {
         String name = "ä";
-        AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
+        AbstractDnsRecord record = new TestDnsRecord(name, DnsRecordType.A, 0);
         assertEquals("xn--4ca.", record.name());
     }
 
     @Test
     public void testValidDomainNameTrailingDot() {
         String name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.";
-        AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
+        AbstractDnsRecord record = new TestDnsRecord(name, DnsRecordType.A, 0);
         assertEquals(name, record.name());
     }
 
     @Test
     public void testValidDomainNameUmlautTrailingDot() {
         String name = "ä.";
-        AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
+        AbstractDnsRecord record = new TestDnsRecord(name, DnsRecordType.A, 0);
         assertEquals("xn--4ca.", record.name());
     }
 
     @Test
     public void testValidDomainNameLength() {
         String name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        assertThrows(IllegalArgumentException.class, () -> new AbstractDnsRecord(name, DnsRecordType.A, 0) { });
+        assertThrows(IllegalArgumentException.class, () -> new TestDnsRecord(name, DnsRecordType.A, 0));
     }
 
     @Test
     public void testValidDomainNameUmlautLength() {
         String name = "äaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        assertThrows(IllegalArgumentException.class, () -> new AbstractDnsRecord(name, DnsRecordType.A, 0) { });
+        assertThrows(IllegalArgumentException.class, () -> new TestDnsRecord(name, DnsRecordType.A, 0));
+    }
+
+    private static final class TestDnsRecord extends AbstractDnsRecord {
+        TestDnsRecord(String name, DnsRecordType type, long timeToLive) {
+            super(name, type, timeToLive);
+        }
+
+        @Override
+        public DnsRecord copy() {
+            return this; // This class is immutable.
+        }
     }
 }

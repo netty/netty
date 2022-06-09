@@ -19,7 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.LeakInfo;
 import io.netty5.buffer.api.LeakInfo.TracePoint;
 import io.netty5.buffer.api.Owned;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
 

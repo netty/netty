@@ -19,33 +19,36 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.TypeParameterMatcher;
 
+import java.util.List;
+
 /**
- * {@link ChannelHandler} which decodes from one message to an other message.
+ * {@link ChannelHandler} which decodes from one message to another message.
  *
- *
- * For example here is an implementation which decodes a {@link String} to an {@link Integer} which represent
+ * For example here is an implementation which decodes a {@link String} to an {@link Integer} which represent
  * the length of the {@link String}.
  *
- * <pre>
+ * <pre>{@code
  *     public class StringToIntegerDecoder extends
- *             {@link MessageToMessageDecoder}&lt;{@link String}&gt; {
+ *             MessageToMessageDecoder<String> {
  *
- *         {@code @Override}
- *         public void decode({@link ChannelHandlerContext} ctx, {@link String} message,
- *                            List&lt;Object&gt; out) throws {@link Exception} {
+ *         @Override
+ *         public void decode(ChannelHandlerContext ctx, String message,
+ *                            List<Object> out) throws Exception {
  *             out.add(message.length());
  *         }
  *     }
- * </pre>
+ * }</pre>
  *
- * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
- * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageDecoder} will call
- * {@link ReferenceCounted#release()} on decoded messages.
- *
+ * Note that messages passed to {@link #decode(ChannelHandlerContext, Object)} will be
+ * {@linkplain Resource#dispose(Object) disposed of} automatically.
+ * <p>
+ * To take control of the message lifetime, you should instead override the
+ * {@link #decodeAndClose(ChannelHandlerContext, Object)} method.
+ * <p>
+ * Do not override both.
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
 
@@ -81,11 +84,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
             if (acceptInboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
-                try {
-                    decode(ctx, cast);
-                } finally {
-                    ReferenceCountUtil.release(cast);
-                }
+                decodeAndClose(ctx, cast);
             } else {
                 ctx.fireChannelRead(msg);
             }
@@ -97,12 +96,41 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
     }
 
     /**
-     * Decode from one message to an other. This method will be called for each written message that can be handled
+     * Decode from one message to another. This method will be called for each written message that can be handled
      * by this decoder.
+     * <p>
+     * The message will be {@linkplain Resource#dispose(Object) disposed of} after this call.
+     * <p>
+     * Subclasses that wish to sometimes pass messages through, should instead override the
+     * {@link #decodeAndClose(ChannelHandlerContext, Object)} method.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
-     * @param msg           the message to decode to an other one
+     * @param msg           the message to decode to another one
      * @throws Exception    is thrown if an error occurs
      */
-    protected abstract void decode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected void decode(ChannelHandlerContext ctx, I msg) throws Exception {
+        throw new CodecException(getClass().getName() + " must override either decode() or decodeAndClose().");
+    }
+
+    /**
+     * Decode from one message to another. This method will be called for each written message that can be handled
+     * by this decoder.
+     * <p>
+     * The message will not be automatically {@linkplain Resource#dispose(Object) disposed of} after this call.
+     * Instead, the responsibility of ensuring that messages are disposed of falls upon the implementor of this method.
+     * <p>
+     * Subclasses that wish to have incoming messages automatically disposed of should instead override the
+     * {@link #decodeAndClose(ChannelHandlerContext, Object)} method.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
+     * @param msg           the message to decode to another one
+     * @throws Exception    is thrown if an error occurs
+     */
+    protected void decodeAndClose(ChannelHandlerContext ctx, I msg) throws Exception {
+        try {
+            decode(ctx, msg);
+        } finally {
+            Resource.dispose(msg);
+        }
+    }
 }

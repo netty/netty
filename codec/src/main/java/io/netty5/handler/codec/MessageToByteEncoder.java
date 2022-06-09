@@ -21,7 +21,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.TypeParameterMatcher;
 
@@ -106,7 +106,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
                 try {
                     encode(ctx, cast, buf);
                 } finally {
-                    ReferenceCountUtil.release(cast);
+                    Resource.dispose(cast);
                 }
 
                 if (buf.isReadable()) {

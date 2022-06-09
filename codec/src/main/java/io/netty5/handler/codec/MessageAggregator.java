@@ -22,7 +22,7 @@ import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
 
@@ -398,7 +398,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             handleOversizedMessage(ctx, oversized);
         } finally {
             // Release the message in case it is a full one.
-            ReferenceCountUtil.release(oversized);
+            Resource.dispose(oversized);
         }
     }
 

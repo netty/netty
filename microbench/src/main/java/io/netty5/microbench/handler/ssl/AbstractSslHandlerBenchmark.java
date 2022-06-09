@@ -17,6 +17,7 @@ package io.netty5.microbench.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.ssl.SslContext;
@@ -26,7 +27,6 @@ import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.microbench.channel.EmbeddedChannelWriteAccumulatingHandlerContext;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
-import io.netty5.util.ReferenceCountUtil;
 import org.openjdk.jmh.annotations.Param;
 
 import javax.net.ssl.SSLEngine;
@@ -127,11 +127,11 @@ public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     protected final void destroySslHandlers() {
         try {
             if (clientSslHandler != null) {
-                ReferenceCountUtil.release(clientSslHandler.engine());
+                Resource.dispose(clientSslHandler.engine());
             }
         } finally {
             if (serverSslHandler != null) {
-                ReferenceCountUtil.release(serverSslHandler.engine());
+                Resource.dispose(serverSslHandler.engine());
             }
         }
     }

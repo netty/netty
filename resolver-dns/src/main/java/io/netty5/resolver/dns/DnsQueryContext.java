@@ -18,13 +18,14 @@ package io.netty5.resolver.dns;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
+import io.netty5.handler.codec.dns.DnsOptPseudoRecord;
 import io.netty5.handler.codec.dns.DnsQuery;
 import io.netty5.handler.codec.dns.DnsQuestion;
 import io.netty5.handler.codec.dns.DnsRecord;
 import io.netty5.handler.codec.dns.DnsRecordType;
 import io.netty5.handler.codec.dns.DnsResponse;
 import io.netty5.handler.codec.dns.DnsSection;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
@@ -75,6 +76,10 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                 !hasOptRecord(additionals)) {
             optResource = new AbstractDnsOptPseudoRrRecord(parent.maxPayloadSize(), 0, 0) {
                 // We may want to remove this in the future and let the user just specify the opt record in the query.
+                @Override
+                public DnsOptPseudoRecord copy() {
+                    return this; // This instance is immutable.
+                }
             };
         } else {
             optResource = null;
@@ -156,7 +161,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
             promise.tryFailure(cause);
             writePromise.setFailure(cause);
         } finally {
-            ReferenceCountUtil.release(query);
+            Resource.dispose(query);
         }
     }
 
@@ -205,7 +210,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         } else if (trySuccess(envelope)) {
             return; // Ownership transferred, don't release
         }
-        ReferenceCountUtil.release(envelope);
+        Resource.dispose(envelope);
     }
 
     @SuppressWarnings("unchecked")

@@ -25,7 +25,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2Exception.ShutdownHint;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
@@ -200,7 +200,7 @@ public class Http2ConnectionHandlerTest {
         when(ctx.executor()).thenReturn(executor);
         doAnswer(in -> {
             Object msg = in.getArgument(0);
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
             return null;
         }).when(ctx).fireChannelRead(any());
         doAnswer((Answer<Future<Void>>) in ->

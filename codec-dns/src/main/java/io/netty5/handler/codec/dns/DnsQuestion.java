@@ -27,4 +27,7 @@ public interface DnsQuestion extends DnsRecord {
      */
     @Override
     long timeToLive();
+
+    @Override
+    DnsQuestion copy();
 }

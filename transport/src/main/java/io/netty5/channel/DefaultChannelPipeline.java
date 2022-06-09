@@ -15,8 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.Resource;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.ResourceLeakDetector;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.FastThreadLocal;
@@ -102,10 +101,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     final Object touch(Object msg, DefaultChannelHandlerContext next) {
         if (touch) {
-            if (msg instanceof Resource<?>) {
-                return ((Resource<?>) msg).touch(next);
-            }
-            return ReferenceCountUtil.touch(msg, next);
+            Resource.touch(msg, next);
         }
         return msg;
     }
@@ -920,7 +916,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                             "It usually means the last handler in the pipeline did not handle the exception.",
                     cause);
         } finally {
-            ReferenceCountUtil.release(cause);
+            Resource.dispose(cause);
         }
     }
 
@@ -941,7 +937,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     /**
      * Called once a message hit the end of the {@link ChannelPipeline} without been handled by the user
      * in {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}. This method is responsible
-     * to call {@link ReferenceCountUtil#release(Object)} on the given msg at some point.
+     * to call {@link Resource#dispose(Object)} on the given msg at some point.
      */
     protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
         try {
@@ -950,7 +946,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                             "Please check your pipeline configuration. Discarded message pipeline : {}. Channel : {}.",
                     msg, ctx.pipeline().names(), ctx.channel());
         } finally {
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
         }
     }
 
@@ -964,12 +960,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     /**
      * Called once an user event hit the end of the {@link ChannelPipeline} without been handled by the user
      * in {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}. This method is responsible
-     * to call {@link ReferenceCountUtil#release(Object)} on the given event at some point.
+     * to call {@link Resource#dispose(Object)} on the given event at some point.
      */
     protected void onUnhandledInboundUserEventTriggered(Object evt) {
         // This may not be a configuration error and so don't log anything.
         // The event may be superfluous for the current pipeline configuration.
-        ReferenceCountUtil.release(evt);
+        Resource.dispose(evt);
     }
 
     /**

@@ -17,6 +17,7 @@ package io.netty5.channel.group;
 
 import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ServerChannel;
@@ -250,7 +251,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
         }
         ChannelGroupFuture future = new DefaultChannelGroupFuture(this, futures, executor);
-        ReferenceCountUtil.release(message);
+        Resource.dispose(message);
         return future;
     }
 
@@ -368,7 +369,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
         }
         final ChannelGroupFuture future = new DefaultChannelGroupFuture(this, futures, executor);
-        ReferenceCountUtil.release(message);
+        Resource.dispose(message);
         return future;
     }
 

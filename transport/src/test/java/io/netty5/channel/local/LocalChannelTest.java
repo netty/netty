@@ -31,11 +31,11 @@ import io.netty5.channel.IoHandler;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.SingleThreadEventLoop;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.RejectedExecutionHandler;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -875,7 +875,7 @@ public class LocalChannelTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.info(String.format("Received message: %s", msg));
-            ReferenceCountUtil.safeRelease(msg);
+            SilentDispose.dispose(msg, logger);
         }
     }
 

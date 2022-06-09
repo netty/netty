@@ -32,7 +32,7 @@ import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -316,10 +316,10 @@ public class OpenSslPrivateKeyMethodTest {
                     server.close().sync();
                 }
             } finally {
-                ReferenceCountUtil.release(sslClientContext);
+                Resource.dispose(sslClientContext);
             }
         } finally {
-            ReferenceCountUtil.release(sslServerContext);
+            Resource.dispose(sslServerContext);
         }
     }
 
@@ -378,10 +378,10 @@ public class OpenSslPrivateKeyMethodTest {
                     server.close().sync();
                 }
             } finally {
-                ReferenceCountUtil.release(sslClientContext);
+                Resource.dispose(sslClientContext);
             }
         } finally {
-            ReferenceCountUtil.release(sslServerContext);
+            Resource.dispose(sslServerContext);
         }
     }
 

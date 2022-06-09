@@ -25,7 +25,7 @@ import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.NetUtil;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.ResourceLeakDetector;
 import io.netty5.util.internal.logging.InternalLogLevel;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -248,7 +248,7 @@ public class EpollReuseAddrTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ReferenceCountUtil.release(msg);
+            Resource.dispose(msg);
             received.set(true);
         }
     }

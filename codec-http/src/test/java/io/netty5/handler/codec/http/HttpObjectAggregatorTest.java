@@ -20,7 +20,7 @@ import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResultProvider;
 import io.netty5.util.AsciiString;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -165,7 +165,7 @@ public class HttpObjectAggregatorTest {
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         assertThat(response, instanceOf(LastHttpContent.class));
-        ReferenceCountUtil.release(response);
+        Resource.dispose(response);
 
         assertTrue(embedder.isOpen());
 
@@ -213,7 +213,7 @@ public class HttpObjectAggregatorTest {
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         assertThat(response, instanceOf(LastHttpContent.class));
-        ReferenceCountUtil.release(response);
+        Resource.dispose(response);
 
         if (serverShouldCloseConnection(message, response)) {
             assertFalse(embedder.isOpen());
@@ -581,7 +581,7 @@ public class HttpObjectAggregatorTest {
             try {
                 assertTrue(msg1 instanceof FullHttpRequest);
             } finally {
-                ReferenceCountUtil.release(msg1);
+                Resource.dispose(msg1);
             }
 
             // Don't aggregate: non-POST
@@ -598,8 +598,8 @@ public class HttpObjectAggregatorTest {
                 assertSame(content2, channel.readInbound());
                 assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
             } finally {
-              ReferenceCountUtil.release(request2);
-              ReferenceCountUtil.release(content2);
+              Resource.dispose(request2);
+              Resource.dispose(content2);
             }
 
             assertFalse(channel.finish());
@@ -644,7 +644,7 @@ public class HttpObjectAggregatorTest {
             try {
                 assertTrue(msg1 instanceof FullHttpResponse);
             } finally {
-                ReferenceCountUtil.release(msg1);
+                Resource.dispose(msg1);
             }
 
             // Don't aggregate: application/json
@@ -662,8 +662,8 @@ public class HttpObjectAggregatorTest {
                 assertSame(content2, channel.readInbound());
                 assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
             } finally {
-                ReferenceCountUtil.release(response2);
-                ReferenceCountUtil.release(content2);
+                Resource.dispose(response2);
+                Resource.dispose(content2);
             }
 
             assertFalse(channel.finish());

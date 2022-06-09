@@ -21,9 +21,11 @@ import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.AsyncMapping;
 import io.netty5.util.DomainNameMapping;
 import io.netty5.util.Mapping;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +37,7 @@ import static java.util.Objects.requireNonNull;
  * which certificate to choose for the host name.</p>
  */
 public class SniHandler extends AbstractSniHandler<SslContext> {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SniHandler.class);
     private static final Selection EMPTY_SELECTION = new Selection(null, null);
 
     protected final AsyncMapping<String, SslContext> mapping;
@@ -138,7 +141,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
             // transferred to the SslHandler.
             // See https://github.com/netty/netty/issues/5678
             if (sslHandler != null) {
-                ReferenceCountUtil.safeRelease(sslHandler.engine());
+                SilentDispose.dispose(sslHandler.engine(), logger);
             }
         }
     }

@@ -27,7 +27,7 @@ import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
@@ -152,7 +152,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
             promiseAggregator.setFailure(t);
         } finally {
             if (release) {
-                ReferenceCountUtil.release(msg);
+                Resource.dispose(msg);
             }
             promiseAggregator.doneAllocatingPromises();
         }

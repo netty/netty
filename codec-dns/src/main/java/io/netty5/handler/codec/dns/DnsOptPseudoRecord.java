@@ -41,4 +41,7 @@ public interface DnsOptPseudoRecord extends DnsRecord {
      * into {@link DnsOptPseudoRecord#timeToLive()}.
      */
     int flags();
+
+    @Override
+    DnsOptPseudoRecord copy();
 }

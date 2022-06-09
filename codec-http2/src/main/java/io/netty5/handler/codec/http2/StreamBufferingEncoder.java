@@ -18,10 +18,12 @@ package io.netty5.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.UnstableApi;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Iterator;
@@ -57,6 +59,7 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
  */
 @UnstableApi
 public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamBufferingEncoder.class);
 
     /**
      * Thrown if buffered streams are terminated due to this encoder being closed.
@@ -217,7 +220,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             pendingStream.frames.add(new DataFrame(data, padding, endOfStream, promise));
             return promise.asFuture();
         } else {
-            ReferenceCountUtil.safeRelease(data);
+            SilentDispose.dispose(data, logger);
             return ctx.newFailedFuture(connectionError(PROTOCOL_ERROR, "Stream does not exist %d", streamId));
         }
     }
@@ -373,7 +376,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         @Override
         void release(Throwable t) {
             super.release(t);
-            ReferenceCountUtil.safeRelease(data);
+            SilentDispose.dispose(data, logger);
         }
 
         @Override

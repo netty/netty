@@ -24,11 +24,13 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.DefaultMessageSizeEstimator;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -71,6 +73,7 @@ import static org.mockito.Mockito.when;
  */
 @SuppressWarnings("unchecked")
 public class StreamBufferingEncoderTest {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamBufferingEncoderTest.class);
 
     private StreamBufferingEncoder encoder;
 
@@ -544,7 +547,7 @@ public class StreamBufferingEncoderTest {
     private static Answer<Future<Void>> successAnswer() {
         return invocation -> {
             for (Object a : invocation.getArguments()) {
-                ReferenceCountUtil.safeRelease(a);
+                SilentDispose.dispose(a, logger);
             }
 
             return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);

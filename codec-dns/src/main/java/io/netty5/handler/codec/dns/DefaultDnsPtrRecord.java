@@ -70,4 +70,9 @@ public class DefaultDnsPtrRecord extends AbstractDnsRecord implements DnsPtrReco
 
         return buf.toString();
     }
+
+    @Override
+    public DnsPtrRecord copy() {
+        return this;
+    }
 }

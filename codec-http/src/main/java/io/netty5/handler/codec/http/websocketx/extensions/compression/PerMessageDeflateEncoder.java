@@ -87,9 +87,9 @@ class PerMessageDeflateEncoder extends DeflateEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg,
+    protected void encodeAndClose(ChannelHandlerContext ctx, WebSocketFrame msg,
                           List<Object> out) throws Exception {
-        super.encode(ctx, msg, out);
+        super.encodeAndClose(ctx, msg, out);
 
         if (msg.isFinalFragment()) {
             compressing = false;

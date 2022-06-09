@@ -19,7 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.LeakInfo;
 import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Send;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;

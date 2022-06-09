@@ -24,7 +24,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -128,13 +128,13 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
 
     @Override
     public final ChannelHandlerContext fireUserEventTriggered(Object event) {
-        ReferenceCountUtil.release(event);
+        Resource.dispose(event);
         return this;
     }
 
     @Override
     public final ChannelHandlerContext fireChannelRead(Object msg) {
-        ReferenceCountUtil.release(msg);
+        Resource.dispose(msg);
         return this;
     }
 

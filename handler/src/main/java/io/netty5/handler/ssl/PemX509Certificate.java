@@ -17,8 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Resource;
-import io.netty5.buffer.api.Send;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.CharsetUtil;
