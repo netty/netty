@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -30,7 +30,7 @@ import io.netty5.util.internal.UnstableApi;
  * {@code #setExtraStreamIds(Integer.MAX_VALUE)}.
  */
 @UnstableApi
-public interface Http2GoAwayFrame extends Http2Frame, ByteBufHolder {
+public interface Http2GoAwayFrame extends Http2Frame, Resource<Http2GoAwayFrame> {
     /**
      * The reason for beginning closure of the connection. Represented as an HTTP/2 error code.
      */
@@ -60,30 +60,7 @@ public interface Http2GoAwayFrame extends Http2Frame, ByteBufHolder {
      * Optional debugging information describing cause the GOAWAY. Will not be {@code null}, but may
      * be empty.
      */
-    @Override
-    ByteBuf content();
+    Buffer content();
 
-    @Override
     Http2GoAwayFrame copy();
-
-    @Override
-    Http2GoAwayFrame duplicate();
-
-    @Override
-    Http2GoAwayFrame retainedDuplicate();
-
-    @Override
-    Http2GoAwayFrame replace(ByteBuf content);
-
-    @Override
-    Http2GoAwayFrame retain();
-
-    @Override
-    Http2GoAwayFrame retain(int increment);
-
-    @Override
-    Http2GoAwayFrame touch();
-
-    @Override
-    Http2GoAwayFrame touch(Object hint);
 }

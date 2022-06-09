@@ -14,11 +14,10 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
-
 
 /**
  * Handler for outbound HTTP/2 traffic.
@@ -63,5 +62,5 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter {
      */
     @Override
     Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-                            Http2Flags flags, ByteBuf payload);
+                            Http2Flags flags, Buffer payload);
 }

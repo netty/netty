@@ -14,9 +14,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.stream.ChunkedFile;
 import io.netty5.handler.stream.ChunkedInput;
@@ -33,6 +32,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -103,7 +103,7 @@ public class Http2DataChunkedInputTest {
 
     @Test
     public void testWrappedReturnNull() throws Exception {
-        Http2DataChunkedInput input = new Http2DataChunkedInput(new ChunkedInput<ByteBuf>() {
+        Http2DataChunkedInput input = new Http2DataChunkedInput(new ChunkedInput<Buffer>() {
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -116,12 +116,7 @@ public class Http2DataChunkedInputTest {
             }
 
             @Override
-            public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-                return null;
-            }
-
-            @Override
-            public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            public Buffer readChunk(BufferAllocator allocator) throws Exception {
                 return null;
             }
 
@@ -135,7 +130,7 @@ public class Http2DataChunkedInputTest {
                 return 0;
             }
         }, STREAM);
-        assertNull(input.readChunk(ByteBufAllocator.DEFAULT));
+        assertNull(input.readChunk(preferredAllocator()));
     }
 
     private static void check(ChunkedInput<?>... inputs) {
@@ -156,15 +151,15 @@ public class Http2DataChunkedInputTest {
                 break;
             }
 
-            ByteBuf buffer = dataFrame.content();
-            while (buffer.isReadable()) {
+            Buffer buffer = dataFrame.content();
+            while (buffer.readableBytes() > 0) {
                 assertEquals(BYTES[i++], buffer.readByte());
                 read++;
                 if (i == BYTES.length) {
                     i = 0;
                 }
             }
-            buffer.release();
+            buffer.close();
 
             // Save last chunk
             http2DataFrame = dataFrame;

@@ -327,7 +327,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                     final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                             ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireInboundEventTriggered(goAwayFrame.retainedDuplicate());
+                    childChannel.pipeline().fireInboundEventTriggered(goAwayFrame.copy());
                 }
                 return true;
             });

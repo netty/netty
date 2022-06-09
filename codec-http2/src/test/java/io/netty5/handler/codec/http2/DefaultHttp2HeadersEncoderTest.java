@@ -12,17 +12,16 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2TestUtil.newTestEncoder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,12 +41,9 @@ public class DefaultHttp2HeadersEncoderTest {
     @Test
     public void encodeShouldSucceed() throws Http2Exception {
         Http2Headers headers = headers();
-        ByteBuf buf = Unpooled.buffer();
-        try {
+        try (Buffer buf = onHeapAllocator().allocate(256)) {
             encoder.encodeHeaders(3 /* randomly chosen */, headers, buf);
-            assertTrue(buf.writerIndex() > 0);
-        } finally {
-            buf.release();
+            assertTrue(buf.writerOffset() > 0);
         }
     }
 
@@ -58,7 +54,7 @@ public class DefaultHttp2HeadersEncoderTest {
         assertThrows(StreamException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                encoder.encodeHeaders(3 /* randomly chosen */, headers, Unpooled.buffer());
+                encoder.encodeHeaders(3 /* randomly chosen */, headers, onHeapAllocator().allocate(256));
             }
         });
     }

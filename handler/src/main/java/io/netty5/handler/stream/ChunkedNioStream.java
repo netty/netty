@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -30,7 +29,7 @@ import static java.util.Objects.requireNonNull;
  * chunk by chunk.  Please note that the {@link ReadableByteChannel} must
  * operate in blocking mode.  Non-blocking mode channels are not supported.
  */
-public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
+public class ChunkedNioStream implements ChunkedInput<Buffer> {
 
     private final ReadableByteChannel in;
 
@@ -53,7 +52,7 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
      * Creates a new instance that fetches data from the specified channel.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     *                  {@link #readChunk(BufferAllocator)} call
      */
     public ChunkedNioStream(ReadableByteChannel in, int chunkSize) {
         this.in = requireNonNull(in, "in");
@@ -92,14 +91,8 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
         in.close();
     }
 
-    @Deprecated
     @Override
-    public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-        return readChunk(ctx.alloc());
-    }
-
-    @Override
-    public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+    public Buffer readChunk(BufferAllocator allocator) throws Exception {
         if (isEndOfInput()) {
             return null;
         }
@@ -118,7 +111,7 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
         }
         byteBuffer.flip();
         boolean release = true;
-        ByteBuf buffer = allocator.buffer(byteBuffer.remaining());
+        Buffer buffer = allocator.allocate(byteBuffer.remaining());
         try {
             buffer.writeBytes(byteBuffer);
             byteBuffer.clear();
@@ -126,7 +119,7 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
             return buffer;
         } finally {
             if (release) {
-                buffer.release();
+                buffer.close();
             }
         }
     }

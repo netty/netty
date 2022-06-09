@@ -12,12 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
@@ -33,7 +30,6 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -45,12 +41,13 @@ import org.mockito.verification.VerificationMode;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
 import static io.netty5.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty5.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
+import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -109,11 +106,10 @@ public class StreamBufferingEncoderTest {
         when(writer.configuration()).thenReturn(configuration);
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
-        when(writer.writeData(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean()))
+        when(writer.writeData(any(ChannelHandlerContext.class), anyInt(), any(Buffer.class), anyInt(), anyBoolean()))
                 .thenAnswer(successAnswer());
-        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong())).thenAnswer(
-                successAnswer());
-        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class)))
+        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong())).thenAnswer(successAnswer());
+        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(Buffer.class)))
                 .thenAnswer(successAnswer());
         when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
             anyInt(), anyBoolean())).thenAnswer(noopAnswer());
@@ -136,8 +132,8 @@ public class StreamBufferingEncoderTest {
 
         // Set LifeCycleManager on encoder and decoder
         when(ctx.channel()).thenReturn(channel);
-        when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
-        when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.bufferAllocator()).thenReturn(onHeapAllocator());
+        when(channel.bufferAllocator()).thenReturn(onHeapAllocator());
         when(executor.inEventLoop()).thenReturn(true);
         doAnswer((Answer<Promise<Void>>) invocation -> newPromise()).when(ctx).newPromise();
         doAnswer((Answer<Future<Void>>) invocation -> ImmediateEventExecutor.INSTANCE.newSucceededFuture(null))
@@ -167,25 +163,29 @@ public class StreamBufferingEncoderTest {
         encoder.close();
     }
 
-    @Disabled("Disabled until H2 is ported to Buffer")
     @Test
     public void multipleWritesToActiveStream() {
         encoder.writeSettingsAck(ctx);
         encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
-        ByteBuf data = data();
+        Buffer data = data();
         final int expectedBytes = data.readableBytes() * 3;
         encoder.writeData(ctx, 3, data, 0, false);
         encoder.writeData(ctx, 3, data(), 0, false);
         encoder.writeData(ctx, 3, data(), 0, false);
+        when(writer.writeData(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0), eq(false)))
+                .thenAnswer(inv -> {
+                    Buffer buffer = inv.getArgument(2);
+                    assertEquals(expectedBytes, buffer.readableBytes());
+                    return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+                });
         encoderWriteHeaders(3);
 
         writeVerifyWriteHeaders(times(1), 3);
         // Contiguous data writes are coalesced
-        ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+        ArgumentCaptor<Buffer> bufCaptor = ArgumentCaptor.forClass(Buffer.class);
         verify(writer, times(1)).writeData(any(ChannelHandlerContext.class), eq(3),
                 bufCaptor.capture(), eq(0), eq(false));
-        assertEquals(expectedBytes, bufCaptor.getValue().readableBytes());
     }
 
     @Test
@@ -227,18 +227,18 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, false);
+        encoder.writeData(ctx, 3, empty(), 0, false);
         writeVerifyWriteHeaders(times(1), 3);
-        encoder.writeData(ctx, 5, EMPTY_BUFFER, 0, false);
+        encoder.writeData(ctx, 5, empty(), 0, false);
         verify(writer, never())
-                .writeData(eq(ctx), eq(5), any(ByteBuf.class), eq(0), eq(false));
+                .writeData(eq(ctx), eq(5), any(Buffer.class), eq(0), eq(false));
     }
 
     @Test
     public void bufferingNewStreamFailsAfterGoAwayReceived() throws Http2Exception {
         encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(0);
-        connection.goAwayReceived(1, 8, EMPTY_BUFFER);
+        connection.goAwayReceived(1, 8, empty());
 
         Future<Void> future = encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
@@ -260,7 +260,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(5, connection.numActiveStreams());
         assertEquals(4, encoder.numBufferedStreams());
 
-        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
+        connection.goAwayReceived(11, 8, empty());
 
         assertEquals(5, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
@@ -279,7 +279,7 @@ public class StreamBufferingEncoderTest {
         encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
         encoderWriteHeaders(3);
-        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
+        connection.goAwayReceived(11, 8, empty());
         Future<Void> f = encoderWriteHeaders(5);
 
         assertTrue(f.await().cause() instanceof Http2GoAwayException);
@@ -303,8 +303,7 @@ public class StreamBufferingEncoderTest {
         Future<Void> f3 = encoderWriteHeaders(7);
         assertEquals(2, encoder.numBufferedStreams());
 
-        ByteBuf empty = Unpooled.buffer(0);
-        encoder.writeGoAway(ctx, 3, CANCEL.code(), empty);
+        encoder.writeGoAway(ctx, 3, CANCEL.code(), empty());
 
         assertEquals(1, connection.numActiveStreams());
         assertEquals(2, encoder.numBufferedStreams());
@@ -322,7 +321,7 @@ public class StreamBufferingEncoderTest {
         encoderWriteHeaders(3);
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, true);
+        encoder.writeData(ctx, 3, empty(), 0, true);
 
         assertEquals(0, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
@@ -475,10 +474,10 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void closedBufferedStreamReleasesByteBuf() {
+    public void closedBufferedStreamReleasesBuffer() {
         encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(0);
-        ByteBuf data = mock(ByteBuf.class);
+        Buffer data = mock(Buffer.class);
         Future<Void> f1 = encoderWriteHeaders(3);
         assertEquals(1, encoder.numBufferedStreams());
         Future<Void> f2 = encoder.writeData(ctx, 3, data, 0, false);
@@ -489,7 +488,7 @@ public class StreamBufferingEncoderTest {
         assertTrue(rstFuture.isSuccess());
         assertTrue(f1.isSuccess());
         assertTrue(f2.isSuccess());
-        verify(data).release();
+        verify(data).close();
     }
 
     @Test
@@ -572,10 +571,10 @@ public class StreamBufferingEncoderTest {
         return ImmediateEventExecutor.INSTANCE.newPromise();
     }
 
-    private static ByteBuf data() {
-        ByteBuf buf = Unpooled.buffer(10);
+    private static Buffer data() {
+        Buffer buf = onHeapAllocator().allocate(10);
         for (int i = 0; i < buf.writableBytes(); i++) {
-            buf.writeByte(i);
+            buf.writeByte((byte) i);
         }
         return buf;
     }

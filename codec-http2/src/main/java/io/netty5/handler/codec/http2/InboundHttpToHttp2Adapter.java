@@ -72,7 +72,7 @@ public class InboundHttpToHttp2Adapter implements ChannelHandler {
                 ctx, streamId, messageHeaders, 0, !(hasContent || hasTrailers));
         if (hasContent) {
             final Buffer payload = message.payload();
-            listener.onDataRead(ctx, streamId, ByteBufAdaptor.intoByteBuf(payload), 0, !hasTrailers);
+            listener.onDataRead(ctx, streamId, payload, 0, !hasTrailers);
         }
         if (hasTrailers) {
             Http2Headers headers = HttpConversionUtil.toHttp2Headers(message.trailingHeaders(), true);

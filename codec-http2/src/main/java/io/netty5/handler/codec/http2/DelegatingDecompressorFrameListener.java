@@ -14,10 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.compression.Brotli;
@@ -75,7 +72,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding, boolean endOfStream)
             throws Http2Exception {
         final Http2Stream stream = connection.stream(streamId);
         final Http2Decompressor decompressor = decompressor(stream);
@@ -94,26 +91,24 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
             for (;;) {
                 if (decomp.isFinished()) {
-                    flowController.consumeBytes(stream,
-                            listener.onDataRead(ctx, streamId, Unpooled.EMPTY_BUFFER, padding, endOfStream));
+                    flowController.consumeBytes(stream, listener.onDataRead(
+                            ctx, streamId, ctx.bufferAllocator().allocate(0), padding, endOfStream));
                     break;
                 }
-                Buffer buffer = ByteBufAdaptor.extractOrCopy(ctx.bufferAllocator(), data);
-                int idx = buffer.readerOffset();
-                decompressed = decomp.decompress(buffer, ctx.bufferAllocator());
-                if (decompressed == null || idx == data.readerIndex()) {
-                    flowController.consumeBytes(stream,
-                            listener.onDataRead(ctx, streamId, Unpooled.EMPTY_BUFFER, padding, endOfStream));
+                int idx = data.readerOffset();
+                decompressed = decomp.decompress(data, ctx.bufferAllocator());
+                if (decompressed == null || idx == data.readerOffset()) {
+                    flowController.consumeBytes(stream, listener.onDataRead(
+                            ctx, streamId, ctx.bufferAllocator().allocate(0), padding, endOfStream));
                     break;
                 } else {
                     // Immediately return the bytes back to the flow controller. ConsumedBytesConverter will convert
                     // from the decompressed amount which the user knows about to the compressed amount which flow
                     // control knows about.
                     decompressor.incrementDecompressedBytes(decompressed.readableBytes());
-                    ByteBuf convertedDecompressed = ByteBufAdaptor.intoByteBuf(decompressed);
                     flowController.consumeBytes(stream,
-                            listener.onDataRead(ctx, streamId, convertedDecompressed, padding, false));
-                    convertedDecompressed.release();
+                            listener.onDataRead(ctx, streamId, decompressed, padding, false));
+                    decompressed.close();
                     decompressed = null;
                 }
                 padding = 0; // Padding is only communicated once on the first iteration.
@@ -295,8 +290,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
-        public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
-                boolean endOfStream) throws Http2Exception {
+        public void receiveFlowControlledFrame(Http2Stream stream, Buffer data, int padding,
+                                               boolean endOfStream) throws Http2Exception {
             flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
         }
 

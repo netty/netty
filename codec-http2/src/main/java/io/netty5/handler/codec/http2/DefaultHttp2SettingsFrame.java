@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.codec.http2;
 
 import io.netty5.util.internal.StringUtil;

@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;
@@ -34,14 +33,14 @@ import static java.util.Objects.requireNonNull;
  * Otherwise, {@link ChunkedStream} will generate many too small chunks or
  * block unnecessarily often.
  */
-public class ChunkedStream implements ChunkedInput<ByteBuf> {
-
+public class ChunkedStream implements ChunkedInput<Buffer> {
     static final int DEFAULT_CHUNK_SIZE = 8192;
 
     private final PushbackInputStream in;
     private final int chunkSize;
     private long offset;
     private boolean closed;
+    private byte[] cachedArray;
 
     /**
      * Creates a new instance that fetches data from the specified stream.
@@ -53,8 +52,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
     /**
      * Creates a new instance that fetches data from the specified stream.
      *
-     * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     * @param chunkSize the number of bytes to fetch on each {@link #readChunk(BufferAllocator)} call.
      */
     public ChunkedStream(InputStream in, int chunkSize) {
         requireNonNull(in, "in");
@@ -103,14 +101,8 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
         in.close();
     }
 
-    @Deprecated
     @Override
-    public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-        return readChunk(ctx.alloc());
-    }
-
-    @Override
-    public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+    public Buffer readChunk(BufferAllocator allocator) throws Exception {
         if (isEndOfInput()) {
             return null;
         }
@@ -124,10 +116,27 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
         }
 
         boolean release = true;
-        ByteBuf buffer = allocator.buffer(chunkSize);
+        Buffer buffer = allocator.allocate(chunkSize);
         try {
             // transfer to buffer
-            int written = buffer.writeBytes(in, chunkSize);
+            int written;
+            try (var iter = buffer.forEachWritable()) {
+                var component = iter.first();
+                if (component.hasWritableArray()) {
+                    written = in.read(component.writableArray(),
+                            component.writableArrayOffset(),
+                            component.writableArrayLength());
+                } else {
+                    int size = Math.min(component.writableBytes(), chunkSize);
+                    if (cachedArray == null || cachedArray.length < size) {
+                        cachedArray = new byte[size];
+                    }
+                    written = in.read(cachedArray, 0, size);
+                    if (written > 0) {
+                        buffer.writeBytes(cachedArray, 0, written);
+                    }
+                }
+            }
             if (written < 0) {
                 return null;
             }
@@ -136,7 +145,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
             return buffer;
         } finally {
             if (release) {
-                buffer.release();
+                buffer.close();
             }
         }
     }

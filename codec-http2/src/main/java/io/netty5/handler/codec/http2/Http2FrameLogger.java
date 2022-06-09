@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.internal.UnstableApi;
@@ -66,8 +66,8 @@ public class Http2FrameLogger {
         return logger.isEnabled(level);
     }
 
-    public void logData(Direction direction, ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-            boolean endStream) {
+    public void logData(Direction direction, ChannelHandlerContext ctx, int streamId, Buffer data, int padding,
+                        boolean endStream) {
         if (isEnabled()) {
             logger.log(level, "{} {} DATA: streamId={} padding={} endStream={} length={} bytes={}", ctx.channel(),
                     direction.name(), streamId, padding, endStream, data.readableBytes(), toString(data));
@@ -139,7 +139,7 @@ public class Http2FrameLogger {
     }
 
     public void logGoAway(Direction direction, ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData) {
+            Buffer debugData) {
         if (isEnabled()) {
             logger.log(level, "{} {} GO_AWAY: lastStreamId={} errorCode={} length={} bytes={}", ctx.channel(),
                     direction.name(), lastStreamId, errorCode, debugData.readableBytes(), toString(debugData));
@@ -155,21 +155,21 @@ public class Http2FrameLogger {
     }
 
     public void logUnknownFrame(Direction direction, ChannelHandlerContext ctx, byte frameType, int streamId,
-            Http2Flags flags, ByteBuf data) {
+            Http2Flags flags, Buffer data) {
         if (isEnabled()) {
             logger.log(level, "{} {} UNKNOWN: frameType={} streamId={} flags={} length={} bytes={}", ctx.channel(),
                     direction.name(), frameType & 0xFF, streamId, flags.value(), data.readableBytes(), toString(data));
         }
     }
 
-    private String toString(ByteBuf buf) {
+    private String toString(Buffer buf) {
         if (level == InternalLogLevel.TRACE || buf.readableBytes() <= BUFFER_LENGTH_THRESHOLD) {
             // Log the entire buffer.
-            return ByteBufUtil.hexDump(buf);
+            return BufferUtil.hexDump(buf);
         }
 
         // Otherwise just log the first 64 bytes.
         int length = Math.min(buf.readableBytes(), BUFFER_LENGTH_THRESHOLD);
-        return ByteBufUtil.hexDump(buf, buf.readerIndex(), length) + "...";
+        return BufferUtil.hexDump(buf, buf.readerOffset(), length) + "...";
     }
 }

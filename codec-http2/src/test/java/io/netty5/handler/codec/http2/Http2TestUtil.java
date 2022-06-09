@@ -14,10 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
@@ -27,16 +24,17 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.mockito.Mockito;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyByte;
@@ -100,21 +98,17 @@ public final class Http2TestUtil {
 
     public static HpackEncoder newTestEncoder() {
         try {
-            return newTestEncoder(true, MAX_HEADER_LIST_SIZE, MAX_HEADER_TABLE_SIZE);
+            return newTestEncoder(MAX_HEADER_LIST_SIZE, MAX_HEADER_TABLE_SIZE);
         } catch (Http2Exception e) {
             throw new Error("max size not allowed?", e);
         }
     }
 
-    public static HpackEncoder newTestEncoder(boolean ignoreMaxHeaderListSize,
-                                              long maxHeaderListSize, long maxHeaderTableSize) throws Http2Exception {
+    public static HpackEncoder newTestEncoder(long maxHeaderListSize, long maxHeaderTableSize) throws Http2Exception {
         HpackEncoder hpackEncoder = new HpackEncoder(false, 16, 0);
-        ByteBuf buf = Unpooled.buffer();
-        try {
+        try (Buffer buf = onHeapAllocator().allocate(256)) {
             hpackEncoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
             hpackEncoder.setMaxHeaderListSize(maxHeaderListSize);
-        } finally  {
-            buf.release();
         }
         return hpackEncoder;
     }
@@ -164,7 +158,7 @@ public final class Http2TestUtil {
         }
 
         @Override
-        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+        public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding, boolean endOfStream)
                 throws Http2Exception {
             int numBytes = data.readableBytes();
             int processed = listener.onDataRead(ctx, streamId, data, padding, endOfStream);
@@ -242,7 +236,7 @@ public final class Http2TestUtil {
         }
 
         @Override
-        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData)
                 throws Http2Exception {
             listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
             goAwayLatch.countDown();
@@ -257,7 +251,7 @@ public final class Http2TestUtil {
 
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                ByteBuf payload) throws Http2Exception {
+                                   Buffer payload) throws Http2Exception {
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             messageLatch.countDown();
         }
@@ -345,16 +339,16 @@ public final class Http2TestUtil {
             }
         };
 
-        final ConcurrentLinkedQueue<ByteBuf> buffers = new ConcurrentLinkedQueue<>();
+        final ConcurrentLinkedQueue<Buffer> buffers = new ConcurrentLinkedQueue<>();
 
         Http2FrameWriter frameWriter = Mockito.mock(Http2FrameWriter.class);
         doAnswer(invocationOnMock -> {
             for (;;) {
-                ByteBuf buf = buffers.poll();
-                if (buf == null) {
-                    break;
+                try (Buffer buf = buffers.poll()) {
+                    if (buf == null) {
+                        break;
+                    }
                 }
-                buf.release();
             }
             return null;
         }).when(frameWriter).close();
@@ -369,8 +363,8 @@ public final class Http2TestUtil {
         when(frameWriter.writePing(any(ChannelHandlerContext.class), anyBoolean(), anyLong()))
                 .thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
         when(frameWriter.writeGoAway(any(ChannelHandlerContext.class), anyInt(),
-                anyLong(), any(ByteBuf.class))).thenAnswer(invocationOnMock -> {
-                    buffers.offer((ByteBuf) invocationOnMock.getArgument(3));
+                anyLong(), any(Buffer.class))).thenAnswer(invocationOnMock -> {
+                    buffers.offer(invocationOnMock.getArgument(3));
                     return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                 });
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class), anyInt(),
@@ -380,9 +374,9 @@ public final class Http2TestUtil {
                 any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean()))
                 .thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
 
-        when(frameWriter.writeData(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class), anyInt(),
+        when(frameWriter.writeData(any(ChannelHandlerContext.class), anyInt(), any(Buffer.class), anyInt(),
                 anyBoolean())).thenAnswer(invocationOnMock -> {
-                    buffers.offer((ByteBuf) invocationOnMock.getArgument(2));
+                    buffers.offer(invocationOnMock.getArgument(2));
                     return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                 });
 
@@ -396,8 +390,8 @@ public final class Http2TestUtil {
                 anyInt())).thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
 
         when(frameWriter.writeFrame(any(ChannelHandlerContext.class), anyByte(), anyInt(), any(Http2Flags.class),
-                any(ByteBuf.class))).thenAnswer(invocationOnMock -> {
-                    buffers.offer((ByteBuf) invocationOnMock.getArgument(4));
+                any(Buffer.class))).thenAnswer(invocationOnMock -> {
+                    buffers.offer(invocationOnMock.getArgument(4));
                     return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                 });
         return frameWriter;
@@ -411,12 +405,20 @@ public final class Http2TestUtil {
         return any(Http2Settings.class);
     }
 
-    static ByteBuf bb(String s) {
-        return ByteBufUtil.writeUtf8(UnpooledByteBufAllocator.DEFAULT, s);
+    static Buffer bb(String s) {
+        return onHeapAllocator().copyOf(s.getBytes(StandardCharsets.UTF_8));
     }
 
-    static ByteBuf bb(int size) {
-        return UnpooledByteBufAllocator.DEFAULT.buffer().writeZero(size);
+    static Buffer bb(byte[] s) {
+        return onHeapAllocator().copyOf(s);
+    }
+
+    static Buffer bb(int size) {
+        return onHeapAllocator().allocate(size).fill((byte) 0).skipWritable(size);
+    }
+
+    static Buffer empty() {
+        return onHeapAllocator().allocate(0);
     }
 
     static void assertEqualsAndRelease(Http2Frame expected, Http2Frame actual) {

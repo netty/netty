@@ -15,7 +15,7 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
 
@@ -84,11 +84,11 @@ public interface Http2Connection {
          * @param errorCode    the error code, if abnormal closure.
          * @param debugData    application-defined debug data.
          */
-        void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData);
+        void onGoAwaySent(int lastStreamId, long errorCode, Buffer debugData);
 
         /**
          * Called when a {@code GOAWAY} was received from the remote endpoint. This event handler duplicates {@link
-         * Http2FrameListener#onGoAwayRead(io.netty5.channel.ChannelHandlerContext, int, long, ByteBuf)}
+         * Http2FrameListener#onGoAwayRead(io.netty5.channel.ChannelHandlerContext, int, long, Buffer)}
          * but is added here in order to simplify application logic for handling {@code GOAWAY} in a uniform way. An
          * application should generally not handle both events, but if it does this method is called second, after
          * notifying the {@link Http2FrameListener}.
@@ -99,7 +99,7 @@ public interface Http2Connection {
          * @param errorCode    the error code, if abnormal closure.
          * @param debugData    application-defined debug data.
          */
-        void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData);
+        void onGoAwayReceived(int lastStreamId, long errorCode, Buffer debugData);
     }
 
     /**
@@ -333,7 +333,7 @@ public interface Http2Connection {
      * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame. Note that reference count ownership
      * belongs to the caller (ownership is not transferred to this method).
      */
-    void goAwayReceived(int lastKnownStream, long errorCode, ByteBuf message) throws Http2Exception;
+    void goAwayReceived(int lastKnownStream, long errorCode, Buffer message) throws Http2Exception;
 
     /**
      * Indicates whether or not a {@code GOAWAY} was sent to the remote endpoint.
@@ -351,5 +351,5 @@ public interface Http2Connection {
      * belongs to the caller (ownership is not transferred to this method).
      * @return {@code true} if the corresponding {@code GOAWAY} frame should be sent to the remote endpoint.
      */
-    boolean goAwaySent(int lastKnownStream, long errorCode, ByteBuf message) throws Http2Exception;
+    boolean goAwaySent(int lastKnownStream, long errorCode, Buffer message) throws Http2Exception;
 }

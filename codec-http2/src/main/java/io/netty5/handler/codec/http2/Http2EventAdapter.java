@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 
@@ -25,7 +25,7 @@ import io.netty5.util.internal.UnstableApi;
 @UnstableApi
 public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameListener {
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding, boolean endOfStream)
             throws Http2Exception {
         return data.readableBytes() + padding;
     }
@@ -71,7 +71,7 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData)
             throws Http2Exception {
     }
 
@@ -82,7 +82,7 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
 
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-            ByteBuf payload) throws Http2Exception {
+                               Buffer payload) throws Http2Exception {
     }
 
     @Override
@@ -106,10 +106,10 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+    public void onGoAwaySent(int lastStreamId, long errorCode, Buffer debugData) {
     }
 
     @Override
-    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+    public void onGoAwayReceived(int lastStreamId, long errorCode, Buffer debugData) {
     }
 }

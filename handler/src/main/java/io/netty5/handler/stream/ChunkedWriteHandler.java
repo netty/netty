@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -60,7 +60,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositive;
  *
  * Some {@link ChunkedInput} generates a chunk on a certain event or timing.
  * Such {@link ChunkedInput} implementation often returns {@code null} on
- * {@link ChunkedInput#readChunk(ChannelHandlerContext)}, resulting in the indefinitely suspended
+ * {@link ChunkedInput#readChunk(BufferAllocator)}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
  */
@@ -187,7 +187,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
         }
 
         boolean requiresFlush = true;
-        ByteBufAllocator allocator = ctx.alloc();
+        BufferAllocator allocator = ctx.bufferAllocator();
         while (channel.isWritable()) {
             final PendingWrite currentWrite = queue.peek();
 

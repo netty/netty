@@ -16,9 +16,8 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.util.AsciiString;
@@ -28,6 +27,7 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
 
+import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -67,10 +67,6 @@ public final class Http2CodecUtil {
     public static final int INT_FIELD_LENGTH = 4;
     public static final short MAX_WEIGHT = 256;
     public static final short MIN_WEIGHT = 1;
-
-    private static final ByteBuf CONNECTION_PREFACE =
-            unreleasableBuffer(directBuffer(24).writeBytes("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8)))
-                    .asReadOnly();
 
     public static final Supplier<Buffer> CONNECTION_PREFACE_BUFFER =
             offHeapAllocator().constBufferSupplier("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8));
@@ -171,15 +167,7 @@ public final class Http2CodecUtil {
     }
 
     /**
-     * Returns a buffer containing the {@link #CONNECTION_PREFACE}.
-     */
-    public static ByteBuf connectionPrefaceBuf() {
-        // Return a duplicate so that modifications to the reader index will not affect the original buffer.
-        return CONNECTION_PREFACE.retainedDuplicate();
-    }
-
-    /**
-     * Returns a buffer containing the {@link #CONNECTION_PREFACE}.
+     * Returns a buffer containing the {@link #CONNECTION_PREFACE_BUFFER}.
      */
     public static Buffer connectionPrefaceBuffer() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
@@ -204,25 +192,26 @@ public final class Http2CodecUtil {
      * Creates a buffer containing the error message from the given exception. If the cause is
      * {@code null} returns an empty buffer.
      */
-    public static ByteBuf toByteBuf(ChannelHandlerContext ctx, Throwable cause) {
+    public static Buffer toBuffer(ChannelHandlerContext ctx, Throwable cause) {
+        BufferAllocator allocator = ctx.bufferAllocator();
         if (cause == null || cause.getMessage() == null) {
-            return Unpooled.EMPTY_BUFFER;
+            return allocator.allocate(0);
         }
 
-        return ByteBufUtil.writeUtf8(ctx.alloc(), cause.getMessage());
+        return allocator.copyOf(cause.getMessage().getBytes(StandardCharsets.UTF_8));
     }
 
     /**
      * Reads a big-endian (31-bit) integer from the buffer.
      */
-    public static int readUnsignedInt(ByteBuf buf) {
+    public static int readUnsignedInt(Buffer buf) {
         return buf.readInt() & 0x7fffffff;
     }
 
     /**
      * Writes an HTTP/2 frame header to the output buffer.
      */
-    public static void writeFrameHeader(ByteBuf out, int payloadLength, byte type,
+    public static void writeFrameHeader(Buffer out, int payloadLength, byte type,
             Http2Flags flags, int streamId) {
         out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
         writeFrameHeaderInternal(out, payloadLength, type, flags, streamId);
@@ -261,11 +250,10 @@ public final class Http2CodecUtil {
                 "allowed size (%d)", maxHeaderListSize);
     }
 
-    static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,
-            Http2Flags flags, int streamId) {
+    static void writeFrameHeaderInternal(Buffer out, int payloadLength, byte type, Http2Flags flags, int streamId) {
         out.writeMedium(payloadLength);
         out.writeByte(type);
-        out.writeByte(flags.value());
+        out.writeByte((byte) flags.value());
         out.writeInt(streamId);
     }
 

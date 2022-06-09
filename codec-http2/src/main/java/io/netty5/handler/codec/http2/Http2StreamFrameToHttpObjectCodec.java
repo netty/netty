@@ -13,12 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandler.Sharable;
@@ -47,8 +45,6 @@ import io.netty5.util.AttributeKey;
 import io.netty5.util.internal.UnstableApi;
 
 import java.util.List;
-
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 
 /**
  * This handler converts from {@link Http2StreamFrame} to {@link HttpObject},
@@ -123,11 +119,9 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         } else if (frame instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) frame;
             if (dataFrame.isEndStream()) {
-                ctx.fireChannelRead(new DefaultLastHttpContent(
-                        extractOrCopy(ctx.bufferAllocator(), dataFrame.content()), validateHeaders));
+                ctx.fireChannelRead(new DefaultLastHttpContent(dataFrame.content(), validateHeaders));
             } else {
-                ctx.fireChannelRead(new DefaultHttpContent(extractOrCopy(ctx.bufferAllocator(),
-                        dataFrame.content())));
+                ctx.fireChannelRead(new DefaultHttpContent(dataFrame.content()));
             }
         }
     }
@@ -136,7 +130,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         boolean needFiller = !(last instanceof FullHttpMessage) && last.trailingHeaders().isEmpty();
         final Buffer payload = last.payload();
         if (payload.readableBytes() > 0 || needFiller) {
-            out.add(new DefaultHttp2DataFrame(ByteBufAdaptor.intoByteBuf(payload), last.trailingHeaders().isEmpty()));
+            out.add(new DefaultHttp2DataFrame(payload.send(), last.trailingHeaders().isEmpty()));
         }
         if (!last.trailingHeaders().isEmpty()) {
             Http2Headers headers = HttpConversionUtil.toHttp2Headers(last.trailingHeaders(), validateHeaders);
@@ -191,7 +185,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         } else if (obj instanceof HttpContent) {
             HttpContent<?> cont = (HttpContent<?>) obj;
             final Buffer payload = cont.payload();
-            out.add(new DefaultHttp2DataFrame(ByteBufAdaptor.intoByteBuf(payload), false));
+            out.add(new DefaultHttp2DataFrame(payload.send(), false));
         }
     }
 

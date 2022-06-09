@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
@@ -218,7 +219,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public void goAwayReceived(final int lastKnownStream, long errorCode, ByteBuf debugData) throws Http2Exception {
+    public void goAwayReceived(final int lastKnownStream, long errorCode, Buffer debugData) throws Http2Exception {
         if (localEndpoint.lastStreamKnownByPeer() >= 0 && localEndpoint.lastStreamKnownByPeer() < lastKnownStream) {
             throw connectionError(PROTOCOL_ERROR, "lastStreamId MUST NOT increase. Current value: %d new value: %d",
                     localEndpoint.lastStreamKnownByPeer(), lastKnownStream);
@@ -242,7 +243,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public boolean goAwaySent(final int lastKnownStream, long errorCode, ByteBuf debugData) throws Http2Exception {
+    public boolean goAwaySent(final int lastKnownStream, long errorCode, Buffer debugData) throws Http2Exception {
         if (remoteEndpoint.lastStreamKnownByPeer() >= 0) {
             // Protect against re-entrancy. Could happen if writing the frame fails, and error handling
             // treating this is a connection handler and doing a graceful shutdown...

@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 
@@ -46,7 +47,7 @@ public interface Http2FrameReader extends Closeable {
      * Attempts to read the next frame from the input buffer. If enough data is available to fully
      * read the frame, notifies the listener of the read frame.
      */
-    void readFrame(ChannelHandlerContext ctx, ByteBuf input, Http2FrameListener listener)
+    void readFrame(ChannelHandlerContext ctx, Buffer input, Http2FrameListener listener)
             throws Http2Exception;
 
     /**

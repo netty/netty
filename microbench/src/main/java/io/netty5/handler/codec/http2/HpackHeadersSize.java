@@ -31,10 +31,11 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 
 import java.util.List;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 
 /**
  * Enum that indicates the size of the headers to be used for the benchmark.
@@ -58,7 +59,7 @@ public enum HpackHeadersSize {
         return HpackHeader.createHeaders(numHeaders, nameLength, valueLength, limitAscii);
     }
 
-    public ByteBuf newOutBuffer() {
-        return Unpooled.buffer(numHeaders * (nameLength + valueLength));
+    public Buffer newOutBuffer() {
+        return onHeapAllocator().allocate(numHeaders * (nameLength + valueLength));
     }
 }

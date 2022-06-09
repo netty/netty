@@ -29,7 +29,6 @@ import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
 public class Http2ClientUpgradeCodecTest {
 
     @Test

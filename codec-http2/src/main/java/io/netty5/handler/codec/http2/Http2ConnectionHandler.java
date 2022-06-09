@@ -14,16 +14,15 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
@@ -31,12 +30,13 @@ import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.buffer.ByteBufUtil.hexDump;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty5.channel.ChannelFutureListeners.CLOSE_ON_FAILURE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
-import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuffer;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
 import static io.netty5.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;
@@ -60,14 +60,14 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * {@link Http2LocalFlowController}
  */
 @UnstableApi
-public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager {
+public class Http2ConnectionHandler extends ByteToMessageDecoderForBuffer implements Http2LifecycleManager {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
 
     private static final Http2Headers HEADERS_TOO_LARGE_HEADERS = ReadOnlyHttp2Headers.serverHeaders(false,
             HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText());
-    private static final ByteBuf HTTP_1_X_BUF = Unpooled.unreleasableBuffer(
-        Unpooled.wrappedBuffer(new byte[] {'H', 'T', 'T', 'P', '/', '1', '.'})).asReadOnly();
+    private static final Buffer HTTP_1_X_BUF =
+            BufferAllocator.offHeapUnpooled().copyOf(new byte[] {'H', 'T', 'T', 'P', '/', '1', '.'}).makeReadOnly();
 
     private final Http2ConnectionDecoder decoder;
     private final Http2ConnectionEncoder encoder;
@@ -199,7 +199,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     private abstract class BaseDecoder {
-        public abstract void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
+        public abstract void decode(ChannelHandlerContext ctx, Buffer in) throws Exception;
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
         public void channelActive(ChannelHandlerContext ctx) throws Exception { }
 
@@ -222,7 +222,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     private final class PrefaceDecoder extends BaseDecoder {
-        private ByteBuf clientPrefaceString;
+        private Buffer clientPrefaceString;
         private boolean prefaceSent;
 
         PrefaceDecoder(ChannelHandlerContext ctx) throws Exception {
@@ -238,7 +238,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
             try {
                 if (ctx.channel().isActive() && readClientPrefaceString(in) && verifyFirstFrameIsSettings(in)) {
                     // After the preface is read, it is time to hand over control to the post initialized decoder.
@@ -282,7 +282,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          */
         private void cleanup() {
             if (clientPrefaceString != null) {
-                clientPrefaceString.release();
+                clientPrefaceString.close();
                 clientPrefaceString = null;
             }
         }
@@ -293,7 +293,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          * @return {@code true} if processing of the client preface string is complete. Since client preface strings can
          *         only be received by servers, returns true immediately for client endpoints.
          */
-        private boolean readClientPrefaceString(ByteBuf in) throws Http2Exception {
+        private boolean readClientPrefaceString(Buffer in) throws Http2Exception {
             if (clientPrefaceString == null) {
                 return true;
             }
@@ -302,27 +302,31 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             int bytesRead = min(in.readableBytes(), prefaceRemaining);
 
             // If the input so far doesn't match the preface, break the connection.
-            if (bytesRead == 0 || !ByteBufUtil.equals(in, in.readerIndex(),
-                                                      clientPrefaceString, clientPrefaceString.readerIndex(),
-                                                      bytesRead)) {
+            if (bytesRead == 0 || !BufferUtil.equals(in, in.readerOffset(),
+                                                     clientPrefaceString, clientPrefaceString.readerOffset(),
+                                                     bytesRead)) {
                 int maxSearch = 1024; // picked because 512 is too little, and 2048 too much
-                int http1Index =
-                    ByteBufUtil.indexOf(HTTP_1_X_BUF, in.slice(in.readerIndex(), min(in.readableBytes(), maxSearch)));
-                if (http1Index != -1) {
-                    String chunk = in.toString(in.readerIndex(), http1Index - in.readerIndex(), CharsetUtil.US_ASCII);
-                    throw connectionError(PROTOCOL_ERROR, "Unexpected HTTP/1.x request: %s", chunk);
+                in.makeReadOnly();
+                try (Buffer preface = in.copy(in.readerOffset(), min(in.readableBytes(), maxSearch), true)) {
+                    int http1Index = preface.bytesBefore(HTTP_1_X_BUF);
+                    if (http1Index != -1) {
+                        try (Buffer chunk = preface.readSplit(http1Index)) {
+                            throw connectionError(PROTOCOL_ERROR, "Unexpected HTTP/1.x request: %s",
+                                                  chunk.toString(StandardCharsets.US_ASCII));
+                        }
+                    }
                 }
-                String receivedBytes = hexDump(in, in.readerIndex(),
+                String receivedBytes = BufferUtil.hexDump(in, in.readerOffset(),
                                                min(in.readableBytes(), clientPrefaceString.readableBytes()));
                 throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt. " +
                                                       "Hex dump for received bytes: %s", receivedBytes);
             }
-            in.skipBytes(bytesRead);
-            clientPrefaceString.skipBytes(bytesRead);
+            in.skipReadable(bytesRead);
+            clientPrefaceString.skipReadable(bytesRead);
 
-            if (!clientPrefaceString.isReadable()) {
+            if (clientPrefaceString.readableBytes() == 0) {
                 // Entire preface has been read.
-                clientPrefaceString.release();
+                clientPrefaceString.close();
                 clientPrefaceString = null;
                 return true;
             }
@@ -337,18 +341,18 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          * data is required before we can determine the next frame type.
          * @throws Http2Exception thrown if the next frame is NOT a non-ack {@code SETTINGS} frame.
          */
-        private boolean verifyFirstFrameIsSettings(ByteBuf in) throws Http2Exception {
+        private boolean verifyFirstFrameIsSettings(Buffer in) throws Http2Exception {
             if (in.readableBytes() < 5) {
                 // Need more data before we can see the frame type for the first frame.
                 return false;
             }
 
-            short frameType = in.getUnsignedByte(in.readerIndex() + 3);
-            short flags = in.getUnsignedByte(in.readerIndex() + 4);
+            int frameType = in.getUnsignedByte(in.readerOffset() + 3);
+            int flags = in.getUnsignedByte(in.readerOffset() + 4);
             if (frameType != SETTINGS || (flags & Http2Flags.ACK) != 0) {
                 throw connectionError(PROTOCOL_ERROR, "First received frame was not SETTINGS. " +
                                                       "Hex dump for first 5 bytes: %s",
-                                      hexDump(in, in.readerIndex(), 5));
+                                      BufferUtil.hexDump(in, in.readerOffset(), 5));
             }
             return true;
         }
@@ -366,12 +370,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             final boolean isClient = !connection().isServer();
             if (isClient) {
                 // Clients must send the preface string as the first bytes on the connection.
-                ctx.write(connectionPrefaceBuf()).addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
+                ctx.write(connectionPrefaceBuffer()).addListener(ctx.channel(), CLOSE_ON_FAILURE);
             }
 
             // Both client and server must send their initial settings.
             encoder.writeSettings(ctx, initialSettings)
-                   .addListener(ctx.channel(), ChannelFutureListeners.CLOSE_ON_FAILURE);
+                   .addListener(ctx.channel(), CLOSE_ON_FAILURE);
 
             if (isClient) {
                 // If this handler is extended by the user and we directly fire the userEvent from this context then
@@ -384,7 +388,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     private final class FrameDecoder extends BaseDecoder {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
             try {
                 decoder.decodeFrame(ctx, in);
             } catch (Throwable e) {
@@ -445,7 +449,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         byteDecoder.decode(ctx, in);
     }
 
@@ -774,28 +778,29 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public Future<Void> goAway(final ChannelHandlerContext ctx, final int lastStreamId, final long errorCode,
-                                final ByteBuf debugData) {
+                                final Buffer debugData) {
         final Http2Connection connection = connection();
         try {
             if (!connection.goAwaySent(lastStreamId, errorCode, debugData)) {
-                debugData.release();
+                debugData.close();
                 return ctx.newSucceededFuture();
             }
         } catch (Throwable cause) {
-            debugData.release();
+            debugData.close();
             return ctx.newFailedFuture(cause);
         }
 
-        // Need to retain before we write the buffer because if we do it after the refCnt could already be 0 and
-        // result in an IllegalRefCountException.
-        debugData.retain();
+        // Need to retain a shallow-copy before we write the buffer because we may need it later for debug-logging,
+        // and the debugData buffer will be freed by the go-away write.
+        debugData.makeReadOnly();
+        Buffer debugDataCopy = debugData.copy(true);
         Future<Void> future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData);
 
         if (future.isDone()) {
-            processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future);
+            processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugDataCopy, future);
         } else {
             future.addListener(future1 ->
-                    processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future1));
+                    processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugDataCopy, future1));
         }
 
         return future;
@@ -837,7 +842,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             lastKnownStream = connection().remote().lastStreamCreated();
         }
-        return goAway(ctx, lastKnownStream, errorCode, Http2CodecUtil.toByteBuf(ctx, cause));
+        return goAway(ctx, lastKnownStream, errorCode, Http2CodecUtil.toBuffer(ctx, cause));
     }
 
     @SuppressWarnings("unchecked")
@@ -859,13 +864,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     /**
      * Returns the client preface string if this is a client connection, otherwise returns {@code null}.
      */
-    private static ByteBuf clientPrefaceString(Http2Connection connection) {
-        return connection.isServer() ? connectionPrefaceBuf() : null;
+    private static Buffer clientPrefaceString(Http2Connection connection) {
+        return connection.isServer() ? connectionPrefaceBuffer() : null;
     }
 
     private static void processGoAwayWriteResult(final ChannelHandlerContext ctx, final int lastStreamId,
-                                                 final long errorCode, final ByteBuf debugData, Future<?> future) {
-        try {
+                                                 final long errorCode, final Buffer debugData, Future<?> future) {
+        try (debugData) {
             if (future.isSuccess()) {
                 if (errorCode != NO_ERROR.code()) {
                     if (logger.isDebugEnabled()) {
@@ -883,9 +888,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 }
                 ctx.close();
             }
-        } finally {
-            // We're done with the debug data now.
-            debugData.release();
         }
     }
 

@@ -32,6 +32,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.util.AsciiString;
 
@@ -123,7 +124,7 @@ final class HpackDecoder {
      * <p>
      * This method assumes the entire header block is contained in {@code in}.
      */
-    public void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
+    public void decode(int streamId, Buffer in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
         Http2HeadersSink sink = new Http2HeadersSink(streamId, headers, maxHeaderListSize, validateHeaders);
         decode(in, sink);
 
@@ -132,7 +133,7 @@ final class HpackDecoder {
         sink.finish();
     }
 
-    private void decode(ByteBuf in, Sink sink) throws Http2Exception {
+    private void decode(Buffer in, Sink sink) throws Http2Exception {
         int index = 0;
         int nameLength = 0;
         int valueLength = 0;
@@ -140,7 +141,7 @@ final class HpackDecoder {
         boolean huffmanEncoded = false;
         CharSequence name = null;
         IndexType indexType = IndexType.NONE;
-        while (in.isReadable()) {
+        while (in.readableBytes() > 0) {
             switch (state) {
                 case READ_HEADER_REPRESENTATION:
                     byte b = in.readByte();
@@ -320,15 +321,6 @@ final class HpackDecoder {
         }
     }
 
-    /**
-     * @deprecated use {@link #setMaxHeaderListSize(long)}; {@code maxHeaderListSizeGoAway} is
-     *     ignored
-     */
-    @Deprecated
-    public void setMaxHeaderListSize(long maxHeaderListSize, long maxHeaderListSizeGoAway) throws Http2Exception {
-        setMaxHeaderListSize(maxHeaderListSize);
-    }
-
     public void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
         if (maxHeaderListSize < MIN_HEADER_LIST_SIZE || maxHeaderListSize > MAX_HEADER_LIST_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
@@ -447,16 +439,16 @@ final class HpackDecoder {
         }
     }
 
-    private CharSequence readStringLiteral(ByteBuf in, int length, boolean huffmanEncoded) throws Http2Exception {
+    private CharSequence readStringLiteral(Buffer in, int length, boolean huffmanEncoded) throws Http2Exception {
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
         }
         byte[] buf = new byte[length];
-        in.readBytes(buf);
+        in.readBytes(buf, 0, length);
         return new AsciiString(buf, false);
     }
 
-    private static IllegalArgumentException notEnoughDataException(ByteBuf in) {
+    private static IllegalArgumentException notEnoughDataException(Buffer in) {
         return new IllegalArgumentException("decode only works with an entire header block! " + in);
     }
 
@@ -465,8 +457,8 @@ final class HpackDecoder {
      * <p>
      * Visible for testing only!
      */
-    static int decodeULE128(ByteBuf in, int result) throws Http2Exception {
-        final int readerIndex = in.readerIndex();
+    static int decodeULE128(Buffer in, int result) throws Http2Exception {
+        final int readerIndex = in.readerOffset();
         final long v = decodeULE128(in, (long) result);
         if (v > Integer.MAX_VALUE) {
             // the maximum value that can be represented by a signed 32 bit number is:
@@ -474,7 +466,7 @@ final class HpackDecoder {
             // OR
             // 0x0 + 0x7f + (0x7f << 7) + (0x7f << 14) + (0x7f << 21) + (0x7 << 28)
             // we should reset the readerIndex if we overflowed the int type.
-            in.readerIndex(readerIndex);
+            in.readerOffset(readerIndex);
             throw DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION;
         }
         return (int) v;
@@ -485,11 +477,11 @@ final class HpackDecoder {
      * <p>
      * Visible for testing only!
      */
-    static long decodeULE128(ByteBuf in, long result) throws Http2Exception {
+    static long decodeULE128(Buffer in, long result) throws Http2Exception {
         assert result <= 0x7f && result >= 0;
         final boolean resultStartedAtZero = result == 0;
-        final int writerIndex = in.writerIndex();
-        for (int readerIndex = in.readerIndex(), shift = 0; readerIndex < writerIndex; ++readerIndex, shift += 7) {
+        final int writerOffset = in.writerOffset();
+        for (int readerIndex = in.readerOffset(), shift = 0; readerIndex < writerOffset; ++readerIndex, shift += 7) {
             byte b = in.getByte(readerIndex);
             if (shift == 56 && ((b & 0x80) != 0 || b == 0x7F && !resultStartedAtZero)) {
                 // the maximum value that can be represented by a signed 64 bit number is:
@@ -503,7 +495,7 @@ final class HpackDecoder {
             }
 
             if ((b & 0x80) == 0) {
-                in.readerIndex(readerIndex + 1);
+                in.readerOffset(readerIndex + 1);
                 return result + ((b & 0x7FL) << shift);
             }
             result += (b & 0x7FL) << shift;

@@ -12,12 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.FullHttpMessage;
@@ -135,9 +132,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
                 // Write the data
                 final Buffer payload = ((HttpContent<?>) msg).payload();
-                final ByteBuf content = ByteBufAdaptor.intoByteBuf(payload);
                 endStream = isLastContent && trailers.isEmpty();
-                encoder.writeData(ctx, currentStreamId, content, 0, endStream)
+                encoder.writeData(ctx, currentStreamId, payload, 0, endStream)
                         .cascadeTo(promiseAggregator.newPromise());
                 release = false;
 

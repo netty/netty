@@ -31,7 +31,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ByteProcessor;
 
@@ -65,7 +65,7 @@ final class HpackHuffmanEncoder {
      * @param out the output stream for the compressed data
      * @param data the string literal to be Huffman encoded
      */
-    public void encode(ByteBuf out, CharSequence data) {
+    public void encode(Buffer out, CharSequence data) {
         requireNonNull(out, "out");
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
@@ -80,7 +80,7 @@ final class HpackHuffmanEncoder {
         }
     }
 
-    private void encodeSlowPath(ByteBuf out, CharSequence data) {
+    private void encodeSlowPath(Buffer out, CharSequence data) {
         long current = 0;
         int n = 0;
 
@@ -95,14 +95,14 @@ final class HpackHuffmanEncoder {
 
             while (n >= 8) {
                 n -= 8;
-                out.writeByte((int) (current >> n));
+                out.writeByte((byte) (current >> n));
             }
         }
 
         if (n > 0) {
             current <<= 8 - n;
             current |= 0xFF >>> n; // this should be EOS symbol
-            out.writeByte((int) current);
+            out.writeByte((byte) current);
         }
     }
 
@@ -132,7 +132,7 @@ final class HpackHuffmanEncoder {
     }
 
     private final class EncodeProcessor implements ByteProcessor {
-        ByteBuf out;
+        Buffer out;
         private long current;
         private int n;
 
@@ -147,7 +147,7 @@ final class HpackHuffmanEncoder {
 
             while (n >= 8) {
                 n -= 8;
-                out.writeByte((int) (current >> n));
+                out.writeByte((byte) (current >> n));
             }
             return true;
         }
@@ -157,7 +157,7 @@ final class HpackHuffmanEncoder {
                 if (n > 0) {
                     current <<= 8 - n;
                     current |= 0xFF >>> n; // this should be EOS symbol
-                    out.writeByte((int) current);
+                    out.writeByte((byte) current);
                 }
             } finally {
                 out = null;

@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
@@ -39,5 +39,5 @@ public interface Http2DataWriter {
      * @return the future for the write.
      */
     Future<Void> writeData(ChannelHandlerContext ctx, int streamId,
-                     ByteBuf data, int padding, boolean endStream);
+                           Buffer data, int padding, boolean endStream);
 }

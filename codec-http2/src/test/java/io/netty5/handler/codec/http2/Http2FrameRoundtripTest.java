@@ -12,14 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.EmptyByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
@@ -28,7 +23,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -37,19 +31,19 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
-import java.util.LinkedList;
 import java.util.List;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_PADDING;
 import static io.netty5.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
+import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
+import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static io.netty5.handler.codec.http2.Http2TestUtil.newTestDecoder;
 import static io.netty5.handler.codec.http2.Http2TestUtil.newTestEncoder;
 import static io.netty5.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty5.util.CharsetUtil.UTF_8;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -83,24 +77,18 @@ public class Http2FrameRoundtripTest {
     @Mock
     private Channel channel;
 
-    @Mock
-    private ByteBufAllocator alloc;
-
     private Http2FrameWriter writer;
     private Http2FrameReader reader;
-    private final List<ByteBuf> needReleasing = new LinkedList<>();
 
     @BeforeEach
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        when(ctx.alloc()).thenReturn(alloc);
+        when(ctx.bufferAllocator()).thenReturn(onHeapAllocator());
         when(ctx.executor()).thenReturn(executor);
         when(ctx.channel()).thenReturn(channel);
         doAnswer((Answer<Future<Void>>) in ->
                 ImmediateEventExecutor.INSTANCE.newSucceededFuture(null)).when(ctx).write(any());
-        doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer()).when(alloc).buffer();
-        doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer((Integer) in.getArguments()[0])).when(alloc).buffer(anyInt());
         doAnswer((Answer<Promise<Void>>) invocation ->
                 GlobalEventExecutor.INSTANCE.newPromise()).when(ctx).newPromise();
 
@@ -108,87 +96,70 @@ public class Http2FrameRoundtripTest {
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));
     }
 
-    @AfterEach
-    public void tearDown() {
-        try {
-            // Release all of the buffers.
-            for (ByteBuf buf : needReleasing) {
-                buf.release();
-            }
-            // Now verify that all of the reference counts are zero.
-            for (ByteBuf buf : needReleasing) {
-                int expectedFinalRefCount = 0;
-                if (buf.isReadOnly() || buf instanceof EmptyByteBuf) {
-                    // Special case for when we're writing slices of the padding buffer.
-                    expectedFinalRefCount = 1;
-                }
-                assertEquals(expectedFinalRefCount, buf.refCnt());
-            }
-        } finally {
-            needReleasing.clear();
-        }
-    }
-
     @Test
     public void emptyDataShouldMatch() throws Exception {
-        final ByteBuf data = EMPTY_BUFFER;
-        writer.writeData(ctx, STREAM_ID, data.slice(), 0, false);
+        Buffer data = empty();
+        writer.writeData(ctx, STREAM_ID, data, 0, false);
         readFrames();
         verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0), eq(false));
     }
 
     @Test
     public void dataShouldMatch() throws Exception {
-        final ByteBuf data = data(10);
-        writer.writeData(ctx, STREAM_ID, data.slice(), 1, false);
-        readFrames();
-        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(1), eq(false));
+        try (Buffer data = data(10)) {
+            writer.writeData(ctx, STREAM_ID, data.copy(), 1, false);
+            readFrames();
+            verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(1), eq(false));
+        }
     }
 
     @Test
     public void dataWithPaddingShouldMatch() throws Exception {
-        final ByteBuf data = data(10);
-        writer.writeData(ctx, STREAM_ID, data.slice(), MAX_PADDING, true);
-        readFrames();
-        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(MAX_PADDING), eq(true));
+        try (Buffer data = data(10)) {
+            writer.writeData(ctx, STREAM_ID, data.copy(), MAX_PADDING, true);
+            readFrames();
+            verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(MAX_PADDING), eq(true));
+        }
     }
 
     @Test
     public void largeDataFrameShouldMatch() throws Exception {
         // Create a large message to force chunking.
-        final ByteBuf originalData = data(1024 * 1024);
-        final int originalPadding = 100;
-        final boolean endOfStream = true;
+        try (Buffer originalData = data(1024 * 1024)) {
+            final int originalPadding = 100;
+            final boolean endOfStream = true;
 
-        writer.writeData(ctx, STREAM_ID, originalData.slice(), originalPadding,
-                endOfStream);
-        readFrames();
+            writer.writeData(ctx, STREAM_ID, originalData.copy(), originalPadding,
+                             endOfStream);
+            readFrames();
 
-        // Verify that at least one frame was sent with eos=false and exactly one with eos=true.
-        verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class),
-                anyInt(), eq(false));
-        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class),
-                anyInt(), eq(true));
+            // Verify that at least one frame was sent with eos=false and exactly one with eos=true.
+            verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), any(Buffer.class),
+                                                       anyInt(), eq(false));
+            verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(Buffer.class),
+                                        anyInt(), eq(true));
 
-        // Capture the read data and padding.
-        ArgumentCaptor<ByteBuf> dataCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        ArgumentCaptor<Integer> paddingCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), dataCaptor.capture(),
-                paddingCaptor.capture(), anyBoolean());
+            // Capture the read data and padding.
+            ArgumentCaptor<Buffer> dataCaptor = ArgumentCaptor.forClass(Buffer.class);
+            ArgumentCaptor<Integer> paddingCaptor = ArgumentCaptor.forClass(Integer.class);
+            verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), dataCaptor.capture(),
+                                                       paddingCaptor.capture(), anyBoolean());
 
-        // Make sure the data matches the original.
-        for (ByteBuf chunk : dataCaptor.getAllValues()) {
-            ByteBuf originalChunk = originalData.readSlice(chunk.readableBytes());
-            assertEquals(originalChunk, chunk);
+            // Make sure the data matches the original.
+            for (Buffer chunk : dataCaptor.getAllValues()) {
+                try (Buffer originalChunk = originalData.readSplit(chunk.readableBytes())) {
+                    assertEquals(originalChunk, chunk);
+                }
+            }
+            assertEquals(0, originalData.readableBytes());
+
+            // Make sure the padding matches the original.
+            int totalReadPadding = 0;
+            for (int framePadding : paddingCaptor.getAllValues()) {
+                totalReadPadding += framePadding;
+            }
+            assertEquals(originalPadding, totalReadPadding);
         }
-        assertFalse(originalData.isReadable());
-
-        // Make sure the padding matches the original.
-        int totalReadPadding = 0;
-        for (int framePadding : paddingCaptor.getAllValues()) {
-            totalReadPadding += framePadding;
-        }
-        assertEquals(originalPadding, totalReadPadding);
     }
 
     @Test
@@ -328,14 +299,15 @@ public class Http2FrameRoundtripTest {
     @Test
     public void goAwayFrameShouldMatch() throws Exception {
         final String text = "test";
-        final ByteBuf data = buf(text.getBytes());
+        try (Buffer data = bb(text.getBytes())) {
 
-        writer.writeGoAway(ctx, STREAM_ID, ERROR_CODE, data.slice());
-        readFrames();
+            writer.writeGoAway(ctx, STREAM_ID, ERROR_CODE, data.copy());
+            readFrames();
 
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(listener).onGoAwayRead(eq(ctx), eq(STREAM_ID), eq(ERROR_CODE), captor.capture());
-        assertEquals(data, captor.getValue());
+            ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
+            verify(listener).onGoAwayRead(eq(ctx), eq(STREAM_ID), eq(ERROR_CODE), captor.capture());
+            assertEquals(data, captor.getValue());
+        }
     }
 
     @Test
@@ -409,38 +381,33 @@ public class Http2FrameRoundtripTest {
 
     private void readFrames() throws Http2Exception {
         // Now read all of the written frames.
-        ByteBuf write = captureWrites();
+        Buffer write = captureWrites();
         reader.readFrame(ctx, write, listener);
     }
 
-    private static ByteBuf data(int size) {
+    private static Buffer data(int size) {
         byte[] data = new byte[size];
         for (int ix = 0; ix < data.length;) {
             int length = min(MESSAGE.length, data.length - ix);
             System.arraycopy(MESSAGE, 0, data, ix, length);
             ix += length;
         }
-        return buf(data);
+        return bb(data);
     }
 
-    private static ByteBuf buf(byte[] bytes) {
-        return Unpooled.wrappedBuffer(bytes);
-    }
-
-    private <T extends ByteBuf> T releaseLater(T buf) {
-        needReleasing.add(buf);
-        return buf;
-    }
-
-    private ByteBuf captureWrites() {
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+    private Buffer captureWrites() {
+        ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
         verify(ctx, atLeastOnce()).write(captor.capture());
-        CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
-        for (ByteBuf buf : captor.getAllValues()) {
-            buf = releaseLater(buf.retain());
-            composite.addComponent(true, buf);
+        List<Buffer> allWrites = captor.getAllValues();
+        int bytesWritten = 0;
+        for (Buffer buffer : allWrites) {
+            bytesWritten += buffer.readableBytes();
         }
-        return composite;
+        Buffer combined = onHeapAllocator().allocate(bytesWritten);
+        for (Buffer buffer : allWrites) {
+            combined.writeBytes(buffer);
+        }
+        return combined;
     }
 
     private static Http2Headers headers() {

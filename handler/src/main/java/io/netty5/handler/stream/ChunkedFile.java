@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.FileRegion;
 
 import java.io.File;
@@ -33,13 +32,14 @@ import static java.util.Objects.requireNonNull;
  * <a href="https://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
-public class ChunkedFile implements ChunkedInput<ByteBuf> {
+public class ChunkedFile implements ChunkedInput<Buffer> {
 
     private final RandomAccessFile file;
     private final long startOffset;
     private final long endOffset;
     private final int chunkSize;
     private long offset;
+    private byte[] cachedArray;
 
     /**
      * Creates a new instance that fetches data from the specified file.
@@ -52,7 +52,7 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     *                  {@link #readChunk(BufferAllocator)} call
      */
     public ChunkedFile(File file, int chunkSize) throws IOException {
         this(new RandomAccessFile(file, "r"), chunkSize);
@@ -69,7 +69,7 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     *                  {@link #readChunk(BufferAllocator)} call
      */
     public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
         this(file, 0, file.length(), chunkSize);
@@ -81,7 +81,7 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
      * @param offset the offset of the file where the transfer begins
      * @param length the number of bytes to transfer
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     *                  {@link #readChunk(BufferAllocator)} call
      */
     public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
         requireNonNull(file, "file");
@@ -138,14 +138,8 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
         file.close();
     }
 
-    @Deprecated
     @Override
-    public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-        return readChunk(ctx.alloc());
-    }
-
-    @Override
-    public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+    public Buffer readChunk(BufferAllocator allocator) throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {
             return null;
@@ -154,17 +148,29 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
         // Check if the buffer is backed by an byte array. If so we can optimize it a bit an safe a copy
 
-        ByteBuf buf = allocator.heapBuffer(chunkSize);
+        Buffer buf = allocator.allocate(chunkSize);
         boolean release = true;
         try {
-            file.readFully(buf.array(), buf.arrayOffset(), chunkSize);
-            buf.writerIndex(chunkSize);
-            this.offset = offset + chunkSize;
+            try (var iterator = buf.forEachWritable()) {
+                var component = iterator.first();
+                int size = Math.min(component.writableBytes(), chunkSize);
+                if (component.hasWritableArray()) {
+                    file.readFully(component.writableArray(), component.writableArrayOffset(), size);
+                    component.skipWritable(size);
+                } else {
+                    if (cachedArray == null || cachedArray.length < size) {
+                        cachedArray = new byte[size];
+                    }
+                    file.readFully(cachedArray, 0, size);
+                    buf.writeBytes(cachedArray, 0, size);
+                }
+                this.offset = offset + size;
+            }
             release = false;
             return buf;
         } finally {
             if (release) {
-                buf.release();
+                buf.close();
             }
         }
     }

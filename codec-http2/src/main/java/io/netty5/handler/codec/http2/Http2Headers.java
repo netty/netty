@@ -12,7 +12,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
 import io.netty5.handler.codec.Headers;
@@ -94,7 +93,7 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
         public static boolean hasPseudoHeaderFormat(CharSequence headerName) {
             if (headerName instanceof AsciiString) {
                 final AsciiString asciiHeaderName = (AsciiString) headerName;
-                return asciiHeaderName.length() > 0 && asciiHeaderName.byteAt(0) == PSEUDO_HEADER_PREFIX_BYTE;
+                return !asciiHeaderName.isEmpty() && asciiHeaderName.byteAt(0) == PSEUDO_HEADER_PREFIX_BYTE;
             } else {
                 return headerName.length() > 0 && headerName.charAt(0) == PSEUDO_HEADER_PREFIX;
             }

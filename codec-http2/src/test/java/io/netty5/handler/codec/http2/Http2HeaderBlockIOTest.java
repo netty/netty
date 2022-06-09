@@ -12,16 +12,15 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2TestUtil.randomString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -32,18 +31,18 @@ public class Http2HeaderBlockIOTest {
 
     private DefaultHttp2HeadersDecoder decoder;
     private DefaultHttp2HeadersEncoder encoder;
-    private ByteBuf buffer;
+    private Buffer buffer;
 
     @BeforeEach
     public void setup() {
         encoder = new DefaultHttp2HeadersEncoder();
         decoder = new DefaultHttp2HeadersDecoder(false);
-        buffer = Unpooled.buffer();
+        buffer = onHeapAllocator().allocate(256);
     }
 
     @AfterEach
     public void teardown() {
-        buffer.release();
+        buffer.close();
     }
 
     @Test

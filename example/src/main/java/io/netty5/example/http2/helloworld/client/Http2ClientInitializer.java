@@ -19,7 +19,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.SocketChannel;
-import io.netty5.handler.adaptor.BufferConversionHandler;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.HttpClientCodec;
@@ -101,7 +100,6 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
         // Specify Host in SSLContext New Handler to add TLS SNI Extension
         pipeline.addLast(sslCtx.newHandler(ch.bufferAllocator(), Http2Client.HOST, Http2Client.PORT));
-        pipeline.addLast(BufferConversionHandler.bufferToByteBuf());
         // We must wait for the handshake to finish and the protocol to be negotiated before configuring
         // the HTTP/2 components of the pipeline.
         pipeline.addLast(new ApplicationProtocolNegotiationHandler("") {

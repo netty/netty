@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.ConstantTimeUtils;
@@ -31,6 +32,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.List;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 
@@ -99,14 +101,11 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
 
     static HpackEncoder newTestEncoder() {
         HpackEncoder hpackEncoder = new HpackEncoder();
-        ByteBuf buf = Unpooled.buffer();
-        try {
+        try (Buffer buf = onHeapAllocator().allocate(256)) {
             hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
             hpackEncoder.setMaxHeaderListSize(MAX_HEADER_LIST_SIZE);
         } catch (Http2Exception e) {
             throw new Error("max size not allowed?", e);
-        } finally  {
-            buf.release();
         }
         return hpackEncoder;
     }

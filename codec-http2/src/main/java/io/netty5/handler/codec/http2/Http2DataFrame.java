@@ -15,15 +15,15 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.UnstableApi;
 
 /**
  * HTTP/2 DATA frame.
  */
 @UnstableApi
-public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
+public interface Http2DataFrame extends Http2StreamFrame, Resource<Http2DataFrame> {
 
     /**
      * Frame padding to use. Will be non-negative and less than 256.
@@ -33,8 +33,7 @@ public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
     /**
      * Payload of DATA frame. Will not be {@code null}.
      */
-    @Override
-    ByteBuf content();
+    Buffer content();
 
     /**
      * Returns the number of bytes that are flow-controlled initially, so even if the {@link #content()} is consumed
@@ -47,27 +46,5 @@ public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
      */
     boolean isEndStream();
 
-    @Override
     Http2DataFrame copy();
-
-    @Override
-    Http2DataFrame duplicate();
-
-    @Override
-    Http2DataFrame retainedDuplicate();
-
-    @Override
-    Http2DataFrame replace(ByteBuf content);
-
-    @Override
-    Http2DataFrame retain();
-
-    @Override
-    Http2DataFrame retain(int increment);
-
-    @Override
-    Http2DataFrame touch();
-
-    @Override
-    Http2DataFrame touch(Object hint);
 }

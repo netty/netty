@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.util.Resource;
@@ -29,7 +28,6 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.adaptor.BufferConversionHandler;
 import io.netty5.handler.ssl.ApplicationProtocolConfig;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.handler.ssl.ApplicationProtocolNegotiationHandler;
@@ -42,7 +40,6 @@ import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -65,6 +62,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -113,7 +111,6 @@ public class Http2MultiplexTransportTest {
         eventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
     }
 
-    @Disabled("Disabled until H2 is ported to Buffer")
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
     public void asyncSettingsAckWithMultiplexHandler() throws Exception {
@@ -198,7 +195,6 @@ public class Http2MultiplexTransportTest {
         serverAckAllLatch.await();
     }
 
-    @Disabled("Disabled until H2 is ported to Buffer")
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testFlushNotDiscarded() throws Exception {
@@ -220,8 +216,7 @@ public class Http2MultiplexTransportTest {
                                     ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
                                             new DefaultHttp2Headers(), false)).addListener(future -> {
                                         ctx.write(new DefaultHttp2DataFrame(
-                                                Unpooled.copiedBuffer("Hello World",
-                                                                      CharsetUtil.US_ASCII), true));
+                                                bb("Hello World").send(), true));
                                         ctx.channel().executor().execute(ctx::flush);
                                     });
                                 }, 500, MILLISECONDS);
@@ -339,7 +334,6 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(sslCtx.newHandler(ch.bufferAllocator()));
-                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
@@ -373,7 +367,6 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientCtx.newHandler(ch.bufferAllocator()));
-                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
@@ -486,7 +479,6 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(serverCtx.newHandler(ch.bufferAllocator()));
-                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
                         @Override
                         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -499,7 +491,7 @@ public class Http2MultiplexTransportTest {
                                                 new DefaultHttp2Headers(), false))
                                            .addListener(future -> {
                                                    ctx.writeAndFlush(new DefaultHttp2DataFrame(
-                                                           Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII),
+                                                           bb("Hello World").send(),
                                                            true));
                                            });
                                     }
@@ -532,7 +524,6 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientCtx.newHandler(ch.bufferAllocator()));
-                    ch.pipeline().addLast(BufferConversionHandler.bufferToByteBuf());
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {

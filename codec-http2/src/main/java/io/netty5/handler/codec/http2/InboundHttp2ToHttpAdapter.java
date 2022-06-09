@@ -14,10 +14,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpMessage;
@@ -232,7 +230,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding, boolean endOfStream)
             throws Http2Exception {
         Http2Stream stream = connection.stream(streamId);
         FullHttpMessage<?> msg = getMessage(stream);
@@ -248,7 +246,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         }
 
         content.ensureWritable(dataReadableBytes);
-        content.writeBytes(ByteBufAdaptor.extractOrCopy(ctx.bufferAllocator(), data.retain()));
+        content.writeBytes(data);
 
         if (endOfStream) {
             fireChannelRead(ctx, msg, false, stream);

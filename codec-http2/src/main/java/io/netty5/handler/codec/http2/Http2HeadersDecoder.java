@@ -12,10 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -71,7 +70,7 @@ public interface Http2HeadersDecoder {
     /**
      * Decodes the given headers block and returns the headers.
      */
-    Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception;
+    Http2Headers decodeHeaders(int streamId, Buffer headerBlock) throws Http2Exception;
 
     /**
      * Get the {@link Configuration} for this {@link Http2HeadersDecoder}

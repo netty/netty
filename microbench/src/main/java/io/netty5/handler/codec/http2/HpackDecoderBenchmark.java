@@ -31,7 +31,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -42,7 +42,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.HpackBenchmarkUtil.http2Headers;
 
 public class HpackDecoderBenchmark extends AbstractMicrobenchmark {
@@ -56,46 +56,42 @@ public class HpackDecoderBenchmark extends AbstractMicrobenchmark {
     @Param({ "true", "false" })
     public boolean limitToAscii;
 
-    private ByteBuf input;
+    private Buffer input;
 
     @Setup(Level.Trial)
     public void setup() throws Http2Exception {
-        input = wrappedBuffer(getSerializedHeaders(http2Headers(size, limitToAscii), sensitive));
+        input = onHeapAllocator().copyOf(getSerializedHeaders(http2Headers(size, limitToAscii), sensitive))
+                                 .makeReadOnly();
     }
 
     @TearDown(Level.Trial)
     public void teardown() {
-        input.release();
+        input.close();
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     public void decode(final Blackhole bh) throws Http2Exception {
         HpackDecoder hpackDecoder = new HpackDecoder(Integer.MAX_VALUE);
-        @SuppressWarnings("unchecked")
-        Http2Headers headers =
-                new DefaultHttp2Headers() {
+        Http2Headers headers = new DefaultHttp2Headers() {
             @Override
             public Http2Headers add(CharSequence name, CharSequence value) {
                 bh.consume(sensitive);
                 return this;
             }
         };
-        hpackDecoder.decode(0, input.duplicate(), headers, true);
+        hpackDecoder.decode(0, input.copy(true), headers, true);
     }
 
     private byte[] getSerializedHeaders(Http2Headers headers, boolean sensitive) throws Http2Exception {
         HpackEncoder hpackEncoder = HpackUtilBenchmark.newTestEncoder();
-        ByteBuf out = size.newOutBuffer();
-        try {
+        try (Buffer out = size.newOutBuffer()) {
             hpackEncoder.encodeHeaders(3 /* randomly chosen */, out, headers,
                                   sensitive ? Http2HeadersEncoder.ALWAYS_SENSITIVE
                                             : Http2HeadersEncoder.NEVER_SENSITIVE);
             byte[] bytes = new byte[out.readableBytes()];
-            out.readBytes(bytes);
+            out.readBytes(bytes, 0, bytes.length);
             return bytes;
-        } finally {
-            out.release();
         }
     }
 }

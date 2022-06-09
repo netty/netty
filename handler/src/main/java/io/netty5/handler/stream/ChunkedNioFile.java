@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.FileRegion;
 
 import java.io.File;
@@ -36,7 +35,7 @@ import static java.util.Objects.requireNonNull;
  * <a href="https://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
-public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
+public class ChunkedNioFile implements ChunkedInput<Buffer> {
 
     private final FileChannel in;
     private final long startOffset;
@@ -54,8 +53,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
     /**
      * Creates a new instance that fetches data from the specified file.
      *
-     * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     * @param chunkSize the number of bytes to fetch on each {@link #readChunk(BufferAllocator)} call.
      */
     public ChunkedNioFile(File in, int chunkSize) throws IOException {
         this(new RandomAccessFile(in, "r").getChannel(), chunkSize);
@@ -71,8 +69,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
     /**
      * Creates a new instance that fetches data from the specified file.
      *
-     * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     * @param chunkSize the number of bytes to fetch on each {@link #readChunk(BufferAllocator)} call.
      */
     public ChunkedNioFile(FileChannel in, int chunkSize) throws IOException {
         this(in, 0, in.size(), chunkSize);
@@ -83,8 +80,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
      *
      * @param offset the offset of the file where the transfer begins
      * @param length the number of bytes to transfer
-     * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #readChunk(ChannelHandlerContext)} call
+     * @param chunkSize the number of bytes to fetch on each {@link #readChunk(BufferAllocator)} call.
      */
     public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize) throws IOException {
         requireNonNull(in, "in");
@@ -141,26 +137,20 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
         in.close();
     }
 
-    @Deprecated
     @Override
-    public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-        return readChunk(ctx.alloc());
-    }
-
-    @Override
-    public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+    public Buffer readChunk(BufferAllocator allocator) throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {
             return null;
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
-        ByteBuf buffer = allocator.buffer(chunkSize);
+        Buffer buffer = allocator.allocate(chunkSize);
         boolean release = true;
         try {
             int readBytes = 0;
             for (;;) {
-                int localReadBytes = buffer.writeBytes(in, offset + readBytes, chunkSize - readBytes);
+                int localReadBytes = buffer.transferFrom(in, offset + readBytes, chunkSize - readBytes);
                 if (localReadBytes < 0) {
                     break;
                 }
@@ -174,7 +164,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
             return buffer;
         } finally {
             if (release) {
-                buffer.release();
+                buffer.close();
             }
         }
     }

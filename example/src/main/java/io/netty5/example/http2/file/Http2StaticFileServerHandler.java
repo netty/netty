@@ -15,8 +15,7 @@
  */
 package io.netty5.example.http2.file;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -272,7 +271,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
 
         buf.append("</ul></body></html>\r\n");
 
-        ByteBuf buffer = ctx.alloc().buffer(buf.length());
+        Buffer buffer = ctx.bufferAllocator().allocate(buf.length());
         buffer.writeCharSequence(buf.toString(), CharsetUtil.UTF_8);
 
         Http2Headers headers = new DefaultHttp2Headers();
@@ -280,7 +279,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
         headers.add(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 
         ctx.write(new DefaultHttp2HeadersFrame(headers).stream(stream));
-        ctx.writeAndFlush(new DefaultHttp2DataFrame(buffer, true).stream(stream));
+        ctx.writeAndFlush(new DefaultHttp2DataFrame(buffer.send(), true).stream(stream));
     }
 
     private void sendRedirect(ChannelHandlerContext ctx, String newUri) {
@@ -300,7 +299,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
         headersFrame.stream(stream);
 
         Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
-                Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8), true);
+                ctx.bufferAllocator().copyOf(("Failure: " + status + "\r\n").getBytes(CharsetUtil.UTF_8)).send(), true);
         dataFrame.stream(stream);
 
         ctx.write(headersFrame);

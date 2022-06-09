@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -81,7 +81,7 @@ public interface Http2LifecycleManager {
      * {@code GO_AWAY} frame has been sent then the return status may indicate success immediately.
      */
     Future<Void> goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData);
+            Buffer debugData);
 
     /**
      * Processes the given error.

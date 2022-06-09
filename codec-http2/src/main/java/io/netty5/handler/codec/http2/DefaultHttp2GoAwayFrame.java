@@ -15,20 +15,19 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferHolder;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * The default {@link Http2GoAwayFrame} implementation.
  */
 @UnstableApi
-public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implements Http2GoAwayFrame {
-
+public final class DefaultHttp2GoAwayFrame extends BufferHolder<Http2GoAwayFrame> implements Http2GoAwayFrame {
     private final long errorCode;
     private final int lastStreamId;
     private int extraStreamIds;
@@ -48,7 +47,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
      * @param errorCode reason for the go away
      */
     public DefaultHttp2GoAwayFrame(long errorCode) {
-        this(errorCode, Unpooled.EMPTY_BUFFER);
+        this(errorCode, onHeapAllocator().allocate(0));
     }
 
     /**
@@ -57,7 +56,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
      * @param error non-{@code null} reason for the go away
      * @param content non-{@code null} debug data
      */
-    public DefaultHttp2GoAwayFrame(Http2Error error, ByteBuf content) {
+    public DefaultHttp2GoAwayFrame(Http2Error error, Buffer content) {
         this(error.code(), content);
     }
 
@@ -67,7 +66,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
      * @param errorCode reason for the go away
      * @param content non-{@code null} debug data
      */
-    public DefaultHttp2GoAwayFrame(long errorCode, ByteBuf content) {
+    public DefaultHttp2GoAwayFrame(long errorCode, Buffer content) {
         this(-1, errorCode, content);
     }
 
@@ -77,7 +76,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
      * This constructor is for internal use only. A user should not have to specify a specific last stream identifier,
      * but use {@link #setExtraStreamIds(int)} instead.
      */
-    DefaultHttp2GoAwayFrame(int lastStreamId, long errorCode, ByteBuf content) {
+    DefaultHttp2GoAwayFrame(int lastStreamId, long errorCode, Buffer content) {
         super(content);
         this.errorCode = errorCode;
         this.lastStreamId = lastStreamId;
@@ -111,41 +110,18 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     }
 
     @Override
+    public Buffer content() {
+        return getBuffer();
+    }
+
+    @Override
     public Http2GoAwayFrame copy() {
         return new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, content().copy());
     }
 
     @Override
-    public Http2GoAwayFrame duplicate() {
-        return (Http2GoAwayFrame) super.duplicate();
-    }
-
-    @Override
-    public Http2GoAwayFrame retainedDuplicate() {
-        return (Http2GoAwayFrame) super.retainedDuplicate();
-    }
-
-    @Override
-    public Http2GoAwayFrame replace(ByteBuf content) {
-        return new DefaultHttp2GoAwayFrame(errorCode, content).setExtraStreamIds(extraStreamIds);
-    }
-
-    @Override
-    public Http2GoAwayFrame retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public Http2GoAwayFrame retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public Http2GoAwayFrame touch() {
-        super.touch();
-        return this;
+    protected Http2GoAwayFrame receive(Buffer buf) {
+        return new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, buf);
     }
 
     @Override

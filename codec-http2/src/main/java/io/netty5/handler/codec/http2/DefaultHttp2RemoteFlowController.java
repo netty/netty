@@ -225,7 +225,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     }
 
     private FlowState state(Http2Stream stream) {
-        return (FlowState) stream.getProperty(stateKey);
+        return stream.getProperty(stateKey);
     }
 
     /**
@@ -318,7 +318,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Save the state of writability.
          */
         void markedWritability(boolean isWritable) {
-            this.markedWritable = isWritable;
+            markedWritable = isWritable;
         }
 
         @Override

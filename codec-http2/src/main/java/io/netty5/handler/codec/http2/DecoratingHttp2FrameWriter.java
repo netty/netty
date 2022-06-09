@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
@@ -33,7 +33,7 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+    public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, Buffer data, int padding,
                                   boolean endStream) {
         return delegate.writeData(ctx, streamId, data, padding, endStream);
     }
@@ -85,7 +85,7 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
+    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData) {
         return delegate.writeGoAway(ctx, lastStreamId, errorCode, debugData);
     }
 
@@ -96,7 +96,7 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                                   ByteBuf payload) {
+                                   Buffer payload) {
         return delegate.writeFrame(ctx, frameType, streamId, flags, payload);
     }
 

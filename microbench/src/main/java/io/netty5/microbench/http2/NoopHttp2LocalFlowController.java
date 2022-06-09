@@ -14,7 +14,7 @@
  */
 package io.netty5.microbench.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2Exception;
 import io.netty5.handler.codec.http2.Http2FrameWriter;
@@ -52,7 +52,7 @@ public final class NoopHttp2LocalFlowController implements Http2LocalFlowControl
     }
 
     @Override
-    public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding, boolean endOfStream)
+    public void receiveFlowControlledFrame(Http2Stream stream, Buffer data, int padding, boolean endOfStream)
             throws Http2Exception {
     }
 

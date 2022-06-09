@@ -131,9 +131,9 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     }
 
     private static void validateHeaders(AsciiString[] pseudoHeaders, AsciiString... otherHeaders) {
-        // We are only validating values... so start at 1 and go until end.
+        // We are only validating values... so start at 1 and go until the end.
         for (int i = 1; i < pseudoHeaders.length; i += 2) {
-            // pseudoHeaders names are only set internally so they are assumed to be valid.
+            // pseudoHeaders names are only set internally, so they are assumed to be valid.
             checkNotNullArrayParam(pseudoHeaders[i], i, "pseudoHeaders");
         }
 

@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -47,7 +47,7 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint for this stream.
      * @throws Http2Exception if any flow control errors are encountered.
      */
-    void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
+    void receiveFlowControlledFrame(Http2Stream stream, Buffer data, int padding,
                                     boolean endOfStream) throws Http2Exception;
 
     /**

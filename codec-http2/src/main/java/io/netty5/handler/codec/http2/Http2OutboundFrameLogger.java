@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
@@ -38,7 +38,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     }
 
     @Override
-    public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+    public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, Buffer data,
                                   int padding, boolean endStream) {
         logger.logData(OUTBOUND, ctx, streamId, data, padding, endStream);
         return writer.writeData(ctx, streamId, data, padding, endStream);
@@ -108,7 +108,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData) {
+                                    Buffer debugData) {
         logger.logGoAway(OUTBOUND, ctx, lastStreamId, errorCode, debugData);
         return writer.writeGoAway(ctx, lastStreamId, errorCode, debugData);
     }
@@ -122,7 +122,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-                                   Http2Flags flags, ByteBuf payload) {
+                                   Http2Flags flags, Buffer payload) {
         logger.logUnknownFrame(OUTBOUND, ctx, frameType, streamId, flags, payload);
         return writer.writeFrame(ctx, frameType, streamId, flags, payload);
     }

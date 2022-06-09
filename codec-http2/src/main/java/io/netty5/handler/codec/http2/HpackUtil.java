@@ -364,8 +364,6 @@ final class HpackUtil {
             30 // EOS
     };
 
-    static final int HUFFMAN_EOS = 256;
-
     private HpackUtil() {
         // utility class
     }

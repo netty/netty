@@ -183,7 +183,6 @@ final class HpackStaticTable {
     // create a map CharSequenceMap header name to index value to allow quick lookup
     private static CharSequenceMap<Integer> createMap() {
         int length = STATIC_TABLE.size();
-        @SuppressWarnings("unchecked")
         CharSequenceMap<Integer> ret = new CharSequenceMap<>(true,
                 UnsupportedValueConverter.instance(), length);
         // Iterate through the static table in reverse order to

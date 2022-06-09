@@ -15,8 +15,7 @@
 
 package io.netty5.example.http2.helloworld.multiplex.server;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -26,10 +25,9 @@ import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty5.handler.codec.http2.Http2DataFrame;
 import io.netty5.handler.codec.http2.Http2Headers;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
-import io.netty5.util.CharsetUtil;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import java.nio.charset.StandardCharsets;
+
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 
 /**
@@ -41,8 +39,7 @@ import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 @Sharable
 public class HelloWorldHttp2Handler implements ChannelHandler {
 
-    static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(
-            copiedBuffer("Hello World", CharsetUtil.UTF_8)).asReadOnly();
+    static final byte[] RESPONSE_BYTES = "Hello World".getBytes(StandardCharsets.UTF_8);
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
@@ -75,7 +72,7 @@ public class HelloWorldHttp2Handler implements ChannelHandler {
             sendResponse(ctx, data.content());
         } else {
             // We do not send back the response to the remote-peer, so we need to release it.
-            data.release();
+            data.close();
         }
     }
 
@@ -85,9 +82,8 @@ public class HelloWorldHttp2Handler implements ChannelHandler {
     private static void onHeadersRead(ChannelHandlerContext ctx, Http2HeadersFrame headers)
             throws Exception {
         if (headers.isEndStream()) {
-            ByteBuf content = ctx.alloc().buffer();
-            content.writeBytes(RESPONSE_BYTES.duplicate());
-            ByteBufUtil.writeAscii(content, " - via HTTP/2");
+            Buffer content = ctx.bufferAllocator().copyOf(RESPONSE_BYTES);
+            content.writeCharSequence(" - via HTTP/2", StandardCharsets.US_ASCII);
             sendResponse(ctx, content);
         }
     }
@@ -95,10 +91,10 @@ public class HelloWorldHttp2Handler implements ChannelHandler {
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
-    private static void sendResponse(ChannelHandlerContext ctx, ByteBuf payload) {
+    private static void sendResponse(ChannelHandlerContext ctx, Buffer payload) {
         // Send a frame for the response status
         Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
         ctx.write(new DefaultHttp2HeadersFrame(headers));
-        ctx.write(new DefaultHttp2DataFrame(payload, true));
+        ctx.write(new DefaultHttp2DataFrame(payload.send(), true));
     }
 }

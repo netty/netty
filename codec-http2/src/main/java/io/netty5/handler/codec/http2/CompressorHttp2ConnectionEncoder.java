@@ -15,7 +15,9 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -160,7 +162,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     }
 
     @Override
-    public Future<Void> writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
+    public Future<Void> writeData(final ChannelHandlerContext ctx, final int streamId, Buffer data, int padding,
                                   final boolean endOfStream) {
         final Http2Stream stream = connection().stream(streamId);
         final Compressor compressor = stream == null ? null : (Compressor) stream.getProperty(propertyKey);
@@ -170,12 +172,11 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
 
         try {
-            ByteBuf buf = ByteBufAdaptor.intoByteBuf(compressor.compress(
-                    ByteBufAdaptor.extractOrCopy(ctx.bufferAllocator(), data), ctx.bufferAllocator()));
-            if (!buf.isReadable()) {
-                buf.release();
+            Buffer buf = compressor.compress(data, ctx.bufferAllocator());
+            if (buf.readableBytes() == 0) {
+                buf.close();
                 if (endOfStream) {
-                    buf = ByteBufAdaptor.intoByteBuf(compressor.finish(ctx.bufferAllocator()));
+                    buf = compressor.finish(ctx.bufferAllocator());
                     return super.writeData(ctx, streamId, buf, padding,
                             true);
                 }
@@ -189,7 +190,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
                 combiner.add(future);
 
-                buf = ByteBufAdaptor.intoByteBuf(compressor.finish(ctx.bufferAllocator()));
+                buf = compressor.finish(ctx.bufferAllocator());
 
                 // Padding is only communicated once on the first iteration
                 future = super.writeData(ctx, streamId, buf, 0, true);
