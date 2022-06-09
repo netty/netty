@@ -133,8 +133,8 @@ public interface BufferAllocator extends SafeCloseable {
      * <p>
      * When a composite buffer is closed, all of its constituent component buffers are closed as well.
      * <p>
-     * See the class documentation for more information on what is required of the given buffers for composition to be
-     * allowed.
+     * See the class documentation for more information on how buffers compose, and what is required of the given
+     * buffers for composition to be allowed.
      *
      * @param send The sent buffer to compose into a single buffer view.
      * @return A buffer composed of, and backed by, the given buffers.
@@ -150,8 +150,8 @@ public interface BufferAllocator extends SafeCloseable {
      * <p>
      * When a composite buffer is closed, all of its constituent component buffers are closed as well.
      * <p>
-     * See the class documentation for more information on what is required of the given buffers for composition to be
-     * allowed.
+     * See the class documentation for more information on how buffers compose, and what is required of the given
+     * buffers for composition to be allowed.
      *
      * @param sends The sent buffers to compose into a single buffer view.
      * @return A buffer composed of, and backed by, the given buffers.
