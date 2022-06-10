@@ -713,7 +713,8 @@ public class EmbeddedChannelTest {
         // this future will complete after 10min
         ScheduledFuture<?> future10 = channel.eventLoop().schedule(runnable, 10, TimeUnit.MINUTES);
         // this future will complete after 10min + 1ns
-        ScheduledFuture<?> future101 = channel.eventLoop().schedule(runnable, TimeUnit.MINUTES.toNanos(10) + 1, TimeUnit.NANOSECONDS);
+        ScheduledFuture<?> future101 = channel.eventLoop().schedule(runnable,
+                TimeUnit.MINUTES.toNanos(10) + 1, TimeUnit.NANOSECONDS);
         // this future will complete after 20min
         ScheduledFuture<?> future20 = channel.eventLoop().schedule(runnable, 20, TimeUnit.MINUTES);
 

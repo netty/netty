@@ -22,6 +22,7 @@ public class ScheduledFutureTaskTest {
 
     @Test
     public void testDeadlineNanosNotOverflow() {
-        Assertions.assertEquals(Long.MAX_VALUE, ScheduledFutureTask.deadlineNanos(AbstractScheduledEventExecutor.defaultCurrentTimeNanos(), Long.MAX_VALUE));
+        Assertions.assertEquals(Long.MAX_VALUE, ScheduledFutureTask.deadlineNanos(
+                AbstractScheduledEventExecutor.defaultCurrentTimeNanos(), Long.MAX_VALUE));
     }
 }

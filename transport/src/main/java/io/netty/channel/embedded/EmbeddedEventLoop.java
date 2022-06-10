@@ -41,11 +41,11 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     /**
      * When time is frozen, the timestamp returned by {@link #getCurrentTimeNanos()}. When unfrozen, this is unused.
      */
-    private long frozenTimestamp = 0;
+    private long frozenTimestamp;
     /**
      * Whether time is currently frozen.
      */
-    private boolean timeFrozen = false;
+    private boolean timeFrozen;
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 

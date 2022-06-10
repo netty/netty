@@ -213,7 +213,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
         validateScheduled0(delay, unit);
 
-        return schedule(new ScheduledFutureTask<V>(this, callable, deadlineNanos(getCurrentTimeNanos(), unit.toNanos(delay))));
+        return schedule(new ScheduledFutureTask<V>(
+                this, callable, deadlineNanos(getCurrentTimeNanos(), unit.toNanos(delay))));
     }
 
     @Override
