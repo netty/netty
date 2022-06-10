@@ -404,7 +404,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     private static Buffer dummyData(int size) {
         final Buffer buffer = onHeapAllocator().allocate(size);
-        buffer.skipWritable(size);
+        buffer.skipWritableBytes(size);
         return buffer;
     }
 

@@ -156,7 +156,7 @@ public class ChunkedFile implements ChunkedInput<Buffer> {
                 int size = Math.min(component.writableBytes(), chunkSize);
                 if (component.hasWritableArray()) {
                     file.readFully(component.writableArray(), component.writableArrayOffset(), size);
-                    component.skipWritable(size);
+                    component.skipWritableBytes(size);
                 } else {
                     if (cachedArray == null || cachedArray.length < size) {
                         cachedArray = new byte[size];

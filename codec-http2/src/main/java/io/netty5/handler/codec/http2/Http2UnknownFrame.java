@@ -22,6 +22,13 @@ import io.netty5.util.internal.UnstableApi;
 @UnstableApi
 public interface Http2UnknownFrame extends Http2StreamFrame, Resource<Http2UnknownFrame> {
 
+    /**
+     * Get the data content associated with this unknown frame.
+     * <p>
+     * The buffer will be empty if there is no data with this unknown frame.
+     *
+     * @return The contents of this unknown frame.
+     */
     Buffer content();
 
     @Override
@@ -30,9 +37,26 @@ public interface Http2UnknownFrame extends Http2StreamFrame, Resource<Http2Unkno
     @Override
     Http2UnknownFrame stream(Http2FrameStream stream);
 
+    /**
+     * Get the raw frame type.
+     *
+     * This is the type value that wasn't recognized and caused this to be captured as an unknown frame.
+     *
+     * @return The raw frame type.
+     */
     byte frameType();
 
+    /**
+     * Get the {@link Http2Flags} set on this unknown frame.
+     *
+     * @return The flags set on this frame.
+     */
     Http2Flags flags();
 
+    /**
+     * Create a copy of this unknown frame, which in turn contain a copy of the frame {@linkplain #content() contents}.
+     *
+     * @return A copy of this unknown frame.
+     */
     Http2UnknownFrame copy();
 }

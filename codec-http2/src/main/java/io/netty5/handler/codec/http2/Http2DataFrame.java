@@ -46,5 +46,10 @@ public interface Http2DataFrame extends Http2StreamFrame, Resource<Http2DataFram
      */
     boolean isEndStream();
 
+    /**
+     * Produce a copy of this data frame, which contain a copy of the frame {@linkplain #content() contents}.
+     *
+     * @return A copy of this data frame.
+     */
     Http2DataFrame copy();
 }

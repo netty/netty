@@ -20,7 +20,6 @@ import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.IllegalReferenceCountException;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;

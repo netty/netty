@@ -137,7 +137,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     public void readFrame(ChannelHandlerContext ctx, Buffer input, Http2FrameListener listener)
             throws Http2Exception {
         if (readError) {
-            input.skipReadable(input.readableBytes());
+            input.skipReadableBytes(input.readableBytes());
             return;
         }
         try {
@@ -705,7 +705,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 } else {
                     headerBlock = alloc.allocate(len);
                     fragment.copyInto(fragment.readerOffset(), headerBlock, 0, len);
-                    headerBlock.skipWritable(len);
+                    headerBlock.skipWritableBytes(len);
+                    fragment.skipReadableBytes(len);
                 }
                 return;
             }
@@ -716,13 +717,14 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             if (headerBlock.writableBytes() >= len) {
                 // The buffer can hold the requested bytes, just write it directly.
                 fragment.copyInto(fragment.readerOffset(), headerBlock, headerBlock.readerOffset(), len);
-                headerBlock.skipWritable(len);
+                headerBlock.skipWritableBytes(len);
             } else {
                 // Allocate a new buffer that is big enough to hold the entire header block so far.
                 Buffer buf = alloc.allocate(headerBlock.readableBytes() + len);
                 buf.writeBytes(headerBlock);
                 fragment.copyInto(fragment.readerOffset(), buf, buf.writerOffset(), len);
-                buf.skipWritable(len);
+                buf.skipWritableBytes(len);
+                fragment.skipReadableBytes(len);
                 headerBlock.close();
                 headerBlock = buf;
             }

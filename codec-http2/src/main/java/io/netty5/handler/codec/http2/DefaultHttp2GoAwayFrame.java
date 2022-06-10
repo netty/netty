@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferHolder;
+import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
@@ -47,7 +48,7 @@ public final class DefaultHttp2GoAwayFrame extends BufferHolder<Http2GoAwayFrame
      * @param errorCode reason for the go away
      */
     public DefaultHttp2GoAwayFrame(long errorCode) {
-        this(errorCode, onHeapAllocator().allocate(0));
+        this(-1, errorCode, onHeapAllocator().allocate(0));
     }
 
     /**
@@ -56,7 +57,7 @@ public final class DefaultHttp2GoAwayFrame extends BufferHolder<Http2GoAwayFrame
      * @param error non-{@code null} reason for the go away
      * @param content non-{@code null} debug data
      */
-    public DefaultHttp2GoAwayFrame(Http2Error error, Buffer content) {
+    public DefaultHttp2GoAwayFrame(Http2Error error, Send<Buffer> content) {
         this(error.code(), content);
     }
 
@@ -66,8 +67,8 @@ public final class DefaultHttp2GoAwayFrame extends BufferHolder<Http2GoAwayFrame
      * @param errorCode reason for the go away
      * @param content non-{@code null} debug data
      */
-    public DefaultHttp2GoAwayFrame(long errorCode, Buffer content) {
-        this(-1, errorCode, content);
+    public DefaultHttp2GoAwayFrame(long errorCode, Send<Buffer> content) {
+        this(-1, errorCode, content.receive());
     }
 
     /**
@@ -76,7 +77,11 @@ public final class DefaultHttp2GoAwayFrame extends BufferHolder<Http2GoAwayFrame
      * This constructor is for internal use only. A user should not have to specify a specific last stream identifier,
      * but use {@link #setExtraStreamIds(int)} instead.
      */
-    DefaultHttp2GoAwayFrame(int lastStreamId, long errorCode, Buffer content) {
+    DefaultHttp2GoAwayFrame(int lastStreamId, long errorCode, Send<Buffer> content) {
+        this(lastStreamId, errorCode, content.receive());
+    }
+
+    private DefaultHttp2GoAwayFrame(int lastStreamId, long errorCode, Buffer content) {
         super(content);
         this.errorCode = errorCode;
         this.lastStreamId = lastStreamId;

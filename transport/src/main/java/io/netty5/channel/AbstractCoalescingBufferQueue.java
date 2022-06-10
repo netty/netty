@@ -17,11 +17,10 @@ package io.netty5.channel;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -290,20 +289,7 @@ public abstract class AbstractCoalescingBufferQueue {
     protected final Buffer composeIntoComposite(BufferAllocator alloc, Buffer cumulation, Buffer next) {
         // Create a composite buffer to accumulate this pair and potentially all the buffers
         // in the queue. Using +2 as we have already dequeued current and next.
-        return alloc.compose(List.of(trimAndSend(cumulation), trimAndSend(next)));
-    }
-
-    private static Send<Buffer> trimAndSend(Buffer buffer) {
-        // TODO this should no longer be necessary
-//        if (buffer.readerOffset() != 0) {
-//            buffer.readSplit(0).close();
-//        }
-//        if (buffer.writableBytes() > 0) {
-//            Buffer tmp = buffer.split();
-//            buffer.close();
-//            buffer = tmp;
-//        }
-        return buffer.send();
+        return alloc.compose(List.of(cumulation.send(), next.send()));
     }
 
     /**
@@ -391,10 +377,6 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void safeDispose(Object object) {
-        try {
-            Resource.dispose(object);
-        } catch (Throwable t) {
-            logger.warn("Failed to release a message: {}", object, t);
-        }
+        SilentDispose.dispose(object, logger);
     }
 }

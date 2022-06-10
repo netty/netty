@@ -62,5 +62,10 @@ public interface Http2GoAwayFrame extends Http2Frame, Resource<Http2GoAwayFrame>
      */
     Buffer content();
 
+    /**
+     * Produce a copy of this GOAWAY frame, which contain a copy of the frame {@linkplain #content() contents}.
+     *
+     * @return A copy of this GOAWAY frame.
+     */
     Http2GoAwayFrame copy();
 }

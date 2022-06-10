@@ -42,8 +42,6 @@ import io.netty5.util.AsciiString;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -735,7 +733,6 @@ public class InboundHttp2ToHttpAdapterTest {
             listener.messageReceived(msg);
             latch.countDown();
             latch2.countDown();
-            System.out.println("latch = " + latch);
         }
     }
 

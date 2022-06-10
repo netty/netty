@@ -50,7 +50,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      * @param endStream whether this data should terminate the stream
      */
     public DefaultHttp2DataFrame(boolean endStream) {
-        this(DefaultBufferAllocators.onHeapAllocator().allocate(0).send(), endStream);
+        this(DefaultBufferAllocators.onHeapAllocator().allocate(0), endStream, 0);
     }
 
     /**

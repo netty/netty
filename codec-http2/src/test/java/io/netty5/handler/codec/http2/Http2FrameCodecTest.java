@@ -336,7 +336,7 @@ public class Http2FrameCodecTest {
         Buffer expected = debugData.copy();
 
         Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
-                debugData.copy());
+                debugData.send());
         goAwayFrame.setExtraStreamIds(2);
 
         channel.writeOutbound(goAwayFrame);
@@ -345,14 +345,13 @@ public class Http2FrameCodecTest {
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
         expected.close();
-        debugData.close();
     }
 
     @Test
     public void receiveGoaway() throws Exception {
         Buffer debugData = bb("foo");
         frameInboundWriter.writeInboundGoAway(2, NO_ERROR.code(), debugData);
-        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo"));
+        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo").send());
         Http2GoAwayFrame actualFrame = inboundHandler.readInbound();
 
         assertEqualsAndRelease(expectedFrame, actualFrame);
@@ -411,7 +410,7 @@ public class Http2FrameCodecTest {
 
         Buffer debugData = bb("debug");
         Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
-                debugData.copy());
+                debugData.copy().send());
         goAwayFrame.setExtraStreamIds(Integer.MAX_VALUE);
 
         channel.writeOutbound(goAwayFrame);

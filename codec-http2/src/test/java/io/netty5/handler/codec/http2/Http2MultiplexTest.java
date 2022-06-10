@@ -400,7 +400,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertEquals(parentChannel.readInbound(), pingFrame);
 
         DefaultHttp2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(1,
-                parentChannel.bufferAllocator().allocate(8).writeLong(8));
+                parentChannel.bufferAllocator().allocate(8).writeLong(8).send());
         frameInboundWriter.writeInboundGoAway(0, goAwayFrame.errorCode(), goAwayFrame.content().copy());
 
         Http2GoAwayFrame frame = parentChannel.readInbound();

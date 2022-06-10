@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -321,8 +320,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoderForBuffer implem
                 throw connectionError(PROTOCOL_ERROR, "HTTP/2 client preface string missing or corrupt. " +
                                                       "Hex dump for received bytes: %s", receivedBytes);
             }
-            in.skipReadable(bytesRead);
-            clientPrefaceString.skipReadable(bytesRead);
+            in.skipReadableBytes(bytesRead);
+            clientPrefaceString.skipReadableBytes(bytesRead);
 
             if (clientPrefaceString.readableBytes() == 0) {
                 // Entire preface has been read.

@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.util.Send;
-import io.netty5.util.IllegalReferenceCountException;
 
 import static java.util.Objects.requireNonNull;
 

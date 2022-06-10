@@ -22,8 +22,6 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.TypeParameterMatcher;
 
-import java.util.List;
-
 /**
  * {@link ChannelHandler} which decodes from one message to another message.
  *

@@ -36,7 +36,6 @@ import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;
@@ -447,7 +446,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // valid stream ID for the current peer.
             onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? Integer.MAX_VALUE :
                     Integer.MAX_VALUE - 1, NO_ERROR.code(),
-                    ctx.bufferAllocator().copyOf("Stream IDs exhausted on local stream creation".getBytes(US_ASCII))));
+                    ctx.bufferAllocator().copyOf("Stream IDs exhausted on local stream creation", US_ASCII).send()));
 
             return f;
         }
@@ -639,7 +638,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData) {
-            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData));
+            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData.send()));
         }
 
         @Override

@@ -18,7 +18,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -414,7 +413,7 @@ public final class Http2TestUtil {
     }
 
     static Buffer bb(int size) {
-        return onHeapAllocator().allocate(size).fill((byte) 0).skipWritable(size);
+        return onHeapAllocator().allocate(size).fill((byte) 0).skipWritableBytes(size);
     }
 
     static Buffer empty() {

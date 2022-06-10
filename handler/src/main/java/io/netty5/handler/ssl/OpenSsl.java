@@ -21,7 +21,6 @@ import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.util.Resource;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.NativeLibraryLoader;

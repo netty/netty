@@ -33,13 +33,11 @@ import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty5.util.AsciiString;
-import io.netty5.util.IllegalReferenceCountException;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
@@ -74,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -593,36 +592,32 @@ public class Http2ConnectionRoundtripTest {
             http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false);
             Buffer emptyBuf = onHeapAllocator().allocate(0);
             emptyBuf.close();
-            try {
-                final Future<Void> future;
-                switch (mode) {
-                    case SINGLE_END_OF_STREAM:
-                        future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, true);
-                        break;
-                    case SECOND_END_OF_STREAM:
-                        future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
-                        http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, true);
-                        break;
-                    case SINGLE_WITH_TRAILERS:
-                        future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
-                        http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
-                                (short) 16, false, 0, true);
-                        break;
-                    case SECOND_WITH_TRAILERS:
-                        future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
-                        http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false);
-                        http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
-                                (short) 16, false, 0, true);
-                        break;
-                    default:
-                        throw new Error();
-                }
-                http2Client.flush(ctx());
-                future.cascadeTo(promise);
-            } catch (Throwable e) {
-                e.printStackTrace();
-                throw e;
+            final Future<Void> future;
+            switch (mode) {
+            case SINGLE_END_OF_STREAM:
+                future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, true);
+                break;
+            case SECOND_END_OF_STREAM:
+                future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
+                http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, true);
+                break;
+            case SINGLE_WITH_TRAILERS:
+                future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
+                http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
+                                                   (short) 16, false, 0, true);
+                break;
+            case SECOND_WITH_TRAILERS:
+                future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
+                http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false);
+                http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
+                                                   (short) 16, false, 0, true);
+                break;
+            default:
+                fail("unexpected mode: " + mode);
+                return;
             }
+            http2Client.flush(ctx());
+            future.cascadeTo(promise);
         });
 
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
