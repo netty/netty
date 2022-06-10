@@ -31,6 +31,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
@@ -1777,6 +1778,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
         this.ctx = ctx;
 
         Channel channel = ctx.channel();
+        setOpensslEngineSocketFd(channel);
         pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16);
         boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
         boolean active = channel.isActive();
@@ -1925,11 +1927,18 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
         ctx.flush();
     }
 
+     private void setOpensslEngineSocketFd(Channel c) {
+         if (c instanceof UnixChannel && engine instanceof ReferenceCountedOpenSslEngine) {
+             ((ReferenceCountedOpenSslEngine) engine).bioSetFd(((UnixChannel) c).fd().intValue());
+         }
+     }
+
     /**
      * Issues an initial TLS handshake once connected when used in client-mode
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+        setOpensslEngineSocketFd(ctx.channel());
         if (!startTls) {
             startHandshakeProcessing(true);
         }
