@@ -56,7 +56,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }, null),
             // note: the getCurrentTimeNanos() call here only works because this is a final class, otherwise the method
             // could be overridden leading to unsafe initialization here!
-            AbstractScheduledEventExecutor.deadlineNanos(getCurrentTimeNanos(), SCHEDULE_QUIET_PERIOD_INTERVAL),
+            deadlineNanos(getCurrentTimeNanos(), SCHEDULE_QUIET_PERIOD_INTERVAL),
             -SCHEDULE_QUIET_PERIOD_INTERVAL
     );
 
