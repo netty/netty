@@ -99,7 +99,7 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
         }
         for (int i = 0; i < permutations; ++i) {
             data[i] = allocator.allocate(size);
-            data[i].skipWritable(size);
+            data[i].skipWritableBytes(size);
             for (int j = 0; j < size; j++) {
                 int value = random.nextInt(Byte.MIN_VALUE, Byte.MAX_VALUE + 1);
                 // turn any found value into something different

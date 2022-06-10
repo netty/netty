@@ -371,9 +371,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
             int bytesToSkip = buffer.bytesBefore(HttpConstants.LF) + 1;
             if (bytesToSkip > 0) {
                 currentState = State.READ_CHUNK_SIZE;
-                buffer.skipReadable(bytesToSkip);
+                buffer.skipReadableBytes(bytesToSkip);
             } else {
-                buffer.skipReadable(buffer.readableBytes());
+                buffer.skipReadableBytes(buffer.readableBytes());
             }
             return;
         }
@@ -391,7 +391,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
         }
         case BAD_MESSAGE: {
             // Keep discarding until disconnection.
-            buffer.skipReadable(buffer.readableBytes());
+            buffer.skipReadableBytes(buffer.readableBytes());
             break;
         }
         case UPGRADED: {
@@ -539,7 +539,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
 
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
-        in.skipReadable(in.readableBytes());
+        in.skipReadableBytes(in.readableBytes());
 
         if (message == null) {
             message = createInvalidMessage(ctx);
@@ -556,7 +556,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
 
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
-        in.skipReadable(in.readableBytes());
+        in.skipReadableBytes(in.readableBytes());
 
         HttpContent<?> chunk = new DefaultLastHttpContent(allocator.allocate(0));
         chunk.setDecoderResult(DecoderResult.failure(cause));
@@ -889,7 +889,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
                 size = oldSize;
                 return null;
             }
-            buffer.skipReadable(i + 1);
+            buffer.skipReadableBytes(i + 1);
             return seq;
         }
 

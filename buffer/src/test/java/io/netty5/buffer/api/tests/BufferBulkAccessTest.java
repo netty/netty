@@ -312,7 +312,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 long addr = component.writableNativeAddress();
                 assertThat(addr).isNotZero();
                 component.writableBuffer().putInt(0x01020304);
-                component.skipWritable(4);
+                component.skipWritableBytes(4);
                 assertThat(component.writableBytes()).isEqualTo(4);
                 assertThat(component.writableNativeAddress()).isEqualTo(addr + 4);
                 return true;
@@ -326,11 +326,11 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 long addr = component.readableNativeAddress();
                 assertThat(addr).isNotZero();
                 assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x01);
-                component.skipReadable(1);
+                component.skipReadableBytes(1);
                 assertThat(component.readableBytes()).isEqualTo(3);
                 assertThat(component.readableNativeAddress()).isEqualTo(addr + 1);
                 assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x02);
-                component.skipReadable(1);
+                component.skipReadableBytes(1);
                 return true;
             });
 

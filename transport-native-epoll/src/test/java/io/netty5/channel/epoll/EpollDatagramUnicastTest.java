@@ -165,13 +165,13 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 for (int i = 0; i < numBuffers; i++) {
                     components[i] = offHeapAllocator().allocate(segmentSize);
                     components[i].fill((byte) 0);
-                    components[i].skipWritable(segmentSize);
+                    components[i].skipWritableBytes(segmentSize);
                 }
                 buffer = offHeapAllocator().compose(stream(components).map(Buffer::send).collect(Collectors.toList()));
             } else {
                 buffer = offHeapAllocator().allocate(bufferCapacity);
                 buffer.fill((byte) 0);
-                buffer.skipWritable(bufferCapacity);
+                buffer.skipWritableBytes(bufferCapacity);
             }
             cc.writeAndFlush(new SegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
 

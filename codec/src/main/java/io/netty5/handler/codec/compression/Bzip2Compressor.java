@@ -146,7 +146,7 @@ public final class Bzip2Compressor implements Compressor {
                     Bzip2BlockCompressor blockCompressor = this.blockCompressor;
                     final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
                     final int bytesWritten = blockCompressor.write(in, in.readerOffset(), length);
-                    in.skipReadable(bytesWritten);
+                    in.skipReadableBytes(bytesWritten);
                     if (!blockCompressor.isFull()) {
                         if (in.readableBytes() > 0) {
                             break;

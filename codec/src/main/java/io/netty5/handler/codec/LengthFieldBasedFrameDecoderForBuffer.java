@@ -310,7 +310,7 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
 
     private void discardTooLongFrame(Buffer in) {
         final int bytesToDiscardNow = (int) Math.min(bytesToDiscard, in.readableBytes());
-        in.skipReadable(bytesToDiscardNow);
+        in.skipReadableBytes(bytesToDiscardNow);
 
         bytesToDiscard -= bytesToDiscardNow;
 
@@ -318,13 +318,13 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
     }
 
     private static void failOnNegativeLengthField(Buffer buffer, long frameLength, int lengthFieldEndOffset) {
-        buffer.skipReadable(lengthFieldEndOffset);
+        buffer.skipReadableBytes(lengthFieldEndOffset);
         throw new CorruptedFrameException("negative pre-adjustment length field: " + frameLength);
     }
 
     private static void failOnFrameLengthLessThanLengthFieldEndOffset(
             Buffer buffer, long frameLength, int lengthFieldEndOffset) {
-        buffer.skipReadable(lengthFieldEndOffset);
+        buffer.skipReadableBytes(lengthFieldEndOffset);
         throw new CorruptedFrameException(
                 "Adjusted frame length (" + frameLength + ") is less " +
                 "than lengthFieldEndOffset: " + lengthFieldEndOffset);
@@ -336,18 +336,18 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
 
         if (discard < 0) {
             // buffer contains more bytes then the frameLength so we can discard all now
-            buffer.skipReadable((int) frameLength);
+            buffer.skipReadableBytes((int) frameLength);
         } else {
             // Enter the discard mode and discard everything received so far.
             bytesToDiscard = discard;
-            buffer.skipReadable(buffer.readableBytes());
+            buffer.skipReadableBytes(buffer.readableBytes());
         }
         failOnLengthExceededIfNecessary(true);
     }
 
     private static void failOnFrameLengthLessThanInitialBytesToStrip(
             Buffer buffer, int frameLength, int initialBytesToStrip) {
-        buffer.skipReadable(frameLength);
+        buffer.skipReadableBytes(frameLength);
         throw new CorruptedFrameException(
                 "Adjusted frame length (" + frameLength + ") is less " +
                 "than initialBytesToStrip: " + initialBytesToStrip);
@@ -400,7 +400,7 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
             failOnFrameLengthLessThanInitialBytesToStrip(buffer, currentFrameLength, initialBytesToStrip);
         }
 
-        buffer.skipReadable(initialBytesToStrip);
+        buffer.skipReadableBytes(initialBytesToStrip);
 
         // extract frame
         final Buffer frame = extractFrame(ctx, buffer, currentFrameLength - initialBytesToStrip);

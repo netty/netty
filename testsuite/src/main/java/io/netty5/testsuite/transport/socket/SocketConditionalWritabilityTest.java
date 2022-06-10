@@ -81,7 +81,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                                 int chunkSize = Math.min(expectedBytes - bytesWritten, maxWriteChunkSize);
                                 bytesWritten += chunkSize;
                                 Buffer buffer = ctx.bufferAllocator().allocate(chunkSize);
-                                buffer.skipWritable(chunkSize);
+                                buffer.skipWritableBytes(chunkSize);
                                 ctx.write(buffer);
                             }
                             ctx.flush();

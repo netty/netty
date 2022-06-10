@@ -141,7 +141,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws IllegalArgumentException if the given delta is negative.
      * @throws BufferClosedException if this buffer is closed.
      */
-    default Buffer skipReadable(int delta) {
+    default Buffer skipReadableBytes(int delta) {
         checkPositiveOrZero(delta, "delta");
         readerOffset(readerOffset() + delta);
         return this;
@@ -175,7 +175,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @throws BufferClosedException if this buffer is closed.
      * @throws BufferReadOnlyException if this buffer is {@linkplain #readOnly() read-only}.
      */
-    default Buffer skipWritable(int delta) {
+    default Buffer skipWritableBytes(int delta) {
         checkPositiveOrZero(delta, "delta");
         writerOffset(writerOffset() + delta);
         return this;
@@ -435,8 +435,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
         }
         int woff = writerOffset();
         source.copyInto(source.readerOffset(), this, woff, size);
-        source.skipReadable(size);
-        skipWritable(size);
+        source.skipReadableBytes(size);
+        skipWritableBytes(size);
         return this;
     }
 
@@ -469,7 +469,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
         for (int i = 0; i < length; i++) {
             setByte(woff + i, source[srcPos + i]);
         }
-        skipWritable(length);
+        skipWritableBytes(length);
         return this;
     }
 
@@ -519,7 +519,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     default Buffer readBytes(ByteBuffer destination) {
         int byteCount = destination.remaining();
         copyInto(readerOffset(), destination, destination.position(), byteCount);
-        skipReadable(byteCount);
+        skipReadableBytes(byteCount);
         destination.position(destination.limit());
         return this;
     }

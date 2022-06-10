@@ -222,7 +222,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
                 // We've just finished discarding a very large frame.
                 // Go back to the initial state.
                 discardingTooLongFrame = false;
-                buffer.skipReadable(minFrameLength + minDelimLength);
+                buffer.skipReadableBytes(minFrameLength + minDelimLength);
 
                 int tooLongFrameLength = this.tooLongFrameLength;
                 this.tooLongFrameLength = 0;
@@ -234,14 +234,14 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
 
             if (minFrameLength > maxFrameLength) {
                 // Discard read frame.
-                buffer.skipReadable(minFrameLength + minDelimLength);
+                buffer.skipReadableBytes(minFrameLength + minDelimLength);
                 fail(minFrameLength);
                 return null;
             }
 
             if (stripDelimiter) {
                 frame = buffer.readSplit(minFrameLength);
-                buffer.skipReadable(minDelimLength);
+                buffer.skipReadableBytes(minDelimLength);
             } else {
                 frame = buffer.readSplit(minFrameLength + minDelimLength);
             }
@@ -252,7 +252,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
                 if (buffer.readableBytes() > maxFrameLength) {
                     // Discard the content of the buffer until a delimiter is found.
                     tooLongFrameLength = buffer.readableBytes();
-                    buffer.skipReadable(buffer.readableBytes());
+                    buffer.skipReadableBytes(buffer.readableBytes());
                     discardingTooLongFrame = true;
                     if (failFast) {
                         fail(tooLongFrameLength);
@@ -261,7 +261,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
             } else {
                 // Still discarding the buffer since a delimiter is not found.
                 tooLongFrameLength += buffer.readableBytes();
-                buffer.skipReadable(buffer.readableBytes());
+                buffer.skipReadableBytes(buffer.readableBytes());
             }
             return null;
         }

@@ -811,7 +811,7 @@ public class HttpContentDecoderTest {
                 Buffer b = ((HttpContent<?>) o).payload();
                 int readableBytes = b.readableBytes();
                 b.copyInto(b.readerOffset(), receivedContent, readCount, readableBytes);
-                b.skipReadable(readableBytes);
+                b.skipReadableBytes(readableBytes);
                 readCount += readableBytes;
             }
             if (o instanceof HttpMessage) {
@@ -853,7 +853,7 @@ public class HttpContentDecoderTest {
         for (Buffer b : outbound) {
             int readableBytes = b.readableBytes();
             b.copyInto(b.readerOffset(), output, readCount, readableBytes);
-            b.skipReadable(readableBytes);
+            b.skipReadableBytes(readableBytes);
             b.close();
             readCount += readableBytes;
         }

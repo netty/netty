@@ -144,7 +144,7 @@ public interface MemoryManager {
         ManagedBufferAllocator allocator = new ManagedBufferAllocator(manager, false);
         WrappingAllocation allocationType = new WrappingAllocation(array);
         Buffer buffer = manager.allocateShared(allocator, array.length, ArcDrop::wrap, allocationType);
-        buffer.skipWritable(array.length);
+        buffer.skipWritableBytes(array.length);
         return buffer.makeReadOnly();
     }
 

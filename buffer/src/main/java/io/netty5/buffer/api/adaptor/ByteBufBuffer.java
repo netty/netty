@@ -283,7 +283,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             GatheringByteChannel gatheringByteChannel = (GatheringByteChannel) channel;
             int bytesWritten = delegate.getBytes(readerOffset(), gatheringByteChannel, length);
             if (bytesWritten > 0) {
-                skipReadable(bytesWritten);
+                skipReadableBytes(bytesWritten);
             }
             return bytesWritten;
         }
@@ -291,7 +291,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         copyInto(readerOffset(), buf, 0, buf.remaining());
         int bytesWritten = channel.write(buf);
         if (bytesWritten > 0) {
-            skipReadable(bytesWritten);
+            skipReadableBytes(bytesWritten);
         }
         return bytesWritten;
     }
@@ -315,7 +315,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
         int bytesRead = delegate.setBytes(writerOffset(), channel, position, length);
         if (bytesRead > 0) { // Don't skipWritable if bytesRead is 0 or -1
-            skipWritable(bytesRead);
+            skipWritableBytes(bytesRead);
         }
         return bytesRead;
     }
@@ -342,7 +342,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             ScatteringByteChannel scatteringByteChannel = (ScatteringByteChannel) channel;
             int bytesRead = delegate.setBytes(writerOffset(), scatteringByteChannel, length);
             if (bytesRead > 0) {
-                skipWritable(bytesRead);
+                skipWritableBytes(bytesRead);
             }
             return bytesRead;
         }
@@ -467,7 +467,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         Buffer copy = control.getAllocator().allocate(length);
         try {
             copyInto(offset, copy, 0, length);
-            copy.skipWritable(length);
+            copy.skipWritableBytes(length);
             if (readOnly) {
                 copy.makeReadOnly();
             }
@@ -1329,8 +1329,8 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
 
         @Override
-        public ReadableComponent skipReadable(int byteCount) {
-            buffer.skipReadable(byteCount);
+        public ReadableComponent skipReadableBytes(int byteCount) {
+            buffer.skipReadableBytes(byteCount);
             int delta = buffer.readerOffset() - startBufferReaderOffset;
             byteBuffer.position(startByteBufferPosition + delta);
             return this;
@@ -1398,8 +1398,8 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         }
 
         @Override
-        public WritableComponent skipWritable(int byteCount) {
-            buffer.skipWritable(byteCount);
+        public WritableComponent skipWritableBytes(int byteCount) {
+            buffer.skipWritableBytes(byteCount);
             int delta = buffer.writerOffset() - startBufferWriterOffset;
             byteBuffer.position(startByteBufferPosition + delta);
             return this;

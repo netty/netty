@@ -553,7 +553,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 }
             }
         } finally {
-            skipReadable(totalBytesWritten);
+            skipReadableBytes(totalBytesWritten);
         }
         return totalBytesWritten;
     }
@@ -591,7 +591,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
         } finally {
             if (totalBytesRead > 0) { // Don't skipWritable if total is 0 or -1
-                skipWritable(totalBytesRead);
+                skipWritableBytes(totalBytesRead);
             }
         }
         return totalBytesRead;
@@ -633,7 +633,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
         } finally {
             if (totalBytesRead > 0) { // Don't skipWritable if total is 0 or -1
-                skipWritable(totalBytesRead);
+                skipWritableBytes(totalBytesRead);
             }
         }
         return totalBytesRead;
@@ -1044,7 +1044,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 int roffAfter = buf.readerOffset();
                 if (roffAfter != roffBefore) { // Check if ReadableComponent.skipReadable was called.
                     buf.readerOffset(roffBefore); // Reset component offset.
-                    skipReadable(roffAfter - roffBefore); // Then move *composite* buffer offset.
+                    skipReadableBytes(roffAfter - roffBefore); // Then move *composite* buffer offset.
                 }
                 if (count > 0) {
                     visited += count;
@@ -1081,7 +1081,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 int woffAfter = buf.writerOffset();
                 if (woffAfter != woffBefore) { // Check if WritableComponent.skipWritable was called.
                     buf.writerOffset(woffBefore);
-                    skipWritable(woffAfter - woffBefore);
+                    skipWritableBytes(woffAfter - woffBefore);
                 }
                 if (count > 0) {
                     visited += count;
@@ -2147,8 +2147,8 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         @Override
-        public ReadableComponent skipReadable(int byteCount) {
-            ((ReadableComponent) currentComponent).skipReadable(byteCount);
+        public ReadableComponent skipReadableBytes(int byteCount) {
+            ((ReadableComponent) currentComponent).skipReadableBytes(byteCount);
             compositeBuffer.readerOffset(pastOffset + currentReadSkip + byteCount);
             currentReadSkip += byteCount; // This needs to be after the bounds-checks.
             return this;
@@ -2190,8 +2190,8 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         @Override
-        public WritableComponent skipWritable(int byteCount) {
-            ((WritableComponent) currentComponent).skipWritable(byteCount);
+        public WritableComponent skipWritableBytes(int byteCount) {
+            ((WritableComponent) currentComponent).skipWritableBytes(byteCount);
             compositeBuffer.writerOffset(pastOffset + currentWriteSkip + byteCount);
             currentWriteSkip += byteCount; // This needs to be after the bounds-checks.
             return this;

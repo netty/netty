@@ -1048,7 +1048,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
                 // Not an SSL/TLS packet
                 NotSslRecordException e = new NotSslRecordException(
                         "not an SSL/TLS record: " + BufferUtil.hexDump(in));
-                in.skipReadable(in.readableBytes());
+                in.skipReadableBytes(in.readableBytes());
 
                 // First fail the handshake promise as we may need to have access to the SSLEngine which may
                 // be released because the user will remove the SslHandler in an exceptionCaught(...) implementation.

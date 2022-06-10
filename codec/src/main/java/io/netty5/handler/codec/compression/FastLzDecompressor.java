@@ -172,8 +172,8 @@ public final class FastLzDecompressor implements Decompressor {
                                     "stream corrupted: originalLength(%d) and actual length(%d) mismatch",
                                     originalLength, decompressedBytes));
                         }
-                        output.skipWritable(decompressedBytes);
-                        in.skipReadable(chunkLength);
+                        output.skipWritableBytes(decompressedBytes);
+                        in.skipReadableBytes(chunkLength);
                     } else {
                         output = in.readSplit(chunkLength);
                     }

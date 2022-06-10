@@ -68,7 +68,7 @@ public class BufferSearchTest extends BufferTestSupport {
             fillBuffer(buf);
             byte needle = (byte) 0xA5;
             buf.setByte(3, needle);
-            buf.skipReadable(3);
+            buf.skipReadableBytes(3);
             assertThat(buf.bytesBefore(needle))
                     .as("bytesBefore(%X) should be 0", needle)
                     .isEqualTo(0);
@@ -83,7 +83,7 @@ public class BufferSearchTest extends BufferTestSupport {
              Buffer needle = allocator.allocate(3).writeMedium(0xA5A5A5)) {
             fillBuffer(buf);
             buf.setMedium(3, needle.getMedium(0));
-            buf.skipReadable(3);
+            buf.skipReadableBytes(3);
             assertThat(buf.bytesBefore(needle))
                     .as("bytesBefore(Buffer(%X)) should be 0", needle.getMedium(0))
                     .isEqualTo(0);
@@ -98,7 +98,7 @@ public class BufferSearchTest extends BufferTestSupport {
             fillBuffer(buf);
             byte needle = (byte) 0xA5;
             buf.setByte(3, needle);
-            buf.skipReadable(2);
+            buf.skipReadableBytes(2);
             assertThat(buf.bytesBefore(needle))
                     .as("bytesBefore(%X) should be 0", needle)
                     .isEqualTo(1);
@@ -113,7 +113,7 @@ public class BufferSearchTest extends BufferTestSupport {
              Buffer needle = allocator.allocate(3).writeMedium(0xA5A5A5)) {
             fillBuffer(buf);
             buf.setMedium(3, needle.getMedium(0));
-            buf.skipReadable(2);
+            buf.skipReadableBytes(2);
             assertThat(buf.bytesBefore(needle))
                     .as("bytesBefore(Buffer(%X)) should be 0", needle.getMedium(0))
                     .isEqualTo(1);
@@ -134,7 +134,7 @@ public class BufferSearchTest extends BufferTestSupport {
                         .as("bytesBefore(%X)", needle)
                         .isEqualTo(offset);
                 offset--;
-                buf.skipReadable(1);
+                buf.skipReadableBytes(1);
             }
         }
     }
@@ -153,7 +153,7 @@ public class BufferSearchTest extends BufferTestSupport {
                         .as("bytesBefore(Buffer(%X))", needle.getMedium(0))
                         .isEqualTo(offset);
                 offset--;
-                buf.skipReadable(1);
+                buf.skipReadableBytes(1);
             }
         }
     }
@@ -172,7 +172,7 @@ public class BufferSearchTest extends BufferTestSupport {
                         .as("bytesBefore(%X)", needle)
                         .isEqualTo(offset);
                 offset--;
-                buf.skipReadable(1);
+                buf.skipReadableBytes(1);
             }
         }
     }
@@ -191,7 +191,7 @@ public class BufferSearchTest extends BufferTestSupport {
                         .as("bytesBefore(Buffer(%X))", needle.getMedium(0))
                         .isEqualTo(offset);
                 offset--;
-                buf.skipReadable(1);
+                buf.skipReadableBytes(1);
             }
         }
     }
@@ -211,7 +211,7 @@ public class BufferSearchTest extends BufferTestSupport {
                 assertThat(buf.bytesBefore(needle))
                         .as("bytesBefore(%X)", needle)
                         .isEqualTo(-1);
-                buf.skipReadable(1);
+                buf.skipReadableBytes(1);
             }
         }
     }
@@ -231,7 +231,7 @@ public class BufferSearchTest extends BufferTestSupport {
                 assertThat(buf.bytesBefore(needle))
                         .as("bytesBefore(Buffer(%X))", needle.getMedium(0))
                         .isEqualTo(-1);
-                buf.skipReadable(1);
+                buf.skipReadableBytes(1);
             }
         }
     }

@@ -88,7 +88,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             cb.handler(new ChannelHandler() { });
             Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
             Buffer buf = clientChannel.bufferAllocator().allocate(expectedBytes);
-            buf.skipWritable(expectedBytes);
+            buf.skipWritableBytes(expectedBytes);
             clientChannel.writeAndFlush(buf).addListener(clientChannel, ChannelFutureListeners.CLOSE);
 
             latch.await();
@@ -139,7 +139,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
-                            buf.skipWritable(expectedBytes);
+                            buf.skipWritableBytes(expectedBytes);
                             ctx.writeAndFlush(buf).addListener(ctx.channel(), ChannelFutureListeners.CLOSE);
                             ctx.fireChannelActive();
                         }

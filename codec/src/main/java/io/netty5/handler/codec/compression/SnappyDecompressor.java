@@ -118,7 +118,7 @@ public final class SnappyDecompressor implements Decompressor {
                 if (numBytesToSkip != 0) {
                     // The last chunkType we detected was RESERVED_SKIPPABLE and we still have some bytes to skip.
                     int skipBytes = Math.min(numBytesToSkip, in.readableBytes());
-                    in.skipReadable(skipBytes);
+                    in.skipReadableBytes(skipBytes);
                     numBytesToSkip -= skipBytes;
 
                     // Let's return and try again.
@@ -147,9 +147,9 @@ public final class SnappyDecompressor implements Decompressor {
                             return null;
                         }
 
-                        in.skipReadable(4);
+                        in.skipReadableBytes(4);
                         int offset = in.readerOffset();
-                        in.skipReadable(SNAPPY_IDENTIFIER_LEN);
+                        in.skipReadableBytes(SNAPPY_IDENTIFIER_LEN);
 
                         checkByte(in.getByte(offset++), (byte) 's');
                         checkByte(in.getByte(offset++), (byte) 'N');
@@ -165,10 +165,10 @@ public final class SnappyDecompressor implements Decompressor {
                             streamCorrupted("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
                         }
 
-                        in.skipReadable(4);
+                        in.skipReadableBytes(4);
 
                         int skipBytes = Math.min(chunkLength, in.readableBytes());
-                        in.skipReadable(skipBytes);
+                        in.skipReadableBytes(skipBytes);
                         if (skipBytes != chunkLength) {
                             // We could skip all bytes, let's store the remaining so we can do so once we receive more
                             // data.
@@ -194,7 +194,7 @@ public final class SnappyDecompressor implements Decompressor {
                             return null;
                         }
 
-                        in.skipReadable(4);
+                        in.skipReadableBytes(4);
                         if (validateChecksums) {
                             int checksum = Integer.reverseBytes(in.readInt());
                             try {
@@ -204,7 +204,7 @@ public final class SnappyDecompressor implements Decompressor {
                                 throw e;
                             }
                         } else {
-                            in.skipReadable(4);
+                            in.skipReadableBytes(4);
                         }
                         return in.readSplit(chunkLength - 4);
                     case COMPRESSED_DATA:
@@ -221,7 +221,7 @@ public final class SnappyDecompressor implements Decompressor {
                             return null;
                         }
 
-                        in.skipReadable(4);
+                        in.skipReadableBytes(4);
                         int checksum = Integer.reverseBytes(in.readInt());
 
                         int uncompressedSize = snappy.getPreamble(in);

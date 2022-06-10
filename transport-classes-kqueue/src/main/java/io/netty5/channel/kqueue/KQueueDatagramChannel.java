@@ -279,14 +279,14 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             if (remoteAddress == null) {
                 data.forEachReadable(0, (index, component) -> {
                     int written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
-                    component.skipReadable(written);
+                    component.skipReadableBytes(written);
                     return false;
                 });
             } else {
                 data.forEachReadable(0, (index, component) -> {
                     int written = socket.sendToAddress(component.readableNativeAddress(), 0, component.readableBytes(),
                                                             remoteAddress.getAddress(), remoteAddress.getPort());
-                    component.skipReadable(written);
+                    component.skipReadableBytes(written);
                     return false;
                 });
             }
@@ -429,7 +429,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                                 localAddress = (InetSocketAddress) localAddress();
                             }
                             allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                            buffer.skipWritable(allocHandle.lastBytesRead());
+                            buffer.skipWritableBytes(allocHandle.lastBytesRead());
 
                             packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                         }

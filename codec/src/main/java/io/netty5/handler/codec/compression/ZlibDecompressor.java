@@ -276,7 +276,7 @@ public final class ZlibDecompressor implements Decompressor {
                         outputLength = inflater.inflate(buffer);
                     }
                     if (outputLength > 0) {
-                        writableComponent.skipWritable(outputLength);
+                        writableComponent.skipWritableBytes(outputLength);
                         if (crc != null) {
                             crc.update(decompressed, writerIndex, outputLength);
                         }
@@ -301,7 +301,7 @@ public final class ZlibDecompressor implements Decompressor {
             }
 
             int remaining = inflater.getRemaining();
-            in.skipReadable(readableBytes - remaining);
+            in.skipReadableBytes(readableBytes - remaining);
 
             if (readFooter) {
                 gzipState = GzipState.FOOTER_START;
@@ -370,7 +370,7 @@ public final class ZlibDecompressor implements Decompressor {
 
                 // mtime (int)
                 crc.update(in, in.readerOffset(), 4);
-                in.skipReadable(4);
+                in.skipReadableBytes(4);
 
                 crc.update(in.readUnsignedByte()); // extra flags
                 crc.update(in.readUnsignedByte()); // operating system
@@ -397,7 +397,7 @@ public final class ZlibDecompressor implements Decompressor {
                         return false;
                     }
                     crc.update(in, in.readerOffset(), xlen);
-                    in.skipReadable(xlen);
+                    in.skipReadableBytes(xlen);
                 }
                 gzipState = GzipState.SKIP_FNAME;
                 // fall through
@@ -553,7 +553,7 @@ public final class ZlibDecompressor implements Decompressor {
 
         if (buffer.implicitCapacityLimit() < preferredSize) {
             decompressionBufferExhausted(buffer);
-            buffer.skipReadable(buffer.readableBytes());
+            buffer.skipReadableBytes(buffer.readableBytes());
             throw new DecompressionException(
                     "Decompression buffer has reached maximum size: " + buffer.implicitCapacityLimit());
         }

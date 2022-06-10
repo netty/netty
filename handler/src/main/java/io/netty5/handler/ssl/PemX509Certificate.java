@@ -115,7 +115,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
         }
 
         int length = content.readableBytes();
-        pem.skipWritable(length);
+        pem.skipWritableBytes(length);
         content.copyInto(content.readerOffset(), pem, pem.writerOffset(), length);
         return pem;
     }

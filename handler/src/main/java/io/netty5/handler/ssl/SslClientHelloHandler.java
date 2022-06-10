@@ -64,7 +64,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                                 handshakeFailed = true;
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + BufferUtil.hexDump(in));
-                                in.skipReadable(in.readableBytes());
+                                in.skipReadableBytes(in.readableBytes());
                                 ctx.fireUserEventTriggered(new SniCompletionEvent(e));
                                 ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
                                 throw e;
@@ -141,7 +141,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                                 int hsLen = packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH;
                                 in.copyInto(readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH,
                                             handshakeBuffer, handshakeBuffer.writerOffset(), hsLen);
-                                handshakeBuffer.skipWritable(hsLen);
+                                handshakeBuffer.skipWritableBytes(hsLen);
                                 readerIndex += packetLength;
                                 readableBytes -= packetLength;
                                 if (handshakeLength <= handshakeBuffer.readableBytes()) {

@@ -84,7 +84,7 @@ public interface WritableComponent {
      *
      * @param byteCount The number of bytes written to this component.
      * @return itself.
-     * @see Buffer#skipWritable(int)
+     * @see Buffer#skipWritableBytes(int)
      */
-    WritableComponent skipWritable(int byteCount);
+    WritableComponent skipWritableBytes(int byteCount);
 }

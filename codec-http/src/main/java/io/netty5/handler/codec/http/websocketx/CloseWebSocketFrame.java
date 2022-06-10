@@ -147,7 +147,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
         int base = binaryData.readerOffset();
         try {
-            binaryData.skipReadable(2);
+            binaryData.skipReadableBytes(2);
             return binaryData.toString(CharsetUtil.UTF_8);
         } finally {
             binaryData.readerOffset(base);

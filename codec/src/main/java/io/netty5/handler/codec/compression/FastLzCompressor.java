@@ -211,7 +211,7 @@ public final class FastLzCompressor implements Compressor {
             out.setByte(outputIdx + OPTIONS_OFFSET,
                     (byte) (blockType | (checksum != null ? BLOCK_WITH_CHECKSUM : BLOCK_WITHOUT_CHECKSUM)));
             out.writerOffset(outputOffset + 2 + chunkLength);
-            in.skipReadable(length);
+            in.skipReadableBytes(length);
         }
     }
 

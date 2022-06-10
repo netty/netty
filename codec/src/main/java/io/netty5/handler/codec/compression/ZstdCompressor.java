@@ -237,8 +237,8 @@ public final class ZstdCompressor implements Compressor {
                                 writableComponent.writableBuffer().put(outArray);
                             }
                         }
-                        writableComponent.skipWritable(compressedLength);
-                        readableComponent.skipReadable(readableComponent.readableBytes());
+                        writableComponent.skipWritableBytes(compressedLength);
+                        readableComponent.skipReadableBytes(readableComponent.readableBytes());
                     }
                 }
             }

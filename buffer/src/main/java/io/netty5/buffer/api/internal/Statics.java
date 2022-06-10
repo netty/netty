@@ -261,7 +261,7 @@ public interface Statics {
 
     static CharSequence readCharSequence(Buffer source, int length, Charset charset) {
         final CharSequence charSequence = copyToCharSequence(source, source.readerOffset(), length, charset);
-        source.skipReadable(length);
+        source.skipReadableBytes(length);
         return charSequence;
     }
 

@@ -185,7 +185,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
     private void finish(Buffer in, Buffer out) {
         if (result != null) { // Result can be null if the operation failed.
             if (in != null) {
-                in.skipReadable(result.bytesConsumed());
+                in.skipReadableBytes(result.bytesConsumed());
             }
             if (out != null) {
                 if (writeBack) {
@@ -204,7 +204,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
                         out.writeByte(buf.get());
                     }
                 } else {
-                    out.skipWritable(result.bytesProduced());
+                    out.skipWritableBytes(result.bytesProduced());
                 }
             }
             result = null;

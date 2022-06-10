@@ -153,13 +153,13 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     @Override
-    public UnsafeBuffer skipReadable(int delta) {
-        return (UnsafeBuffer) super.skipReadable(delta);
+    public UnsafeBuffer skipReadableBytes(int delta) {
+        return (UnsafeBuffer) super.skipReadableBytes(delta);
     }
 
     @Override
-    public UnsafeBuffer skipWritable(int delta) {
-        return (UnsafeBuffer) super.skipWritable(delta);
+    public UnsafeBuffer skipWritableBytes(int delta) {
+        return (UnsafeBuffer) super.skipWritableBytes(delta);
     }
 
     @Override
@@ -333,7 +333,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         }
         checkGet(readerOffset(), length);
         int bytesWritten = channel.write(readableBuffer().limit(length));
-        skipReadable(bytesWritten);
+        skipReadableBytes(bytesWritten);
         return bytesWritten;
     }
 
@@ -354,7 +354,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         checkSet(writerOffset(), length);
         int bytesRead = channel.read(writableBuffer().limit(length), position);
         if (bytesRead > 0) { // Don't skipWritable if bytesRead is 0 or -1
-            skipWritable(bytesRead);
+            skipWritableBytes(bytesRead);
         }
         return bytesRead;
     }
@@ -374,7 +374,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         checkSet(writerOffset(), length);
         int bytesRead = channel.read(writableBuffer().limit(length));
         if (bytesRead != -1) {
-            skipWritable(bytesRead);
+            skipWritableBytes(bytesRead);
         }
         return bytesRead;
     }
