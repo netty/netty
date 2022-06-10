@@ -19,6 +19,7 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -633,6 +634,18 @@ public class EmbeddedChannel extends AbstractChannel {
                     "More than one exception was raised. " +
                             "Will report only the first one and log others.", cause);
         }
+    }
+
+    public void advanceTimeBy(long duration, TimeUnit unit) {
+        embeddedEventLoop().advanceTimeBy(unit.toNanos(duration));
+    }
+
+    public void freezeTime() {
+        embeddedEventLoop().freezeTime();
+    }
+
+    public void unfreezeTime() {
+        embeddedEventLoop().unfreezeTime();
     }
 
     /**
