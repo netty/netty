@@ -19,8 +19,6 @@ import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PriorityQueue;
 
-import static io.netty.util.concurrent.ScheduledFutureTask.deadlineNanos;
-
 import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -80,6 +78,12 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     static long defaultCurrentTimeNanos() {
         return System.nanoTime() - START_TIME;
+    }
+
+    static long deadlineNanos(long nanoTime, long delay) {
+        long deadlineNanos = nanoTime + delay;
+        // Guard against overflow
+        return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
     }
 
     /**

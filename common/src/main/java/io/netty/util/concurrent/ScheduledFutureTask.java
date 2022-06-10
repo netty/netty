@@ -25,12 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V>, PriorityQueueNode {
-    static long deadlineNanos(long nanoTime, long delay) {
-        long deadlineNanos = nanoTime + delay;
-        // Guard against overflow
-        return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
-    }
-
     // set once when added to priority queue
     private long id;
 
