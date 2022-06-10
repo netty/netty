@@ -60,6 +60,7 @@ class HttpPostStandardRequestDecoderTest {
 
         assertEquals(1, decoder.getBodyHttpDatas().size());
         assertMemoryAttribute(decoder.getBodyHttpData("key1"), "value1");
+        decoder.destroy();
     }
 
     @Test
