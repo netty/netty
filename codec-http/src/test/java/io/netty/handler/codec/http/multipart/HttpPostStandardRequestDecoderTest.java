@@ -75,6 +75,7 @@ class HttpPostStandardRequestDecoderTest {
         decoder.offer(httpContent);
 
         assertEquals(0, decoder.getBodyHttpDatas().size());
+        decoder.destroy();
     }
 
     private static DefaultHttpDataFactory httpDiskDataFactory() {
