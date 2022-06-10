@@ -95,9 +95,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     protected long getCurrentTimeNanos() {
         if (timeFrozen) {
             return frozenTimestamp;
-        } else {
-            return System.nanoTime() - startTime;
-        }
+        return System.nanoTime() - startTime;
     }
 
     void advanceTimeBy(long nanos) {
