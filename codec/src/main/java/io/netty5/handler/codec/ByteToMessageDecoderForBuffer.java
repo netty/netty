@@ -28,12 +28,14 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.ChannelInputShutdownEvent;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
+import io.netty5.util.Send;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
 
 import java.net.SocketAddress;
+import java.util.Arrays;
 
 import static io.netty5.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
 import static java.util.Objects.requireNonNull;
@@ -634,29 +636,17 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                     cumulation.close();
                     cumulation = tmp;
                 }
-                CompositeBuffer composite;
                 if (CompositeBuffer.isComposite(cumulation)) {
-                    composite = (CompositeBuffer) cumulation;
-                } else {
-                    composite = alloc.compose(cumulation.send());
+                    CompositeBuffer composite = (CompositeBuffer) cumulation;
+                    composite.extendWith(prepareInForCompose(in));
+                    return composite;
                 }
-                if (in.readOnly()) {
-                    composite.extendWith(in.copy().send());
-                } else {
-                    if (in.readerOffset() != 0) {
-                        // We can't compose buffers that will have reader-offset gaps.
-                        in.readSplit(0).close(); // Trim off already-read bytes at the beginning.
-                    }
-                    if (in.writableBytes() > 0) {
-                        // We also can't compose buffers that will have writer-offset gaps.
-                        // Trim off the excess with split.
-                        composite.extendWith(in.split().send());
-                    } else {
-                        composite.extendWith(in.send());
-                    }
-                }
-                return composite;
+                return alloc.compose(Arrays.asList(cumulation.send(), prepareInForCompose(in)));
             }
+        }
+
+        private static Send<Buffer> prepareInForCompose(Buffer in) {
+            return in.readOnly() ? in.copy().send() : in.send();
         }
 
         @Override

@@ -145,18 +145,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
                 partCompressedContent.close();
                 continue;
             }
-            if (partCompressedContent.readerOffset() != 0) {
-                // We can't compose buffers that will have reader-offset gaps.
-                partCompressedContent.readSplit(0).close(); // Trim off already-read bytes at the beginning.
-            }
-            if (partCompressedContent.writableBytes() > 0) {
-                // We also can't compose buffers that will have writer-offset gaps.
-                // Trim off the excess with split.
-                bufferList.add(partCompressedContent.split().send());
-                partCompressedContent.close();
-            } else {
-                bufferList.add(partCompressedContent.send());
-            }
+            bufferList.add(partCompressedContent.send());
         }
 
         if (bufferList.isEmpty()) {

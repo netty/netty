@@ -64,15 +64,13 @@ final class CompressionTestUtils {
                 if (msg == null) {
                     break;
                 }
-                if (msg.readerOffset() != 0) {
-                    // We can't compose buffers that will have reader-offset gaps.
-                    msg.readSplit(0).close(); // Trim off already-read bytes at the beginning.
-                }
-                if (msg.writableBytes() > 0) {
-                    // We also can't compose buffers that will have writer-offset gaps.
-                    // Trim off the excess with split.
-                    bufferList.add(msg.split().send());
-                } else {
+
+                // This is needed at the moment as otherwise we will see:
+                //
+                // java.lang.AssertionError: Method should not be used.
+                // at io.netty5.buffer.api.DefaultCompositeBuffer$TornBufferAccessor
+                //     .readByte(DefaultCompositeBuffer.java:1575)
+                if (msg.readableBytes() != 0) {
                     bufferList.add(msg.send());
                 }
             }
