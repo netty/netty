@@ -263,7 +263,7 @@ public interface BufferAllocator extends SafeCloseable {
             duplicate.position(length + duplicate.position());
             return true;
         });
-        copy.skipWritable(bytesToCopy);
+        copy.skipWritableBytes(bytesToCopy);
         return copy;
     }
 

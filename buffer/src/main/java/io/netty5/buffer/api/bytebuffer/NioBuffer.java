@@ -141,13 +141,13 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     @Override
-    public NioBuffer skipReadable(int delta) {
-        return (NioBuffer) super.skipReadable(delta);
+    public NioBuffer skipReadableBytes(int delta) {
+        return (NioBuffer) super.skipReadableBytes(delta);
     }
 
     @Override
-    public NioBuffer skipWritable(int delta) {
-        return (NioBuffer) super.skipWritable(delta);
+    public NioBuffer skipWritableBytes(int delta) {
+        return (NioBuffer) super.skipWritableBytes(delta);
     }
 
     @Override
@@ -300,7 +300,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         }
         checkGet(readerOffset(), length);
         int bytesWritten = channel.write(readableBuffer().limit(length));
-        skipReadable(bytesWritten);
+        skipReadableBytes(bytesWritten);
         return bytesWritten;
     }
 
@@ -321,7 +321,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         checkSet(writerOffset(), length);
         int bytesRead = channel.read(writableBuffer().limit(length), position);
         if (bytesRead > 0) { // Don't skipWritable if bytesRead is 0 or -1
-            skipWritable(bytesRead);
+            skipWritableBytes(bytesRead);
         }
         return bytesRead;
     }
@@ -341,7 +341,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         checkSet(writerOffset(), length);
         int bytesRead = channel.read(writableBuffer().limit(length));
         if (bytesRead != -1) {
-            skipWritable(bytesRead);
+            skipWritableBytes(bytesRead);
         }
         return bytesRead;
     }

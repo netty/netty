@@ -617,7 +617,7 @@ public class SslHandlerTest {
                               logger.debug("[testHandshakeFailBeforeWritePromise] server channel active");
                               Buffer buf = ctx.bufferAllocator().allocate(10);
                               buf.fill((byte) 0);
-                              buf.skipWritable(buf.capacity());
+                              buf.skipWritableBytes(buf.capacity());
                               ctx.writeAndFlush(buf).addListener(future -> {
                                   logger.debug("[testHandshakeFailBeforeWritePromise] " +
                                                "server write and flush completed: " + future);
@@ -651,7 +651,7 @@ public class SslHandlerTest {
                               logger.debug("[testHandshakeFailBeforeWritePromise] client channel active");
                               Buffer buf = ctx.bufferAllocator().allocate(1000);
                               buf.fill((byte) 0);
-                              buf.skipWritable(buf.capacity());
+                              buf.skipWritableBytes(buf.capacity());
                               ctx.writeAndFlush(buf).addListener(future -> {
                                   logger.debug("[testHandshakeFailBeforeWritePromise] " +
                                                "client write and flush completed");
@@ -752,7 +752,7 @@ public class SslHandlerTest {
             firstBuffer.writeByte((byte) 0);
             firstBuffer = firstBuffer.makeReadOnly();
             Buffer secondBuffer = offHeapAllocator().allocate(10);
-            secondBuffer.skipWritable(secondBuffer.capacity());
+            secondBuffer.skipWritableBytes(secondBuffer.capacity());
             cc.write(firstBuffer);
             cc.writeAndFlush(secondBuffer).syncUninterruptibly();
             serverReceiveLatch.countDown();

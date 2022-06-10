@@ -140,7 +140,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.ensureWritable(2 + contentLen);
         out.writeShort((short) contentLen);
         content.copyInto(content.readerOffset(), out, out.writerOffset(), contentLen);
-        out.skipWritable(contentLen);
+        out.skipWritableBytes(contentLen);
     }
 
     protected void encodeName(String name, Buffer buf) throws Exception {

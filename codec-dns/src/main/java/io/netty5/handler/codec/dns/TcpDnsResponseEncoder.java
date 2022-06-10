@@ -48,7 +48,7 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
     protected void encode(ChannelHandlerContext ctx, DnsResponse response, List<Object> out) throws Exception {
         Buffer buf = ctx.bufferAllocator().allocate(1024);
 
-        buf.skipWritable(2);
+        buf.skipWritableBytes(2);
         DnsMessageUtil.encodeDnsResponse(encoder, response, buf);
         buf.setShort(0, (short) (buf.readableBytes() - 2));
 

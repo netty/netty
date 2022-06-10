@@ -925,7 +925,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         int readableBytes = content.readableBytes();
         try (Buffer buffer = allocator.allocate(readableBytes)) {
             content.copyInto(content.readerOffset(), buffer, 0, readableBytes);
-            buffer.skipWritable(readableBytes);
+            buffer.skipWritableBytes(readableBytes);
             return newBIO(buffer);
         }
     }

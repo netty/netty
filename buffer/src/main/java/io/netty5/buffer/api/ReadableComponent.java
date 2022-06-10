@@ -109,7 +109,7 @@ public interface ReadableComponent {
      *
      * @param byteCount The number of bytes read from this component.
      * @return itself.
-     * @see Buffer#skipReadable(int)
+     * @see Buffer#skipReadableBytes(int)
      */
-    ReadableComponent skipReadable(int byteCount);
+    ReadableComponent skipReadableBytes(int byteCount);
 }

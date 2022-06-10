@@ -46,7 +46,7 @@ public final class TcpDnsQueryEncoder extends MessageToByteEncoderForBuffer<DnsQ
         // Length is two octets as defined by RFC-7766
         // See https://tools.ietf.org/html/rfc7766#section-8
         int initialOffset = out.writerOffset();
-        out.skipWritable(2);
+        out.skipWritableBytes(2);
         encoder.encode(msg, out);
 
         // Now fill in the correct length based on the amount of data that we wrote the ByteBuf.

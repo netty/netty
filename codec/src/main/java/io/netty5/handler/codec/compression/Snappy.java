@@ -235,8 +235,8 @@ public final class Snappy {
 
         out.ensureWritable(length);
         in.copyInto(in.readerOffset(), out, out.writerOffset(), length);
-        in.skipReadable(length);
-        out.skipWritable(length);
+        in.skipReadableBytes(length);
+        out.skipWritableBytes(length);
     }
 
     private static void encodeCopyWithOffset(Buffer out, int offset, int length) {
@@ -450,8 +450,8 @@ public final class Snappy {
 
         out.ensureWritable(length);
         in.copyInto(in.readerOffset(), out, out.writerOffset(), length);
-        in.skipReadable(length);
-        out.skipWritable(length);
+        in.skipReadableBytes(length);
+        out.skipWritableBytes(length);
         return length;
     }
 
@@ -499,7 +499,7 @@ public final class Snappy {
     private static void copyRegion(Buffer out, int initialIndex, int offset, int length) {
         out.readerOffset(initialIndex - offset);
         out.copyInto(out.readerOffset(), out, out.writerOffset(), length);
-        out.skipWritable(length).skipReadable(length);
+        out.skipWritableBytes(length).skipReadableBytes(length);
     }
 
     /**

@@ -390,7 +390,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             if (bytesRead >= expectedBytes) {
                 // We write a reply and immediately close our end of the socket.
                 Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
-                buf.skipWritable(expectedBytes);
+                buf.skipWritableBytes(expectedBytes);
                 ctx.writeAndFlush(buf).addListener(ctx.channel(), (c, f) ->
                         c.close().addListener(c, (channel, future) -> {
                             // This is a bit racy but there is no better way how to handle this in Java11.
@@ -430,7 +430,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             Buffer buf = ctx.bufferAllocator().allocate(expectedBytes);
-            buf.skipWritable(expectedBytes);
+            buf.skipWritableBytes(expectedBytes);
             Buffer msg = buf.copy();
             ctx.writeAndFlush(buf);
 

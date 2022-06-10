@@ -271,15 +271,15 @@ public final class Lz4Decompressor implements Decompressor {
                                     try (Buffer inBuffer = allocator.allocate(compressedLength)) {
                                         in.copyInto(in.readerOffset(), inBuffer,
                                                 inBuffer.writerOffset(), compressedLength);
-                                        inBuffer.skipWritable(compressedLength);
+                                        inBuffer.skipWritableBytes(compressedLength);
                                         decompress(inBuffer, uncompressed);
                                     }
                                 } else {
                                     decompress(in, uncompressed);
                                 }
-                                in.skipReadable(compressedLength);
+                                in.skipReadableBytes(compressedLength);
                                 // Update the writerIndex now to reflect what we decompressed.
-                                uncompressed.skipWritable(decompressedLength);
+                                uncompressed.skipWritableBytes(decompressedLength);
                                 break;
                             default:
                                 streamCorrupted(String.format(

@@ -190,7 +190,7 @@ public class BufferOffsetsTest extends BufferTestSupport {
                 buf.readByte();
             }
 
-            buf.skipReadable(8);
+            buf.skipReadableBytes(8);
             assertEquals(8 + 8, buf.readerOffset());
         }
     }
@@ -202,7 +202,7 @@ public class BufferOffsetsTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8)) {
             buf.writeLong(1);
             buf.readInt();
-            assertThrows(IllegalArgumentException.class, () -> buf.skipReadable(-1));
+            assertThrows(IllegalArgumentException.class, () -> buf.skipReadableBytes(-1));
         }
     }
 
@@ -213,7 +213,7 @@ public class BufferOffsetsTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(32)) {
             writeRandomBytes(buf, 16);
 
-            buf.skipWritable(8);
+            buf.skipWritableBytes(8);
             assertEquals(16 + 8, buf.writerOffset());
         }
     }
@@ -224,7 +224,7 @@ public class BufferOffsetsTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.writeInt(1);
-            assertThrows(IllegalArgumentException.class, () -> buf.skipWritable(-1));
+            assertThrows(IllegalArgumentException.class, () -> buf.skipWritableBytes(-1));
         }
     }
 }

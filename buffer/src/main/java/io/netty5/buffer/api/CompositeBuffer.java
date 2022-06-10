@@ -180,13 +180,13 @@ public interface CompositeBuffer extends Buffer {
     CompositeBuffer writerOffset(int offset);
 
     @Override
-    default CompositeBuffer skipReadable(int delta) {
-        return (CompositeBuffer) Buffer.super.skipReadable(delta);
+    default CompositeBuffer skipReadableBytes(int delta) {
+        return (CompositeBuffer) Buffer.super.skipReadableBytes(delta);
     }
 
     @Override
-    default CompositeBuffer skipWritable(int delta) {
-        return (CompositeBuffer) Buffer.super.skipWritable(delta);
+    default CompositeBuffer skipWritableBytes(int delta) {
+        return (CompositeBuffer) Buffer.super.skipWritableBytes(delta);
     }
 
     @Override

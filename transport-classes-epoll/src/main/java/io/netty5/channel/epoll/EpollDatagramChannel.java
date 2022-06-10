@@ -546,7 +546,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 if (bytesRead <= 0) {
                     return false;
                 }
-                component.skipWritable(bytesRead);
+                component.skipWritableBytes(bytesRead);
                 return true;
             });
             final int totalBytesRead = initialWritableBytes - buf.writableBytes();

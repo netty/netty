@@ -16,8 +16,6 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 
@@ -313,7 +311,7 @@ public final class ZlibCompressor implements Compressor {
                         if (numBytes <= 0) {
                             break;
                         }
-                        writableComponent.skipWritable(numBytes);
+                        writableComponent.skipWritableBytes(numBytes);
                     }
                 } else {
                     for (;;) {
@@ -321,7 +319,7 @@ public final class ZlibCompressor implements Compressor {
                         if (numBytes <= 0) {
                             break;
                         }
-                        writableComponent.skipWritable(numBytes);
+                        writableComponent.skipWritableBytes(numBytes);
                     }
                 }
             }

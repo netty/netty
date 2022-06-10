@@ -208,7 +208,7 @@ public final class LzfDecompressor implements Decompressor {
                                     int inPos = readableComponent.readableArrayOffset();
                                     try {
                                         Buffer out = decompress(allocator, inputArray, inPos, originalLength);
-                                        in.skipReadable(chunkLength);
+                                        in.skipReadableBytes(chunkLength);
                                         currentState = State.INIT_BLOCK;
                                         return out;
                                     } finally {
@@ -224,7 +224,7 @@ public final class LzfDecompressor implements Decompressor {
                         in.copyInto(idx, inputArray, 0, chunkLength);
                         try {
                             Buffer out = decompress(allocator, inputArray, 0, originalLength);
-                            in.skipReadable(chunkLength);
+                            in.skipReadableBytes(chunkLength);
                             currentState = State.INIT_BLOCK;
                             return out;
                         } finally {

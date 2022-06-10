@@ -203,7 +203,7 @@ public final class BufferInputStream extends InputStream implements DataInput {
 
                 case '\r':
                     if (available > 0 && (char) buffer.getUnsignedByte(buffer.readerOffset()) == '\n') {
-                        buffer.skipReadable(1);
+                        buffer.skipReadableBytes(1);
                     }
                     break loop;
 
@@ -248,7 +248,7 @@ public final class BufferInputStream extends InputStream implements DataInput {
     @Override
     public int skipBytes(int n) throws IOException {
         int nBytes = Math.min(available(), n);
-        buffer.skipReadable(nBytes);
+        buffer.skipReadableBytes(nBytes);
         return nBytes;
     }
 

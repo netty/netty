@@ -163,8 +163,8 @@ public final class SnappyCompressor implements Compressor {
         writeChunkLength(out, dataLength + 4);
         calculateAndWriteChecksum(in, out);
         in.copyInto(in.readerOffset(), out, out.writerOffset(), dataLength);
-        in.skipReadable(dataLength);
-        out.skipWritable(dataLength);
+        in.skipReadableBytes(dataLength);
+        out.skipWritableBytes(dataLength);
     }
 
     private static void setChunkLength(Buffer out, int lengthIdx) {

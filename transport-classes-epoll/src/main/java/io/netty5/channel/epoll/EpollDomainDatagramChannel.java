@@ -198,7 +198,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
         if (remoteAddress == null) {
             data.forEachReadable(0, (index, component) -> {
                 int written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
-                component.skipReadable(written);
+                component.skipReadableBytes(written);
                 return false;
             });
         } else {
@@ -206,7 +206,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                 int written = socket.sendToAddressDomainSocket(
                         component.readableNativeAddress(), 0, component.readableBytes(),
                         remoteAddress.path().getBytes(UTF_8));
-                component.skipReadable(written);
+                component.skipReadableBytes(written);
                 return false;
             });
         }
@@ -367,7 +367,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                             localAddress = (DomainSocketAddress) localAddress();
                         }
                         allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                        buf.skipWritable(allocHandle.lastBytesRead());
+                        buf.skipWritableBytes(allocHandle.lastBytesRead());
 
                         packet = new DomainDatagramPacket(buf, localAddress, remoteAddress);
                     }

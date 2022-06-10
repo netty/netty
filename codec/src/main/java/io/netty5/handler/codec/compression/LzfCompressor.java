@@ -213,7 +213,7 @@ public final class LzfCompressor implements Compressor {
                             outputLength = encodeNonCompress(input, inputPtr, length, output, 0);
                         }
 
-                        readableComponent.skipReadable(length);
+                        readableComponent.skipReadableBytes(length);
 
                         if (!readableComponent.hasReadableArray()) {
                             recycler.releaseInputBuffer(input);

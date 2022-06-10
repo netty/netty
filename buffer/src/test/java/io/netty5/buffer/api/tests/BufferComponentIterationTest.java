@@ -719,9 +719,9 @@ public class BufferComponentIterationTest extends BufferTestSupport {
                     byte value = byteBuffer.get();
                     byteBuffer.clear();
                     target.writeByte(value);
-                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipReadable(9));
-                    component.skipReadable(0);
-                    component.skipReadable(1);
+                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipReadableBytes(9));
+                    component.skipReadableBytes(0);
+                    component.skipReadableBytes(1);
                 }
                 return target.writableBytes() > 0;
             });
@@ -749,9 +749,9 @@ public class BufferComponentIterationTest extends BufferTestSupport {
                         byteBuffer.clear();
                         target.writeByte(value);
                         var cmp = component; // Capture for lambda.
-                        assertThrows(IndexOutOfBoundsException.class, () -> cmp.skipReadable(9));
-                        component.skipReadable(0);
-                        component.skipReadable(1);
+                        assertThrows(IndexOutOfBoundsException.class, () -> cmp.skipReadableBytes(9));
+                        component.skipReadableBytes(0);
+                        component.skipReadableBytes(1);
                     }
                 }
             }
@@ -776,9 +776,9 @@ public class BufferComponentIterationTest extends BufferTestSupport {
                     byte value = byteBuffer.get();
                     byteBuffer.clear();
                     assertThat(value).isEqualTo(target.readByte());
-                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipWritable(9));
-                    component.skipWritable(0);
-                    component.skipWritable(1);
+                    assertThrows(IndexOutOfBoundsException.class, () -> component.skipWritableBytes(9));
+                    component.skipWritableBytes(0);
+                    component.skipWritableBytes(1);
                 }
                 return true;
             });
@@ -805,9 +805,9 @@ public class BufferComponentIterationTest extends BufferTestSupport {
                         byteBuffer.clear();
                         assertThat(value).isEqualTo(target.readByte());
                         var cmp = component; // Capture for lambda.
-                        assertThrows(IndexOutOfBoundsException.class, () -> cmp.skipWritable(9));
-                        component.skipWritable(0);
-                        component.skipWritable(1);
+                        assertThrows(IndexOutOfBoundsException.class, () -> cmp.skipWritableBytes(9));
+                        component.skipWritableBytes(0);
+                        component.skipWritableBytes(1);
                     }
                 }
             }
@@ -826,14 +826,14 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             buf.writeLong(0x0102030405060708L);
             assertThat(buf.readInt()).isEqualTo(0x01020304);
             buf.forEachReadable(0, (index, component) -> {
-                assertThrows(IllegalArgumentException.class, () -> component.skipReadable(-1));
+                assertThrows(IllegalArgumentException.class, () -> component.skipReadableBytes(-1));
                 return true;
             });
 
             try (var iterator = buf.forEachReadable()) {
                 for (var component = iterator.first(); component != null; component = component.next()) {
                     var cmp = component; // Capture for lambda.
-                    assertThrows(IllegalArgumentException.class, () -> cmp.skipReadable(-1));
+                    assertThrows(IllegalArgumentException.class, () -> cmp.skipReadableBytes(-1));
                 }
             }
         }
@@ -845,14 +845,14 @@ public class BufferComponentIterationTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.forEachWritable(0, (index, component) -> {
-                assertThrows(IllegalArgumentException.class, () -> component.skipWritable(-1));
+                assertThrows(IllegalArgumentException.class, () -> component.skipWritableBytes(-1));
                 return true;
             });
 
             try (var iterator = buf.forEachWritable()) {
                 for (var component = iterator.first(); component != null; component = component.next()) {
                     var cmp = component; // Capture for lambda.
-                    assertThrows(IllegalArgumentException.class, () -> cmp.skipWritable(-1));
+                    assertThrows(IllegalArgumentException.class, () -> cmp.skipWritableBytes(-1));
                 }
             }
         }

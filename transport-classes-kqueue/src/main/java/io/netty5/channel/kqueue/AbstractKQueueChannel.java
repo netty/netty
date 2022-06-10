@@ -252,7 +252,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
             unsafe().recvBufAllocHandle().lastBytesRead(localReadAmount);
             if (localReadAmount > 0) {
-                component.skipWritable(localReadAmount);
+                component.skipWritableBytes(localReadAmount);
             }
             return localReadAmount;
         }
@@ -265,7 +265,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             assert address != 0;
             int written = socket.writeAddress(address, 0, component.readableBytes());
             if (written > 0) {
-                component.skipReadable(written);
+                component.skipReadableBytes(written);
             }
             return false;
         });

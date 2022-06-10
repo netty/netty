@@ -76,7 +76,7 @@ final class NativeDatagramPacketArray {
                 NativeDatagramPacket p = packets[count];
                 p.init(iovArray.memoryAddress(iovArrayStart), iovArray.count() - iovArrayStart, segmentLen, recipient);
                 count++;
-                component.skipWritable(byteCount);
+                component.skipWritableBytes(byteCount);
                 return true;
             }
             return false;
@@ -104,7 +104,7 @@ final class NativeDatagramPacketArray {
                 long packetAddr = iovArray.memoryAddress(iovArrayStart);
                 p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
                 count++;
-                component.skipReadable(byteCount);
+                component.skipReadableBytes(byteCount);
                 return true;
             }
             return false;

@@ -957,7 +957,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     dst.position(dst.position() + bytesProduced);
                 } else {
                     try (bioReadCopyBuf) {
-                        bioReadCopyBuf.skipWritable(bytesProduced);
+                        bioReadCopyBuf.skipWritableBytes(bytesProduced);
                         assert bioReadCopyBuf.readableBytes() <= dst.remaining() :
                                 "The destination buffer " + dst + " didn't have enough remaining space to hold the " +
                                 "encrypted content in " + bioReadCopyBuf;

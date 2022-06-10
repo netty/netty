@@ -109,7 +109,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
 
                 if (stripDelimiter) {
                     frame = buffer.readSplit(length);
-                    buffer.skipReadable(delimLength);
+                    buffer.skipReadableBytes(delimLength);
                 } else {
                     frame = buffer.readSplit(length + delimLength);
                 }

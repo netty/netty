@@ -62,7 +62,7 @@ public class BufferEqualsTest extends BufferTestSupport {
              Buffer buf2 = allocator.allocate(data2.length)) {
             buf1.writeBytes(data1);
             buf2.writeBytes(data2);
-            buf2.skipReadable(3);
+            buf2.skipReadableBytes(3);
             buf2.writerOffset(buf2.writerOffset() - 5);
 
             Assertions.assertEquals(buf1, buf2);

@@ -151,7 +151,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
     protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
-            in.skipReadable(actualReadableBytes());
+            in.skipReadableBytes(actualReadableBytes());
             return;
         }
 
@@ -424,7 +424,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
         if (readableBytes > 0) {
             // Fix for memory leak, caused by ByteToMessageDecoder#channelRead:
             // buffer 'cumulation' is released ONLY when no more readable bytes available.
-            in.skipReadable(readableBytes);
+            in.skipReadableBytes(readableBytes);
         }
         if (ctx.channel().isActive() && config.closeOnProtocolViolation()) {
             Object closeMessage;

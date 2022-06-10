@@ -253,7 +253,7 @@ public final class NioDatagramChannel
             }
 
             allocHandle.lastBytesRead(receiveDatagram.bytesReceived);
-            data.skipWritable(allocHandle.lastBytesRead());
+            data.skipWritableBytes(allocHandle.lastBytesRead());
             buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
             return 1;
@@ -293,7 +293,7 @@ public final class NioDatagramChannel
                 } else {
                     writtenBytes = javaChannel().write(component.readableBuffer());
                 }
-                component.skipReadable(writtenBytes);
+                component.skipReadableBytes(writtenBytes);
                 return true;
             });
             return buf.readableBytes() < initialReadable;

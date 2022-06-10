@@ -177,7 +177,7 @@ public class ParameterizedSslHandlerTest {
                                             List<Send<Buffer>> components = new ArrayList<>(numComponents);
                                             for (int i = 0; i < numComponents; ++i) {
                                                 Buffer buf = ctx.bufferAllocator().allocate(singleComponentSize);
-                                                buf.skipWritable(singleComponentSize);
+                                                buf.skipWritableBytes(singleComponentSize);
                                                 components.add(buf.send());
                                             }
                                             CompositeBuffer content = ctx.bufferAllocator().compose(components);

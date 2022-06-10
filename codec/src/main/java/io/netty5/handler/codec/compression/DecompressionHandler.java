@@ -78,7 +78,7 @@ public final class DecompressionHandler extends ByteToMessageDecoderForBuffer {
         }
         assert decompressor.isFinished();
         if (discardBytesAfterFinished) {
-            in.skipReadable(in.readableBytes());
+            in.skipReadableBytes(in.readableBytes());
         } else {
             ctx.fireChannelRead(in.split());
         }

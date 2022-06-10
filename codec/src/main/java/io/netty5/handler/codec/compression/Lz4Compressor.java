@@ -254,7 +254,7 @@ public final class Lz4Compressor implements Compressor {
                 footer.setInt(idx + DECOMPRESSED_LENGTH_OFFSET, 0);
                 footer.setInt(idx + CHECKSUM_OFFSET, 0);
 
-                footer.skipWritable(HEADER_LENGTH);
+                footer.skipWritableBytes(HEADER_LENGTH);
                 return footer;
             default:
                 throw new IllegalStateException();
@@ -293,7 +293,7 @@ public final class Lz4Compressor implements Compressor {
         final int idx = out.writerOffset();
         int compressedLength = 0;
         try {
-            out.skipWritable(HEADER_LENGTH);
+            out.skipWritableBytes(HEADER_LENGTH);
             assert out.countWritableComponents() == 1;
             int readable = flushableBytes;
 

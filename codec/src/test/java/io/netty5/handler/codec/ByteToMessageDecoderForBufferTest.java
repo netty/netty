@@ -616,8 +616,8 @@ public class ByteToMessageDecoderForBufferTest {
             int valuesSkipped = rng.nextInt(0, valueCapacity / 4);
             int valuesWritten = rng.nextInt(0, valueCapacity - valuesSkipped);
             Buffer buf = allocator.allocate(valueCapacity * Integer.BYTES);
-            buf.skipWritable(valuesSkipped * Integer.BYTES);
-            buf.skipReadable(valuesSkipped * Integer.BYTES);
+            buf.skipWritableBytes(valuesSkipped * Integer.BYTES);
+            buf.skipReadableBytes(valuesSkipped * Integer.BYTES);
             for (int i = 0; i < valuesWritten; i++) {
                 buf.writeInt(++sendCounter);
             }
