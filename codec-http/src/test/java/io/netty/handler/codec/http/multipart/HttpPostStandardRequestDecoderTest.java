@@ -81,7 +81,7 @@ class HttpPostStandardRequestDecoderTest {
         return new DefaultHttpDataFactory(false);
     }
 
-    private void assertMemoryAttribute(InterfaceHttpData data, String expectedValue) {
+    private static void assertMemoryAttribute(InterfaceHttpData data, String expectedValue) {
         assertEquals(InterfaceHttpData.HttpDataType.Attribute, data.getHttpDataType());
         assertEquals(((MemoryAttribute) data).getValue(), expectedValue);
     }
