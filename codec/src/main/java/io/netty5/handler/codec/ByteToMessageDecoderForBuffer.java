@@ -630,11 +630,6 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                     Buffer tmp = cumulation.copy();
                     cumulation.close();
                     cumulation = tmp;
-                } else if (cumulation.writableBytes() > 0) {
-                    // Prevent writer-offset gaps from an initial cumulation.
-                    Buffer tmp = cumulation.split();
-                    cumulation.close();
-                    cumulation = tmp;
                 }
                 if (CompositeBuffer.isComposite(cumulation)) {
                     CompositeBuffer composite = (CompositeBuffer) cumulation;
