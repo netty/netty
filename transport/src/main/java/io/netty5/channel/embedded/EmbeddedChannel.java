@@ -42,6 +42,7 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty5.util.internal.PlatformDependent.throwException;
 import static java.util.Objects.requireNonNull;
@@ -612,6 +613,37 @@ public class EmbeddedChannel extends AbstractChannel {
                     "More than one exception was raised. " +
                             "Will report only the first one and log others.", cause);
         }
+    }
+
+    private EmbeddedEventLoop embeddedEventLoop() {
+        return (EmbeddedEventLoop) executor();
+    }
+    /**
+     * Advance the clock of the event loop of this channel by the given duration. Any scheduled tasks will execute
+     * sooner by the given time (but {@link #runScheduledPendingTasks()} still needs to be called).
+     */
+    public void advanceTimeBy(long duration, TimeUnit unit) {
+        embeddedEventLoop().advanceTimeBy(unit.toNanos(duration));
+    }
+
+    /**
+     * Freeze the clock of this channel's event loop. Any scheduled tasks that are not already due will not run on
+     * future {@link #runScheduledPendingTasks()} calls. While the event loop is frozen, it is still possible to
+     * {@link #advanceTimeBy(long, TimeUnit) advance time} manually so that scheduled tasks execute.
+     */
+    public void freezeTime() {
+        embeddedEventLoop().freezeTime();
+    }
+
+    /**
+     * Unfreeze an event loop that was {@link #freezeTime() frozen}. Time will continue at the point where
+     * {@link #freezeTime()} stopped it: if a task was scheduled ten minutes in the future and {@link #freezeTime()}
+     * was called, it will run ten minutes after this method is called again (assuming no
+     * {@link #advanceTimeBy(long, TimeUnit)} calls, and assuming pending scheduled tasks are run at that time using
+     * {@link #runScheduledPendingTasks()}).
+     */
+    public void unfreezeTime() {
+        embeddedEventLoop().unfreezeTime();
     }
 
     /**

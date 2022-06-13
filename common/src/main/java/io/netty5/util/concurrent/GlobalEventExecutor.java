@@ -45,17 +45,11 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     private static final long SCHEDULE_QUIET_PERIOD_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
-    private static final RunnableScheduledFutureAdapter<Void> QUIET_PERIOD_TASK;
+    private final RunnableScheduledFutureAdapter<Void> quietPeriodTask;
     public static final GlobalEventExecutor INSTANCE;
 
     static {
         INSTANCE = new GlobalEventExecutor();
-        QUIET_PERIOD_TASK = new RunnableScheduledFutureAdapter<>(
-                INSTANCE, INSTANCE.newPromise(), Executors.callable(() -> {
-                    // NOOP
-                }, null), deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL), -SCHEDULE_QUIET_PERIOD_INTERVAL);
-
-        INSTANCE.scheduledTaskQueue().add(QUIET_PERIOD_TASK);
     }
 
     private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
@@ -75,6 +69,16 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     private GlobalEventExecutor() {
         threadFactory = ThreadExecutorMap.apply(new DefaultThreadFactory(
                 DefaultThreadFactory.toPoolName(getClass()), false, Thread.NORM_PRIORITY, null), this);
+        quietPeriodTask = new RunnableScheduledFutureAdapter<>(
+                this, newPromise(), Executors.callable(() -> {
+            // NOOP
+        }, null),
+                // note: the getCurrentTimeNanos() call here only works because this is a final class, otherwise
+                // the method could be overridden leading to unsafe initialization here!
+                deadlineNanos(getCurrentTimeNanos(), SCHEDULE_QUIET_PERIOD_INTERVAL),
+                -SCHEDULE_QUIET_PERIOD_INTERVAL);
+
+        scheduledTaskQueue().add(quietPeriodTask);
     }
 
     /**
@@ -122,7 +126,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     private void fetchFromScheduledTaskQueue() {
-        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        long nanoTime = getCurrentTimeNanos();
         Runnable scheduledTask = pollScheduledTask(nanoTime);
         while (scheduledTask != null) {
             taskQueue.add(scheduledTask);
@@ -243,7 +247,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                         logger.warn("Unexpected exception from the global event executor: ", t);
                     }
 
-                    if (task != QUIET_PERIOD_TASK) {
+                    if (task != quietPeriodTask) {
                         continue;
                     }
                 }

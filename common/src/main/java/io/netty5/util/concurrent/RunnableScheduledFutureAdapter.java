@@ -64,12 +64,16 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
 
     @Override
     public long delayNanos() {
-        return Math.max(0, deadlineNanos() - AbstractScheduledEventExecutor.nanoTime());
+        return delayNanos(executor.getCurrentTimeNanos());
     }
 
     @Override
     public long delayNanos(long currentTimeNanos) {
-        return Math.max(0, deadlineNanos() - (currentTimeNanos - AbstractScheduledEventExecutor.START_TIME));
+        return deadlineToDelayNanos(currentTimeNanos, deadlineNanos);
+    }
+
+    private static long deadlineToDelayNanos(long currentTimeNanos, long deadlineNanos) {
+        return deadlineNanos == 0L ? 0L : Math.max(0L, deadlineNanos - currentTimeNanos);
     }
 
     @Override
@@ -127,7 +131,7 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
                         if (p > 0) {
                             deadlineNanos += p;
                         } else {
-                            deadlineNanos = AbstractScheduledEventExecutor.nanoTime() - p;
+                            deadlineNanos = executor.getCurrentTimeNanos() - p;
                         }
                         if (!isCancelled()) {
                             executor.schedule(this);
