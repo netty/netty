@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
@@ -174,11 +175,16 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private static final class Collector {
-        Buffer[] array;
-        int index;
+        private Buffer[] array;
+        private int index;
 
         Collector(Iterable<Buffer> externals) {
-            var dupeCheck = new IdentityHashMap<>();
+            final Map<Buffer, Buffer> dupeCheck;
+            if (externals instanceof Collection) {
+                dupeCheck = new IdentityHashMap<>(((Collection<?>) externals).size());
+            } else {
+                dupeCheck = new IdentityHashMap<>();
+            }
             int size = 0;
             for (Buffer buf : externals) {
                 if (dupeCheck.put(buf, buf) != null) {
@@ -217,14 +223,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             for (Buffer buf : externals) {
                 if (buf.capacity() == 0) {
                     buf.close();
-                    continue;
-                }
-                if (CompositeBuffer.isComposite(buf)) {
+                } else if (CompositeBuffer.isComposite(buf)) {
                     CompositeBuffer cbuf = (CompositeBuffer) buf;
                     collect(Arrays.asList(cbuf.decomposeBuffer()));
-                    continue;
+                } else {
+                    add(buf);
                 }
-                add(buf);
             }
         }
 
@@ -291,8 +295,8 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private static final class ConcatIterator<T> implements Iterator<T> {
-        Iterator<T> current;
-        Iterator<T> next;
+        private Iterator<T> current;
+        private Iterator<T> next;
 
         ConcatIterator(Iterator<T> first, Iterator<T> second) {
             current = first;
