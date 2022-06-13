@@ -53,7 +53,12 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         public void run() {
             // NOOP
         }
-    }, null), ScheduledFutureTask.deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL), -SCHEDULE_QUIET_PERIOD_INTERVAL);
+    }, null),
+            // note: the getCurrentTimeNanos() call here only works because this is a final class, otherwise the method
+            // could be overridden leading to unsafe initialization here!
+            deadlineNanos(getCurrentTimeNanos(), SCHEDULE_QUIET_PERIOD_INTERVAL),
+            -SCHEDULE_QUIET_PERIOD_INTERVAL
+    );
 
     // because the GlobalEventExecutor is a singleton, tasks submitted to it can come from arbitrary threads and this
     // can trigger the creation of a thread from arbitrary thread groups; for this reason, the thread factory must not
@@ -117,7 +122,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     private void fetchFromScheduledTaskQueue() {
-        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        long nanoTime = getCurrentTimeNanos();
         Runnable scheduledTask = pollScheduledTask(nanoTime);
         while (scheduledTask != null) {
             taskQueue.add(scheduledTask);
