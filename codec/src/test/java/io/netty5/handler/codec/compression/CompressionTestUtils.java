@@ -64,15 +64,7 @@ final class CompressionTestUtils {
                 if (msg == null) {
                     break;
                 }
-
-                // This is needed at the moment as otherwise we will see:
-                //
-                // java.lang.AssertionError: Method should not be used.
-                // at io.netty5.buffer.api.DefaultCompositeBuffer$TornBufferAccessor
-                //     .readByte(DefaultCompositeBuffer.java:1575)
-                if (msg.readableBytes() != 0) {
-                    bufferList.add(msg.send());
-                }
+                bufferList.add(msg.send());
             }
         }
         return allocator.compose(bufferList);

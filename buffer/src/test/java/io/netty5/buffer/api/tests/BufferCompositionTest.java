@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
+
 import static io.netty5.buffer.api.internal.Statics.acquire;
 import static io.netty5.buffer.api.internal.Statics.isOwned;
 import static java.util.Arrays.asList;
@@ -376,6 +378,42 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
+    public void composeMustIgnoreMiddleBuffersWithNoReadableBytes() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             Buffer a = allocator.allocate(8).writerOffset(8).readerOffset(4);
+             Buffer b = allocator.allocate(8).writerOffset(4).readerOffset(4);
+             Buffer c = allocator.allocate(8).writerOffset(4).readerOffset(0);
+             CompositeBuffer composite = allocator.compose(List.of(a.send(), b.send(), c.send()))) {
+            assertThat(composite.countComponents()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    public void extendWithMustIgnoreMiddleBuffersWithNoReadableBytes() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             Buffer a = allocator.allocate(8).writerOffset(8).readerOffset(4);
+             Buffer b = allocator.allocate(8).writerOffset(4).readerOffset(4);
+             Buffer c = allocator.allocate(8).writerOffset(4).readerOffset(0);
+             CompositeBuffer composite = allocator.compose()) {
+            composite.extendWith(a.send());
+            composite.extendWith(b.send());
+            composite.extendWith(c.send());
+            assertThat(composite.countComponents()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    public void extendWithMustFlattenCompositeBuffers() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             Buffer a = allocator.copyOf(new byte[1]);
+             Buffer b = allocator.copyOf(new byte[1]);
+             CompositeBuffer composite = allocator.compose()) {
+            composite.extendWith(allocator.compose(List.of(a.send(), b.send())).send());
+            assertThat(composite.countComponents()).isEqualTo(2);
+        }
+    }
+
+    @Test
     public void composingReadOnlyBuffersMustCreateReadOnlyCompositeBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer a = allocator.allocate(4).makeReadOnly();
@@ -416,12 +454,9 @@ public class BufferCompositionTest extends BufferTestSupport {
 
     @Test
     public void compositeWritableBufferCannotBeExtendedWithReadOnlyBuffer() {
-        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            CompositeBuffer composite;
-            try (Buffer a = allocator.allocate(8)) {
-                composite = allocator.compose(a.send());
-            }
-            try (composite; Buffer b = allocator.allocate(8).makeReadOnly()) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             CompositeBuffer composite = allocator.compose(allocator.allocate(8).send())) {
+            try (Buffer b = allocator.allocate(8).makeReadOnly()) {
                 assertThrows(IllegalArgumentException.class, () -> composite.extendWith(b.send()));
             }
         }
@@ -429,12 +464,9 @@ public class BufferCompositionTest extends BufferTestSupport {
 
     @Test
     public void compositeReadOnlyBufferCannotBeExtendedWithWritableBuffer() {
-        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            CompositeBuffer composite;
-            try (Buffer a = allocator.allocate(8).makeReadOnly()) {
-                composite = allocator.compose(a.send());
-            }
-            try (composite; Buffer b = allocator.allocate(8)) {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             CompositeBuffer composite = allocator.compose(allocator.allocate(8).makeReadOnly().send())) {
+            try (Buffer b = allocator.allocate(8)) {
                 assertThrows(IllegalArgumentException.class, () -> composite.extendWith(b.send()));
             }
         }
