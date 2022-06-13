@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.netty.handler.codec.DateFormatter;
 
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -39,12 +38,25 @@ import org.junit.jupiter.api.Test;
 public class ServerCookieEncoderTest {
 
     @Test
-    public void testEncodingSingleCookieV0() throws ParseException {
+    public void testEncodingSingleCookieV0NegativeMaxAge()  {
+        testEncodingSingleCookieV0(-1);
+    }
 
-        int maxAge = 50;
+    @Test
+    public void testEncodingSingleCookieV0PositiveMaxAge() {
+        testEncodingSingleCookieV0(50);
+    }
 
-        String result = "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere;" +
-                " Domain=.adomainsomewhere; Secure; SameSite=Lax";
+    private static void testEncodingSingleCookieV0(int maxAge)  {
+        final StringBuilder result = new StringBuilder();
+        result.append("myCookie=myValue;");
+        if (maxAge >= 0) {
+            result.append(" Max-Age=50; Expires=(.+?);");
+        }
+
+        result.append(" Path=/apathsomewhere;").append(
+                " Domain=.adomainsomewhere; Secure; SameSite=Lax");
+
         DefaultCookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setDomain(".adomainsomewhere");
         cookie.setMaxAge(maxAge);
@@ -53,13 +65,14 @@ public class ServerCookieEncoderTest {
         cookie.setSameSite(SameSite.Lax);
 
         String encodedCookie = ServerCookieEncoder.STRICT.encode(cookie);
-
-        Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
+        Matcher matcher = Pattern.compile(result.toString()).matcher(encodedCookie);
         assertTrue(matcher.find());
-        Date expiresDate = DateFormatter.parseHttpDate(matcher.group(1));
-        long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
-        // 2 secs should be fine
-        assertTrue(Math.abs(diff - maxAge) <= 2);
+        if (maxAge >= 0) {
+            Date expiresDate = DateFormatter.parseHttpDate(matcher.group(1));
+            long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
+            // 2 secs should be fine
+            assertTrue(Math.abs(diff - maxAge) <= 2);
+        }
     }
 
     @Test
