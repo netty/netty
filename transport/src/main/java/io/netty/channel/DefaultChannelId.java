@@ -107,8 +107,9 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-    private static int defaultProcessId() {
-        ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+    static int processHandlePid(ClassLoader loader) {
+        /*pid is positive on unix, non{-1,0} on windows*/
+        int nilValue = -1;
         if (PlatformDependent.javaVersion() >= 9) {
             long pid;
             try {
@@ -117,15 +118,21 @@ public final class DefaultChannelId implements ChannelId {
                 processHandleCurrent.setAccessible(true);
                 pid = ((ProcessHandle) processHandleCurrent.invoke(null)).pid();
             } catch (Exception e) {
-                /*nil value: pid is positive on unix, non{-1,0} on windows*/
-                pid = -1;
+                return nilValue;
             }
-            if (pid != -1) {
-                if (pid > Integer.MAX_VALUE || pid < Integer.MIN_VALUE) {
-                    throw new IllegalStateException("Current process ID exceeds int range: " + pid);
-                }
-                return (int) pid;
+            if (pid > Integer.MAX_VALUE || pid < Integer.MIN_VALUE) {
+                throw new IllegalStateException("Current process ID exceeds int range: " + pid);
             }
+            return (int) pid;
+        }
+        return nilValue;
+    }
+
+    private static int defaultProcessId() {
+        ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+        int processId = processHandlePid(loader);
+        if (processId != -1) {
+            return processId;
         }
 
         String value;
