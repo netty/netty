@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.MacAddressUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -105,11 +106,30 @@ public final class DefaultChannelId implements ChannelId {
         MACHINE_ID = machineId;
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private static int defaultProcessId() {
-        ClassLoader loader = null;
+        ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+        if (PlatformDependent.javaVersion() >= 9) {
+            long pid;
+            try {
+                Class<?> processHandleImplType = Class.forName("java.lang.ProcessHandleImpl", true, loader);
+                Method processHandleCurrent = processHandleImplType.getMethod("current");
+                processHandleCurrent.setAccessible(true);
+                pid = ((ProcessHandle) processHandleCurrent.invoke(null)).pid();
+            } catch (Exception e) {
+                /*nil value: pid is positive on unix, non{-1,0} on windows*/
+                pid = -1;
+            }
+            if (pid != -1) {
+                if (pid > Integer.MAX_VALUE || pid < Integer.MIN_VALUE) {
+                    throw new IllegalStateException("Current process ID exceeds int range: " + pid);
+                }
+                return (int) pid;
+            }
+        }
+
         String value;
         try {
-            loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
             // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
             Class<?> mgmtFactoryType = Class.forName("java.lang.management.ManagementFactory", true, loader);
             Class<?> runtimeMxBeanType = Class.forName("java.lang.management.RuntimeMXBean", true, loader);
