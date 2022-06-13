@@ -21,12 +21,13 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
 import io.netty.util.NetUtil;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class AbstractChannelTest {
@@ -85,6 +86,25 @@ public class AbstractChannelTest {
         TestChannel channel = new TestChannel();
         final ChannelId channelId = channel.id();
         assertTrue(channelId instanceof DefaultChannelId);
+    }
+
+    @Test
+    void processIdWithProcessHandleJava9() {
+        Assumptions.assumeTrue(PlatformDependent.javaVersion() >= 9);
+        ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+        int processHandlePid = DefaultChannelId.processHandlePid(loader);
+        assertTrue(processHandlePid != -1);
+        assertEquals(DefaultChannelId.jmxPid(loader), processHandlePid);
+        assertEquals(DefaultChannelId.defaultProcessId(), processHandlePid);
+    }
+
+    @Test
+    void processIdWithJmxPrejava9() {
+        Assumptions.assumeTrue(PlatformDependent.javaVersion() < 9);
+        ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+        int processHandlePid = DefaultChannelId.processHandlePid(loader);
+        assertEquals(-1, processHandlePid);
+        assertEquals(DefaultChannelId.defaultProcessId(), DefaultChannelId.jmxPid(loader));
     }
 
     @Test

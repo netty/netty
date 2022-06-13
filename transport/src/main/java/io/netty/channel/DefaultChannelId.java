@@ -128,13 +128,7 @@ public final class DefaultChannelId implements ChannelId {
         return nilValue;
     }
 
-    private static int defaultProcessId() {
-        ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
-        int processId = processHandlePid(loader);
-        if (processId != -1) {
-            return processId;
-        }
-
+    static int jmxPid(ClassLoader loader) {
         String value;
         try {
             // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
@@ -177,6 +171,15 @@ public final class DefaultChannelId implements ChannelId {
         }
 
         return pid;
+    }
+
+    static int defaultProcessId() {
+        ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+        int processId = processHandlePid(loader);
+        if (processId != -1) {
+            return processId;
+        }
+        return jmxPid(loader);
     }
 
     private final byte[] data;
