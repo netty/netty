@@ -561,7 +561,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         // In that case, key would be "", will get exception:
                         // java.lang.IllegalArgumentException: Param 'name' must not be empty;
                         // Just check and skip empty key.
-                        if (key.length() > 0) {
+                        if (!key.isEmpty()) {
                             currentAttribute = factory.createAttribute(request, key);
                             currentAttribute.setValue(""); // empty
                             addHttpData(currentAttribute);
