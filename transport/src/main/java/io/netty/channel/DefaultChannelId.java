@@ -117,6 +117,7 @@ public final class DefaultChannelId implements ChannelId {
                 Method processHandlePid = processHandleImplType.getMethod("pid");
                 pid = (Long) processHandlePid.invoke(processHandleInstance);
             } catch (Exception e) {
+                logger.debug("Could not invoke ProcessHandle.current().pid();", e);
                 return nilValue;
             }
             if (pid > Integer.MAX_VALUE || pid < Integer.MIN_VALUE) {
