@@ -22,8 +22,9 @@ import java.nio.channels.ClosedChannelException;
 
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -91,8 +92,8 @@ public class AbstractChannelTest {
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_9)
     void processIdWithProcessHandleJava9() {
-        Assumptions.assumeTrue(PlatformDependent.javaVersion() >= 9);
         ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
         int processHandlePid = DefaultChannelId.processHandlePid(loader);
         assertTrue(processHandlePid != -1);
@@ -101,8 +102,8 @@ public class AbstractChannelTest {
     }
 
     @Test
+    @EnabledForJreRange(max = JRE.JAVA_8)
     void processIdWithJmxPrejava9() {
-        Assumptions.assumeTrue(PlatformDependent.javaVersion() < 9);
         ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
         int processHandlePid = DefaultChannelId.processHandlePid(loader);
         assertEquals(-1, processHandlePid);
