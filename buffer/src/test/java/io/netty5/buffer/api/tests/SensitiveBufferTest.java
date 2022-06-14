@@ -21,6 +21,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
+import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
@@ -144,7 +145,7 @@ public class SensitiveBufferTest {
             return baseMemoryManager.allocateShared(
                     control,
                     size,
-                    drop -> dropDecorator.apply(new CheckingDrop(bytesCleared, drop)),
+                    drop -> dropDecorator.apply(new CheckingDrop(bytesCleared, baseMemoryManager, drop)),
                     allocationType);
         }
 
@@ -169,6 +170,11 @@ public class SensitiveBufferTest {
         }
 
         @Override
+        public void clearMemory(Object memory) {
+            baseMemoryManager.clearMemory(memory);
+        }
+
+        @Override
         public String implementationName() {
             throw new UnsupportedOperationException();
         }
@@ -179,20 +185,25 @@ public class SensitiveBufferTest {
 
         private static final class CheckingDrop implements Drop<Buffer> {
             private final AtomicInteger bytesCleared;
+            private final MemoryManager manager;
             private final Drop<Buffer> delegate;
 
-            CheckingDrop(AtomicInteger bytesCleared, Drop<Buffer> delegate) {
+            CheckingDrop(AtomicInteger bytesCleared, MemoryManager manager, Drop<Buffer> delegate) {
                 this.bytesCleared = bytesCleared;
+                this.manager = manager;
                 this.delegate = delegate;
             }
 
             @Override
             public void drop(Buffer obj) {
-                int capacity = obj.capacity();
-                for (int i = 0; i < capacity; i++) {
-                    assertEquals((byte) 0, obj.getByte(i));
+                Object memory = manager.unwrapRecoverableMemory(obj);
+                try (Buffer buf = manager.recoverMemory(() -> null, memory, Statics.NO_OP_DROP)) {
+                    int capacity = buf.capacity();
+                    for (int i = 0; i < capacity; i++) {
+                        assertEquals((byte) 0, buf.getByte(i));
+                    }
+                    bytesCleared.addAndGet(capacity);
                 }
-                bytesCleared.addAndGet(capacity);
                 delegate.drop(obj);
             }
 

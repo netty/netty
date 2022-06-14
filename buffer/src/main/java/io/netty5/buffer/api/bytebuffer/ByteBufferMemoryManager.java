@@ -92,6 +92,12 @@ public final class ByteBufferMemoryManager implements MemoryManager {
     }
 
     @Override
+    public void clearMemory(Object memory) {
+        ByteBuffer buffer = (ByteBuffer) memory;
+        Statics.setMemory(buffer, buffer.capacity(), (byte) 0);
+    }
+
+    @Override
     public String implementationName() {
         return "ByteBuffer";
     }

@@ -103,6 +103,12 @@ public final class ByteBufMemoryManager implements MemoryManager {
     }
 
     @Override
+    public void clearMemory(Object memory) {
+        ByteBuf byteBuf = (ByteBuf) memory;
+        byteBuf.setZero(0, byteBuf.capacity());
+    }
+
+    @Override
     public String implementationName() {
         return "Netty ByteBuf";
     }

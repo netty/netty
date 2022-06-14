@@ -117,9 +117,8 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
             // The given buffer object might only be a small piece of the original buffer, due to split() calls.
             // We go through the memory recovery process in order to get back the full memory allocation.
             Object memory = manager.unwrapRecoverableMemory(obj);
-            try (Buffer buffer = manager.recoverMemory(control, memory, base)) {
-                buffer.fill((byte) 0);
-            }
+            manager.clearMemory(memory);
+            base.drop(obj);
         }
 
         @Override

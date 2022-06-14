@@ -15,6 +15,8 @@
  */
 package io.netty5.buffer.api.unsafe;
 
+import io.netty5.util.internal.PlatformDependent;
+
 class UnsafeMemory {
     final Object base;
     final long address;
@@ -28,5 +30,9 @@ class UnsafeMemory {
 
     public UnsafeMemory slice(int offset, int length) {
         return new UnsafeMemory(base, address + offset, length);
+    }
+
+    public void clearMemory() {
+        PlatformDependent.setMemory(base, address, size, (byte) 0);
     }
 }

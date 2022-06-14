@@ -1236,7 +1236,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
     }
 
     ByteBuf unwrapRecoverableMemory() {
-        return delegate;
+        return delegate.isReadOnly() ? delegate.unwrap() : delegate;
     }
 
     private RuntimeException accessException(RuntimeException e, boolean isWrite) {
