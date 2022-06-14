@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.MacAddressUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -107,17 +106,15 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     static int processHandlePid(ClassLoader loader) {
-        /*pid is positive on unix, non{-1,0} on windows*/
+        // pid is positive on unix, non{-1,0} on windows
         int nilValue = -1;
         if (PlatformDependent.javaVersion() >= 9) {
             Long pid;
             try {
-                Class<?> processHandleImplType = Class.forName("java.lang.ProcessHandleImpl", true, loader);
+                Class<?> processHandleImplType = Class.forName("java.lang.ProcessHandle", true, loader);
                 Method processHandleCurrent = processHandleImplType.getMethod("current");
-                processHandleCurrent.setAccessible(true);
                 Object processHandleInstance = processHandleCurrent.invoke(null);
                 Method processHandlePid = processHandleImplType.getMethod("pid");
-                processHandlePid.setAccessible(true);
                 pid = (Long) processHandlePid.invoke(processHandleInstance);
             } catch (Exception e) {
                 return nilValue;
