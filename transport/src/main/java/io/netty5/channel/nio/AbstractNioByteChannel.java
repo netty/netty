@@ -17,6 +17,7 @@ package io.netty5.channel.nio;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -27,10 +28,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.internal.ChannelUtils;
-import io.netty5.channel.socket.ChannelInputShutdownEvent;
-import io.netty5.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty5.channel.socket.SocketChannelConfig;
-import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -66,15 +64,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         super(parent, eventLoop, ch, SelectionKey.OP_READ);
     }
 
-    /**
-     * Shutdown the input side of the channel.
-     */
-    protected abstract Future<Void> shutdownInput();
-
-    protected boolean isInputShutdown0() {
-        return false;
-    }
-
     @Override
     protected AbstractNioUnsafe newUnsafe() {
         return new NioByteUnsafe();
@@ -86,7 +75,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     final boolean shouldBreakReadReady(ChannelConfig config) {
-        return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+        return isShutdown(ChannelShutdownDirection.Inbound) &&
+                (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
@@ -97,16 +87,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected class NioByteUnsafe extends AbstractNioUnsafe {
 
         private void closeOnRead(ChannelPipeline pipeline) {
-            if (!isInputShutdown0()) {
+            if (!isShutdown(ChannelShutdownDirection.Inbound)) {
                 if (isAllowHalfClosure(config())) {
-                    shutdownInput();
-                    pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                    shutdown(ChannelShutdownDirection.Inbound, newPromise());
                 } else {
                     close(newPromise());
                 }
             } else {
                 inputClosedSeenErrorOnRead = true;
-                pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
         }
 
@@ -165,7 +153,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     readPending = false;
                     pipeline.fireChannelRead(buffer);
                     buffer = null;
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();

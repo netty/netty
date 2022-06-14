@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.DomainSocketChannel;
@@ -176,7 +177,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                         pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();

@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ServerChannel;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
@@ -89,6 +90,9 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     private static final FutureContextListener<Channel, Void> CHILD_CHANNEL_REGISTRATION_LISTENER =
             Http2MultiplexHandler::registerDone;
 
+    static final FutureContextListener<Channel, Void> CHILD_CHANNEL_SHUTDOWN_REGISTRATION_LISTENER = (c, v) ->
+        registerDoneShutdown(c, v, true);
+
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
     private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
@@ -125,7 +129,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         this.upgradeStreamHandler = upgradeStreamHandler;
     }
 
-    static void registerDone(Channel childChannel, Future<?> future) {
+    static boolean registerDone(Channel childChannel, Future<?> future) {
         // Handle any errors that occurred on the local thread while registering. Even though
         // failures can happen after this point, they will be handled by the channel by closing the
         // childChannel.
@@ -135,6 +139,14 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             } else {
                 childChannel.unsafe().closeForcibly();
             }
+            return false;
+        }
+        return true;
+    }
+
+    static void registerDoneShutdown(Channel childChannel, Future<?> future, boolean shutdownInput) {
+        if (!registerDone(childChannel, future) && shutdownInput) {
+            childChannel.shutdown(ChannelShutdownDirection.Inbound);
         }
     }
 
@@ -206,37 +218,20 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (event.type() == Http2FrameStreamEvent.Type.State) {
                 switch (stream.state()) {
                     case HALF_CLOSED_LOCAL:
-                        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
-                            // Ignore everything which was not caused by an upgrade
-                            break;
+                        // Ignore everything which was not caused by an upgrade
+                        if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
+                            createStreamChannelIfNeeded(stream, false);
                         }
-                        // fall-through
+                        break;
                     case HALF_CLOSED_REMOTE:
-                        // fall-through
-                    case OPEN:
                         if (stream.attachment != null) {
-                            // ignore if child channel was already created.
-                            break;
-                        }
-                        final AbstractHttp2StreamChannel ch;
-                        // We need to handle upgrades special when on the client side.
-                        if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isServer(ctx)) {
-                            // We must have an upgrade handler or else we can't handle the stream
-                            if (upgradeStreamHandler == null) {
-                                throw connectionError(INTERNAL_ERROR,
-                                        "Client is misconfigured for upgrade requests");
-                            }
-                            ch = new Http2MultiplexHandlerStreamChannel(stream, upgradeStreamHandler);
-                            ch.closeOutbound();
+                            stream.attachment.shutdown(ChannelShutdownDirection.Inbound);
                         } else {
-                            ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
+                            createStreamChannelIfNeeded(stream, true);
                         }
-                        Future<Void> future = ch.register();
-                        if (future.isDone()) {
-                            registerDone(ch, future);
-                        } else {
-                            future.addListener(ch, CHILD_CHANNEL_REGISTRATION_LISTENER);
-                        }
+                        break;
+                    case OPEN:
+                        createStreamChannelIfNeeded(stream, false);
                         break;
                     case CLOSED:
                         AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
@@ -252,6 +247,37 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             return;
         }
         ctx.fireUserEventTriggered(evt);
+    }
+
+    private void createStreamChannelIfNeeded(DefaultHttp2FrameStream stream, boolean shutdownInputOnceRegistered)
+            throws Http2Exception {
+        if (stream.attachment != null) {
+            // ignore if child channel was already created.
+            return;
+        }
+        final AbstractHttp2StreamChannel ch;
+        // We need to handle upgrades special when on the client side.
+        if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isServer(ctx)) {
+            // We must have an upgrade handler or else we can't handle the stream
+            if (upgradeStreamHandler == null) {
+                throw connectionError(INTERNAL_ERROR,
+                        "Client is misconfigured for upgrade requests");
+            }
+            ch = new Http2MultiplexHandlerStreamChannel(stream, upgradeStreamHandler);
+            ch.closeOutbound();
+        } else {
+            ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
+        }
+        Future<Void> future = ch.register();
+        if (future.isDone()) {
+            registerDoneShutdown(ch, future, shutdownInputOnceRegistered);
+        } else {
+            if (shutdownInputOnceRegistered) {
+                future.addListener(ch, CHILD_CHANNEL_SHUTDOWN_REGISTRATION_LISTENER);
+            } else {
+                future.addListener(ch, CHILD_CHANNEL_REGISTRATION_LISTENER);
+            }
+        }
     }
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.

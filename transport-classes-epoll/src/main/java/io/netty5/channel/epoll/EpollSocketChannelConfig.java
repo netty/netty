@@ -37,7 +37,7 @@ import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.ChannelOption.TCP_NODELAY;
 
-public final class EpollSocketChannelConfig extends EpollDuplexChannelConfig implements SocketChannelConfig {
+public final class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
     private volatile boolean tcpFastopen;
 
     /**

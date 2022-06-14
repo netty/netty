@@ -54,6 +54,16 @@ public interface ChannelInboundInvoker {
     ChannelInboundInvoker fireChannelInactive();
 
     /**
+     * A {@link Channel} was shutdown in a specific direction.
+     *
+     * This will result in having the
+     * {@link ChannelHandler#channelShutdown(ChannelHandlerContext, ChannelShutdownDirection)}  method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelInboundInvoker fireChannelShutdown(ChannelShutdownDirection direction);
+
+    /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
      *
      * This will result in having the  {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}

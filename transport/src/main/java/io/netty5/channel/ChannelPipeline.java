@@ -135,6 +135,7 @@ import java.util.NoSuchElementException;
  *     <li>{@link ChannelHandlerContext#fireUserEventTriggered(Object)}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelWritabilityChanged()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelInactive()}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelShutdown(ChannelShutdownDirection)}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelUnregistered()}</li>
  *     </ul>
  * </li>
@@ -147,6 +148,7 @@ import java.util.NoSuchElementException;
  *     <li>{@link ChannelHandlerContext#read()}</li>
  *     <li>{@link ChannelHandlerContext#disconnect()}</li>
  *     <li>{@link ChannelHandlerContext#close()}</li>
+ *     <li>{@link ChannelHandlerContext#shutdown(ChannelShutdownDirection)}</li>
  *     <li>{@link ChannelHandlerContext#deregister()}</li>
  *     </ul>
  * </li>
@@ -518,6 +520,9 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline fireChannelInactive();
+
+    @Override
+    ChannelPipeline fireChannelShutdown(ChannelShutdownDirection direction);
 
     @Override
     ChannelPipeline fireExceptionCaught(Throwable cause);

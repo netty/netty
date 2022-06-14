@@ -34,7 +34,7 @@ import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
-public final class KQueueDomainSocketChannelConfig extends KQueueDuplexChannelConfig
+public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
         implements DomainSocketChannelConfig {
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
 

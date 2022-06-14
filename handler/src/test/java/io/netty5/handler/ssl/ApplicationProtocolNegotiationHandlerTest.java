@@ -17,8 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.socket.ChannelInputShutdownEvent;
 import io.netty5.handler.codec.DecoderException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -161,7 +161,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
     public void testBufferMessagesUntilHandshakeCompleteWithInputShutdown() throws Exception {
-        testBufferMessagesUntilHandshakeComplete(ctx -> ctx.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE));
+        testBufferMessagesUntilHandshakeComplete(ctx -> ctx.fireChannelShutdown(ChannelShutdownDirection.Inbound));
     }
 
     private static void testBufferMessagesUntilHandshakeComplete(

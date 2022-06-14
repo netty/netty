@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
@@ -125,7 +126,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                         readPending = false;
                         pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
                                                                  acceptedAddress[0]));
-                    } while (allocHandle.continueReading());
+                    } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
                 } catch (Throwable t) {
                     exception = t;
                 }
@@ -140,6 +141,16 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                 epollInFinally(config);
             }
         }
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        return !isActive();
     }
 
     @Override

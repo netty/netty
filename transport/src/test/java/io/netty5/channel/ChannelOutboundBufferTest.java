@@ -426,6 +426,16 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
+        protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isShutdown(ChannelShutdownDirection direction) {
+            return !isActive();
+        }
+
+        @Override
         public ChannelConfig config() {
             return config;
         }

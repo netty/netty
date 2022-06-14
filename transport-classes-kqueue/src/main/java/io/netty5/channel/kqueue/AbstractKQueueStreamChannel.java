@@ -17,6 +17,7 @@ package io.netty5.channel.kqueue;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -27,20 +28,16 @@ import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.internal.ChannelUtils;
-import io.netty5.channel.socket.DuplexChannel;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.SocketWritableByteChannel;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.Executor;
 
@@ -48,8 +45,7 @@ import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WR
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 
 @UnstableApi
-public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel implements DuplexChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractKQueueStreamChannel.class);
+public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
@@ -79,7 +75,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     }
 
     @Override
-    public abstract KQueueDuplexChannelConfig config();
+    public abstract KQueueChannelConfig config();
 
     @Override
     public ChannelMetadata metadata() {
@@ -379,110 +375,37 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
-    @UnstableApi
     @Override
-    protected final void doShutdownOutput() throws Exception {
-        socket.shutdown(false, true);
-    }
-
-    @Override
-    public boolean isOutputShutdown() {
-        return socket.isOutputShutdown();
-    }
-
-    @Override
-    public boolean isInputShutdown() {
-        return socket.isInputShutdown();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return socket.isShutdown();
-    }
-
-    @Override
-    public Future<Void> shutdownOutput() {
-        return shutdownOutput(newPromise());
-    }
-
-    @Override
-    public Future<Void> shutdownOutput(final Promise<Void> promise) {
-        EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
-        } else {
-            loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
-        }
-        return promise.asFuture();
-    }
-
-    @Override
-    public Future<Void> shutdownInput() {
-        return shutdownInput(newPromise());
-    }
-
-    @Override
-    public Future<Void> shutdownInput(final Promise<Void> promise) {
-        EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            shutdownInput0(promise);
-        } else {
-            loop.execute(() -> shutdownInput0(promise));
-        }
-        return promise.asFuture();
-    }
-
-    private void shutdownInput0(Promise<Void> promise) {
-        try {
-            socket.shutdown(true, false);
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
-            return;
-        }
-        promise.setSuccess(null);
-    }
-
-    @Override
-    public Future<Void> shutdown() {
-        return shutdown(newPromise());
-    }
-
-    @Override
-    public Future<Void> shutdown(final Promise<Void> promise) {
-        Future<Void> shutdownOutputFuture = shutdownOutput();
-        if (shutdownOutputFuture.isDone()) {
-            shutdownOutputDone(promise, shutdownOutputFuture);
-        } else {
-            shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
-        }
-        return promise.asFuture();
-    }
-
-    private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {
-        Future<Void> shutdownInputFuture = shutdownInput();
-        if (shutdownInputFuture.isDone()) {
-            shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-        } else {
-            shutdownInputFuture.addListener(shutdownInputFuture1 ->
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
+    protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+        switch (direction) {
+            case Outbound:
+                socket.shutdown(false, true);
+                break;
+            case Inbound:
+                try {
+                    socket.shutdown(true, false);
+                } catch (NotYetConnectedException ignore) {
+                    // We attempted to shutdown and failed, which means the input has already effectively been
+                    // shutdown.
+                }
+                break;
+            default:
+                throw new AssertionError();
         }
     }
 
-    private static void shutdownDone(Future<?> shutdownOutputFuture,
-                                     Future<?> shutdownInputFuture,
-                                     Promise<Void> promise) {
-        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
-        Throwable shutdownInputCause = shutdownInputFuture.cause();
-        if (shutdownOutputCause != null) {
-            if (shutdownInputCause != null) {
-                logger.debug("Exception suppressed because a previous exception occurred.",
-                        shutdownInputCause);
-            }
-            promise.setFailure(shutdownOutputCause);
-        } else if (shutdownInputCause != null) {
-            promise.setFailure(shutdownInputCause);
-        } else {
-            promise.setSuccess(null);
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Outbound:
+                return socket.isOutputShutdown();
+            case Inbound:
+                return socket.isInputShutdown();
+            default:
+                throw new AssertionError();
         }
     }
 
@@ -543,7 +466,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                         //   was "wrapped" by this Channel implementation.
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();

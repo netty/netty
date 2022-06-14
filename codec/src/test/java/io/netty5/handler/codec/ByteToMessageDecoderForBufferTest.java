@@ -20,8 +20,8 @@ import io.netty5.buffer.api.BufferStub;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.socket.ChannelInputShutdownEvent;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer.Cumulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -576,7 +576,7 @@ public class ByteToMessageDecoderForBufferTest {
             assertNull(channel.readInbound());
             removeHandler.set(true);
             // This should trigger channelInputClosed(...)
-            channel.pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+            channel.pipeline().fireChannelShutdown(ChannelShutdownDirection.Inbound);
 
             assertTrue(channel.finish());
             try (Buffer b = channel.readInbound()) {

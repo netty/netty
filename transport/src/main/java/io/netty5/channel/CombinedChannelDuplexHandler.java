@@ -15,11 +15,9 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.internal.DelegatingChannelHandlerContext;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
@@ -32,8 +30,8 @@ import static java.util.Objects.requireNonNull;
 public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends ChannelHandler>
         extends ChannelHandlerAdapter {
 
-    private DelegatingChannelHandlerContext inboundCtx;
-    private DelegatingChannelHandlerContext outboundCtx;
+    private CombinedChannelHandlerContext inboundCtx;
+    private CombinedChannelHandlerContext outboundCtx;
     private volatile boolean handlerAdded;
 
     private I inboundHandler;
@@ -128,8 +126,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
                             " was constructed with the default constructor.");
         }
 
-        outboundCtx = new DelegatingChannelHandlerContext(ctx, outboundHandler);
-        inboundCtx = new DelegatingChannelHandlerContext(ctx, inboundHandler);
+        outboundCtx = new CombinedChannelHandlerContext(ctx, outboundHandler);
+        inboundCtx = new CombinedChannelHandlerContext(ctx, inboundHandler);
 
         // The inboundCtx and outboundCtx were created and set now it's safe to call removeInboundHandler() and
         // removeOutboundHandler().
@@ -153,7 +151,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelRegistered(inboundCtx);
         } else {
@@ -163,7 +161,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelUnregistered(inboundCtx);
         } else {
@@ -173,7 +171,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelActive(inboundCtx);
         } else {
@@ -183,7 +181,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelInactive(inboundCtx);
         } else {
@@ -192,8 +190,18 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) throws Exception {
+        assert ctx == inboundCtx.delegatingCtx();
+        if (!inboundCtx.removed) {
+            inboundHandler.channelShutdown(inboundCtx, direction);
+        } else {
+            inboundCtx.fireChannelInactive();
+        }
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.exceptionCaught(inboundCtx, cause);
         } else {
@@ -203,7 +211,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.userEventTriggered(inboundCtx, evt);
         } else {
@@ -213,7 +221,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelRead(inboundCtx, msg);
         } else {
@@ -223,7 +231,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelReadComplete(inboundCtx);
         } else {
@@ -233,7 +241,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        assert ctx == inboundCtx.ctx;
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelWritabilityChanged(inboundCtx);
         } else {
@@ -245,7 +253,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     public Future<Void> bind(
             ChannelHandlerContext ctx,
             SocketAddress localAddress) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             return outboundHandler.bind(outboundCtx, localAddress);
         } else {
@@ -257,7 +265,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     public Future<Void> connect(
             ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             return outboundHandler.connect(outboundCtx, remoteAddress, localAddress);
         } else {
@@ -267,7 +275,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public Future<Void> disconnect(ChannelHandlerContext ctx) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             return outboundHandler.disconnect(outboundCtx);
         } else {
@@ -277,7 +285,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public Future<Void> close(ChannelHandlerContext ctx) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             return outboundHandler.close(outboundCtx);
         } else {
@@ -286,8 +294,18 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
+    public Future<Void> shutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
+        assert ctx == outboundCtx.delegatingCtx();
+        if (!outboundCtx.removed) {
+            return outboundHandler.shutdown(outboundCtx, direction);
+        } else {
+            return outboundCtx.shutdown(direction);
+        }
+    }
+
+    @Override
     public Future<Void> register(ChannelHandlerContext ctx) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             return outboundHandler.register(outboundCtx);
         } else {
@@ -297,7 +315,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public Future<Void> deregister(ChannelHandlerContext ctx) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             return outboundHandler.deregister(outboundCtx);
         } else {
@@ -307,7 +325,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             outboundHandler.read(outboundCtx);
         } else {
@@ -317,7 +335,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             return outboundHandler.write(outboundCtx, msg);
         } else {
@@ -327,7 +345,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void flush(ChannelHandlerContext ctx) {
-        assert ctx == outboundCtx.ctx;
+        assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
             outboundHandler.flush(outboundCtx);
         } else {
@@ -335,181 +353,24 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
     }
 
-    private static final class DelegatingChannelHandlerContext implements ChannelHandlerContext {
+    private static final class CombinedChannelHandlerContext extends DelegatingChannelHandlerContext {
 
-        private final ChannelHandlerContext ctx;
         private final ChannelHandler handler;
         boolean removed;
 
-        DelegatingChannelHandlerContext(ChannelHandlerContext ctx, ChannelHandler handler) {
-            this.ctx = ctx;
+        CombinedChannelHandlerContext(ChannelHandlerContext ctx, ChannelHandler handler) {
+            super(ctx);
             this.handler = handler;
         }
 
         @Override
-        public Channel channel() {
-            return ctx.channel();
-        }
-
-        @Override
-        public EventExecutor executor() {
-            return ctx.executor();
-        }
-
-        @Override
-        public String name() {
-            return ctx.name();
+        public boolean isRemoved() {
+            return delegatingCtx().isRemoved() || removed;
         }
 
         @Override
         public ChannelHandler handler() {
-            return ctx.handler();
-        }
-
-        @Override
-        public boolean isRemoved() {
-            return removed || ctx.isRemoved();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRegistered() {
-            ctx.fireChannelRegistered();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelUnregistered() {
-            ctx.fireChannelUnregistered();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelActive() {
-            ctx.fireChannelActive();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelInactive() {
-            ctx.fireChannelInactive();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-            ctx.fireExceptionCaught(cause);
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireUserEventTriggered(Object event) {
-            ctx.fireUserEventTriggered(event);
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRead(Object msg) {
-            ctx.fireChannelRead(msg);
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelReadComplete() {
-            ctx.fireChannelReadComplete();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelWritabilityChanged() {
-            ctx.fireChannelWritabilityChanged();
-            return this;
-        }
-
-        @Override
-        public Future<Void> bind(SocketAddress localAddress) {
-            return ctx.bind(localAddress);
-        }
-
-        @Override
-        public Future<Void> connect(SocketAddress remoteAddress) {
-            return ctx.connect(remoteAddress);
-        }
-
-        @Override
-        public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-            return ctx.connect(remoteAddress, localAddress);
-        }
-
-        @Override
-        public Future<Void> disconnect() {
-            return ctx.disconnect();
-        }
-
-        @Override
-        public Future<Void> close() {
-            return ctx.close();
-        }
-
-        @Override
-        public Future<Void> register() {
-            return ctx.register();
-        }
-
-        @Override
-        public Future<Void> deregister() {
-            return ctx.deregister();
-        }
-
-        @Override
-        public ChannelHandlerContext read() {
-            ctx.read();
-            return this;
-        }
-
-        @Override
-        public Future<Void> write(Object msg) {
-            return ctx.write(msg);
-        }
-
-        @Override
-        public ChannelHandlerContext flush() {
-            ctx.flush();
-            return this;
-        }
-
-        @Override
-        public Future<Void> writeAndFlush(Object msg) {
-            return ctx.writeAndFlush(msg);
-        }
-
-        @Override
-        public ChannelPipeline pipeline() {
-            return ctx.pipeline();
-        }
-
-        @Override
-        public ByteBufAllocator alloc() {
-            return ctx.alloc();
-        }
-
-        @Override
-        public BufferAllocator bufferAllocator() {
-            return ctx.bufferAllocator();
-        }
-
-        @Override
-        public Promise<Void> newPromise() {
-            return ctx.newPromise();
-        }
-
-        @Override
-        public Future<Void> newSucceededFuture() {
-            return ctx.newSucceededFuture();
-        }
-
-        @Override
-        public Future<Void> newFailedFuture(Throwable cause) {
-            return ctx.newFailedFuture(cause);
+            return handler;
         }
 
         void remove() {

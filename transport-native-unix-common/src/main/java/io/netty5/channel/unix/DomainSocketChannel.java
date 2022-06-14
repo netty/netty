@@ -15,13 +15,11 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty5.channel.socket.DuplexChannel;
-
 /**
  * A {@link UnixChannel} that supports communication via
  * <a href="https://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
  */
-public interface DomainSocketChannel extends UnixChannel, DuplexChannel {
+public interface DomainSocketChannel extends UnixChannel {
     @Override
     DomainSocketAddress remoteAddress();
 

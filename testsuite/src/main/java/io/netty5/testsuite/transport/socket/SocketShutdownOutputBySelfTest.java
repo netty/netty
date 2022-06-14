@@ -21,6 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.socket.SocketChannel;
@@ -64,7 +65,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             ss.bind(newSocketAddress());
             ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
-            assertFalse(ch.isOutputShutdown());
+            assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             s = ss.accept();
             ch.writeAndFlush(onHeapAllocator().copyOf(new byte[] { 1 })).sync();
@@ -72,17 +73,17 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             assertTrue(h.ch.isOpen());
             assertTrue(h.ch.isActive());
-            assertFalse(h.ch.isInputShutdown());
-            assertFalse(h.ch.isOutputShutdown());
+            assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Inbound));
+            assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             // Make the connection half-closed and ensure read() returns -1.
-            ch.shutdownOutput().sync();
+            ch.shutdown(ChannelShutdownDirection.Outbound).sync();
             assertEquals(-1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
             assertTrue(h.ch.isActive());
-            assertFalse(h.ch.isInputShutdown());
-            assertTrue(h.ch.isOutputShutdown());
+            assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Inbound));
+            assertTrue(h.ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             // If half-closed, the peer should be able to write something.
             s.getOutputStream().write(new byte[] { 1 });
@@ -116,13 +117,13 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             ch.close().syncUninterruptibly();
             try {
-                ch.shutdownInput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Inbound).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
             }
             try {
-                ch.shutdownOutput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Outbound).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
@@ -152,7 +153,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             cb.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(2, 4));
             ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
-            assertFalse(ch.isOutputShutdown());
+            assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             s = ss.accept();
 
@@ -168,17 +169,17 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             assertTrue(h.ch.isOpen());
             assertTrue(h.ch.isActive());
-            assertFalse(h.ch.isInputShutdown());
-            assertFalse(h.ch.isOutputShutdown());
+            assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Inbound));
+            assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             // Make the connection half-closed and ensure read() returns -1.
-            ch.shutdownOutput().sync();
+            ch.shutdown(ChannelShutdownDirection.Outbound).sync();
             assertEquals(-1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
             assertTrue(h.ch.isActive());
-            assertFalse(h.ch.isInputShutdown());
-            assertTrue(h.ch.isOutputShutdown());
+            assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Inbound));
+            assertTrue(h.ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             try {
                 // If half-closed, the local endpoint shouldn't be able to write
@@ -206,21 +207,21 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
     }
 
     public void testShutdownOutputSoLingerNoAssertError(Bootstrap cb) throws Throwable {
-        testShutdownSoLingerNoAssertError0(cb, true);
+        testShutdownOutputSoLingerNoAssertError0(cb, false);
     }
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testShutdownSoLingerNoAssertError(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testShutdownSoLingerNoAssertError);
+    public void testShutdownOutputAndInputSoLingerNoAssertError(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testShutdownOutputSoLingerNoAssertError);
     }
 
-    public void testShutdownSoLingerNoAssertError(Bootstrap cb) throws Throwable {
-        testShutdownSoLingerNoAssertError0(cb, false);
+    public void testShutdownOutputAndInputSoLingerNoAssertError(Bootstrap cb) throws Throwable {
+        testShutdownOutputSoLingerNoAssertError0(cb, true);
     }
 
-    private void testShutdownSoLingerNoAssertError0(Bootstrap cb, boolean output) throws Throwable {
-        ServerSocket ss = new ServerSocket();
+    public void testShutdownOutputSoLingerNoAssertError0(Bootstrap cb, boolean shutdownInputAsWell) throws Throwable {
+            ServerSocket ss = new ServerSocket();
         Socket s = null;
 
         Channel client = null;
@@ -230,10 +231,9 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
                     .connect(ss.getLocalSocketAddress()).get();
             s = ss.accept();
 
-            if (output) {
-                ((SocketChannel) client).shutdownOutput().sync();
-            } else {
-                ((SocketChannel) client).shutdown().sync();
+            client.shutdown(ChannelShutdownDirection.Outbound).sync();
+            if (shutdownInputAsWell) {
+                client.shutdown(ChannelShutdownDirection.Inbound).sync();
             }
         } finally {
             if (s != null) {

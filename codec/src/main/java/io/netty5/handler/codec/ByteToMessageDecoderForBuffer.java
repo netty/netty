@@ -15,24 +15,19 @@
 package io.netty5.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.socket.ChannelInputShutdownEvent;
+import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.internal.DelegatingChannelHandlerContext;
 import io.netty5.util.Send;
-import io.netty5.util.concurrent.EventExecutor;
-import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
 
-import java.net.SocketAddress;
 import java.util.Arrays;
 
 import static io.netty5.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
@@ -198,7 +193,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
                 } else {
                     cumulation = cumulator.cumulate(ctx.bufferAllocator(), cumulation, data);
                 }
-                assert context.ctx == ctx || ctx == context;
+                assert context.delegatingCtx() == ctx || ctx == context;
 
                 callDecode(context, cumulation);
             } catch (DecoderException e) {
@@ -247,18 +242,18 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        assert context.ctx == ctx || ctx == context;
+        assert context.delegatingCtx() == ctx || ctx == context;
         channelInputClosed(context, true);
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireUserEventTriggered(evt);
-        if (evt instanceof ChannelInputShutdownEvent) {
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) throws Exception {
+        ctx.fireChannelShutdown(direction);
+        if (direction == ChannelShutdownDirection.Inbound) {
             // The decodeLast method is invoked when a channelInactive event is encountered.
             // This method is responsible for ending requests in some situations and must be called
             // when the input has been shutdown.
-            assert context.ctx == ctx || ctx == context;
+            assert context.delegatingCtx() == ctx || ctx == context;
             channelInputClosed(context, false);
         }
     }
@@ -288,7 +283,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
 
     /**
      * Called when the input of the channel was closed which may be because it changed to inactive or because of
-     * {@link ChannelInputShutdownEvent}.
+     * shutdown.
      */
     void channelInputClosed(ByteToMessageDecoderContext ctx) throws Exception {
         if (cumulation != null) {
@@ -417,12 +412,11 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     }
 
     // Package private so we can also make use of it in ReplayingDecoder.
-    static final class ByteToMessageDecoderContext implements ChannelHandlerContext {
-        private final ChannelHandlerContext ctx;
+    static final class ByteToMessageDecoderContext extends DelegatingChannelHandlerContext {
         private int fireChannelReadCalled;
 
         private ByteToMessageDecoderContext(ChannelHandlerContext ctx) {
-            this.ctx = ctx;
+            super(ctx);
         }
 
         void reset() {
@@ -434,170 +428,10 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
         }
 
         @Override
-        public Channel channel() {
-            return ctx.channel();
-        }
-
-        @Override
-        public EventExecutor executor() {
-            return ctx.executor();
-        }
-
-        @Override
-        public String name() {
-            return ctx.name();
-        }
-
-        @Override
-        public ChannelHandler handler() {
-            return ctx.handler();
-        }
-
-        @Override
-        public boolean isRemoved() {
-            return ctx.isRemoved();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRegistered() {
-            ctx.fireChannelRegistered();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelUnregistered() {
-            ctx.fireChannelUnregistered();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelActive() {
-            ctx.fireChannelActive();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelInactive() {
-            ctx.fireChannelInactive();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-            ctx.fireExceptionCaught(cause);
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireUserEventTriggered(Object evt) {
-            ctx.fireUserEventTriggered(evt);
-            return this;
-        }
-
-        @Override
         public ChannelHandlerContext fireChannelRead(Object msg) {
             fireChannelReadCalled ++;
-            ctx.fireChannelRead(msg);
+            super.fireChannelRead(msg);
             return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelReadComplete() {
-            ctx.fireChannelReadComplete();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelWritabilityChanged() {
-            ctx.fireChannelWritabilityChanged();
-            return this;
-        }
-
-        @Override
-        public Future<Void> register() {
-            return ctx.register();
-        }
-
-        @Override
-        public ChannelHandlerContext read() {
-            ctx.read();
-            return this;
-        }
-
-        @Override
-        public ChannelHandlerContext flush() {
-            ctx.flush();
-            return this;
-        }
-
-        @Override
-        public ChannelPipeline pipeline() {
-            return ctx.pipeline();
-        }
-
-        @Override
-        public ByteBufAllocator alloc() {
-            return ctx.alloc();
-        }
-
-        @Override
-        public BufferAllocator bufferAllocator() {
-            return ctx.bufferAllocator();
-        }
-
-        @Override
-        public Future<Void> bind(SocketAddress localAddress) {
-            return ctx.bind(localAddress);
-        }
-
-        @Override
-        public Future<Void> connect(SocketAddress remoteAddress) {
-            return ctx.connect(remoteAddress);
-        }
-
-        @Override
-        public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-            return ctx.connect(remoteAddress, localAddress);
-        }
-
-        @Override
-        public Future<Void> disconnect() {
-            return ctx.disconnect();
-        }
-
-        @Override
-        public Future<Void> close() {
-            return ctx.close();
-        }
-
-        @Override
-        public Future<Void> deregister() {
-            return ctx.deregister();
-        }
-
-        @Override
-        public Future<Void> write(Object msg) {
-            return ctx.write(msg);
-        }
-
-        @Override
-        public Future<Void> writeAndFlush(Object msg) {
-            return ctx.writeAndFlush(msg);
-        }
-
-        @Override
-        public Promise<Void> newPromise() {
-            return ctx.newPromise();
-        }
-
-        @Override
-        public Future<Void> newSucceededFuture() {
-            return ctx.newSucceededFuture();
-        }
-
-        @Override
-        public Future<Void> newFailedFuture(Throwable cause) {
-            return ctx.newFailedFuture(cause);
         }
     }
 

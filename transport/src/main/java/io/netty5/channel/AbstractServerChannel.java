@@ -25,10 +25,11 @@ import static java.util.Objects.requireNonNull;
  * A skeletal server-side {@link Channel} implementation.  A server-side
  * {@link Channel} does not allow the following operations:
  * <ul>
- * <li>{@link #connect(SocketAddress, Promise)}</li>
- * <li>{@link #disconnect(Promise)}</li>
- * <li>{@link #write(Object, Promise)}</li>
+ * <li>{@link #connect(SocketAddress)}</li>
+ * <li>{@link #disconnect()}</li>
+ * <li>{@link #write(Object)}</li>
  * <li>{@link #flush()}</li>
+ * <li>{@link #shutdown(ChannelShutdownDirection)}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
  */
@@ -66,8 +67,18 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
+    protected void doDisconnect() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        return !isActive();
     }
 
     @Override

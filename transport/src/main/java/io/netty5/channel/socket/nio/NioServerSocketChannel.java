@@ -19,6 +19,7 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
@@ -143,6 +144,16 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         return SocketUtils.localSocketAddress(javaChannel().socket());
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        return !isActive();
     }
 
     @Override
