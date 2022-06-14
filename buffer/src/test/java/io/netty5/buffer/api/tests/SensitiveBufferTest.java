@@ -18,6 +18,7 @@ package io.netty5.buffer.api.tests;
 import io.netty5.buffer.api.AllocationType;
 import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.util.Send;
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static io.netty5.buffer.api.SensitiveBufferAllocator.sensitiveOffHeapAllocator;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -103,6 +105,27 @@ public class SensitiveBufferTest {
             assertEquals(0, stubManager.getBytesCleared());
             send.close();
             assertEquals(8, stubManager.getBytesCleared());
+        }
+    }
+
+    @Test
+    public void sensitiveAllocatorMustCaptureMemoryManager() {
+        MemoryManager baseMemoryManager = MemoryManager.instance();
+        StubManager stubManager = new StubManager(baseMemoryManager);
+
+        try (BufferAllocator allocator = MemoryManager.using(stubManager, () -> sensitiveOffHeapAllocator())) {
+            allocator.allocate(8).close();
+            assertThat(stubManager.getBytesCleared()).isEqualTo(8);
+        }
+
+        try (BufferAllocator allocator = sensitiveOffHeapAllocator()) {
+            allocator.allocate(8).close();
+            assertThat(stubManager.getBytesCleared()).isEqualTo(8); // No change, stub not captured here.
+        }
+
+        try (BufferAllocator allocator = sensitiveOffHeapAllocator()) {
+            MemoryManager.using(stubManager, () -> allocator.allocate(8)).close();
+            assertThat(stubManager.getBytesCleared()).isEqualTo(16); // Stub captured on allocation, as override.
         }
     }
 
