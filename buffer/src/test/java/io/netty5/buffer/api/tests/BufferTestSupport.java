@@ -177,8 +177,8 @@ public abstract class BufferTestSupport {
         }
         initFixtures = initFixtures.stream().flatMap(f -> {
             Builder<Fixture> builder = Stream.builder();
-            for (MemoryManager managers : loadableManagers) {
-                char[] chars = managers.implementationName().toCharArray();
+            for (MemoryManager manager : loadableManagers) {
+                char[] chars = manager.implementationName().toCharArray();
                 for (int i = 1, j = 1; i < chars.length; i++) {
                     if (Character.isUpperCase(chars[i])) {
                         chars[j++] = chars[i];
@@ -186,7 +186,7 @@ public abstract class BufferTestSupport {
                 }
                 String managersName = String.valueOf(chars, 0, 2);
                 builder.add(new Fixture(f + "/" + managersName,
-                                        () -> MemoryManager.using(managers, f), f.getProperties()));
+                                        () -> MemoryManager.using(manager, f), f.getProperties()));
             }
             return builder.build();
         }).collect(Collectors.toList());
@@ -561,10 +561,40 @@ public abstract class BufferTestSupport {
             var roBuffer = bbAlloc.apply(6).asReadOnlyBuffer();
             assertThrows(ReadOnlyBufferException.class, () -> buf.copyInto(0, roBuffer, 0, 1));
             assertThrows(ReadOnlyBufferException.class, () -> buf.copyInto(0, roBuffer, 0, 0));
+
+            ByteBuffer target = bbAlloc.apply(6);
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(-1, target, 0, 1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, -1, 1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 3, 6));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(3, target, 0, 6));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 0, 7));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 0, -1));
         }
     }
 
-    public static void testCopyIntoBuf(Fixture fixture, Function<Integer, Buffer> bbAlloc) {
+    public static void testCopyIntoByteArray(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            buf.writeLong(0x0102030405060708L);
+            byte[] buffer = new byte[8];
+            buf.copyInto(0, buffer, 0, buffer.length);
+            assertThat(buffer).containsExactly(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08);
+
+            buffer = new byte[6];
+            buf.copyInto(1, buffer, 1, 3);
+            assertThat(buffer).containsExactly(0x00, 0x02, 0x03, 0x04, 0x00, 0x00);
+
+            byte[] target = new byte[6];
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(-1, target, 0, 1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, -1, 1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 3, 6));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(3, target, 0, 6));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 0, 7));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 0, -1));
+        }
+    }
+
+    public static void testCopyIntoBuffer(Fixture fixture, Function<Integer, Buffer> bbAlloc) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.writeLong(0x0102030405060708L);
@@ -628,6 +658,15 @@ public abstract class BufferTestSupport {
             //          0x0102030102030405
             buf.copyInto(0, buf, 3, 5);
             assertThat(toByteArray(buf)).containsExactly(0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04, 0x05);
+
+            try (Buffer target = bbAlloc.apply(6)) {
+                assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(-1, target, 0, 1));
+                assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, -1, 1));
+                assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 3, 6));
+                assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(3, target, 0, 6));
+                assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 0, 7));
+                assertThrows(IndexOutOfBoundsException.class, () -> buf.copyInto(0, target, 0, -1));
+            }
         }
     }
 
@@ -664,11 +703,11 @@ public abstract class BufferTestSupport {
     }
 
     public static void checkByteIterationOfRegion(Buffer buf) {
-        assertThrows(IllegalArgumentException.class, () -> buf.openCursor(-1, 1));
-        assertThrows(IllegalArgumentException.class, () -> buf.openCursor(1, -1));
-        assertThrows(IllegalArgumentException.class, () -> buf.openCursor(buf.capacity(), 1));
-        assertThrows(IllegalArgumentException.class, () -> buf.openCursor(buf.capacity() - 1, 2));
-        assertThrows(IllegalArgumentException.class, () -> buf.openCursor(buf.capacity() - 2, 3));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openCursor(-1, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openCursor(1, -1));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openCursor(buf.capacity(), 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openCursor(buf.capacity() - 1, 2));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openCursor(buf.capacity() - 2, 3));
 
         var cursor = buf.openCursor(1, 0);
         assertFalse(cursor.readByte());
@@ -744,11 +783,11 @@ public abstract class BufferTestSupport {
     }
 
     public static void checkReverseByteIterationOfRegion(Buffer buf) {
-        assertThrows(IllegalArgumentException.class, () -> buf.openReverseCursor(-1, 0));
-        assertThrows(IllegalArgumentException.class, () -> buf.openReverseCursor(0, -1));
-        assertThrows(IllegalArgumentException.class, () -> buf.openReverseCursor(0, 2));
-        assertThrows(IllegalArgumentException.class, () -> buf.openReverseCursor(1, 3));
-        assertThrows(IllegalArgumentException.class, () -> buf.openReverseCursor(buf.capacity(), 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openReverseCursor(-1, 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openReverseCursor(0, -1));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openReverseCursor(0, 2));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openReverseCursor(1, 3));
+        assertThrows(IndexOutOfBoundsException.class, () -> buf.openReverseCursor(buf.capacity(), 0));
 
         var cursor = buf.openReverseCursor(1, 0);
         assertFalse(cursor.readByte());

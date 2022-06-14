@@ -17,6 +17,9 @@ package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.internal.ResourceSupport;
+import io.netty5.buffer.api.internal.Statics;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -27,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -46,17 +50,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoByteArray(Fixture fixture) {
-        try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
-            buf.writeLong(0x0102030405060708L);
-            byte[] array = new byte[8];
-            buf.copyInto(0, array, 0, array.length);
-            assertThat(array).containsExactly(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08);
-
-            array = new byte[6];
-            buf.copyInto(1, array, 1, 3);
-            assertThat(array).containsExactly(0x00, 0x02, 0x03, 0x04, 0x00, 0x00);
-        }
+        testCopyIntoByteArray(fixture);
     }
 
     @ParameterizedTest
@@ -74,13 +68,13 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoOnHeapBuf(Fixture fixture) {
-        testCopyIntoBuf(fixture, BufferAllocator.onHeapUnpooled()::allocate);
+        testCopyIntoBuffer(fixture, BufferAllocator.onHeapUnpooled()::allocate);
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     void copyIntoOffHeapBuf(Fixture fixture) {
-        testCopyIntoBuf(fixture, BufferAllocator.offHeapUnpooled()::allocate);
+        testCopyIntoBuffer(fixture, BufferAllocator.offHeapUnpooled()::allocate);
     }
 
     @ParameterizedTest
@@ -88,7 +82,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOnHeapOnHeapBuf(Fixture fixture) {
         try (var a = BufferAllocator.onHeapUnpooled();
              var b = BufferAllocator.onHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -104,7 +98,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOnHeapOffHeapBuf(Fixture fixture) {
         try (var a = BufferAllocator.onHeapUnpooled();
              var b = BufferAllocator.offHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -120,7 +114,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOffHeapOnHeapBuf(Fixture fixture) {
         try (var a = BufferAllocator.offHeapUnpooled();
              var b = BufferAllocator.onHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -136,7 +130,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOffHeapOffHeapBuf(Fixture fixture) {
         try (var a = BufferAllocator.offHeapUnpooled();
              var b = BufferAllocator.offHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -152,7 +146,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOnHeapOnHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.onHeapUnpooled();
              var b = BufferAllocator.onHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -168,7 +162,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOnHeapOffHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.onHeapUnpooled();
              var b = BufferAllocator.offHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -184,7 +178,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOffHeapOnHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.offHeapUnpooled();
              var b = BufferAllocator.onHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -200,7 +194,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     void copyIntoCompositeOffHeapOffHeapBufCopy(Fixture fixture) {
         try (var a = BufferAllocator.offHeapUnpooled();
              var b = BufferAllocator.offHeapUnpooled()) {
-            testCopyIntoBuf(fixture, size -> {
+            testCopyIntoBuffer(fixture, size -> {
                 int first = size / 2;
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
@@ -414,7 +408,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void writeBytesByteBufferMustExpandCapacityIfBufferIsTooSmall(Fixture fixture) {
+    public void writeBytesHeapByteBufferMustExpandCapacityIfBufferIsTooSmall(Fixture fixture) {
         // With zero offsets
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.allocate(8)) {
@@ -437,6 +431,154 @@ public class BufferBulkAccessTest extends BufferTestSupport {
             assertThat(buffer.writerOffset()).isEqualTo(17);
             assertThat(buffer.readerOffset()).isOne();
             assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesHeapByteBufferMustThrowIfCannotBeExpanded(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15)) {
+            ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7});
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(source));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(source.position()).isEqualTo(0);
+            assertThat(buffer.writerOffset()).isEqualTo(0);
+            assertThat(buffer.readerOffset()).isZero();
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15)) {
+            ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7});
+            buffer.writeByte((byte) -1).readByte();
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(source));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(source.position()).isEqualTo(0);
+            assertThat(buffer.writerOffset()).isOne();
+            assertThat(buffer.readerOffset()).isOne();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesHeapByteBufferWithinCapacityToSharedBufferMustNotThrow(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7});
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(source);
+            }
+            assertThat(buffer.capacity()).isEqualTo(source.capacity());
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7);
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6});
+            buffer.writeByte((byte) -1).readByte();
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(source);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isOne();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesDirectByteBufferMustExpandCapacityIfBufferIsTooSmall(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.allocateDirect(16).put(
+                    new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7}).flip();
+            buffer.writeBytes(source);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(source.capacity());
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(16);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7);
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.allocateDirect(16).put(
+                    new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7}).flip();
+            buffer.writeByte((byte) -1).readByte();
+            buffer.writeBytes(source);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(source.capacity() + 1);
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(17);
+            assertThat(buffer.readerOffset()).isOne();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesDirectByteBufferMustThrowIfCannotBeExpanded(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15)) {
+            ByteBuffer source = ByteBuffer.allocateDirect(16).put(
+                    new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7}).flip();
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(source));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(source.position()).isEqualTo(0);
+            assertThat(buffer.writerOffset()).isEqualTo(0);
+            assertThat(buffer.readerOffset()).isZero();
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15)) {
+            ByteBuffer source = ByteBuffer.allocateDirect(16).put(
+                    new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7}).flip();
+            buffer.writeByte((byte) -1).readByte();
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(source));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(source.position()).isEqualTo(0);
+            assertThat(buffer.writerOffset()).isOne();
+            assertThat(buffer.readerOffset()).isOne();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesByteBufferWithinCapacityToSharedBufferMustNotThrow(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.allocateDirect(8).put(new byte[] {0, 1, 2, 3, 4, 5, 6, 7}).flip();
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(source);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7);
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            ByteBuffer source = ByteBuffer.allocateDirect(7).put(new byte[] {0, 1, 2, 3, 4, 5, 6}).flip();
+            buffer.writeByte((byte) -1).readByte();
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(source);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(source.position()).isEqualTo(source.limit());
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isOne();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6);
         }
     }
 
@@ -470,6 +612,142 @@ public class BufferBulkAccessTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void writeBytesByteArrayMustThrowIfCannotBeExpanded(Fixture fixture) {
+        // Starting at offsets zero.
+        byte[] expected = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15)) {
+            assertThat(expected.length).isEqualTo(16);
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(expected));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.readableBytes()).isZero();
+        }
+
+        // With non-zero start offsets.
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15)) {
+            buffer.writeByte((byte) 1).readByte();
+            assertThat(expected.length).isEqualTo(16);
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(expected));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.readableBytes()).isZero();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesByteArrayWithinCapacityToSharedBufferMustNotThrow(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            byte[] expected = {0, 1, 2, 3, 4, 5, 6, 7};
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(expected);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7);
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeByte((byte) -1).readByte();
+            byte[] expected = {0, 1, 2, 3, 4, 5, 6};
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(expected);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isOne();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesByteArrayWithOffsetMustExpandCapacityIfTooSmall(Fixture fixture) {
+        // Starting at offsets zero.
+        byte[] expected = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            assertThat(expected.length).isEqualTo(16);
+            buffer.writeBytes(expected, 1, expected.length - 1);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(expected.length - 1);
+            byte[] actual = new byte[expected.length - 1];
+            buffer.readBytes(actual, 0, actual.length);
+            assertThat(actual).containsExactly("123456789ABCDEF".getBytes(StandardCharsets.US_ASCII));
+        }
+
+        // With non-zero start offsets.
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeByte((byte) 1).readByte();
+            assertThat(expected.length).isEqualTo(16);
+            buffer.writeBytes(expected, 1, expected.length - 1);
+            assertThat(buffer.capacity()).isGreaterThanOrEqualTo(expected.length);
+            byte[] actual = new byte[expected.length - 1];
+            buffer.readBytes(actual, 0, actual.length);
+            assertThat(actual).containsExactly("123456789ABCDEF".getBytes(StandardCharsets.US_ASCII));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesByteArrayWithOffsetMustThrowIfCannotBeExpanded(Fixture fixture) {
+        // Starting at offsets zero.
+        byte[] expected = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(14)) {
+            assertThat(expected.length).isEqualTo(16);
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(expected, 1, expected.length - 1));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.readableBytes()).isZero();
+        }
+
+        // With non-zero start offsets.
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(14)) {
+            buffer.writeByte((byte) 1).readByte();
+            assertThat(expected.length).isEqualTo(16);
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(expected, 1, expected.length - 1));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.readableBytes()).isZero();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesByteArrayWithOffsetsWithinCapacityToSharedBufferMustNotThrow(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            byte[] expected = {0, 1, 2, 3, 4, 5, 6, 7};
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(expected, 1, expected.length - 1);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.writerOffset()).isEqualTo(7);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(readByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6, 7);
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeByte((byte) -1).readByte();
+            byte[] expected = {0, 1, 2, 3, 4, 5, 6};
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+                buffer.writeBytes(expected, 1, expected.length - 1);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.writerOffset()).isEqualTo(7);
+            assertThat(buffer.readerOffset()).isOne();
+            assertThat(readByteArray(buffer)).containsExactly(1, 2, 3, 4, 5, 6);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void writeBytesBufferMustExpandCapacityIfTooSmall(Fixture fixture) {
         // Starting at offsets zero.
         byte[] expectedByteArray = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
@@ -495,6 +773,64 @@ public class BufferBulkAccessTest extends BufferTestSupport {
             byte[] actual = new byte[expectedByteArray.length];
             buffer.readBytes(actual, 0, actual.length);
             assertThat(actual).containsExactly(expectedByteArray);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesBufferMustThrowIfCannotBeExpanded(Fixture fixture) {
+        // Starting at offsets zero.
+        byte[] expectedByteArray = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15);
+             Buffer expected = allocator.copyOf(expectedByteArray)) {
+            assertThat(expected.readableBytes()).isEqualTo(16);
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(expected));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.readableBytes()).isZero();
+        }
+
+        // With non-zero start offsets.
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8).implicitCapacityLimit(15);
+             Buffer expected = allocator.copyOf(expectedByteArray)) {
+            buffer.writeByte((byte) 1).readByte();
+            assertThat(expected.readableBytes()).isEqualTo(16);
+            assertThrows(IndexOutOfBoundsException.class, () -> buffer.writeBytes(expected));
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.readableBytes()).isZero();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void writeBytesBufferWithinCapacityToSharedBufferMustNotThrow(Fixture fixture) {
+        // With zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            byte[] expectedByteArray = {0, 1, 2, 3, 4, 5, 6, 7};
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer);
+                 Buffer expected = allocator.copyOf(expectedByteArray)) {
+                buffer.writeBytes(expected);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isZero();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6, 7);
+        }
+        // With non-zero offsets
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buffer = allocator.allocate(8)) {
+            buffer.writeByte((byte) -1).readByte();
+            byte[] expectedByteArray = {0, 1, 2, 3, 4, 5, 6};
+            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer);
+                 Buffer expected = allocator.copyOf(expectedByteArray)) {
+                buffer.writeBytes(expected);
+            }
+            assertThat(buffer.capacity()).isEqualTo(8);
+            assertThat(buffer.writerOffset()).isEqualTo(8);
+            assertThat(buffer.readerOffset()).isOne();
+            assertThat(readByteArray(buffer)).containsExactly(0, 1, 2, 3, 4, 5, 6);
         }
     }
 
