@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.handler.adaptor.BufferConversionHandler.byteBufToBuffer;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,8 +42,7 @@ public class PerFrameDeflateEncoderTest {
     public void testCompressedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerFrameDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE),
-                byteBufToBuffer());
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
 
         // initialize
         byte[] payload = new byte[300];
@@ -104,8 +102,7 @@ public class PerFrameDeflateEncoderTest {
     public void testFragmentedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerFrameDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE),
-                byteBufToBuffer());
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
 
         // initialize
         byte[] payload1 = new byte[100];
