@@ -52,6 +52,7 @@ import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
 import static io.netty5.buffer.api.internal.Statics.checkLength;
 import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
+import static io.netty5.buffer.api.internal.Statics.setMemory;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
@@ -158,27 +159,8 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             throw bufferIsClosed(this);
         }
         final ByteBuffer wmem = this.wmem;
-        if (!wmem.hasArray()) {
-            fill(wmem, capacity, value);
-        } else {
-            final int start = wmem.arrayOffset();
-            final int end = wmem.arrayOffset() + capacity;
-            Arrays.fill(wmem.array(), start, end, value);
-        }
+        setMemory(wmem, capacity, value);
         return this;
-    }
-
-    private static void fill(final ByteBuffer wmem, final int capacity, final byte value) {
-        final int intFillValue = (value & 0xFF) * 0x01010101;
-        final int intCount = capacity >>> 2;
-        for (int i = 0; i < intCount; i++) {
-            wmem.putInt(i << 2, intFillValue);
-        }
-        final int byteCount = capacity & 3;
-        final int bytesOffset = intCount << 2;
-        for (int i = 0; i < byteCount; i++) {
-            wmem.put(bytesOffset + i, value);
-        }
     }
 
     private long nativeAddress() {

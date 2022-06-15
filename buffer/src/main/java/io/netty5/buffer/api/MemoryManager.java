@@ -213,6 +213,15 @@ public interface MemoryManager {
     Object sliceMemory(Object memory, int offset, int length);
 
     /**
+     * Overwrite the given recoverable memory object with zeroes, erasing all data that it contains.
+     * <p>
+     * This is used by the {@link SensitiveBufferAllocator} to erase data on deallocation.
+     *
+     * @param memory The memory that should be overwritten.
+     */
+    void clearMemory(Object memory);
+
+    /**
      * Get the name for this implementation, which can be used for finding this particular implementation via the
      * {@link #lookupImplementation(String)} method.
      *

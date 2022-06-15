@@ -123,6 +123,11 @@ public final class UnsafeMemoryManager implements MemoryManager {
     }
 
     @Override
+    public void clearMemory(Object memory) {
+        ((UnsafeMemory) memory).clearMemory();
+    }
+
+    @Override
     public String implementationName() {
         return "Unsafe";
     }

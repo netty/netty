@@ -18,8 +18,10 @@ package io.netty5.buffer.api.tests;
 import io.netty5.buffer.api.AllocationType;
 import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
+import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static io.netty5.buffer.api.SensitiveBufferAllocator.sensitiveOffHeapAllocator;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -106,6 +109,27 @@ public class SensitiveBufferTest {
         }
     }
 
+    @Test
+    public void sensitiveAllocatorMustCaptureMemoryManager() {
+        MemoryManager baseMemoryManager = MemoryManager.instance();
+        StubManager stubManager = new StubManager(baseMemoryManager);
+
+        try (BufferAllocator allocator = MemoryManager.using(stubManager, () -> sensitiveOffHeapAllocator())) {
+            allocator.allocate(8).close();
+            assertThat(stubManager.getBytesCleared()).isEqualTo(8);
+        }
+
+        try (BufferAllocator allocator = sensitiveOffHeapAllocator()) {
+            allocator.allocate(8).close();
+            assertThat(stubManager.getBytesCleared()).isEqualTo(8); // No change, stub not captured here.
+        }
+
+        try (BufferAllocator allocator = sensitiveOffHeapAllocator()) {
+            MemoryManager.using(stubManager, () -> allocator.allocate(8)).close();
+            assertThat(stubManager.getBytesCleared()).isEqualTo(16); // Stub captured on allocation, as override.
+        }
+    }
+
     private static final class StubManager implements MemoryManager {
         private final MemoryManager baseMemoryManager;
         private final AtomicInteger bytesCleared = new AtomicInteger();
@@ -121,7 +145,7 @@ public class SensitiveBufferTest {
             return baseMemoryManager.allocateShared(
                     control,
                     size,
-                    drop -> dropDecorator.apply(new CheckingDrop(bytesCleared, drop)),
+                    drop -> dropDecorator.apply(new CheckingDrop(bytesCleared, baseMemoryManager, drop)),
                     allocationType);
         }
 
@@ -146,6 +170,11 @@ public class SensitiveBufferTest {
         }
 
         @Override
+        public void clearMemory(Object memory) {
+            baseMemoryManager.clearMemory(memory);
+        }
+
+        @Override
         public String implementationName() {
             throw new UnsupportedOperationException();
         }
@@ -156,20 +185,25 @@ public class SensitiveBufferTest {
 
         private static final class CheckingDrop implements Drop<Buffer> {
             private final AtomicInteger bytesCleared;
+            private final MemoryManager manager;
             private final Drop<Buffer> delegate;
 
-            CheckingDrop(AtomicInteger bytesCleared, Drop<Buffer> delegate) {
+            CheckingDrop(AtomicInteger bytesCleared, MemoryManager manager, Drop<Buffer> delegate) {
                 this.bytesCleared = bytesCleared;
+                this.manager = manager;
                 this.delegate = delegate;
             }
 
             @Override
             public void drop(Buffer obj) {
-                int capacity = obj.capacity();
-                for (int i = 0; i < capacity; i++) {
-                    assertEquals((byte) 0, obj.getByte(i));
+                Object memory = manager.unwrapRecoverableMemory(obj);
+                try (Buffer buf = manager.recoverMemory(() -> null, memory, Statics.NO_OP_DROP)) {
+                    int capacity = buf.capacity();
+                    for (int i = 0; i < capacity; i++) {
+                        assertEquals((byte) 0, buf.getByte(i));
+                    }
+                    bytesCleared.addAndGet(capacity);
                 }
-                bytesCleared.addAndGet(capacity);
                 delegate.drop(obj);
             }
 

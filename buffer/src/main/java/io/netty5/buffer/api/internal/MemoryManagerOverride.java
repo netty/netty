@@ -66,10 +66,14 @@ public final class MemoryManagerOverride {
     }
 
     public static MemoryManager configuredOrDefaultManager() {
+        return configuredOrDefaultManager(DEFAULT);
+    }
+
+    public static MemoryManager configuredOrDefaultManager(MemoryManager desiredDefault) {
         if (OVERRIDES_AVAILABLE.get() > 0) {
-            return OVERRIDES.getOrDefault(Thread.currentThread(), DEFAULT);
+            return OVERRIDES.getOrDefault(Thread.currentThread(), desiredDefault);
         }
-        return DEFAULT;
+        return desiredDefault;
     }
 
     public static <T> T using(MemoryManager managers, Supplier<T> supplier) {

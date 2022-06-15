@@ -17,6 +17,7 @@ package io.netty5.buffer.api;
 
 import io.netty5.buffer.api.internal.ArcDrop;
 import io.netty5.buffer.api.internal.CleanerDrop;
+import io.netty5.buffer.api.internal.MemoryManagerOverride;
 
 import java.nio.ByteBuffer;
 import java.util.function.Function;
@@ -40,9 +41,10 @@ import java.util.function.Supplier;
  * This allocator is stateless, and the {@link #close()} method has no effect.
  */
 public final class SensitiveBufferAllocator implements BufferAllocator {
-    private static final BufferAllocator INSTANCE = new SensitiveBufferAllocator();
-    private static final AllocatorControl CONTROL = () -> INSTANCE;
-    private static final Function<Drop<Buffer>, Drop<Buffer>> DECORATOR = SensitiveBufferAllocator::decorate;
+    private static final BufferAllocator INSTANCE = new SensitiveBufferAllocator(null);
+    private final AllocatorControl control = () -> this;
+    private final Function<Drop<Buffer>, Drop<Buffer>> decorator = this::decorate;
+    private final MemoryManager manager;
 
     /**
      * Get the sensitive off-heap buffer allocator instance.
@@ -50,10 +52,15 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
      * @return The allocator.
      */
     public static BufferAllocator sensitiveOffHeapAllocator() {
+        MemoryManager memoryManagerOverride = MemoryManagerOverride.configuredOrDefaultManager(null);
+        if (memoryManagerOverride != null) {
+            return new SensitiveBufferAllocator(memoryManagerOverride);
+        }
         return INSTANCE;
     }
 
-    private SensitiveBufferAllocator() {
+    private SensitiveBufferAllocator(MemoryManager manager) {
+        this.manager = manager;
     }
 
     @Override
@@ -68,13 +75,20 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
 
     @Override
     public Buffer allocate(int size) {
-        MemoryManager manager = MemoryManager.instance();
-        return manager.allocateShared(CONTROL, size, DECORATOR, getAllocationType());
+        MemoryManager manager = getManager();
+        return manager.allocateShared(control, size, decorator, getAllocationType());
     }
 
-    private static Drop<Buffer> decorate(Drop<Buffer> base) {
-        MemoryManager manager = MemoryManager.instance();
-        return CleanerDrop.wrap(ArcDrop.wrap(new ZeroingDrop(manager, base)), manager);
+    private Drop<Buffer> decorate(Drop<Buffer> base) {
+        MemoryManager manager = getManager();
+        return CleanerDrop.wrap(ArcDrop.wrap(new ZeroingDrop(manager, control, base)), manager);
+    }
+
+    private MemoryManager getManager() {
+        if (manager != null) {
+            return MemoryManagerOverride.configuredOrDefaultManager(manager);
+        }
+        return MemoryManager.instance();
     }
 
     @Override
@@ -90,9 +104,11 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
     private static final class ZeroingDrop implements Drop<Buffer> {
         private final MemoryManager manager;
         private final Drop<Buffer> base;
+        private final AllocatorControl control;
 
-        ZeroingDrop(MemoryManager manager, Drop<Buffer> base) {
+        ZeroingDrop(MemoryManager manager, AllocatorControl control, Drop<Buffer> base) {
             this.manager = manager;
+            this.control = control;
             this.base = base;
         }
 
@@ -101,9 +117,8 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
             // The given buffer object might only be a small piece of the original buffer, due to split() calls.
             // We go through the memory recovery process in order to get back the full memory allocation.
             Object memory = manager.unwrapRecoverableMemory(obj);
-            try (Buffer buffer = manager.recoverMemory(CONTROL, memory, base)) {
-                buffer.fill((byte) 0);
-            }
+            manager.clearMemory(memory);
+            base.drop(obj);
         }
 
         @Override

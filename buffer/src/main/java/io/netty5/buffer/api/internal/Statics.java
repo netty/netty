@@ -32,6 +32,7 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 
@@ -224,6 +225,34 @@ public interface Statics {
 
     private static void bbputFallback(ByteBuffer dest, int destPos, ByteBuffer src, int srcPos, int length) {
         dest.position(destPos).put(bbslice(src, srcPos, length));
+    }
+
+    static void setMemory(ByteBuffer buffer, int length, byte value) {
+        if (!buffer.hasArray()) {
+            long address;
+            if (PlatformDependent.hasUnsafe() && (address = nativeAddressOfDirectByteBuffer(buffer)) != 0) {
+                PlatformDependent.setMemory(address, length, value);
+            } else {
+                final int intFillValue = (value & 0xFF) * 0x01010101;
+                final int intCount = length >>> 2;
+                for (int i = 0; i < intCount; i++) {
+                    buffer.putInt(i << 2, intFillValue);
+                }
+                final int byteCount = length & 3;
+                final int bytesOffset = intCount << 2;
+                for (int i = 0; i < byteCount; i++) {
+                    buffer.put(bytesOffset + i, value);
+                }
+            }
+        } else {
+            final int start = buffer.arrayOffset();
+            if (PlatformDependent.hasUnsafe()) {
+                PlatformDependent.setMemory(buffer.array(), start, length, value);
+            } else {
+                final int end = start + length;
+                Arrays.fill(buffer.array(), start, end, value);
+            }
+        }
     }
 
     static BufferClosedException bufferIsClosed(Buffer buffer) {

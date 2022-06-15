@@ -151,6 +151,11 @@ public class CleanerDropTest {
         }
 
         @Override
+        public void clearMemory(Object memory) {
+            manager.clearMemory(memory);
+        }
+
+        @Override
         public String implementationName() {
             return "Leak Tracking " + manager.implementationName();
         }
