@@ -17,14 +17,11 @@
 package io.netty5.channel;
 
 import io.netty.buffer.ByteBufUtil;
-import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.MacAddressUtil;
-import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -107,50 +104,12 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
-        ClassLoader loader = null;
-        String value;
-        try {
-            loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
-            // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
-            Class<?> mgmtFactoryType = Class.forName("java.lang.management.ManagementFactory", true, loader);
-            Class<?> runtimeMxBeanType = Class.forName("java.lang.management.RuntimeMXBean", true, loader);
-
-            Method getRuntimeMXBean = mgmtFactoryType.getMethod("getRuntimeMXBean", EmptyArrays.EMPTY_CLASSES);
-            Object bean = getRuntimeMXBean.invoke(null, EmptyArrays.EMPTY_OBJECTS);
-            Method getName = runtimeMxBeanType.getMethod("getName", EmptyArrays.EMPTY_CLASSES);
-            value = (String) getName.invoke(bean, EmptyArrays.EMPTY_OBJECTS);
-        } catch (Throwable t) {
-            logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", t);
-            try {
-                // Invoke android.os.Process.myPid()
-                Class<?> processType = Class.forName("android.os.Process", true, loader);
-                Method myPid = processType.getMethod("myPid", EmptyArrays.EMPTY_CLASSES);
-                value = myPid.invoke(null, EmptyArrays.EMPTY_OBJECTS).toString();
-            } catch (Throwable t2) {
-                logger.debug("Could not invoke Process.myPid(); not Android?", t2);
-                value = "";
-            }
-        }
-
-        int atIndex = value.indexOf('@');
-        if (atIndex >= 0) {
-            value = value.substring(0, atIndex);
-        }
-
-        int pid;
-        try {
-            pid = Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            // value did not contain an integer.
-            pid = -1;
-        }
-
-        if (pid < 0) {
+        long pid = ProcessHandle.current().pid();
+        if (pid > Integer.MAX_VALUE || pid < Integer.MIN_VALUE) {
+            logger.warn("Current process ID exceeds int range: " + pid);
             pid = ThreadLocalRandom.current().nextInt();
-            logger.warn("Failed to find the current process ID from '{}'; using a random value: {}",  value, pid);
         }
-
-        return pid;
+        return (int) pid;
     }
 
     private final byte[] data;
