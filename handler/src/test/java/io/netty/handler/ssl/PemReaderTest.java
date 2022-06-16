@@ -60,6 +60,9 @@ class PemReaderTest {
         ByteBuf[] bufs = PemReader.readCertificates(in);
         in.close();
         assertThat(bufs.length).isEqualTo(2);
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
     }
 
     @Test
@@ -83,5 +86,6 @@ class PemReaderTest {
         ByteBuf buf = PemReader.readPrivateKey(in);
         in.close();
         assertThat(buf.readableBytes()).isEqualTo(686);
+        buf.release();
     }
 }
