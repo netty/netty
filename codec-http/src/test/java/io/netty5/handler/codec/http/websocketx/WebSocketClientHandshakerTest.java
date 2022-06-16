@@ -156,17 +156,17 @@ public abstract class WebSocketClientHandshakerTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    void testHttpResponseAndFrameInSameBuffer() {
+    void testHttpResponseAndFrameInSameBuffer() throws Exception {
         testHttpResponseAndFrameInSameBuffer(false);
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    void testHttpResponseAndFrameInSameBufferCodec() {
+    void testHttpResponseAndFrameInSameBufferCodec() throws Exception {
         testHttpResponseAndFrameInSameBuffer(true);
     }
 
-    private void testHttpResponseAndFrameInSameBuffer(boolean codec) {
+    private void testHttpResponseAndFrameInSameBuffer(boolean codec) throws Exception {
         String url = "ws://localhost:9999/ws";
         final WebSocketClientHandshaker shaker = newHandshaker(URI.create(url));
         final WebSocketClientHandshaker handshaker = new WebSocketClientHandshaker(
@@ -235,7 +235,7 @@ public abstract class WebSocketClientHandshakerTest {
         }
         // We need to first write the request as HttpClientCodec will fail if we receive a response before a request
         // was written.
-        shaker.handshake(ch).syncUninterruptibly();
+        shaker.handshake(ch).sync();
         for (;;) {
             // Just consume the bytes, we are not interested in these.
             try (Buffer buf = ch.readOutbound()) {

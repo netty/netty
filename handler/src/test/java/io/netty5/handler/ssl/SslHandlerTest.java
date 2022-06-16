@@ -264,7 +264,7 @@ public class SslHandlerTest {
                 ch.runPendingTasks();
             }
 
-            handler.handshakeFuture().syncUninterruptibly();
+            handler.handshakeFuture().sync();
         } catch (CompletionException e) {
             throw e.getCause();
         } finally {
@@ -409,7 +409,7 @@ public class SslHandlerTest {
                 assertEquals(1, ((ReferenceCounted) sslEngine).refCnt());
 
                 assertTrue(ch.finishAndReleaseAll());
-                ch.close().syncUninterruptibly();
+                ch.close().sync();
 
                 assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
                 assertEquals(0, ((ReferenceCounted) sslEngine).refCnt());
@@ -496,14 +496,14 @@ public class SslHandlerTest {
             sc = serverBootstrap.bind(new InetSocketAddress(0)).get();
             cc = bootstrap.connect(sc.localAddress()).get();
 
-            serverPromise.asFuture().syncUninterruptibly();
-            clientPromise.asFuture().syncUninterruptibly();
+            serverPromise.asFuture().sync();
+            clientPromise.asFuture().sync();
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
         }
@@ -754,14 +754,14 @@ public class SslHandlerTest {
             Buffer secondBuffer = offHeapAllocator().allocate(10);
             secondBuffer.skipWritableBytes(secondBuffer.capacity());
             cc.write(firstBuffer);
-            cc.writeAndFlush(secondBuffer).syncUninterruptibly();
+            cc.writeAndFlush(secondBuffer).sync();
             serverReceiveLatch.countDown();
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
 
@@ -814,16 +814,16 @@ public class SslHandlerTest {
                     });
             cc = b.connect(sc.localAddress()).get();
             SslHandler handler = sslHandlerRef.get();
-            handler.handshakeFuture().awaitUninterruptibly();
+            handler.handshakeFuture().await();
             assertFalse(handler.handshakeFuture().isSuccess());
 
-            cc.closeFuture().syncUninterruptibly();
+            cc.closeFuture().sync();
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
 
@@ -841,7 +841,7 @@ public class SslHandlerTest {
         assertFalse(channel.finish());
         channel.pipeline().addLast(new SslHandler(engine));
         assertFalse(engine.isOutboundDone());
-        channel.close().syncUninterruptibly();
+        channel.close().sync();
 
         assertTrue(engine.isOutboundDone());
     }
@@ -905,10 +905,10 @@ public class SslHandlerTest {
             assertThat(sslHandler.handshakeFuture().await().cause(), instanceOf(SSLException.class));
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
 
@@ -977,10 +977,10 @@ public class SslHandlerTest {
             assertThat(cause.getMessage(), containsString("timed out"));
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
             Resource.dispose(sslClientCtx);
@@ -1169,10 +1169,10 @@ public class SslHandlerTest {
             }
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
             Resource.dispose(sslClientCtx);
@@ -1248,10 +1248,10 @@ public class SslHandlerTest {
             }
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
             Resource.dispose(sslClientCtx);
@@ -1365,7 +1365,7 @@ public class SslHandlerTest {
             }
         } finally {
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
             Resource.dispose(sslClientCtx);
@@ -1426,7 +1426,7 @@ public class SslHandlerTest {
             }
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
         }
     }
@@ -1538,7 +1538,7 @@ public class SslHandlerTest {
             assertNull(errorQueue.poll(1, TimeUnit.MILLISECONDS));
         } finally {
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
         }
@@ -1651,8 +1651,8 @@ public class SslHandlerTest {
             Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
             assertThat(serverCause, instanceOf(SSLException.class));
             assertThat(serverCause.getCause(), not(instanceOf(ClosedChannelException.class)));
-            cc.close().syncUninterruptibly();
-            sc.close().syncUninterruptibly();
+            cc.close().sync();
+            sc.close().sync();
 
             Throwable eventClientCause = clientEvent.get().cause();
             assertThat(eventClientCause, instanceOf(SSLException.class));

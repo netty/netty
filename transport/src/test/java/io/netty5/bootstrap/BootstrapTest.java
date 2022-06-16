@@ -73,11 +73,11 @@ public class BootstrapTest {
     private static final ChannelHandler dummyHandler = new DummyHandler();
 
     @AfterAll
-    public static void destroy() {
+    public static void destroy() throws Exception {
         groupA.shutdownGracefully();
         groupB.shutdownGracefully();
-        groupA.terminationFuture().syncUninterruptibly();
-        groupB.terminationFuture().syncUninterruptibly();
+        groupA.terminationFuture().sync();
+        groupB.terminationFuture().sync();
     }
 
     @Test
@@ -388,7 +388,7 @@ public class BootstrapTest {
                 .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1)
                 .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 2);
 
-        bootstrap.register().syncUninterruptibly();
+        bootstrap.register().sync();
 
         latch.await();
 

@@ -69,8 +69,8 @@ public class EpollSocketChannelConfigTest {
     }
 
     @AfterEach
-    public void teardown() {
-        ch.close().syncUninterruptibly();
+    public void tearDown() throws Exception {
+        ch.close().sync();
     }
 
     private static long randLong(long min, long max) {
@@ -145,8 +145,8 @@ public class EpollSocketChannelConfigTest {
     // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
     // want to see a ClosedChannelException for the test to pass.
     @RepeatedIfExceptionsTest(repeats = 4)
-    public void testSetOptionWhenClosed() {
-        ch.close().syncUninterruptibly();
+    public void testSetOptionWhenClosed() throws Exception {
+        ch.close().sync();
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -160,8 +160,8 @@ public class EpollSocketChannelConfigTest {
     // This is inherently racy, so we allow getSoLinger to throw ChannelException a few of times, but eventually we do
     // want to see a ClosedChannelException for the test to pass.
     @RepeatedIfExceptionsTest(repeats = 4)
-    public void testGetOptionWhenClosed() {
-        ch.close().syncUninterruptibly();
+    public void testGetOptionWhenClosed() throws Exception {
+        ch.close().sync();
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {

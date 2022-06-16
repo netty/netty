@@ -25,7 +25,6 @@ import io.netty5.util.concurrent.AbstractEventExecutor;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
@@ -47,7 +46,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
     protected abstract SocketOption<?> newInvalidOption();
 
     @Test
-    public void testNioChannelOption() throws IOException {
+    public void testNioChannelOption() throws Exception {
         EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
@@ -64,13 +63,13 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             assertEquals(value3, value4);
             assertNotEquals(value1, value4);
         } finally {
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
             eventLoopGroup.shutdownGracefully();
         }
     }
 
     @Test
-    public void testInvalidNioChannelOption() {
+    public void testInvalidNioChannelOption() throws Exception {
         EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
@@ -78,25 +77,25 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             assertFalse(channel.config().setOption(option, null));
             assertNull(channel.config().getOption(option));
         } finally {
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
             eventLoopGroup.shutdownGracefully();
         }
     }
 
     @Test
-    public void testGetOptions()  {
+    public void testGetOptions() throws Exception {
         EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
             channel.config().getOptions();
         } finally {
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
             eventLoopGroup.shutdownGracefully();
         }
     }
 
     @Test
-    public void testWrapping() {
+    public void testWrapping() throws Exception {
         EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         final EventLoop eventLoop = eventLoopGroup.next();
 
@@ -183,10 +182,10 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
         EventLoop wrapped = new WrappedEventLoop(eventLoop);
         T channel = newNioChannel(wrapped);
-        channel.register().syncUninterruptibly();
+        channel.register().sync();
 
         assertSame(wrapped, channel.executor());
-        channel.close().syncUninterruptibly();
+        channel.close().sync();
         eventLoopGroup.shutdownGracefully();
     }
 }

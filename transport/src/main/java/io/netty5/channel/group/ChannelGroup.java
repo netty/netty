@@ -79,7 +79,7 @@ import java.util.Set;
  *     ... Wait until the shutdown signal reception ...
  *
  *     // Close the serverChannel and then all accepted connections.
- *     <strong>allChannels.close().awaitUninterruptibly();</strong>
+ *     <strong>allChannels.close().await();</strong>
  * }
  *
  * public class MyHandler implements {@link ChannelHandler} {

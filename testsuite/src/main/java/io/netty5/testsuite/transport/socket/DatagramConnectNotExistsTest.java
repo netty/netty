@@ -69,8 +69,8 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
             assertTrue(datagramChannel.isActive());
             BufferAllocator allocator = datagramChannel.bufferAllocator();
             datagramChannel.writeAndFlush(
-                    allocator.copyOf("test".getBytes(CharsetUtil.US_ASCII))).syncUninterruptibly();
-            assertTrue(promise.asFuture().syncUninterruptibly().getNow() instanceof PortUnreachableException);
+                    allocator.copyOf("test".getBytes(CharsetUtil.US_ASCII))).sync();
+            assertTrue(promise.asFuture().sync().getNow() instanceof PortUnreachableException);
         } finally {
             if (datagramChannel != null) {
                 datagramChannel.close();

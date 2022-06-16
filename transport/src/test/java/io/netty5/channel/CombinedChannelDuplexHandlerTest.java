@@ -175,7 +175,7 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test
-    public void testOutboundEvents() {
+    public void testOutboundEvents() throws Exception {
         ChannelHandler inboundHandler = new ChannelHandlerAdapter() { };
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
 
@@ -206,15 +206,15 @@ public class CombinedChannelDuplexHandlerTest {
         assertNull(outboundHandler.pollEvent());
     }
 
-    private static void doOutboundOperations(Channel channel) {
-        channel.pipeline().bind(LOCAL_ADDRESS).syncUninterruptibly();
-        channel.pipeline().connect(REMOTE_ADDRESS, LOCAL_ADDRESS).syncUninterruptibly();
-        channel.pipeline().write(MSG).syncUninterruptibly();
+    private static void doOutboundOperations(Channel channel) throws Exception {
+        channel.pipeline().bind(LOCAL_ADDRESS).sync();
+        channel.pipeline().connect(REMOTE_ADDRESS, LOCAL_ADDRESS).sync();
+        channel.pipeline().write(MSG).sync();
         channel.pipeline().flush();
         channel.pipeline().read();
-        channel.pipeline().disconnect().syncUninterruptibly();
-        channel.pipeline().close().syncUninterruptibly();
-        channel.pipeline().deregister().syncUninterruptibly();
+        channel.pipeline().disconnect().sync();
+        channel.pipeline().close().sync();
+        channel.pipeline().deregister().sync();
     }
 
     private static void assertOutboundOperations(OutboundEventHandler outboundHandler) {

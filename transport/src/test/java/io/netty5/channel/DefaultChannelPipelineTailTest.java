@@ -76,7 +76,7 @@ public class DefaultChannelPipelineTailTest {
         };
 
         myChannel.pipeline().fireChannelInactive();
-        myChannel.close().syncUninterruptibly();
+        myChannel.close().sync();
 
         assertTrue(latch.await(1L, TimeUnit.SECONDS));
     }

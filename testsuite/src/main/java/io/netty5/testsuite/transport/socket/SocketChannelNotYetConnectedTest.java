@@ -53,20 +53,20 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 .bind(newSocketAddress()).get();
         try {
             try {
-                ch.shutdown(ChannelShutdownDirection.Inbound).syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Inbound).sync();
                 fail();
             } catch (Throwable cause) {
                 assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);
             }
 
             try {
-                ch.shutdown(ChannelShutdownDirection.Outbound).syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Outbound).sync();
                 fail();
             } catch (Throwable cause) {
                 assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);
             }
         } finally {
-            ch.close().syncUninterruptibly();
+            ch.close().sync();
         }
     }
 

@@ -41,7 +41,7 @@ public abstract class AbstractEventLoopTest {
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
         assertTrue(loop.awaitTermination(600, TimeUnit.MILLISECONDS));
-        assertTrue(f.syncUninterruptibly().isSuccess());
+        assertTrue(f.sync().isSuccess());
         assertTrue(loop.isShutdown());
         assertTrue(loop.isTerminated());
     }

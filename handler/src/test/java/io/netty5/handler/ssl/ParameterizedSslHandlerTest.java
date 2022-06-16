@@ -261,10 +261,10 @@ public class ParameterizedSslHandlerTest {
             donePromise.asFuture().sync();
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
 
@@ -359,13 +359,13 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).get();
 
-            promise.asFuture().syncUninterruptibly();
+            promise.asFuture().sync();
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
 
@@ -483,8 +483,8 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).get();
 
-            serverPromise.asFuture().awaitUninterruptibly();
-            clientPromise.asFuture().awaitUninterruptibly();
+            serverPromise.asFuture().await();
+            clientPromise.asFuture().await();
 
             // Server always received the close_notify as the client triggers the close sequence.
             assertTrue(serverPromise.isSuccess());
@@ -497,10 +497,10 @@ public class ParameterizedSslHandlerTest {
             }
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
 
@@ -613,10 +613,10 @@ public class ParameterizedSslHandlerTest {
             assertEquals(expectedContent, clientQueue.toString());
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
 
             Resource.dispose(sslServerCtx);

@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class PendingWriteQueueTest {
 
     @Test
-    public void testRemoveAndWrite() {
+    public void testRemoveAndWrite() throws Exception {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {
@@ -57,7 +57,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndWriteAll() {
+    public void testRemoveAndWriteAll() throws Exception {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {
@@ -71,7 +71,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndFail() {
+    public void testRemoveAndFail() throws Exception {
         assertWriteFails(new TestHandler() {
 
             @Override
@@ -83,7 +83,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndFailAll() {
+    public void testRemoveAndFailAll() throws Exception {
         assertWriteFails(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {
@@ -142,7 +142,7 @@ public class PendingWriteQueueTest {
         assertThat(msg.refCnt(), is(0));
     }
 
-    private static void assertWrite(ChannelHandler handler, int count) {
+    private static void assertWrite(ChannelHandler handler, int count) throws Exception {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
         channel.config().setWriteBufferLowWaterMark(1);
@@ -154,7 +154,7 @@ public class PendingWriteQueueTest {
         }
         assertTrue(channel.writeOutbound(buffers));
         assertTrue(channel.finish());
-        channel.closeFuture().syncUninterruptibly();
+        channel.closeFuture().sync();
 
         for (int i = 0; i < buffers.length; i++) {
             assertBuffer(channel, buffer);
@@ -178,7 +178,7 @@ public class PendingWriteQueueTest {
         assertNull(queue.removeAndWriteAll());
     }
 
-    private static void assertWriteFails(ChannelHandler handler, int count) {
+    private static void assertWriteFails(ChannelHandler handler, int count) throws Exception {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
         ByteBuf[] buffers = new ByteBuf[count];
@@ -192,7 +192,7 @@ public class PendingWriteQueueTest {
             assertTrue(e instanceof TestException);
         }
         assertFalse(channel.finish());
-        channel.closeFuture().syncUninterruptibly();
+        channel.closeFuture().sync();
 
         buffer.release();
         assertNull(channel.readOutbound());
@@ -331,10 +331,10 @@ public class PendingWriteQueueTest {
 
     // See https://github.com/netty/netty/issues/3967
     @Test
-    public void testCloseChannelOnCreation() {
+    public void testCloseChannelOnCreation() throws Exception {
         EmbeddedChannel channel = newChannel();
         ChannelHandlerContext context = channel.pipeline().firstContext();
-        channel.close().syncUninterruptibly();
+        channel.close().sync();
 
         final PendingWriteQueue queue = new PendingWriteQueue(context);
 

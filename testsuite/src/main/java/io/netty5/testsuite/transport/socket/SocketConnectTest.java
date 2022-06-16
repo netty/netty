@@ -80,10 +80,10 @@ public class SocketConnectTest extends AbstractSocketTest {
             assertLocalAddress(localAddressPromise.asFuture().get());
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().syncUninterruptibly();
+                clientChannel.close().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().syncUninterruptibly();
+                serverChannel.close().sync();
             }
         }
     }

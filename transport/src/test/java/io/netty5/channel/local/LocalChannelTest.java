@@ -363,7 +363,7 @@ public class LocalChannelTest {
             // Connect to the server
             cc = cb.connect(sc.localAddress()).get();
 
-            cc.deregister().syncUninterruptibly();
+            cc.deregister().sync();
         } finally {
             closeChannel(cc);
             closeChannel(sc);
@@ -833,7 +833,7 @@ public class LocalChannelTest {
             cc.connect(sc.localAddress()).sync();
             Future<Void> f = ref.get().sync();
 
-            assertPromise.asFuture().syncUninterruptibly();
+            assertPromise.asFuture().sync();
             assertTrue(f.isSuccess());
         } finally {
             closeChannel(cc);
@@ -848,7 +848,7 @@ public class LocalChannelTest {
             assertTrue(assertThrows(CompletionException.class, () -> sb.group(group1)
                     .channel(LocalChannel.class)
                     .handler(new TestHandler())
-                    .connect(LocalAddress.ANY).syncUninterruptibly()).getCause() instanceof ConnectException);
+                    .connect(LocalAddress.ANY).sync()).getCause() instanceof ConnectException);
         } catch (CompletionException e) {
             throw e.getCause();
         }
@@ -865,9 +865,9 @@ public class LocalChannelTest {
         }
     }
 
-    private static void closeChannel(Channel cc) {
+    private static void closeChannel(Channel cc) throws Exception {
         if (cc != null) {
-            cc.close().syncUninterruptibly();
+            cc.close().sync();
         }
     }
 

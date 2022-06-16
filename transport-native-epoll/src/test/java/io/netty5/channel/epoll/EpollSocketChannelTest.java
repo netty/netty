@@ -41,7 +41,7 @@ public class EpollSocketChannelTest {
                     .bind(new InetSocketAddress(0)).get();
             EpollTcpInfo info = ch.tcpInfo();
             assertTcpInfo0(info);
-            ch.close().syncUninterruptibly();
+            ch.close().sync();
         } finally {
             group.shutdownGracefully();
         }
@@ -60,7 +60,7 @@ public class EpollSocketChannelTest {
             EpollTcpInfo info = new EpollTcpInfo();
             ch.tcpInfo(info);
             assertTcpInfo0(info);
-            ch.close().syncUninterruptibly();
+            ch.close().sync();
         } finally {
             group.shutdownGracefully();
         }
@@ -115,7 +115,7 @@ public class EpollSocketChannelTest {
                     .option(ChannelOption.SO_LINGER, 10)
                     .handler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0)).get();
-            ch.close().syncUninterruptibly();
+            ch.close().sync();
         } finally {
             group.shutdownGracefully();
         }

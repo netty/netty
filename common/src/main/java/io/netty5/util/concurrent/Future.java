@@ -88,7 +88,7 @@ import java.util.function.Function;
  * {@code @Override}
  * public void channelRead({@link io.netty5.channel.ChannelHandlerContext} ctx, Object msg) {
  *     {@link Future} future = ctx.channel().close();
- *     future.awaitUninterruptibly();
+ *     future.await();
  *     // Perform post-closure operation
  *     // ...
  * }
@@ -120,7 +120,7 @@ import java.util.function.Function;
  * // BAD - NEVER DO THIS
  * {@link io.netty5.bootstrap.Bootstrap} b = ...;
  * {@link Future} f = b.connect(...);
- * f.awaitUninterruptibly(10, TimeUnit.SECONDS);
+ * f.await(10, TimeUnit.SECONDS);
  * if (f.isCancelled()) {
  *     // Connection attempt cancelled by user
  * } else if (!f.isSuccess()) {
@@ -136,7 +136,7 @@ import java.util.function.Function;
  * // Configure the connect timeout option.
  * <b>b.option({@link io.netty5.channel.ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link Future} f = b.connect(...);
- * f.awaitUninterruptibly();
+ * f.await();
  *
  * // Now we are sure the future is completed.
  * assert f.isDone();
@@ -187,6 +187,7 @@ public interface Future<V> extends AsynchronousResult<V> {
      * @throws CancellationException if the computation was cancelled
      * @throws CompletionException   if the computation threw an exception.
      */
+    @Deprecated(forRemoval = true)
     Future<V> syncUninterruptibly();
 
     /**
@@ -200,6 +201,7 @@ public interface Future<V> extends AsynchronousResult<V> {
      * Waits for this future to be completed without interruption.  This method catches an {@link InterruptedException}
      * and discards it silently.
      */
+    @Deprecated(forRemoval = true)
     Future<V> awaitUninterruptibly();
 
     /**
@@ -224,6 +226,7 @@ public interface Future<V> extends AsynchronousResult<V> {
      *
      * @return {@code true} if and only if the future was completed within the specified time limit
      */
+    @Deprecated(forRemoval = true)
     boolean awaitUninterruptibly(long timeout, TimeUnit unit);
 
     /**
@@ -232,6 +235,7 @@ public interface Future<V> extends AsynchronousResult<V> {
      *
      * @return {@code true} if and only if the future was completed within the specified time limit
      */
+    @Deprecated(forRemoval = true)
     boolean awaitUninterruptibly(long timeoutMillis);
 
     /**

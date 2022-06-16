@@ -181,7 +181,7 @@ public class WebSocketHandshakeHandOverTest {
         // Should throw WebSocketHandshakeException
         try {
             assertTrue(assertThrows(CompletionException.class,
-                () -> handshakeHandler.getHandshakeFuture().syncUninterruptibly())
+                () -> handshakeHandler.getHandshakeFuture().sync())
                     .getCause() instanceof WebSocketHandshakeException);
         } finally {
             serverChannel.finishAndReleaseAll();

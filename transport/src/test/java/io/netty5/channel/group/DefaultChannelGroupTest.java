@@ -47,11 +47,11 @@ public class DefaultChannelGroupTest {
         });
         b.channel(NioServerSocketChannel.class);
 
-        Future<Channel> f = b.bind(0).syncUninterruptibly();
+        Future<Channel> f = b.bind(0).sync();
 
         if (f.isSuccess()) {
             allChannels.add(f.getNow());
-            allChannels.close().awaitUninterruptibly();
+            allChannels.close().await();
         }
 
         bossGroup.shutdownGracefully();

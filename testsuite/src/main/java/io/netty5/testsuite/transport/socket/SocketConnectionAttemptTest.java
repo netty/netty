@@ -94,7 +94,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
         cb.handler(handler);
         cb.option(ChannelOption.ALLOW_HALF_CLOSURE, halfClosure);
-        Future<Channel> future = cb.connect(NetUtil.LOCALHOST, UNASSIGNED_PORT).awaitUninterruptibly();
+        Future<Channel> future = cb.connect(NetUtil.LOCALHOST, UNASSIGNED_PORT).await();
         assertThat(future.cause()).isInstanceOf(ConnectException.class);
         assertFalse(errorPromise.isFailed());
     }

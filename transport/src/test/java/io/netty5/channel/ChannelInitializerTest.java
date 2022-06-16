@@ -63,28 +63,28 @@ public class ChannelInitializerTest {
     }
 
     @AfterEach
-    public void tearDown() {
-        group.shutdownGracefully(0, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).syncUninterruptibly();
+    public void tearDown() throws Exception {
+        group.shutdownGracefully(0, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).sync();
     }
 
     @Test
-    public void testInitChannelThrowsRegisterFirst() {
+    public void testInitChannelThrowsRegisterFirst() throws Exception {
         testInitChannelThrows(true);
     }
 
     @Test
-    public void testInitChannelThrowsRegisterAfter() {
+    public void testInitChannelThrowsRegisterAfter() throws Exception {
         testInitChannelThrows(false);
     }
 
-    private void testInitChannelThrows(boolean registerFirst) {
+    private void testInitChannelThrows(boolean registerFirst) throws Exception {
         final Exception exception = new Exception();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
 
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         if (registerFirst) {
-           pipeline.channel().register().syncUninterruptibly();
+           pipeline.channel().register().sync();
         }
         pipeline.addFirst(new ChannelInitializer<Channel>() {
             @Override
@@ -100,10 +100,10 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            assertTrue(pipeline.channel().register().awaitUninterruptibly().cause() instanceof ClosedChannelException);
+            assertTrue(pipeline.channel().register().await().cause() instanceof ClosedChannelException);
         }
-        pipeline.channel().close().syncUninterruptibly();
-        pipeline.channel().closeFuture().syncUninterruptibly();
+        pipeline.channel().close().sync();
+        pipeline.channel().closeFuture().sync();
 
         assertSame(exception, causeRef.get());
     }
@@ -136,7 +136,7 @@ public class ChannelInitializerTest {
             // pipeline.
             channel.executor().submit(() -> {
                 // NOOP
-            }).syncUninterruptibly();
+            }).sync();
             Iterator<Map.Entry<String, ChannelHandler>> handlers = channel.pipeline().iterator();
             assertSame(handler1, handlers.next().getValue());
             assertSame(handler2, handlers.next().getValue());
@@ -144,7 +144,7 @@ public class ChannelInitializerTest {
             assertSame(handler4, handlers.next().getValue());
             assertFalse(handlers.hasNext());
         } finally {
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         }
     }
 
@@ -173,11 +173,11 @@ public class ChannelInitializerTest {
             // pipeline.
             channel.executor().submit(() -> {
                 // NOOP
-            }).syncUninterruptibly();
+            }).sync();
             assertEquals(1, initChannelCalled.get());
             assertEquals(2, registeredCalled.get());
         } finally {
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         }
     }
 
@@ -248,9 +248,9 @@ public class ChannelInitializerTest {
         }
     }
 
-    private static void closeChannel(Channel c) {
+    private static void closeChannel(Channel c) throws Exception {
         if (c != null) {
-            c.close().syncUninterruptibly();
+            c.close().sync();
         }
     }
 

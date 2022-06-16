@@ -142,7 +142,7 @@ public class FlowControlHandlerTest {
 
         try {
             client.writeAndFlush(newOneMessage())
-                .syncUninterruptibly();
+                .sync();
 
             // We received three messages even through auto reading
             // was turned off after we received the first message.
@@ -190,7 +190,7 @@ public class FlowControlHandlerTest {
 
             // Write the message
             client.writeAndFlush(newOneMessage())
-                .syncUninterruptibly();
+                .sync();
 
             // Read the message
             peer.read();
@@ -237,7 +237,7 @@ public class FlowControlHandlerTest {
 
             // Write the message
             client.writeAndFlush(newOneMessage())
-                .syncUninterruptibly();
+                .sync();
 
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
@@ -309,7 +309,7 @@ public class FlowControlHandlerTest {
             Channel peer = peerRef.exchange(null, 1L, SECONDS);
 
             client.writeAndFlush(newOneMessage())
-                .syncUninterruptibly();
+                .sync();
 
             // channelRead(1)
             assertTrue(msgRcvLatch1.await(1L, SECONDS));
@@ -367,7 +367,7 @@ public class FlowControlHandlerTest {
 
             // Write the message
             client.writeAndFlush(newOneMessage())
-                .syncUninterruptibly();
+                .sync();
 
             // channelRead(1)
             peer.read();
@@ -421,7 +421,7 @@ public class FlowControlHandlerTest {
 
             // Write the message
             client.writeAndFlush(newOneMessage())
-                    .syncUninterruptibly();
+                    .sync();
 
             // channelRead(1)
             peer.read();

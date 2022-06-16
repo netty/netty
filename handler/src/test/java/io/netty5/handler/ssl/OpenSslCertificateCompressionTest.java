@@ -323,20 +323,20 @@ public class OpenSslCertificateCompressionTest {
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new CertCompressionTestChannelInitializer(serverPromise, serverSslContext));
             Channel serverChannel = sb.bind(new LocalAddress("testCertificateCompression"))
-                    .syncUninterruptibly().getNow();
+                    .sync().getNow();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(LocalChannel.class)
                     .handler(new CertCompressionTestChannelInitializer(clientPromise, clientSslContext));
 
-            Channel clientChannel = bootstrap.connect(serverChannel.localAddress()).syncUninterruptibly().getNow();
+            Channel clientChannel = bootstrap.connect(serverChannel.localAddress()).sync().getNow();
 
             assertTrue(clientPromise.asFuture().await(5L, TimeUnit.SECONDS), "client timeout");
             assertTrue(serverPromise.asFuture().await(5L, TimeUnit.SECONDS), "server timeout");
             clientPromise.asFuture().sync();
             serverPromise.asFuture().sync();
-            clientChannel.close().syncUninterruptibly();
-            serverChannel.close().syncUninterruptibly();
+            clientChannel.close().sync();
+            serverChannel.close().sync();
         } finally  {
             group.shutdownGracefully();
         }

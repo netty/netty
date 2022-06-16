@@ -39,26 +39,26 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
 
         NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group, jdkChannel);
         try {
-            serverSocketChannel.register().syncUninterruptibly();
-            serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly();
+            serverSocketChannel.register().sync();
+            serverSocketChannel.bind(new InetSocketAddress(0)).sync();
             assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
             assertTrue(serverSocketChannel.closeOnReadError(new IllegalArgumentException()));
-            serverSocketChannel.close().syncUninterruptibly();
+            serverSocketChannel.close().sync();
         } finally {
             group.shutdownGracefully();
         }
     }
 
     @Test
-    public void testIsActiveFalseAfterClose()  {
+    public void testIsActiveFalseAfterClose() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         NioServerSocketChannel channel = new NioServerSocketChannel(group.next(), group);
         try {
-            channel.register().syncUninterruptibly();
-            channel.bind(new InetSocketAddress(0)).syncUninterruptibly();
+            channel.register().sync();
+            channel.bind(new InetSocketAddress(0)).sync();
             assertTrue(channel.isActive());
             assertTrue(channel.isOpen());
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
             assertFalse(channel.isOpen());
             assertFalse(channel.isActive());
         } finally {

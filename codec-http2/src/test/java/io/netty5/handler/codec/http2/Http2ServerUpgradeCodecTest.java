@@ -38,22 +38,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Http2ServerUpgradeCodecTest {
 
     @Test
-    public void testUpgradeToHttp2ConnectionHandler() {
+    public void testUpgradeToHttp2ConnectionHandler() throws Exception {
         testUpgrade(new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).build(), null);
     }
 
     @Test
-    public void testUpgradeToHttp2FrameCodec() {
+    public void testUpgradeToHttp2FrameCodec() throws Exception {
         testUpgrade(new Http2FrameCodecBuilder(true).build(), null);
     }
 
     @Test
-    public void testUpgradeToHttp2FrameCodecWithMultiplexer() {
+    public void testUpgradeToHttp2FrameCodecWithMultiplexer() throws Exception {
         testUpgrade(new Http2FrameCodecBuilder(true).build(),
                 new Http2MultiplexHandler(new HttpInboundHandler()));
     }
 
-    private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) {
+    private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) throws Exception {
         FullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*", preferredAllocator().allocate(0));
         request.headers().set(HttpHeaderNames.HOST, "netty.io");

@@ -84,10 +84,10 @@ public class SocketReadPendingTest extends AbstractSocketTest {
             clientInitializer.readPendingHandler.assertAllRead();
         } finally {
             if (serverChannel != null) {
-                serverChannel.close().syncUninterruptibly();
+                serverChannel.close().sync();
             }
             if (clientChannel != null) {
-                clientChannel.close().syncUninterruptibly();
+                clientChannel.close().sync();
             }
         }
     }

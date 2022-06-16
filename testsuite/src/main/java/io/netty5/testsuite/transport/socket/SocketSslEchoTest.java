@@ -383,9 +383,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             serverHandler.renegoFuture.sync();
         }
 
-        serverChannel.close().awaitUninterruptibly();
-        clientChannel.close().awaitUninterruptibly();
-        sc.close().awaitUninterruptibly();
+        serverChannel.close().await();
+        clientChannel.close().await();
+        sc.close().await();
         delegatedTaskExecutor.shutdown();
 
         if (serverException.get() != null && !(serverException.get() instanceof IOException)) {

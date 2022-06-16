@@ -50,7 +50,7 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
 
             cb.handler(new ChannelHandler() { });
             cc = cb.register().get();
-            cc.connect(sc.localAddress()).syncUninterruptibly();
+            cc.connect(sc.localAddress()).sync();
             Future<Void> connectFuture2 = cc.connect(sc.localAddress()).await();
             assertTrue(connectFuture2.cause() instanceof AlreadyConnectedException);
         } finally {

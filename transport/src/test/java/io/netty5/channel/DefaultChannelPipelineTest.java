@@ -62,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultChannelPipelineTest {
 
@@ -349,7 +350,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testChannelHandlerContextNavigation() {
+    public void testChannelHandlerContextNavigation() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
 
         final int HANDLER_ARRAY_LEN = 5;
@@ -369,7 +370,7 @@ public class DefaultChannelPipelineTest {
         final AtomicInteger counter = new AtomicInteger();
         Channel channel = newLocalChannel();
         try {
-            channel.register().syncUninterruptibly();
+            channel.register().sync();
             channel.pipeline().addLast(new ChannelHandler() {
                 class TestException extends Exception { }
 
@@ -397,7 +398,7 @@ public class DefaultChannelPipelineTest {
             latch.await();
             assertEquals(1, counter.get());
         } finally {
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         }
     }
 
@@ -408,7 +409,7 @@ public class DefaultChannelPipelineTest {
         final AtomicInteger counter = new AtomicInteger();
         Channel channel = newLocalChannel();
         try {
-            channel.register().syncUninterruptibly();
+            channel.register().sync();
             channel.pipeline().addLast(new ChannelHandler() {
                 @Override
                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -441,7 +442,7 @@ public class DefaultChannelPipelineTest {
             latch.await();
             assertEquals(1, counter.get());
         } finally {
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         }
     }
 
@@ -465,7 +466,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testPipelineOperation() {
+    public void testPipelineOperation() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
 
         final int handlerNum = 5;
@@ -493,7 +494,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testChannelHandlerContextOrder() throws InterruptedException {
+    public void testChannelHandlerContextOrder() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         CountDownLatch latch = new CountDownLatch(8);
 
@@ -725,18 +726,18 @@ public class DefaultChannelPipelineTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testAddHandlerBeforeRegisteredThenRemove() {
+    public void testAddHandlerBeforeRegisteredThenRemove() throws Exception {
         final EventLoop loop = group.next();
 
         CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addFirst(handler);
-        handler.addedFuture.syncUninterruptibly();
+        handler.addedFuture.sync();
         pipeline.channel().register();
         pipeline.remove(handler);
-        handler.removedFuture.syncUninterruptibly();
+        handler.removedFuture.sync();
 
-        pipeline.channel().close().syncUninterruptibly();
+        pipeline.channel().close().sync();
     }
 
     @Test
@@ -748,7 +749,7 @@ public class DefaultChannelPipelineTest {
         CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addFirst(handler);
-        handler.addedFuture.syncUninterruptibly();
+        handler.addedFuture.sync();
         pipeline.channel().register();
         pipeline.replace(handler, null, new ChannelHandlerAdapter() {
             @Override
@@ -756,10 +757,10 @@ public class DefaultChannelPipelineTest {
                 latch.countDown();
             }
         });
-        handler.removedFuture.syncUninterruptibly();
+        handler.removedFuture.sync();
         latch.await();
 
-        pipeline.channel().close().syncUninterruptibly();
+        pipeline.channel().close().sync();
     }
 
     @Test
@@ -797,13 +798,13 @@ public class DefaultChannelPipelineTest {
         assertTrue(last.addedHandler.get());
         assertTrue(last.removedHandler.get());
 
-        pipeline.channel().register().syncUninterruptibly();
+        pipeline.channel().register().sync();
         Throwable cause = handler.error.get();
         Throwable causeName = handlerName.error.get();
         Throwable causeType = handlerType.error.get();
         Throwable causeFirst = first.error.get();
         Throwable causeLast = last.error.get();
-        pipeline.channel().close().syncUninterruptibly();
+        pipeline.channel().close().sync();
         rethrowIfNotNull(cause);
         rethrowIfNotNull(causeName);
         rethrowIfNotNull(causeType);
@@ -819,10 +820,10 @@ public class DefaultChannelPipelineTest {
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testOperationsFailWhenRemoved() {
+    public void testOperationsFailWhenRemoved() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         try {
-            pipeline.channel().register().syncUninterruptibly();
+            pipeline.channel().register().sync();
 
             ChannelHandler handler = new ChannelHandler() { };
             pipeline.addFirst(handler);
@@ -831,16 +832,16 @@ public class DefaultChannelPipelineTest {
 
             testOperationsFailsOnContext(ctx);
         } finally {
-            pipeline.channel().close().syncUninterruptibly();
+            pipeline.channel().close().sync();
         }
     }
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testOperationsFailWhenReplaced() {
+    public void testOperationsFailWhenReplaced() throws Exception {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         try {
-            pipeline.channel().register().syncUninterruptibly();
+            pipeline.channel().register().sync();
 
             ChannelHandler handler = new ChannelHandler() { };
             pipeline.addFirst(handler);
@@ -849,11 +850,11 @@ public class DefaultChannelPipelineTest {
 
             testOperationsFailsOnContext(ctx);
         } finally {
-            pipeline.channel().close().syncUninterruptibly();
+            pipeline.channel().close().sync();
         }
     }
 
-    private static void testOperationsFailsOnContext(ChannelHandlerContext ctx) {
+    private static void testOperationsFailsOnContext(ChannelHandlerContext ctx) throws Exception {
         assertChannelPipelineException(ctx.writeAndFlush(""));
         assertChannelPipelineException(ctx.write(""));
         assertChannelPipelineException(ctx.bind(new SocketAddress() { }));
@@ -878,8 +879,8 @@ public class DefaultChannelPipelineTest {
                 validationPromise.setSuccess(null);
             }
 
-            void validate() {
-                validationPromise.asFuture().syncUninterruptibly();
+            void validate() throws Exception {
+                validationPromise.asFuture().sync();
                 validationPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             }
         }
@@ -917,9 +918,11 @@ public class DefaultChannelPipelineTest {
 
     private static void assertChannelPipelineException(Future<Void> f) {
         try {
-            f.syncUninterruptibly();
+            f.sync();
         } catch (CompletionException e) {
             assertThat(e.getCause(), Matchers.instanceOf(ChannelPipelineException.class));
+        } catch (Exception e) {
+            fail("Unexpected exception", e);
         }
     }
 
@@ -938,7 +941,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler2.addedHandler.get());
         assertFalse(handler2.removedHandler.isDone());
 
-        pipeline.channel().register().syncUninterruptibly();
+        pipeline.channel().register().sync();
         Throwable cause = handler.error.get();
         if (cause != null) {
             throw cause;
@@ -952,7 +955,7 @@ public class DefaultChannelPipelineTest {
         assertFalse(handler2.removedHandler.isDone());
         pipeline.remove(handler2);
         assertTrue(handler2.removedHandler.get());
-        pipeline.channel().close().syncUninterruptibly();
+        pipeline.channel().close().sync();
     }
 
     @Test
@@ -966,8 +969,8 @@ public class DefaultChannelPipelineTest {
             ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
             ChannelPipeline pipeline2 = new LocalChannel(eventLoop2).pipeline();
 
-            pipeline1.channel().register().syncUninterruptibly();
-            pipeline2.channel().register().syncUninterruptibly();
+            pipeline1.channel().register().sync();
+            pipeline2.channel().register().sync();
 
             CountDownLatch latch = new CountDownLatch(2 * 10);
             for (int i = 0; i < 10; i++) {
@@ -975,8 +978,8 @@ public class DefaultChannelPipelineTest {
                 eventLoop2.execute(new TestTask(pipeline1, latch));
             }
             latch.await();
-            pipeline1.channel().close().syncUninterruptibly();
-            pipeline2.channel().close().syncUninterruptibly();
+            pipeline1.channel().close().sync();
+            pipeline2.channel().close().sync();
         } finally {
             defaultGroup.shutdownGracefully();
         }
@@ -1030,9 +1033,9 @@ public class DefaultChannelPipelineTest {
                 // This event must be captured by the added handler.
                 pipeline.fireInboundEventTriggered(event);
             });
-            assertSame(event, promise.asFuture().syncUninterruptibly().getNow());
+            assertSame(event, promise.asFuture().sync().getNow());
         } finally {
-            pipeline1.channel().close().syncUninterruptibly();
+            pipeline1.channel().close().sync();
         }
     }
 
@@ -1097,12 +1100,12 @@ public class DefaultChannelPipelineTest {
 
                 latch.countDown();
 
-                pipeline.channel().closeFuture().syncUninterruptibly();
+                pipeline.channel().closeFuture().sync();
 
                 // Schedule something on the EventLoop to ensure all other scheduled tasks had a chance to complete.
                 pipeline.channel().executor().submit(() -> {
                     // NOOP
-                }).syncUninterruptibly();
+                }).sync();
                 Error error = errorRef.get();
                 if (error != null) {
                     throw error;
@@ -1114,7 +1117,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testSkipHandlerMethodsIfAnnotated() {
+    public void testSkipHandlerMethodsIfAnnotated() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(true);
         ChannelPipeline pipeline = channel.pipeline();
 
@@ -1484,14 +1487,14 @@ public class DefaultChannelPipelineTest {
         pipeline.fireInboundEventTriggered("");
         pipeline.fireExceptionCaught(new Exception());
 
-        pipeline.register().syncUninterruptibly();
-        pipeline.deregister().syncUninterruptibly();
+        pipeline.register().sync();
+        pipeline.deregister().sync();
         pipeline.bind(new SocketAddress() {
-        }).syncUninterruptibly();
+        }).sync();
         pipeline.connect(new SocketAddress() {
-        }).syncUninterruptibly();
-        pipeline.disconnect().syncUninterruptibly();
-        pipeline.close().syncUninterruptibly();
+        }).sync();
+        pipeline.disconnect().sync();
+        pipeline.close().sync();
         pipeline.write("");
         pipeline.flush();
         pipeline.read();
@@ -1662,7 +1665,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static void verifyContextNumber(ChannelPipeline pipeline, int expectedNumber) {
+    private static void verifyContextNumber(ChannelPipeline pipeline, int expectedNumber) throws Exception {
         assertEquals(expectedNumber, pipeline.names().size());
         assertEquals(expectedNumber, pipeline.toMap().size());
 
@@ -1679,7 +1682,7 @@ public class DefaultChannelPipelineTest {
                 }
             }
             assertEquals(expectedNumber, handlerNumber);
-        }).syncUninterruptibly();
+        }).sync();
     }
 
     private static ChannelHandler[] newHandlers(int num) {

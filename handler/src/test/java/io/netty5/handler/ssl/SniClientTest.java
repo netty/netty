@@ -194,16 +194,16 @@ public class SniClientTest {
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler).connect(address).get();
 
-            promise.asFuture().syncUninterruptibly();
-            sslHandler.handshakeFuture().syncUninterruptibly();
+            promise.asFuture().sync();
+            sslHandler.handshakeFuture().sync();
         } catch (CompletionException e) {
             throw e.getCause();
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
 
             Resource.dispose(sslServerContext);
@@ -440,20 +440,20 @@ public class SniClientTest {
             SslHandler handler = new SslHandler(
                     sslClientContext.newEngine(offHeapAllocator(), sniHostName, -1));
             cc = cb.group(group).channel(LocalChannel.class).handler(handler).connect(address).get();
-            assertEquals(sniHostName, promise.asFuture().syncUninterruptibly().getNow());
+            assertEquals(sniHostName, promise.asFuture().sync().getNow());
 
             // After we are done with handshaking getHandshakeSession() should return null.
-            handler.handshakeFuture().syncUninterruptibly();
+            handler.handshakeFuture().sync();
             assertNull(handler.engine().getHandshakeSession());
 
             assertSSLSession(
                     handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             Resource.dispose(sslServerContext);
             Resource.dispose(sslClientContext);

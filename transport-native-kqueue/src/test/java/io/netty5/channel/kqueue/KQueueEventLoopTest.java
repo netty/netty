@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Test
-    public void testScheduleBigDelayNotOverflow() {
+    public void testScheduleBigDelayNotOverflow() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, newIoHandlerFactory());
 
         final EventLoop el = group.next();
@@ -40,7 +40,7 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
             // NOOP
         }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
-        assertFalse(future.awaitUninterruptibly(1000));
+        assertFalse(future.await(1000));
         assertTrue(future.cancel());
         group.shutdownGracefully();
     }

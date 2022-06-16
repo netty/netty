@@ -76,7 +76,7 @@ import java.util.Iterator;
  * public void messageReceived({@link ChannelHandlerContext} ctx, ShutdownMessage msg) {
  *     {@link ChannelGroup} allChannels = MyServer.getAllChannels();
  *     {@link ChannelGroupFuture} future = allChannels.close();
- *     future.awaitUninterruptibly();
+ *     future.await();
  *     // Perform post-shutdown operation
  *     // ...
  *

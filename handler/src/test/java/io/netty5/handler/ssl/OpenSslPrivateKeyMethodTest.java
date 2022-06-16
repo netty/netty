@@ -299,7 +299,7 @@ public class OpenSslPrivateKeyMethodTest {
                     Channel client = client(server, clientHandler);
                     try {
                         client.writeAndFlush(offHeapAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
-                                .syncUninterruptibly();
+                                .sync();
 
                         Future<Object> clientFuture = clientPromise.asFuture();
                         Future<Object> serverFuture = serverPromise.asFuture();

@@ -62,34 +62,34 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
-    public void testRebuildSelector() {
+    public void testRebuildSelector() throws Exception {
         final NioHandler nioHandler = (NioHandler) NioHandler.newFactory().newHandler();
         EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);
         try {
             Channel channel = new NioServerSocketChannel(loop, loop);
-            channel.register().syncUninterruptibly();
+            channel.register().sync();
 
-            Selector selector = loop.submit(nioHandler::unwrappedSelector).syncUninterruptibly().getNow();
+            Selector selector = loop.submit(nioHandler::unwrappedSelector).sync().getNow();
 
-            assertSame(selector, loop.submit(nioHandler::unwrappedSelector).syncUninterruptibly().getNow());
+            assertSame(selector, loop.submit(nioHandler::unwrappedSelector).sync().getNow());
             assertTrue(selector.isOpen());
 
             // Submit to the EventLoop so we are sure its really executed in a non-async manner.
-            loop.submit(nioHandler::rebuildSelector).syncUninterruptibly();
+            loop.submit(nioHandler::rebuildSelector).sync();
 
-            Selector newSelector = loop.submit(nioHandler::unwrappedSelector).syncUninterruptibly().getNow();
+            Selector newSelector = loop.submit(nioHandler::unwrappedSelector).sync().getNow();
             assertTrue(newSelector.isOpen());
             assertNotSame(selector, newSelector);
             assertFalse(selector.isOpen());
 
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         } finally {
             loop.shutdownGracefully();
         }
     }
 
     @Test
-    public void testScheduleBigDelayNotOverflow() {
+    public void testScheduleBigDelayNotOverflow() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
         final EventLoop el = group.next();
@@ -97,7 +97,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             // NOOP
         }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
-        assertFalse(future.awaitUninterruptibly(1000));
+        assertFalse(future.await(1000));
         assertTrue(future.cancel());
         group.shutdownGracefully();
     }
@@ -107,25 +107,25 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         final NioHandler nioHandler = (NioHandler) NioHandler.newFactory().newHandler();
         EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);
         try {
-            Selector selector = loop.submit(nioHandler::unwrappedSelector).syncUninterruptibly().getNow();
+            Selector selector = loop.submit(nioHandler::unwrappedSelector).sync().getNow();
             assertTrue(selector.isOpen());
 
             loop.submit(() -> {
                 // Interrupt the thread which should not end-up in a busy spin and
                 // so the selector should not have been rebuild.
                 Thread.currentThread().interrupt();
-            }).syncUninterruptibly();
+            }).sync();
 
             assertTrue(selector.isOpen());
 
             final CountDownLatch latch = new CountDownLatch(2);
-            loop.submit(latch::countDown).syncUninterruptibly();
+            loop.submit(latch::countDown).sync();
 
-            loop.schedule(latch::countDown, 2, TimeUnit.SECONDS).syncUninterruptibly();
+            loop.schedule(latch::countDown, 2, TimeUnit.SECONDS).sync();
 
             latch.await();
 
-            assertSame(selector, loop.submit(nioHandler::unwrappedSelector).syncUninterruptibly().getNow());
+            assertSame(selector, loop.submit(nioHandler::unwrappedSelector).sync().getNow());
             assertTrue(selector.isOpen());
         } finally {
             loop.shutdownGracefully();
@@ -139,8 +139,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);
         try {
             Channel channel = new NioServerSocketChannel(loop, loop);
-            channel.register().syncUninterruptibly();
-            channel.bind(new InetSocketAddress(0)).syncUninterruptibly();
+            channel.register().sync();
+            channel.bind(new InetSocketAddress(0)).sync();
 
             final SocketChannel selectableChannel = SocketChannel.open();
             selectableChannel.configureBlocking(false);
@@ -163,7 +163,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             latch.await();
 
             selectableChannel.close();
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         } finally {
             loop.shutdownGracefully();
         }
@@ -192,7 +192,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             t.start();
             Future<?> termination = group.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
             t.join();
-            termination.syncUninterruptibly();
+            termination.sync();
             assertThat(error.get(), instanceOf(RejectedExecutionException.class));
             error.set(null);
         }
@@ -227,16 +227,16 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             Selector selector = nioHandler.unwrappedSelector();
             strategyLatch.countDown();
 
-            channel.register().syncUninterruptibly();
+            channel.register().sync();
 
             latch.await();
 
-            Selector newSelector = loop.submit(nioHandler::unwrappedSelector).syncUninterruptibly().getNow();
+            Selector newSelector = loop.submit(nioHandler::unwrappedSelector).sync().getNow();
             assertTrue(newSelector.isOpen());
             assertNotSame(selector, newSelector);
             assertFalse(selector.isOpen());
 
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         } finally {
             loop.shutdownGracefully();
         }

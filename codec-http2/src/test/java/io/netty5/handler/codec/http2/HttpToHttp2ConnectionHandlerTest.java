@@ -105,24 +105,24 @@ public class HttpToHttp2ConnectionHandlerTest {
     @AfterEach
     public void tearDown() throws Exception {
         if (clientChannel != null) {
-            clientChannel.close().syncUninterruptibly();
+            clientChannel.close().sync();
             clientChannel = null;
         }
         if (serverChannel != null) {
-            serverChannel.close().syncUninterruptibly();
+            serverChannel.close().sync();
             serverChannel = null;
         }
         final Channel serverConnectedChannel = this.serverConnectedChannel;
         if (serverConnectedChannel != null) {
-            serverConnectedChannel.close().syncUninterruptibly();
+            serverConnectedChannel.close().sync();
             this.serverConnectedChannel = null;
         }
         Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 5, SECONDS);
         Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 5, SECONDS);
         Future<?> clientGroup = cb.config().group().shutdownGracefully(0, 5, SECONDS);
-        serverGroup.syncUninterruptibly();
-        serverChildGroup.syncUninterruptibly();
-        clientGroup.syncUninterruptibly();
+        serverGroup.sync();
+        serverChildGroup.sync();
+        clientGroup.sync();
     }
 
     @Test
@@ -347,7 +347,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
         Future<Void> writeFuture = clientChannel.writeAndFlush(request);
 
-        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isDone());
         assertFalse(writeFuture.isSuccess());
     }
@@ -364,7 +364,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
         Future<Void> writeFuture = clientChannel.writeAndFlush(request);
 
-        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isDone());
         assertFalse(writeFuture.isSuccess());
         Throwable cause = writeFuture.cause();
@@ -398,7 +398,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
         Future<Void> writeFuture = clientChannel.writeAndFlush(request);
 
-        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
@@ -441,7 +441,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
         Future<Void> writeFuture = clientChannel.writeAndFlush(request);
 
-        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
@@ -496,13 +496,13 @@ public class HttpToHttp2ConnectionHandlerTest {
 
         clientChannel.flush();
 
-        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isSuccess());
 
-        assertTrue(contentFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(contentFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(contentFuture.isSuccess());
 
-        assertTrue(lastContentFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(lastContentFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(lastContentFuture.isSuccess());
 
         awaitRequests();
@@ -577,7 +577,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
     private void verifyHeadersOnly(Http2Headers expected, Future<Void> writeFuture)
             throws Exception {
-        assertTrue(writeFuture.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
+        assertTrue(writeFuture.await(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writeFuture.isSuccess());
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),

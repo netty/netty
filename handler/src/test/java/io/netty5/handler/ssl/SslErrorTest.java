@@ -185,13 +185,13 @@ public class SslErrorTest {
                         }
                     }).connect(serverChannel.localAddress()).get();
             // Block until we received the correct exception
-            promise.asFuture().syncUninterruptibly();
+            promise.asFuture().sync();
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().syncUninterruptibly();
+                clientChannel.close().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().syncUninterruptibly();
+                serverChannel.close().sync();
             }
             group.shutdownGracefully();
 

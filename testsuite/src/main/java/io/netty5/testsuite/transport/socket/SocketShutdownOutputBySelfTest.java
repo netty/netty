@@ -115,15 +115,15 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertTrue(ch.isActive());
             s = ss.accept();
 
-            ch.close().syncUninterruptibly();
+            ch.close().sync();
             try {
-                ch.shutdown(ChannelShutdownDirection.Inbound).syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Inbound).sync();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
             }
             try {
-                ch.shutdown(ChannelShutdownDirection.Outbound).syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Outbound).sync();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
