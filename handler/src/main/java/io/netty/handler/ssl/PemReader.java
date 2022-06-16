@@ -47,12 +47,12 @@ final class PemReader {
 
     private static final Pattern CERT_PATTERN = Pattern.compile(
             "-+BEGIN\\s+.*CERTIFICATE[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=\\r\\n]+)" +                    // Base64 text
+                    "([a-z0-9+/=][a-z0-9+/=\\r\\n]*)" +         // Base64 text
                     "-+END\\s+.*CERTIFICATE[^-]*-+",            // Footer
             Pattern.CASE_INSENSITIVE);
     private static final Pattern KEY_PATTERN = Pattern.compile(
             "-+BEGIN\\s+.*PRIVATE\\s+KEY[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=\\r\\n]+)" +                       // Base64 text
+                    "([a-z0-9+/=][a-z0-9+/=\\r\\n]*)" +            // Base64 text
                     "-+END\\s+.*PRIVATE\\s+KEY[^-]*-+",            // Footer
             Pattern.CASE_INSENSITIVE);
 
