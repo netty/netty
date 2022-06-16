@@ -36,6 +36,7 @@ import java.io.RandomAccessFile;
 import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -112,10 +113,8 @@ public class ChunkedWriteHandlerTest {
 
     @Test
     public void testChunkedNioFileLeftPositionUnchanged() throws IOException {
-        FileChannel in = null;
         final long expectedPosition = 10;
-        try {
-            in = new RandomAccessFile(TMP, "r").getChannel();
+        try (FileChannel in = FileChannel.open(TMP.toPath(), StandardOpenOption.READ)) {
             in.position(expectedPosition);
             check(new ChunkedNioFile(in) {
                 @Override
@@ -125,16 +124,12 @@ public class ChunkedWriteHandlerTest {
             });
             assertTrue(in.isOpen());
             assertEquals(expectedPosition, in.position());
-        } finally {
-            if (in != null) {
-                in.close();
-            }
         }
     }
 
     @Test
     public void testChunkedNioFileFailOnClosedFileChannel() throws IOException {
-        final FileChannel in = new RandomAccessFile(TMP, "r").getChannel();
+        final FileChannel in = FileChannel.open(TMP.toPath(), StandardOpenOption.READ);
         in.close();
 
         assertThrows(ClosedChannelException.class, new Executable() {

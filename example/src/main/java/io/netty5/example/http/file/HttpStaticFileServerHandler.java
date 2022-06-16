@@ -32,6 +32,7 @@ import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.ssl.SslHandler;
+import io.netty5.handler.stream.ChunkedFile;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -209,8 +210,9 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             lastContentFuture = ctx.writeAndFlush(new EmptyLastHttpContent(ctx.bufferAllocator()));
         } else {
             sendFileFuture =
-//                    ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)));
-                    ctx.writeAndFlush(new HttpChunkedInput());
+                    ctx.writeAndFlush(new HttpChunkedInput(
+                            new ChunkedFile(raf, 0, fileLength, 8192),
+                            new EmptyLastHttpContent(ctx.bufferAllocator())));
             // HttpChunkedInput will write the end marker (LastHttpContent) for us.
             lastContentFuture = sendFileFuture;
         }

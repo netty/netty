@@ -104,7 +104,6 @@ public class Http2DataChunkedInputTest {
     @Test
     public void testWrappedReturnNull() throws Exception {
         Http2DataChunkedInput input = new Http2DataChunkedInput(new ChunkedInput<Buffer>() {
-
             @Override
             public boolean isEndOfInput() throws Exception {
                 return false;
