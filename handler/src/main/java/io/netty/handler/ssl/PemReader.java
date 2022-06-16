@@ -46,14 +46,14 @@ final class PemReader {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PemReader.class);
 
     private static final Pattern CERT_PATTERN = Pattern.compile(
-            "-+BEGIN\\s+.*CERTIFICATE[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=][a-z0-9+/=\\r\\n]*)" +         // Base64 text
-                    "-+END\\s+.*CERTIFICATE[^-]*-+",            // Footer
+            "-+BEGIN\\s[^-\\r\\n]*CERTIFICATE[^-\\r\\n]*-+(?:\\s|\\r|\\n)+" + // Header
+                    "([a-z0-9+/=][a-z0-9+/=\\r\\n]*)" +                       // Base64 text
+                    "-+END\\s[^-\\r\\n]*CERTIFICATE[^-\\r\\n]*-+",            // Footer
             Pattern.CASE_INSENSITIVE);
     private static final Pattern KEY_PATTERN = Pattern.compile(
-            "-+BEGIN\\s+.*PRIVATE\\s+KEY[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=][a-z0-9+/=\\r\\n]*)" +            // Base64 text
-                    "-+END\\s+.*PRIVATE\\s+KEY[^-]*-+",            // Footer
+            "-+BEGIN\\s[^-\\r\\n]*PRIVATE\\s+KEY[^-\\r\\n]*-+(?:\\s|\\r|\\n)+" + // Header
+                    "([a-z0-9+/=][a-z0-9+/=\\r\\n]*)" +                          // Base64 text
+                    "-+END\\s[^-\\r\\n]*PRIVATE\\s+KEY[^-\\r\\n]*-+",            // Footer
             Pattern.CASE_INSENSITIVE);
 
     static ByteBuf[] readCertificates(File file) throws CertificateException {
