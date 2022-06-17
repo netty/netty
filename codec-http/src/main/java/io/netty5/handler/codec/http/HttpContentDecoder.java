@@ -95,7 +95,11 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             decompressor = newContentDecoder(contentEncoding);
 
             if (decompressor == null) {
-                fireChannelRead(ctx, message);
+                if (message instanceof HttpContent) {
+                    fireChannelRead(ctx, ((HttpContent<?>) message).copy());
+                } else {
+                    fireChannelRead(ctx, message);
+                }
                 return;
             }
 
@@ -147,7 +151,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         if (msg instanceof HttpContent) {
             final HttpContent<?> c = (HttpContent<?>) msg;
             if (decompressor == null) {
-                fireChannelRead(ctx, c);
+                fireChannelRead(ctx, c.copy());
             } else {
                 decodeContent(ctx, c);
             }
