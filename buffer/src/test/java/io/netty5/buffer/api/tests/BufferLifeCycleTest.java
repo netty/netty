@@ -500,10 +500,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
     void copyWithNegativeSizeMustThrow(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
-            assertThrows(IllegalArgumentException.class, () -> buf.copy(0, -1));
-            assertThrows(IllegalArgumentException.class, () -> buf.copy(2, -1));
-            assertThrows(IllegalArgumentException.class, () -> buf.copy(0, -1, true));
-            assertThrows(IllegalArgumentException.class, () -> buf.copy(2, -1, true));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(0, -1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(2, -1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(0, -1, true));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.copy(2, -1, true));
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
         }

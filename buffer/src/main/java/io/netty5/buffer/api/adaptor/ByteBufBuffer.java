@@ -248,6 +248,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         if (dest.isReadOnly()) {
             throw new ReadOnlyBufferException();
         }
+        checkLength(length);
         dest = dest.duplicate().clear();
         for (int i = 0; i < length; i++) {
             dest.put(destPos + i, getByte(srcPos + i));
@@ -262,6 +263,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
         if (dest.readOnly()) {
             throw bufferIsReadOnly(dest);
         }
+        checkLength(length);
         while (--length >= 0) {
             dest.setByte(destPos + length, getByte(srcPos + length));
         }
@@ -379,11 +381,11 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             throw attachTrace(bufferIsClosed(this));
         }
         if (fromOffset < 0) {
-            throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
+            throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
         checkLength(length);
         if (capacity() < fromOffset + length) {
-            throw new IllegalArgumentException("The fromOffset + length is beyond the end of the buffer: " +
+            throw new IndexOutOfBoundsException("The fromOffset + length is beyond the end of the buffer: " +
                                                "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
         return new ForwardCursor(delegate, fromOffset, length);
@@ -395,14 +397,14 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
             throw attachTrace(bufferIsClosed(this));
         }
         if (fromOffset < 0) {
-            throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
+            throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
         checkLength(length);
         if (capacity() <= fromOffset) {
-            throw new IllegalArgumentException("The fromOffset is beyond the end of the buffer: " + fromOffset + '.');
+            throw new IndexOutOfBoundsException("The fromOffset is beyond the end of the buffer: " + fromOffset + '.');
         }
         if (fromOffset - length < -1) {
-            throw new IllegalArgumentException("The fromOffset - length would underflow the buffer: " +
+            throw new IndexOutOfBoundsException("The fromOffset - length would underflow the buffer: " +
                                                "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
         return new ReverseCursor(delegate, fromOffset, length);
@@ -455,6 +457,7 @@ public final class ByteBufBuffer extends ResourceSupport<Buffer, ByteBufBuffer> 
 
     @Override
     public Buffer copy(int offset, int length, boolean readOnly) {
+        checkLength(length);
         if (readOnly && readOnly()) {
             ByteBufBuffer copy = newConstChild();
             if (offset > 0 || length < capacity()) {

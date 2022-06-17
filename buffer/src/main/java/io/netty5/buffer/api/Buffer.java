@@ -430,7 +430,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      */
     default Buffer writeBytes(Buffer source) {
         int size = source.readableBytes();
-        if (writableBytes() < size) {
+        if (writableBytes() < size && writerOffset() + size <= implicitCapacityLimit()) {
             ensureWritable(size, 1, false);
         }
         int woff = writerOffset();
@@ -464,7 +464,9 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
         if (source.length < srcPos + length) {
             throw new ArrayIndexOutOfBoundsException();
         }
-        ensureWritable(length, 1, false);
+        if (writableBytes() < length && writerOffset() + length <= implicitCapacityLimit()) {
+            ensureWritable(length, 1, false);
+        }
         int woff = writerOffset();
         for (int i = 0; i < length; i++) {
             setByte(woff + i, source[srcPos + i]);
@@ -490,7 +492,10 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
         } else {
             int woff = writerOffset();
             int length = source.remaining();
-            writerOffset(woff + source.remaining());
+            if (writableBytes() < length && woff + length <= implicitCapacityLimit()) {
+                ensureWritable(length, 1, false);
+            }
+            writerOffset(woff + length);
             // Try to reduce bounds-checking by using long and int when possible.
             boolean needReverse = source.order() != ByteOrder.BIG_ENDIAN;
             for (; length >= Long.BYTES; length -= Long.BYTES, woff += Long.BYTES) {

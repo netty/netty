@@ -290,7 +290,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
         @Override
         public Iterator<T> iterator() {
-            return new ConcatIterator(first.iterator(), second.iterator());
+            return new ConcatIterator<>(first.iterator(), second.iterator());
         }
     }
 
@@ -769,11 +769,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     @Override
     public ByteCursor openCursor(int fromOffset, int length) {
         if (fromOffset < 0) {
-            throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
+            throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
         checkLength(length);
         if (capacity < addExact(fromOffset, length)) {
-            throw new IllegalArgumentException("The fromOffset+length is beyond the end of the buffer: " +
+            throw new IndexOutOfBoundsException("The fromOffset+length is beyond the end of the buffer: " +
                                                "fromOffset=" + fromOffset + ", length=" + length + '.');
         }
         if (closed) {
@@ -789,11 +789,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     @Override
     public ByteCursor openReverseCursor(int fromOffset, int length) {
         if (fromOffset < 0) {
-            throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
+            throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
         checkLength(length);
         if (fromOffset - length < -1) {
-            throw new IllegalArgumentException("The fromOffset-length would underflow the buffer: " +
+            throw new IndexOutOfBoundsException("The fromOffset-length would underflow the buffer: " +
                                                "fromOffset=" + fromOffset + ", length=" + length + '.');
         }
         if (closed) {
