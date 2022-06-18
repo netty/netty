@@ -124,10 +124,10 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             Http2DataFrame dataFrame = (Http2DataFrame) frame;
             if (dataFrame.isEndStream()) {
                 ctx.fireChannelRead(new DefaultLastHttpContent(
-                        extractOrCopy(ctx.bufferAllocator(), dataFrame.content().retain()), validateHeaders));
+                        extractOrCopy(ctx.bufferAllocator(), dataFrame.content()), validateHeaders));
             } else {
                 ctx.fireChannelRead(new DefaultHttpContent(extractOrCopy(ctx.bufferAllocator(),
-                        dataFrame.content().retain())));
+                        dataFrame.content())));
             }
         }
     }
