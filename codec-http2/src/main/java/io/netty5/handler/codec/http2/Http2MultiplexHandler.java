@@ -86,7 +86,7 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
 @UnstableApi
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
-    static final FutureContextListener<Channel, Void> CHILD_CHANNEL_REGISTRATION_LISTENER =
+    private static final FutureContextListener<Channel, Void> CHILD_CHANNEL_REGISTRATION_LISTENER =
             Http2MultiplexHandler::registerDone;
 
     private final ChannelHandler inboundStreamHandler;

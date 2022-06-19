@@ -48,11 +48,6 @@ public class Http2ServerUpgradeCodecTest {
     }
 
     @Test
-    public void testUpgradeToHttp2MultiplexCodec() {
-        testUpgrade(new Http2MultiplexCodecBuilder(true, new HttpInboundHandler()).build(), null);
-    }
-
-    @Test
     public void testUpgradeToHttp2FrameCodecWithMultiplexer() {
         testUpgrade(new Http2FrameCodecBuilder(true).build(),
                 new Http2MultiplexHandler(new HttpInboundHandler()));

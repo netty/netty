@@ -44,12 +44,6 @@ public class Http2ClientUpgradeCodecTest {
     }
 
     @Test
-    public void testUpgradeToHttp2MultiplexCodec() throws Exception {
-        testUpgrade(Http2MultiplexCodecBuilder.forClient(new HttpInboundHandler())
-                .withUpgradeStreamHandler(new ChannelHandler() { }).build(), null);
-    }
-
-    @Test
     public void testUpgradeToHttp2FrameCodecWithMultiplexer() throws Exception {
         testUpgrade(Http2FrameCodecBuilder.forClient().build(),
             new Http2MultiplexHandler(new HttpInboundHandler(), new HttpInboundHandler()));

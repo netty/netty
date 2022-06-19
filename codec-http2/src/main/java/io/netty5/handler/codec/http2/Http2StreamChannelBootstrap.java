@@ -139,14 +139,10 @@ public final class Http2StreamChannelBootstrap {
             return ctx;
         }
         ChannelPipeline pipeline = channel.pipeline();
-        ctx = pipeline.context(Http2MultiplexCodec.class);
-        if (ctx == null) {
-            ctx = pipeline.context(Http2MultiplexHandler.class);
-        }
+        ctx = pipeline.context(Http2MultiplexHandler.class);
         if (ctx == null) {
             if (channel.isActive()) {
-                throw new IllegalStateException(StringUtil.simpleClassName(Http2MultiplexCodec.class) + " or "
-                        + StringUtil.simpleClassName(Http2MultiplexHandler.class)
+                throw new IllegalStateException(StringUtil.simpleClassName(Http2MultiplexHandler.class)
                         + " must be in the ChannelPipeline of Channel " + channel);
             } else {
                 throw new ClosedChannelException();
@@ -167,11 +163,7 @@ public final class Http2StreamChannelBootstrap {
         }
         final Http2StreamChannel streamChannel;
         try {
-            if (ctx.handler() instanceof Http2MultiplexCodec) {
-                streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
-            } else {
-                streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
-            }
+            streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
         } catch (Exception e) {
             promise.setFailure(e);
             return;

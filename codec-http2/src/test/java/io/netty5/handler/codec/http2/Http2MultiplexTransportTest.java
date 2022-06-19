@@ -116,13 +116,6 @@ public class Http2MultiplexTransportTest {
     @Disabled("Disabled until H2 is ported to Buffer")
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
-    public void asyncSettingsAckWithMultiplexCodec() throws Exception {
-        asyncSettingsAck0(new Http2MultiplexCodecBuilder(true, DISCARD_HANDLER).build(), null);
-    }
-
-    @Disabled("Disabled until H2 is ported to Buffer")
-    @Test
-    @Timeout(value = 10000, unit = MILLISECONDS)
     public void asyncSettingsAckWithMultiplexHandler() throws Exception {
         asyncSettingsAck0(new Http2FrameCodecBuilder(true).build(),
                 new Http2MultiplexHandler(DISCARD_HANDLER));
@@ -172,9 +165,9 @@ public class Http2MultiplexTransportTest {
         bs.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(Http2MultiplexCodecBuilder
-                        .forClient(DISCARD_HANDLER).autoAckSettingsFrame(false).build());
-                ch.pipeline().addLast(new ChannelHandler() {
+                ch.pipeline().addLast(Http2FrameCodecBuilder
+                        .forClient().autoAckSettingsFrame(false).build());
+                ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER, new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         if (msg instanceof Http2SettingsFrame) {
@@ -182,7 +175,7 @@ public class Http2MultiplexTransportTest {
                         }
                         Resource.dispose(msg);
                     }
-                });
+                }));
             }
         });
         clientChannel = bs.connect(serverChannel.localAddress()).get();
