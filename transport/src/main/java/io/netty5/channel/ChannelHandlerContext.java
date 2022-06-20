@@ -141,8 +141,7 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
 
     /**
      * Return {@code true} if the {@link ChannelHandler} which belongs to this context was removed
-     * from the {@link ChannelPipeline}. Note that this method is only meant to be called from with in the
-     * {@link EventLoop}.
+     * from the {@link ChannelPipeline}.
      */
     boolean isRemoved();
 
