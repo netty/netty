@@ -17,10 +17,8 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.util.Resource;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpHeaders;
@@ -187,41 +185,6 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         ((LastHttpContent<?>) channel.readInbound()).close();
 
         assertNull(channel.readInbound());
-    }
-
-    @Test
-    public void usedHttp2MultiplexCodec() {
-        final Http2MultiplexCodec http2Codec = new Http2MultiplexCodecBuilder(true, new ChannelInitializer<>() {
-            @Override
-            protected void initChannel(Channel ch) {
-            }
-        }).build();
-        UpgradeCodecFactory upgradeCodecFactory = protocol -> new Http2ServerUpgradeCodec(http2Codec);
-        http2ConnectionHandler = http2Codec;
-
-        userEvents = new ArrayList<>();
-
-        HttpServerCodec httpServerCodec = new HttpServerCodec();
-        HttpServerUpgradeHandler<?> upgradeHandler =
-                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, upgradeCodecFactory);
-
-        CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
-                httpServerCodec, upgradeHandler, http2Codec);
-        channel = new EmbeddedChannel(handler, new ChannelHandler() {
-            @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                userEvents.add(evt);
-            }
-        });
-
-        assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuffer()));
-
-        Buffer settingsFrame = settingsFrameBuf();
-
-        assertTrue(channel.writeInbound(settingsFrame));
-
-        assertEquals(1, userEvents.size());
-        assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);
     }
 
     private static Buffer settingsFrameBuf() {
