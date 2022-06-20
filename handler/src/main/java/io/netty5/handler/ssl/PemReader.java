@@ -45,16 +45,15 @@ final class PemReader {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PemReader.class);
 
-    private static final Pattern CERT_PATTERN = Pattern.compile(
-            "-+BEGIN\\s+.*CERTIFICATE[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=\\r\\n]+)" +                    // Base64 text
-                    "-+END\\s+.*CERTIFICATE[^-]*-+",            // Footer
-            Pattern.CASE_INSENSITIVE);
-    private static final Pattern KEY_PATTERN = Pattern.compile(
-            "-+BEGIN\\s+.*PRIVATE\\s+KEY[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=\\r\\n]+)" +                       // Base64 text
-                    "-+END\\s+.*PRIVATE\\s+KEY[^-]*-+",            // Footer
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern CERT_HEADER = Pattern.compile(
+            "-+BEGIN\\s[^-\\r\\n]*CERTIFICATE[^-\\r\\n]*-+(?:\\s|\\r|\\n)+");
+    private static final Pattern CERT_FOOTER = Pattern.compile(
+            "-+END\\s[^-\\r\\n]*CERTIFICATE[^-\\r\\n]*-+(?:\\s|\\r|\\n)*");
+    private static final Pattern KEY_HEADER = Pattern.compile(
+            "-+BEGIN\\s[^-\\r\\n]*PRIVATE\\s+KEY[^-\\r\\n]*-+(?:\\s|\\r|\\n)+");
+    private static final Pattern KEY_FOOTER = Pattern.compile(
+            "-+END\\s[^-\\r\\n]*PRIVATE\\s+KEY[^-\\r\\n]*-+(?:\\s|\\r|\\n)*");
+    private static final Pattern BODY = Pattern.compile("[a-z0-9+/=][a-z0-9+/=\\r\\n]*", Pattern.CASE_INSENSITIVE);
 
     static Buffer[] readCertificates(File file) throws CertificateException {
         try {
@@ -79,14 +78,25 @@ final class PemReader {
         }
 
         List<Buffer> certs = new ArrayList<>();
-        Matcher m = CERT_PATTERN.matcher(content);
+        Matcher m = CERT_HEADER.matcher(content);
         int start = 0;
         while (m.find(start)) {
-            try (Buffer base64 = onHeapAllocator().copyOf(m.group(1), US_ASCII)) {
-                Buffer der = Base64.decode(base64);
-                certs.add(der);
+            m.usePattern(BODY);
+            if (!m.find()) {
+                break;
             }
-            start = m.end();
+
+            try (Buffer base64 = onHeapAllocator().copyOf(m.group(0), US_ASCII)) {
+                m.usePattern(CERT_FOOTER);
+                if (!m.find()) {
+                    // Certificate is incomplete.
+                    break;
+                }
+                certs.add(Base64.decode(base64));
+
+                start = m.end();
+                m.usePattern(CERT_HEADER);
+            }
         }
 
         if (certs.isEmpty()) {
@@ -118,15 +128,28 @@ final class PemReader {
             throw new KeyException("failed to read key input stream", e);
         }
 
-        Matcher m = KEY_PATTERN.matcher(content);
+        Matcher m = KEY_HEADER.matcher(content);
         if (!m.find()) {
-            throw new KeyException("could not find a PKCS #8 private key in input stream" +
-                    " (see https://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
+            throw keyNotFoundException();
+        }
+        m.usePattern(BODY);
+        if (!m.find()) {
+            throw keyNotFoundException();
         }
 
-        try (Buffer base64 = onHeapAllocator().copyOf(m.group(1), US_ASCII)) {
+        try (Buffer base64 = onHeapAllocator().copyOf(m.group(0), US_ASCII)) {
+            m.usePattern(KEY_FOOTER);
+            if (!m.find()) {
+                // Key is incomplete.
+                throw keyNotFoundException();
+            }
             return Base64.decode(base64);
         }
+    }
+
+    private static KeyException keyNotFoundException() {
+        return new KeyException("could not find a PKCS #8 private key in input stream" +
+                " (see https://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
     }
 
     private static String readContent(InputStream in) throws IOException {
@@ -140,7 +163,7 @@ final class PemReader {
                 }
                 out.write(buf, 0, ret);
             }
-            return out.toString(US_ASCII.name());
+            return out.toString(US_ASCII);
         } finally {
             safeClose(out);
         }
