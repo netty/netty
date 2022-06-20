@@ -70,6 +70,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     private final SocketChannelConfig config;
+    private final ByteBufferCollector collector = new ByteBufferCollector();
 
     /**
      * Create a new instance
@@ -361,14 +362,15 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
             // Ensure the pending writes are made of ByteBufs only.
             int maxBytesPerGatheringWrite = ((NioSocketChannelConfig) config).getMaxBytesPerGatheringWrite();
-            ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
-            int nioBufferCnt = in.nioBufferCount();
+            ByteBuffer[] nioBuffers = collector.nioBuffers(in, 1024, maxBytesPerGatheringWrite);
+            int nioBufferCnt = collector.nioBufferCount();
 
             // Always use nioBuffers() to workaround data-corruption.
             // See https://github.com/netty/netty/issues/2761
             switch (nioBufferCnt) {
                 case 0:
                     // We have something else beside ByteBuffers to write so fallback to normal writes.
+                    collector.clearNioBuffers();
                     writeSpinCount -= doWrite0(in);
                     break;
                 case 1: {
@@ -384,6 +386,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     }
                     adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
                     in.removeBytes(localWrittenBytes);
+                    collector.clearNioBuffers();
                     --writeSpinCount;
                     break;
                 }
@@ -391,7 +394,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
                     // to check if the total size of all the buffers is non-zero.
                     // We limit the max amount to int above so cast is safe
-                    long attemptedBytes = in.nioBufferSize();
+                    long attemptedBytes = collector.nioBufferSize();
                     final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
                     if (localWrittenBytes <= 0) {
                         incompleteWrite(true);
@@ -401,6 +404,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
                             maxBytesPerGatheringWrite);
                     in.removeBytes(localWrittenBytes);
+                    collector.clearNioBuffers();
                     --writeSpinCount;
                     break;
                 }

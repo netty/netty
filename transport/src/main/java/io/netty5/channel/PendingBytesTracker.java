@@ -41,8 +41,9 @@ abstract class PendingBytesTracker implements MessageSizeEstimator.Handle {
             // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
             // if the channel was already closed when constructing the PendingBytesTracker.
             // See https://github.com/netty/netty/issues/3967
-            return buffer == null ?
-                    new NoopPendingBytesTracker(handle) : new ChannelOutboundBufferPendingBytesTracker(buffer, handle);
+            return buffer instanceof DefaultChannelOutboundBuffer ?
+                   new ChannelOutboundBufferPendingBytesTracker((DefaultChannelOutboundBuffer) buffer, handle) :
+                    new NoopPendingBytesTracker(handle);
         }
     }
 
@@ -66,10 +67,10 @@ abstract class PendingBytesTracker implements MessageSizeEstimator.Handle {
     }
 
     private static final class ChannelOutboundBufferPendingBytesTracker extends PendingBytesTracker {
-        private final ChannelOutboundBuffer buffer;
+        private final DefaultChannelOutboundBuffer buffer;
 
         ChannelOutboundBufferPendingBytesTracker(
-                ChannelOutboundBuffer buffer, MessageSizeEstimator.Handle estimatorHandle) {
+                DefaultChannelOutboundBuffer buffer, MessageSizeEstimator.Handle estimatorHandle) {
             super(estimatorHandle);
             this.buffer = buffer;
         }

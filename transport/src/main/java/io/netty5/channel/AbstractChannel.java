@@ -301,7 +301,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
+        private volatile DefaultChannelOutboundBuffer outboundBuffer = new DefaultChannelOutboundBuffer(
+                AbstractChannel.this);
         private RecvBufferAllocator.Handle recvHandle;
         private MessageSizeEstimator.Handle estimatorHandler;
 
@@ -471,7 +472,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            final DefaultChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 promise.setFailure(new ClosedChannelException());
                 return;
@@ -498,7 +499,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void closeOutboundBufferForShutdown(
-                ChannelPipeline pipeline, ChannelOutboundBuffer buffer, Throwable cause) {
+                ChannelPipeline pipeline, DefaultChannelOutboundBuffer buffer, Throwable cause) {
             buffer.failFlushed(cause, false);
             buffer.close(cause, true);
             pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
@@ -524,7 +525,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             closeInitiated = true;
 
             final boolean wasActive = isActive();
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            final DefaultChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
             Executor closeExecutor = prepareToClose();
             if (closeExecutor != null) {
@@ -728,7 +729,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            final DefaultChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null || outboundBuffer.isEmpty()) {
                 return;
             }

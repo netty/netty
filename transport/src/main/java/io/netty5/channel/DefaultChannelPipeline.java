@@ -978,16 +978,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @UnstableApi
     protected void incrementPendingOutboundBytes(long size) {
         ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.incrementPendingOutboundBytes(size);
+        if (buffer instanceof DefaultChannelOutboundBuffer) {
+            ((DefaultChannelOutboundBuffer) buffer).incrementPendingOutboundBytes(size);
         }
     }
 
     @UnstableApi
     protected void decrementPendingOutboundBytes(long size) {
         ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.decrementPendingOutboundBytes(size);
+        if (buffer instanceof DefaultChannelOutboundBuffer) {
+            ((DefaultChannelOutboundBuffer) buffer).decrementPendingOutboundBytes(size);
         }
     }
 
