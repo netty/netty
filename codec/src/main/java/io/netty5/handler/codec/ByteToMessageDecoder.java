@@ -28,8 +28,6 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.ChannelInputShutdownEvent;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -633,18 +631,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         @Override
         public BufferAllocator bufferAllocator() {
             return ctx.bufferAllocator();
-        }
-
-        @Override
-        @Deprecated
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            return ctx.attr(key);
-        }
-
-        @Override
-        @Deprecated
-        public <T> boolean hasAttr(AttributeKey<T> key) {
-            return ctx.hasAttr(key);
         }
 
         @Override

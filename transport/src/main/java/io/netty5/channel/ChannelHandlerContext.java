@@ -18,9 +18,6 @@ package io.netty5.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
-import io.netty5.util.AttributeMap;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
@@ -31,13 +28,12 @@ import io.netty5.util.AttributeMap;
  *
  * You can notify the closest handler in the same {@link ChannelPipeline} by calling one of the various methods
  * provided here.
- *
  * Please refer to {@link ChannelPipeline} to understand how an event flows.
  *
  * <h3>Modifying a pipeline</h3>
  *
  * You can get the {@link ChannelPipeline} your handler belongs to by calling
- * {@link #pipeline()}.  A non-trivial application could insert, remove, or
+ * {@link #pipeline()}. A non-trivial application could insert, remove, or
  * replace handlers in the pipeline dynamically at runtime.
  *
  * <h3>Retrieving for later use</h3>
@@ -60,13 +56,6 @@ import io.netty5.util.AttributeMap;
  * }
  * </pre>
  *
- * <h3>Storing stateful information</h3>
- *
- * {@link #attr(AttributeKey)} allow you to
- * store and access stateful information that is related with a handler and its
- * context.  Please refer to {@link ChannelHandler} to learn various recommended
- * ways to manage stateful information.
- *
  * <h3>A handler can have more than one context</h3>
  *
  * Please note that a {@link ChannelHandler} instance can be added to more than
@@ -75,43 +64,6 @@ import io.netty5.util.AttributeMap;
  * the single instance can be invoked with different
  * {@link ChannelHandlerContext}s if it is added to one or more
  * {@link ChannelPipeline}s more than once.
- * <p>
- * For example, the following handler will have as many independent {@link AttributeKey}s
- * as how many times it is added to pipelines, regardless if it is added to the
- * same pipeline multiple times or added to different pipelines multiple times:
- * <pre>
- * public class FactorialHandler implements {@link ChannelHandler} {
- *
- *   private final {@link AttributeKey}&lt;{@link Integer}&gt; counter = {@link AttributeKey}.valueOf("counter");
- *
- *   // This handler will receive a sequence of increasing integers starting
- *   // from 1.
- *   {@code @Override}
- *   public void channelRead({@link ChannelHandlerContext} ctx, Object msg) {
- *     Integer a = ctx.attr(counter).get();
- *
- *     if (a == null) {
- *       a = 1;
- *     }
- *
- *     attr.set(a * (Integer) msg);
- *   }
- * }
- *
- * // Different context objects are given to "f1", "f2", "f3", and "f4" even if
- * // they refer to the same handler instance.  Because the FactorialHandler
- * // stores its state in a context object (using an {@link AttributeKey}), the factorial is
- * // calculated correctly 4 times once the two pipelines (p1 and p2) are active.
- * FactorialHandler fh = new FactorialHandler();
- *
- * {@link ChannelPipeline} p1 = {@link Channel}.pipeline();
- * p1.addLast("f1", fh);
- * p1.addLast("f2", fh);
- *
- * {@link ChannelPipeline} p2 = {@link Channel}.pipeline();
- * p2.addLast("f3", fh);
- * p2.addLast("f4", fh);
- * </pre>
  *
  * <h3>Additional resources worth reading</h3>
  * <p>
@@ -120,12 +72,14 @@ import io.netty5.util.AttributeMap;
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
  */
-public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker, ChannelOutboundInvoker {
+public interface ChannelHandlerContext extends ChannelInboundInvoker, ChannelOutboundInvoker {
 
     /**
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
      */
-    Channel channel();
+    default Channel channel() {
+        return pipeline().channel();
+    }
 
     /**
      * The unique name of the {@link ChannelHandlerContext}.The name was used when then {@link ChannelHandler}
@@ -188,24 +142,14 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
      */
     @Deprecated(forRemoval = true)
-    ByteBufAllocator alloc();
+    default ByteBufAllocator alloc() {
+        return channel().alloc();
+    }
 
     /**
      * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
      */
-    BufferAllocator bufferAllocator();
-
-    /**
-     * @deprecated Use {@link Channel#attr(AttributeKey)}
-     */
-    @Deprecated
-    @Override
-    <T> Attribute<T> attr(AttributeKey<T> key);
-
-    /**
-     * @deprecated Use {@link Channel#hasAttr(AttributeKey)}
-     */
-    @Deprecated
-    @Override
-    <T> boolean hasAttr(AttributeKey<T> key);
+    default BufferAllocator bufferAllocator() {
+        return channel().bufferAllocator();
+    }
 }

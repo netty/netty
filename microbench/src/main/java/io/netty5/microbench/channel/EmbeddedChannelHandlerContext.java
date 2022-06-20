@@ -22,8 +22,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -60,16 +58,6 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     protected abstract void handleException(Throwable t);
-
-    @Override
-    public final <T> Attribute<T> attr(AttributeKey<T> key) {
-        return null;
-    }
-
-    @Override
-    public final <T> boolean hasAttr(AttributeKey<T> key) {
-        return false;
-    }
 
     @Override
     public final Channel channel() {

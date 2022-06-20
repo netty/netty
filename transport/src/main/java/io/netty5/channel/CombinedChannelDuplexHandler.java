@@ -17,8 +17,6 @@ package io.netty5.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -512,16 +510,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         @Override
         public Future<Void> newFailedFuture(Throwable cause) {
             return ctx.newFailedFuture(cause);
-        }
-
-        @Override
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            return ctx.channel().attr(key);
-        }
-
-        @Override
-        public <T> boolean hasAttr(AttributeKey<T> key) {
-            return ctx.channel().hasAttr(key);
         }
 
         void remove() {

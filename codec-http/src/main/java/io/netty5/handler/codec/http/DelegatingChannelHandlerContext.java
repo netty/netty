@@ -21,8 +21,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -143,16 +141,6 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     @Override
     public BufferAllocator bufferAllocator() {
         return ctx.bufferAllocator();
-    }
-
-    @Deprecated
-    public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return ctx.attr(key);
-    }
-
-    @Deprecated
-    public <T> boolean hasAttr(AttributeKey<T> key) {
-        return ctx.hasAttr(key);
     }
 
     @Override
