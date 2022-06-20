@@ -57,7 +57,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
 
                 if (!(msg instanceof LastHttpContent)) {
-                        continueResponse = true;
+                    continueResponse = true;
                 }
                 // 100-continue response must be passed through.
                 fireChannelRead(ctx, msg);
