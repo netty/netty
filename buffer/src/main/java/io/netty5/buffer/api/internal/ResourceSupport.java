@@ -38,6 +38,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     protected ResourceSupport(Drop<T> drop) {
         this.drop = drop;
         tracer = LifecycleTracer.get();
+        tracer.allocate();
     }
 
     /**
