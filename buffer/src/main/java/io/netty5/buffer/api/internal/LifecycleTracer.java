@@ -40,6 +40,9 @@ public abstract class LifecycleTracer {
 
     /**
      * Get a tracer for a newly allocated resource.
+     * <p>
+     * <strong>Note:</strong> this call is itself not traced.
+     * Instead, it is customary to immediately call {@link #allocate()} on the returned tracer.
      *
      * @return A new tracer for a resource.
      */
@@ -47,10 +50,13 @@ public abstract class LifecycleTracer {
         if (!lifecycleTracingEnabled && LeakDetection.leakDetectionEnabled == 0) {
             return NoOpTracer.INSTANCE;
         }
-        StackTracer stackTracer = new StackTracer();
-        stackTracer.addTrace(stackTracer.walk(new Trace(TraceType.ALLOCATE, 0)));
-        return stackTracer;
+        return new StackTracer();
     }
+
+    /**
+     * Add to the trace log that the object has been allocated.
+     */
+    public abstract void allocate();
 
     /**
      * Add to the trace log that the object has been acquired, in other words the reference count has been incremented.
@@ -129,6 +135,10 @@ public abstract class LifecycleTracer {
         private static final NoOpTracer INSTANCE = new NoOpTracer();
 
         @Override
+        public void allocate() {
+        }
+
+        @Override
         public void acquire(int acquires) {
         }
 
@@ -175,6 +185,11 @@ public abstract class LifecycleTracer {
 
         private final ArrayDeque<Trace> traces = new ArrayDeque<>();
         private boolean dropped;
+
+        @Override
+        public void allocate() {
+            addTrace(walk(new Trace(TraceType.ALLOCATE, 0)));
+        }
 
         @Override
         public void acquire(int acquires) {
