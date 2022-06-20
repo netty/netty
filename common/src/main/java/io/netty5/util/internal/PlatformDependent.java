@@ -190,6 +190,15 @@ public final class PlatformDependent {
         final Set<String> allowedClassifiers = Collections.unmodifiableSet(
                 new HashSet<>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
         final Set<String> availableClassifiers = new LinkedHashSet<>();
+
+        if (!addPropertyOsClassifiers(allowedClassifiers, availableClassifiers)) {
+            addFilesystemOsClassifiers(allowedClassifiers, availableClassifiers);
+        }
+        LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+    }
+
+    static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
+                                           final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final File file = new File(osReleaseFileName);
             boolean found = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
@@ -229,7 +238,37 @@ public final class PlatformDependent {
                 break;
             }
         }
-        LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+    }
+
+    static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
+        // empty: -Dio.netty.osClassifiers (no distro specific classifiers for native libs)
+        // single ID: -Dio.netty.osClassifiers=ubuntu
+        // pair ID, ID_LIKE: -Dio.netty.osClassifiers=ubuntu,debian
+        // illegal otherwise
+        String osClassifiersPropertyName = "io.netty.osClassifiers";
+        String osClassifiers = SystemPropertyUtil.get(osClassifiersPropertyName);
+        if (osClassifiers == null) {
+            return false;
+        }
+        if (osClassifiers.isEmpty()) {
+            // let users omit classifiers with just -Dio.netty.osClassifiers
+            return true;
+        }
+        String[] classifiers = osClassifiers.split(",");
+        if (classifiers.length == 0) {
+            throw new IllegalArgumentException(
+                    osClassifiersPropertyName + " property is not empty, but contains no classifiers: "
+                            + osClassifiers);
+        }
+        // at most ID, ID_LIKE classifiers
+        if (classifiers.length > 2) {
+            throw new IllegalArgumentException(
+                    osClassifiersPropertyName + " property contains more than 2 classifiers: " + osClassifiers);
+        }
+        for (String classifier : classifiers) {
+            addClassifier(allowedClassifiers, availableClassifiers, classifier);
+        }
+        return true;
     }
 
     public static long byteArrayBaseOffset() {
