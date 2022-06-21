@@ -85,6 +85,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Tasks invokeTasks;
     private int handlerState = INIT;
 
+    private volatile boolean removed;
+
     DefaultChannelHandlerContext next;
     DefaultChannelHandlerContext prev;
 
@@ -802,12 +804,13 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } finally {
             // Mark the handler as removed in any case.
             handlerState = REMOVE_COMPLETE;
+            removed = true;
         }
     }
 
     @Override
     public boolean isRemoved() {
-        return handlerState == REMOVE_COMPLETE;
+        return removed;
     }
 
     void remove(boolean relink) {
