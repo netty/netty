@@ -822,8 +822,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             }
         } finally {
             // Mark the handler as removed in any case.
-            removed = true;
             handlerState = REMOVE_COMPLETE;
+            removed = true;
         }
     }
 
