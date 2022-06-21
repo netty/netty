@@ -103,8 +103,8 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     }
 
     @Override
-    public ChannelHandlerContext fireUserEventTriggered(Object evt) {
-        ctx.fireUserEventTriggered(evt);
+    public ChannelHandlerContext fireInboundEventTriggered(Object evt) {
+        ctx.fireInboundEventTriggered(evt);
         return this;
     }
 
@@ -137,6 +137,11 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     public ChannelHandlerContext flush() {
         ctx.flush();
         return this;
+    }
+
+    @Override
+    public Future<Void> triggerOutboundEvent(Object event) {
+        return ctx.triggerOutboundEvent(event);
     }
 
     @Override

@@ -162,7 +162,7 @@ public class CloseNotifyTest {
             }
 
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 eventQueue.add(evt);
             }
 

@@ -80,7 +80,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                 httpServerCodec, upgradeHandler, http2ConnectionHandler);
         channel = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 userEvents.add(evt);
             }
         });

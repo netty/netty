@@ -927,7 +927,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() {
 
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 ctx.close();
                 throw new Exception("Exception for test");
             }
@@ -954,7 +954,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             }
         });
 
-        childChannel.pipeline().fireUserEventTriggered(new Object());
+        childChannel.pipeline().fireInboundEventTriggered(new Object());
 
         // The events should have happened in this order because the inactive and deregistration events
         // get deferred as they do in the AbstractChannel.

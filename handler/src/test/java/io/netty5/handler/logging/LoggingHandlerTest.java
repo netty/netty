@@ -192,7 +192,7 @@ public class LoggingHandlerTest {
     public void shouldLogChannelUserEvent() throws Exception {
         String userTriggered = "iAmCustom!";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.pipeline().fireUserEventTriggered(new String(userTriggered));
+        channel.pipeline().fireInboundEventTriggered(new String(userTriggered));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+USER_EVENT: " + userTriggered + '$')));
     }
 

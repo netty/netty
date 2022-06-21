@@ -243,7 +243,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      * HTTP/2 on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
      */
     @Override
-    public final void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+    public final void inboundEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
             // The user event implies that we are on the client.
             tryExpandConnectionFlowControlWindow(connection());
@@ -251,10 +251,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // We schedule this on the EventExecutor to allow to have any extra handlers added to the pipeline
             // before we pass the event to the next handler. This is needed as the event may be called from within
             // handlerAdded(...) which will be run before other handlers will be added to the pipeline.
-            ctx.executor().execute(() -> ctx.fireUserEventTriggered(evt));
+            ctx.executor().execute(() -> ctx.fireInboundEventTriggered(evt));
         } else if (evt instanceof UpgradeEvent) {
             try (UpgradeEvent upgrade = (UpgradeEvent) evt) {
-                ctx.fireUserEventTriggered(upgrade.copy()); // TODO try to avoid full copy (maybe make it read-only?)
+                // TODO try to avoid full copy (maybe make it read-only?)
+                ctx.fireInboundEventTriggered(upgrade.copy());
                 Http2Stream stream = connection().stream(HTTP_UPGRADE_STREAM_ID);
                 if (stream.getProperty(streamKey) == null) {
                     // TODO: improve handler/stream lifecycle so that stream isn't active before handler added.
@@ -269,7 +270,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                         ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest());
             }
         } else {
-            ctx.fireUserEventTriggered(evt);
+            ctx.fireInboundEventTriggered(evt);
         }
     }
 
@@ -677,11 +678,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream,
                                                  @SuppressWarnings("unused") boolean writable) {
-        ctx.fireUserEventTriggered(stream.writabilityChanged);
+        ctx.fireInboundEventTriggered(stream.writabilityChanged);
     }
 
     void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
-        ctx.fireUserEventTriggered(stream.stateChanged);
+        ctx.fireInboundEventTriggered(stream.stateChanged);
     }
 
     void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {

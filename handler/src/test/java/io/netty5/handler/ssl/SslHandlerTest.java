@@ -192,7 +192,7 @@ public class SslHandlerTest {
             }
         }, new ChannelHandler() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslHandshakeCompletionEvent) {
                     throw (Exception) ((SslHandshakeCompletionEvent) evt).cause();
                 }
@@ -282,7 +282,7 @@ public class SslHandlerTest {
         final AtomicReference<Throwable> closeRef = new AtomicReference<>();
         EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof SslHandshakeCompletionEvent) {
                     handshakeRef.set(((SslHandshakeCompletionEvent) evt).cause());
                 } else if (evt instanceof SslCloseCompletionEvent) {
@@ -572,7 +572,7 @@ public class SslHandlerTest {
         final BlockingQueue<SslCompletionEvent> events = new LinkedBlockingQueue<>();
         EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelHandler() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslCompletionEvent) {
                     events.add((SslCompletionEvent) evt);
                 }
@@ -627,7 +627,7 @@ public class SslHandlerTest {
                           }
 
                           @Override
-                          public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                          public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                               logger.debug("[testHandshakeFailBeforeWritePromise] server user event triggered: " + evt);
                               if (evt instanceof SslCompletionEvent) {
                                   events.add(evt);
@@ -1330,7 +1330,7 @@ public class SslHandlerTest {
                                 private int handshakeCount;
 
                                 @Override
-                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt)  {
+                                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt)  {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         handshakeCount++;
                                         ReferenceCountedOpenSslEngine engine =
@@ -1610,11 +1610,11 @@ public class SslHandlerTest {
             }
 
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslHandshakeCompletionEvent) {
                     ref.set((SslHandshakeCompletionEvent) evt);
                 }
-                ctx.fireUserEventTriggered(evt);
+                ctx.fireInboundEventTriggered(evt);
             }
         }
         final AtomicReference<SslHandshakeCompletionEvent> clientEvent =
@@ -1771,7 +1771,7 @@ public class SslHandlerTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 completionEvents.add((SslHandshakeCompletionEvent) evt);
             }

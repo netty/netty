@@ -535,7 +535,6 @@ public class ByteToMessageDecoderTest {
         removeHandler.set(true);
         // This should trigger channelInputClosed(...)
         channel.pipeline().fireChannelShutdown(ChannelShutdownDirection.Inbound);
-
         assertTrue(channel.finish());
         assertBuffer(Unpooled.wrappedBuffer(bytes), channel.readInbound());
         assertNull(channel.readInbound());

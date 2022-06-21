@@ -118,7 +118,7 @@ public interface ChannelHandlerContext extends ChannelInboundInvoker, ChannelOut
     ChannelHandlerContext fireExceptionCaught(Throwable cause);
 
     @Override
-    ChannelHandlerContext fireUserEventTriggered(Object evt);
+    ChannelHandlerContext fireInboundEventTriggered(Object evt);
 
     @Override
     ChannelHandlerContext fireChannelRead(Object msg);

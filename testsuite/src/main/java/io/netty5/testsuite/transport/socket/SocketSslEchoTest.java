@@ -298,11 +298,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 sch.pipeline().addLast("clientHandler", clientHandler);
                 sch.pipeline().addLast(new ChannelHandler() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof SslHandshakeCompletionEvent) {
                             clientHandshakeEventLatch.countDown();
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireInboundEventTriggered(evt);
                     }
                 });
             }
@@ -480,7 +480,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public final void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
                 if (handshakeEvt.cause() != null) {
@@ -490,7 +490,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 negoCounter.incrementAndGet();
                 logStats("HANDSHAKEN");
             }
-            ctx.fireUserEventTriggered(evt);
+            ctx.fireInboundEventTriggered(evt);
         }
 
         @Override

@@ -272,7 +272,7 @@ public class Http2ConnectionHandlerTest {
             return null;
         };
 
-        doAnswer(verifier).when(ctx).fireUserEventTriggered(evt);
+        doAnswer(verifier).when(ctx).fireInboundEventTriggered(evt);
 
         handler.channelActive(ctx);
         if (flushPreface) {
@@ -466,7 +466,7 @@ public class Http2ConnectionHandlerTest {
         final CountDownLatch latch = new CountDownLatch(1);
         handler = new Http2ConnectionHandler(decoder, encoder, new Http2Settings()) {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                     latch.countDown();
                 }

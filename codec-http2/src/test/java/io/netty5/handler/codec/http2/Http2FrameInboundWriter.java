@@ -174,8 +174,8 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelHandlerContext fireUserEventTriggered(Object evt) {
-            channel.pipeline().fireUserEventTriggered(evt);
+        public ChannelHandlerContext fireInboundEventTriggered(Object evt) {
+            channel.pipeline().fireInboundEventTriggered(evt);
             return this;
         }
 
@@ -207,6 +207,11 @@ final class Http2FrameInboundWriter {
         public ChannelHandlerContext flush() {
             channel.pipeline().fireChannelReadComplete();
             return this;
+        }
+
+        @Override
+        public Future<Void> triggerOutboundEvent(Object event) {
+            return channel.pipeline().triggerOutboundEvent(event);
         }
 
         @Override

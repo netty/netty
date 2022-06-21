@@ -46,7 +46,7 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolCon
  * to the <tt>io.netty5.example.http.websocketx.server.WebSocketServer</tt> example.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was instance
+ * {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)} and check if the event was instance
  * of {@link HandshakeComplete}, the event will contain extra information about the handshake such as the request and
  * selected subprotocol.
  */

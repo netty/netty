@@ -164,6 +164,17 @@ public interface ChannelOutboundInvoker {
     Future<Void> writeAndFlush(Object msg);
 
     /**
+     * Trigger a custom outbound event via this {@link ChannelOutboundInvoker} through the
+     * {@link ChannelPipeline}.
+     * <p>
+     * This will result in having the
+     * {@link ChannelHandler#triggerOutboundEvent(ChannelHandlerContext, Object)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    Future<Void> triggerOutboundEvent(Object event);
+
+    /**
      * Return a new {@link Promise}.
      */
     default Promise<Void> newPromise() {

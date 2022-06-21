@@ -41,7 +41,7 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolCon
  * This implementation will establish the websocket connection once the connection to the remote server was complete.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
  * {@link ClientHandshakeStateEvent#HANDSHAKE_ISSUED} or {@link ClientHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {

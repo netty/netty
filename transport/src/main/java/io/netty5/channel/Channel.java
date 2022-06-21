@@ -27,7 +27,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.SocketAddress;
 
 
@@ -291,6 +290,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         return this;
     }
 
+    @Override
+    default Future<Void> triggerOutboundEvent(Object event) {
+        return pipeline().triggerOutboundEvent(event);
+    }
+
     /**
      * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
      * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
@@ -389,6 +393,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
          * Flush out all write operations scheduled via {@link #write(Object, Promise)}.
          */
         void flush();
+
+        /**
+         * Trigger a custom outbound event.
+         */
+        void triggerOutboundEvent(Object event, Promise<Void> promise);
 
         /**
          * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.

@@ -216,11 +216,11 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "USER_EVENT", evt));
         }
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireInboundEventTriggered(evt);
     }
 
     @Override

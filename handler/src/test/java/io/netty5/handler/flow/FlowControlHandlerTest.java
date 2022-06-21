@@ -466,11 +466,11 @@ public class FlowControlHandlerTest {
                 }
 
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     if (evt instanceof IdleStateEvent) {
                         userEvents.add((IdleStateEvent) evt);
                     }
-                    ctx.fireUserEventTriggered(evt);
+                    ctx.fireInboundEventTriggered(evt);
                 }
             }
         );

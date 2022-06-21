@@ -377,7 +377,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 // If this handler is extended by the user and we directly fire the userEvent from this context then
                 // the user will not see the event. We should fire the event starting with this handler so this class
                 // (and extending classes) have a chance to process the event.
-                userEventTriggered(ctx, Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
+                inboundEventTriggered(ctx, Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
             }
         }
     }

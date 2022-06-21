@@ -81,7 +81,7 @@ public final class BufferConversionHandler implements ChannelHandler {
      * @param onWrite The conversion to apply to all outgoing {@linkplain #write(ChannelHandlerContext, Object)}
      *               messages.
      * @param onUserEvent The conversion to apply to all incoming
-     *                    {@linkplain #userEventTriggered(ChannelHandlerContext, Object) user events}.
+     *                    {@linkplain #inboundEventTriggered(ChannelHandlerContext, Object) user events}.
      */
     public BufferConversionHandler(Conversion onRead, Conversion onWrite, Conversion onUserEvent) {
         this.onRead = onRead;
@@ -117,8 +117,8 @@ public final class BufferConversionHandler implements ChannelHandler {
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireUserEventTriggered(onUserEvent.convert(evt));
+    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireInboundEventTriggered(onUserEvent.convert(evt));
     }
 
     @Override

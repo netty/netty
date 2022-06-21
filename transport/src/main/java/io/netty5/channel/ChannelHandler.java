@@ -32,7 +32,6 @@ import java.net.SocketAddress;
  * Handles an I/O event or intercepts an I/O operation, and forwards it to its next handler in
  * its {@link ChannelPipeline}.
  *
- *
  * <h3>The context object</h3>
  * <p>
  * A {@link ChannelHandler} is provided with a {@link ChannelHandlerContext}
@@ -262,11 +261,11 @@ public interface ChannelHandler {
     }
 
     /**
-     * Gets called if an user event was triggered.
+     * Gets called if a custom inbound event was triggered.
      */
     @Skip
-    default void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireUserEventTriggered(evt);
+    default void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireInboundEventTriggered(evt);
     }
 
     /**
@@ -400,5 +399,18 @@ public interface ChannelHandler {
     @Skip
     default void flush(ChannelHandlerContext ctx) {
         ctx.flush();
+    }
+
+    /**
+     * Called once a custom defined outbound event was triggered. This operation will pass the event through the
+     * {@link ChannelPipeline}.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the operation is made.
+     * @param event             the event.
+     * @return                  the {@link Future} which will be notified once the operation completes.
+     */
+    @Skip
+    default Future<Void> triggerOutboundEvent(ChannelHandlerContext ctx, Object event) {
+        return ctx.triggerOutboundEvent(event);
     }
 }

@@ -823,6 +823,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return exception;
         }
 
+        @Override
+        public void triggerOutboundEvent(Object event, Promise<Void> promise) {
+            Resource.dispose(event);
+            promise.setSuccess(null);
+        }
+
         protected final boolean ensureOpen(Promise<Void> promise) {
             if (isOpen()) {
                 return true;

@@ -86,7 +86,7 @@ public class WebSocketHandshakeHandOverTest {
     public void testHandover() {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<>() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
                     serverReceivedHandshake = true;
                     serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
@@ -102,7 +102,7 @@ public class WebSocketHandshakeHandOverTest {
 
         EmbeddedChannel clientChannel = createClientChannel(new SimpleChannelInboundHandler<>() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                     clientReceivedHandshake = true;
                 }
@@ -134,7 +134,7 @@ public class WebSocketHandshakeHandOverTest {
     public void testClientHandshakeTimeout() throws Throwable {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<>() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
                     serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
                 }
@@ -147,7 +147,7 @@ public class WebSocketHandshakeHandOverTest {
 
         EmbeddedChannel clientChannel = createClientChannel(new SimpleChannelInboundHandler<>() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                     clientReceivedHandshake = true;
                 } else if (evt == ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT) {
@@ -239,7 +239,7 @@ public class WebSocketHandshakeHandOverTest {
 
         EmbeddedChannel clientChannel = createClientChannel(handshaker, new SimpleChannelInboundHandler<>() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                     ctx.channel().closeFuture().addListener(future -> clientForceClosed = true);
                     handshaker.close(ctx.channel(), new CloseWebSocketFrame(

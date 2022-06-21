@@ -143,9 +143,9 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         log(Event.USER, evt.toString());
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireInboundEventTriggered(evt);
     }
 
     String getLog() {

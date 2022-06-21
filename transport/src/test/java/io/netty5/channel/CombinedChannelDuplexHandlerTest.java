@@ -234,7 +234,7 @@ public class CombinedChannelDuplexHandlerTest {
         channel.pipeline().fireChannelRead(MSG);
         channel.pipeline().fireChannelReadComplete();
         channel.pipeline().fireExceptionCaught(CAUSE);
-        channel.pipeline().fireUserEventTriggered(USER_EVENT);
+        channel.pipeline().fireInboundEventTriggered(USER_EVENT);
         channel.pipeline().fireChannelWritabilityChanged();
         channel.pipeline().fireChannelInactive();
         channel.pipeline().fireChannelUnregistered();
@@ -307,7 +307,7 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
             queue.add(Event.USER_EVENT_TRIGGERED);
         }
 

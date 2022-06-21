@@ -964,6 +964,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
+        public void triggerOutboundEvent(Object event, Promise<Void> promise) {
+            Resource.dispose(event);
+            promise.setSuccess(null);
+        }
+
+        @Override
         public ChannelOutboundBuffer outboundBuffer() {
             // Always return null as we not use the ChannelOutboundBuffer and not even support it.
             return null;

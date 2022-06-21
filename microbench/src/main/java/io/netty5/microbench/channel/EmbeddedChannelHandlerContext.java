@@ -121,7 +121,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final ChannelHandlerContext fireUserEventTriggered(Object event) {
+    public final ChannelHandlerContext fireInboundEventTriggered(Object event) {
         Resource.dispose(event);
         return this;
     }
@@ -243,6 +243,11 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     public ChannelHandlerContext flush() {
         channel().flush();
         return this;
+    }
+
+    @Override
+    public Future<Void> triggerOutboundEvent(Object event) {
+        return channel().triggerOutboundEvent(event);
     }
 
     @Override
