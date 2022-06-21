@@ -15,11 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.ResourceLeakHint;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -135,23 +131,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Channel channel() {
-        return pipeline.channel();
-    }
-
-    @Override
     public ChannelPipeline pipeline() {
         return pipeline;
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        return channel().config().getAllocator();
-    }
-
-    @Override
-    public BufferAllocator bufferAllocator() {
-        return channel().config().getBufferAllocator();
     }
 
     @Override
@@ -845,16 +826,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         prev = null;
         next = null;
-    }
-
-    @Override
-    public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return channel().attr(key);
-    }
-
-    @Override
-    public <T> boolean hasAttr(AttributeKey<T> key) {
-        return channel().hasAttr(key);
     }
 
     private static boolean safeExecute(EventExecutor executor, Runnable runnable, Promise<Void> promise, Object msg) {

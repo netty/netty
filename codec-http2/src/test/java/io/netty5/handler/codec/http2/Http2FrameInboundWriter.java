@@ -24,8 +24,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -217,16 +215,6 @@ final class Http2FrameInboundWriter {
         @Override
         public BufferAllocator bufferAllocator() {
             return channel.bufferAllocator();
-        }
-
-        @Override
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            return channel.attr(key);
-        }
-
-        @Override
-        public <T> boolean hasAttr(AttributeKey<T> key) {
-            return channel.hasAttr(key);
         }
 
         @Override

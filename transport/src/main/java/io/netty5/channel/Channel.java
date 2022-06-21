@@ -71,6 +71,14 @@ import java.net.SocketAddress;
  * operations.  For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
  *
+ *
+ * <h3>Storing stateful information</h3>
+ *
+ * {@link #attr(AttributeKey)} allow you to
+ * store and access stateful information that is related with a handler and its
+ * context.  Please refer to {@link ChannelHandler} to learn various recommended
+ * ways to manage stateful information.
+ *
  * <h3>Release resources</h3>
  * <p>
  * It is important to call {@link #close()} to release all

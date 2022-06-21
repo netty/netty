@@ -28,8 +28,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.adaptor.BufferConversionHandler.Conversion;
-import io.netty5.util.Attribute;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -353,16 +351,6 @@ class BufferConversionHandlerTest {
 
         @Override
         public BufferAllocator bufferAllocator() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> boolean hasAttr(AttributeKey<T> key) {
             throw new UnsupportedOperationException();
         }
     }
