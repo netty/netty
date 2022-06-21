@@ -98,9 +98,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 decompressor = newContentDecoder(contentEncoding);
 
                 if (decompressor == null) {
-                    if (message instanceof HttpContent) {
-                        dispose = false;
-                    }
+                    dispose = false;
                     fireChannelRead(ctx, message);
                     return;
                 }
