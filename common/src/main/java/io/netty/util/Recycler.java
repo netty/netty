@@ -73,7 +73,9 @@ public abstract class Recycler<T> {
         // bursts.
         RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
 
-        BLOCKING_POOL = SystemPropertyUtil.getBoolean("io.netty.recycler.blocking", false);
+        String arch = PlatformDependent.normalizedArch();
+        boolean isArm = arch.equals("aarch_64") || arch.equals("arm_32");
+        BLOCKING_POOL = SystemPropertyUtil.getBoolean("io.netty.recycler.blocking", isArm);
 
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY_PER_THREAD == 0) {
