@@ -339,7 +339,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_aarch_64.so; osname=Linux; processor=aarch_64,*</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_aarch_64.so; osname=Linux; processor=aarch64,*</Bundle-NativeCode>
                       <Fragment-Host>io.netty.transport-classes-epoll</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
