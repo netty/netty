@@ -674,7 +674,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         try {
-            if (!pendingUnencryptedWrites.isEmpty()) {
+            if (pendingUnencryptedWrites != null && !pendingUnencryptedWrites.isEmpty()) {
                 // Check if queue is not empty first because create a new ChannelException is expensive
                 pendingUnencryptedWrites.releaseAndFailAll(ctx,
                   new ChannelException("Pending write on removal of SslHandler"));
@@ -1975,10 +1975,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-
         Channel channel = ctx.channel();
-        setOpensslEngineSocketFd(channel);
         pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16);
+
+        setOpensslEngineSocketFd(channel);
         boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
         boolean active = channel.isActive();
         if (active || fastOpen) {
