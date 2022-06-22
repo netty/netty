@@ -47,7 +47,8 @@ import static io.netty5.channel.ChannelHandlerMask.MASK_FLUSH;
 import static io.netty5.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty5.channel.ChannelHandlerMask.MASK_REGISTER;
 import static io.netty5.channel.ChannelHandlerMask.MASK_SHUTDOWN;
-import static io.netty5.channel.ChannelHandlerMask.MASK_USER_EVENT_TRIGGERED;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CUSTOM_INBOUND_EVENT_TRIGGERED;
+import static io.netty5.channel.ChannelHandlerMask.MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_WRITE;
 import static io.netty5.channel.ChannelHandlerMask.mask;
 import static java.util.Objects.requireNonNull;
@@ -332,30 +333,30 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public ChannelHandlerContext fireUserEventTriggered(Object event) {
+    public ChannelHandlerContext fireInboundEventTriggered(Object event) {
         requireNonNull(event, "event");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeUserEventTriggered(event);
+            findAndInvokeCustomInboundEventTriggered(event);
         } else {
-            executor.execute(() -> findAndInvokeUserEventTriggered(event));
+            executor.execute(() -> findAndInvokeCustomInboundEventTriggered(event));
         }
         return this;
     }
 
-    private void findAndInvokeUserEventTriggered(Object event) {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_USER_EVENT_TRIGGERED);
+    private void findAndInvokeCustomInboundEventTriggered(Object event) {
+        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CUSTOM_INBOUND_EVENT_TRIGGERED);
         if (ctx == null) {
             Resource.dispose(event);
             notifyHandlerRemovedAlready();
             return;
         }
-        ctx.invokeUserEventTriggered(event);
+        ctx.invokeCustomInboundEventTriggered(event);
     }
 
-    void invokeUserEventTriggered(Object event) {
+    void invokeCustomInboundEventTriggered(Object event) {
         try {
-            handler().userEventTriggered(this, event);
+            handler().inboundEventTriggered(this, event);
         } catch (Throwable t) {
             invokeExceptionCaught(t);
         }
@@ -776,6 +777,33 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 task.cancel();
             }
             return promise.asFuture();
+        }
+    }
+
+    @Override
+    public Future<Void> triggerOutboundEvent(Object event) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            return findAndInvokeTriggerCustomOutboundEvent(event);
+        }
+        Promise<Void> promise  = newPromise();
+        safeExecute(executor, () -> findAndInvokeTriggerCustomOutboundEvent(event).cascadeTo(promise), promise, event);
+        return promise.asFuture();
+    }
+
+    private Future<Void> findAndInvokeTriggerCustomOutboundEvent(Object event) {
+        DefaultChannelHandlerContext ctx = findContextOutbound(MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT);
+        if (ctx == null) {
+            return failRemoved(this);
+        }
+        return ctx.invokeTriggerCustomOutboundEvent(event);
+    }
+
+    private Future<Void> invokeTriggerCustomOutboundEvent(Object event) {
+        try {
+            return handler().triggerOutboundEvent(this, event);
+        } catch (Throwable t) {
+            return handleOutboundHandlerException(t, false);
         }
     }
 

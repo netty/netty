@@ -157,9 +157,9 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     private static void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<?> future) {
         Throwable cause = future.cause();
         if (cause == null) {
-            ctx.fireUserEventTriggered(new SniCompletionEvent(hostname));
+            ctx.fireInboundEventTriggered(new SniCompletionEvent(hostname));
         } else {
-            ctx.fireUserEventTriggered(new SniCompletionEvent(hostname, cause));
+            ctx.fireInboundEventTriggered(new SniCompletionEvent(hostname, cause));
         }
     }
 }

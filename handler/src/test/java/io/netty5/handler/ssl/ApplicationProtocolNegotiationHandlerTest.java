@@ -81,7 +81,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
         SSLHandshakeException exception = new SSLHandshakeException("error");
         SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
-        channel.pipeline().fireUserEventTriggered(completionEvent);
+        channel.pipeline().fireInboundEventTriggered(completionEvent);
         channel.pipeline().fireExceptionCaught(new DecoderException(exception));
         assertNull(channel.pipeline().context(alpnHandler));
         assertFalse(channel.finishAndReleaseAll());
@@ -120,7 +120,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
             channel.pipeline().addLast(new SslHandler(engine));
             channel.pipeline().addLast(alpnHandler);
         }
-        channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+        channel.pipeline().fireInboundEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         // Should produce the close_notify messages
         channel.releaseOutbound();
@@ -139,7 +139,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
         final EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+        channel.pipeline().fireInboundEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
@@ -199,14 +199,14 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelHandler() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                     ctx.fireChannelRead(someBytes);
                 }
-                ctx.fireUserEventTriggered(evt);
+                ctx.fireInboundEventTriggered(evt);
             }
         }, alpnHandler);
-        channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+        channel.pipeline().fireInboundEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
         assertArrayEquals(someBytes, channelReadData.get());
         assertTrue(channelReadCompleteCalled.get());

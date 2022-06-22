@@ -890,7 +890,7 @@ public class DefaultChannelPipelineTest {
         ctx.fireChannelRead("");
         validator.validate();
 
-        ctx.fireUserEventTriggered("");
+        ctx.fireInboundEventTriggered("");
         validator.validate();
 
         ctx.fireChannelReadComplete();
@@ -1014,7 +1014,7 @@ public class DefaultChannelPipelineTest {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         promise.setSuccess(event);
                     }
 
@@ -1028,7 +1028,7 @@ public class DefaultChannelPipelineTest {
                     return;
                 }
                 // This event must be captured by the added handler.
-                pipeline.fireUserEventTriggered(event);
+                pipeline.fireInboundEventTriggered(event);
             });
             assertSame(event, promise.asFuture().syncUninterruptibly().getNow());
         } finally {
@@ -1234,9 +1234,9 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 fail();
-                ctx.fireUserEventTriggered(evt);
+                ctx.fireInboundEventTriggered(evt);
             }
 
             @Skip
@@ -1284,6 +1284,7 @@ public class DefaultChannelPipelineTest {
             private static final int MASK_FLUSH = 1 << 8;
             private static final int MASK_ADDED = 1 << 9;
             private static final int MASK_REMOVED = 1 << 10;
+            private static final int MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT = 1 << 9;
 
             private int executionMask;
 
@@ -1351,6 +1352,13 @@ public class DefaultChannelPipelineTest {
                 executionMask |= MASK_FLUSH;
             }
 
+            @Override
+            public Future<Void> triggerOutboundEvent(ChannelHandlerContext ctx, Object event) {
+                executionMask |= MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT;
+                Resource.dispose(event);
+                return ctx.newSucceededFuture();
+            }
+
             void assertCalled() {
                 assertCalled("handlerAdded", MASK_ADDED);
                 assertCalled("handlerRemoved", MASK_REMOVED);
@@ -1363,6 +1371,7 @@ public class DefaultChannelPipelineTest {
                 assertCalled("read", MASK_READ);
                 assertCalled("write", MASK_WRITE);
                 assertCalled("flush", MASK_FLUSH);
+                assertCalled("triggerCustomOutboundEvent", MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT);
             }
 
             private void assertCalled(String methodName, int mask) {
@@ -1378,7 +1387,7 @@ public class DefaultChannelPipelineTest {
             private static final int MASK_CHANNEL_INACTIVE = 1 << 3;
             private static final int MASK_CHANNEL_READ = 1 << 4;
             private static final int MASK_CHANNEL_READ_COMPLETE = 1 << 5;
-            private static final int MASK_USER_EVENT_TRIGGERED = 1 << 6;
+            private static final int MASK_CUSTOM_INBOUND_EVENT_TRIGGERED = 1 << 6;
             private static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 7;
             private static final int MASK_EXCEPTION_CAUGHT = 1 << 8;
             private static final int MASK_ADDED = 1 << 9;
@@ -1427,8 +1436,8 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                executionMask |= MASK_USER_EVENT_TRIGGERED;
+            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                executionMask |= MASK_CUSTOM_INBOUND_EVENT_TRIGGERED;
             }
 
             @Override
@@ -1450,7 +1459,7 @@ public class DefaultChannelPipelineTest {
                 assertCalled("channelInactive", MASK_CHANNEL_INACTIVE);
                 assertCalled("channelRead", MASK_CHANNEL_READ);
                 assertCalled("channelReadComplete", MASK_CHANNEL_READ_COMPLETE);
-                assertCalled("userEventTriggered", MASK_USER_EVENT_TRIGGERED);
+                assertCalled("userEventTriggered", MASK_CUSTOM_INBOUND_EVENT_TRIGGERED);
                 assertCalled("channelWritabilityChanged", MASK_CHANNEL_WRITABILITY_CHANGED);
                 assertCalled("exceptionCaught", MASK_EXCEPTION_CAUGHT);
             }
@@ -1472,7 +1481,7 @@ public class DefaultChannelPipelineTest {
         pipeline.fireChannelRead("");
         pipeline.fireChannelReadComplete();
         pipeline.fireChannelWritabilityChanged();
-        pipeline.fireUserEventTriggered("");
+        pipeline.fireInboundEventTriggered("");
         pipeline.fireExceptionCaught(new Exception());
 
         pipeline.register().syncUninterruptibly();
@@ -1520,17 +1529,17 @@ public class DefaultChannelPipelineTest {
         Runnable r = () -> {
             pipeline.addLast(new ChannelHandler() {
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     if (evt == userEvent) {
                         ctx.write(writeObject);
                     }
-                    ctx.fireUserEventTriggered(evt);
+                    ctx.fireInboundEventTriggered(evt);
                 }
             });
             pipeline.addFirst(new ChannelHandler() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) {
-                    ctx.fireUserEventTriggered(userEvent);
+                    ctx.fireInboundEventTriggered(userEvent);
                 }
 
                 @Override

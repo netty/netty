@@ -109,7 +109,7 @@ public class LastInboundHandler implements ChannelHandler {
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         queue.add(new UserEvent(evt));
     }
 

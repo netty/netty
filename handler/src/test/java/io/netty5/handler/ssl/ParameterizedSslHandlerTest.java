@@ -170,7 +170,7 @@ public class ParameterizedSslHandlerTest {
                                 private Throwable writeCause;
 
                                 @Override
-                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (sslEvt.isSuccess()) {
@@ -191,7 +191,7 @@ public class ParameterizedSslHandlerTest {
                                             donePromise.tryFailure(sslEvt.cause());
                                         }
                                     }
-                                    ctx.fireUserEventTriggered(evt);
+                                    ctx.fireInboundEventTriggered(evt);
                                 }
 
                                 @Override
@@ -234,7 +234,7 @@ public class ParameterizedSslHandlerTest {
                                 }
 
                                 @Override
-                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (!sslEvt.isSuccess()) {
@@ -657,7 +657,7 @@ public class ParameterizedSslHandlerTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                 if (sslEvt.isSuccess()) {
@@ -667,7 +667,7 @@ public class ParameterizedSslHandlerTest {
                     appendError(sslEvt.cause());
                 }
             }
-            ctx.fireUserEventTriggered(evt);
+            ctx.fireInboundEventTriggered(evt);
         }
 
         @Override

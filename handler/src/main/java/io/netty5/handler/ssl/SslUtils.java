@@ -421,7 +421,7 @@ final class SslUtils {
         // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
         ctx.flush();
         if (notify) {
-            ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            ctx.fireInboundEventTriggered(new SslHandshakeCompletionEvent(cause));
         }
     }
 

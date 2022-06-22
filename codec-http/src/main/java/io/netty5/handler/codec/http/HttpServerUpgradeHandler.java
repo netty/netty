@@ -347,7 +347,7 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
         upgradeCodec.upgradeTo(ctx, request);
 
         // Notify that the upgrade has occurred.
-        ctx.fireUserEventTriggered(new UpgradeEvent(upgradeProtocol, request));
+        ctx.fireInboundEventTriggered(new UpgradeEvent(upgradeProtocol, request));
 
         // Remove this handler from the pipeline.
         ctx.pipeline().remove(HttpServerUpgradeHandler.this);

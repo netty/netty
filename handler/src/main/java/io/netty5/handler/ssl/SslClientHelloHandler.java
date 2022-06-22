@@ -65,8 +65,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + BufferUtil.hexDump(in));
                                 in.skipReadableBytes(in.readableBytes());
-                                ctx.fireUserEventTriggered(new SniCompletionEvent(e));
-                                ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
+                                ctx.fireInboundEventTriggered(new SniCompletionEvent(e));
+                                ctx.fireInboundEventTriggered(new SslHandshakeCompletionEvent(e));
                                 throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA) {

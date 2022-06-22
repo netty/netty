@@ -397,7 +397,7 @@ public class OpenSslCertificateCompressionTest {
                 }
 
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     if (evt instanceof SslHandshakeCompletionEvent) {
                         if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                             channelPromise.trySuccess(evt);
@@ -405,7 +405,7 @@ public class OpenSslCertificateCompressionTest {
                             channelPromise.tryFailure(((SslHandshakeCompletionEvent) evt).cause());
                         }
                     }
-                    ctx.fireUserEventTriggered(evt);
+                    ctx.fireInboundEventTriggered(evt);
                 }
             });
         }

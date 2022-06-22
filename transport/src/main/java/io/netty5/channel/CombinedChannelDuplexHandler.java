@@ -210,12 +210,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        assert ctx == inboundCtx.delegatingCtx();
+    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
-            inboundHandler.userEventTriggered(inboundCtx, evt);
+            inboundHandler.inboundEventTriggered(inboundCtx, evt);
         } else {
-            inboundCtx.fireUserEventTriggered(evt);
+            inboundCtx.fireInboundEventTriggered(evt);
         }
     }
 

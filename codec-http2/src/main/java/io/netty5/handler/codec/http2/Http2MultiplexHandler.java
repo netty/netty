@@ -179,7 +179,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (msg instanceof Http2ResetFrame) {
                 // Reset frames needs to be propagated via user events as these are not flow-controlled and so
                 // must not be controlled by suppressing channel.read() on the child channel.
-                channel.pipeline().fireUserEventTriggered(msg);
+                channel.pipeline().fireInboundEventTriggered(msg);
 
                 // RST frames will also trigger closing of the streams which then will call
                 // AbstractHttp2StreamChannel.streamClosed()
@@ -211,7 +211,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof Http2FrameStreamEvent) {
             Http2FrameStreamEvent event = (Http2FrameStreamEvent) evt;
             DefaultHttp2FrameStream stream = (DefaultHttp2FrameStream) event.stream();
@@ -246,7 +246,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             }
             return;
         }
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireInboundEventTriggered(evt);
     }
 
     private void createStreamChannelIfNeeded(DefaultHttp2FrameStream stream, boolean shutdownInputOnceRegistered)
@@ -327,7 +327,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                     final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                             ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
+                    childChannel.pipeline().fireInboundEventTriggered(goAwayFrame.retainedDuplicate());
                 }
                 return true;
             });

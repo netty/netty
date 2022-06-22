@@ -89,7 +89,7 @@ public abstract class SimpleUserEventChannelHandler<I> implements ChannelHandler
     }
 
     @Override
-    public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public final void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         boolean release = true;
         try {
             if (acceptEvent(evt)) {
@@ -98,7 +98,7 @@ public abstract class SimpleUserEventChannelHandler<I> implements ChannelHandler
                 eventReceived(ctx, ievt);
             } else {
                 release = false;
-                ctx.fireUserEventTriggered(evt);
+                ctx.fireInboundEventTriggered(evt);
             }
         } finally {
             if (autoRelease && release) {

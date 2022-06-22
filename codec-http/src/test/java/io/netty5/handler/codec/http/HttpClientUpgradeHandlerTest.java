@@ -67,7 +67,7 @@ public class HttpClientUpgradeHandlerTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
             this.evt = evt;
         }
     }

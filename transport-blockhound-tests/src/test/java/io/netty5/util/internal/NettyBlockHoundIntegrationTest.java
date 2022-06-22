@@ -307,14 +307,14 @@ public class NettyBlockHoundIntegrationTest {
                                 }
 
                                 @Override
-                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent &&
                                             ((SslHandshakeCompletionEvent) evt).cause() != null) {
                                         Throwable cause = ((SslHandshakeCompletionEvent) evt).cause();
                                         cause.printStackTrace();
                                         error.set(cause);
                                     }
-                                    ctx.fireUserEventTriggered(evt);
+                                    ctx.fireInboundEventTriggered(evt);
                                 }
                             });
                         }
@@ -460,12 +460,12 @@ public class NettyBlockHoundIntegrationTest {
                               .addLast(new ChannelHandler() {
 
                                   @Override
-                                  public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                  public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                       if (evt instanceof SslHandshakeCompletionEvent &&
                                               ((SslHandshakeCompletionEvent) evt).cause() != null) {
                                           ((SslHandshakeCompletionEvent) evt).cause().printStackTrace();
                                       }
-                                      ctx.fireUserEventTriggered(evt);
+                                      ctx.fireInboundEventTriggered(evt);
                                   }
                               });
                         }

@@ -154,7 +154,7 @@ public class DefaultChannelPipelineTailTest {
         };
 
         try {
-            myChannel.pipeline().fireUserEventTriggered("testOnUnhandledInboundUserEventTriggered");
+            myChannel.pipeline().fireInboundEventTriggered("testOnUnhandledInboundUserEventTriggered");
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
         } finally {
             myChannel.close();

@@ -84,7 +84,7 @@ public class Http2MultiplexTransportTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
             Resource.dispose(evt);
         }
     };
@@ -378,7 +378,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent handshakeCompletionEvent =
                                         (SslHandshakeCompletionEvent) evt;
@@ -537,7 +537,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent handshakeCompletionEvent =
                                         (SslHandshakeCompletionEvent) evt;

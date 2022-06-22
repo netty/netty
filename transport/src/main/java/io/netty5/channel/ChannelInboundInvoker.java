@@ -73,13 +73,13 @@ public interface ChannelInboundInvoker {
     ChannelInboundInvoker fireExceptionCaught(Throwable cause);
 
     /**
-     * A {@link Channel} received an user defined event.
+     * A {@link Channel} received a custom defined inbound event.
      *
-     * This will result in having the  {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
-     * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * This will result in having the {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)}
+     * method  called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireUserEventTriggered(Object event);
+    ChannelInboundInvoker fireInboundEventTriggered(Object event);
 
     /**
      * A {@link Channel} received a message.

@@ -157,7 +157,7 @@ public class SniClientTest {
                     ch.pipeline().addFirst(handler);
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                                 if (match) {

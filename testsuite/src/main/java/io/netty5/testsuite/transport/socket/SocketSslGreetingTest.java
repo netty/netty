@@ -230,7 +230,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
 
         @Override
-        public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        public void inboundEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 final SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                 if (event.isSuccess()) {
@@ -261,7 +261,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                     }
                 }
             }
-            ctx.fireUserEventTriggered(evt);
+            ctx.fireInboundEventTriggered(evt);
         }
     }
 }

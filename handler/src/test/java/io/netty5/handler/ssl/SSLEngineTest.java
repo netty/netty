@@ -727,7 +727,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             if (failureExpected) {
                                 serverException = new IllegalStateException("handshake complete. expected failure");
@@ -737,7 +737,7 @@ public abstract class SSLEngineTest {
                             serverException = ((SslHandshakeCompletionEvent) evt).cause();
                             serverLatch.countDown();
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireInboundEventTriggered(evt);
                     }
 
                     @Override
@@ -769,7 +769,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             // With TLS1.3 a mutal auth error will not be propagated as a handshake error most of the
                             // time as the handshake needs NO extra roundtrip.
@@ -780,7 +780,7 @@ public abstract class SSLEngineTest {
                             clientException = ((SslHandshakeCompletionEvent) evt).cause();
                             clientLatch.countDown();
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireInboundEventTriggered(evt);
                     }
 
                     @Override
@@ -894,7 +894,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             if (failureExpected) {
                                 serverException = new IllegalStateException("handshake complete. expected failure");
@@ -904,7 +904,7 @@ public abstract class SSLEngineTest {
                             serverException = ((SslHandshakeCompletionEvent) evt).cause();
                             serverLatch.countDown();
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireInboundEventTriggered(evt);
                     }
 
                     @Override
@@ -956,7 +956,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             if (failureExpected) {
                                 clientException = new IllegalStateException("handshake complete. expected failure");
@@ -966,7 +966,7 @@ public abstract class SSLEngineTest {
                             clientException = ((SslHandshakeCompletionEvent) evt).cause();
                             clientLatch.countDown();
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireInboundEventTriggered(evt);
                     }
 
                     @Override
@@ -1094,7 +1094,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             try {
                                 verifySSLSessionForMutualAuth(
@@ -1126,7 +1126,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             try {
                                 verifySSLSessionForMutualAuth(
@@ -1369,7 +1369,7 @@ public abstract class SSLEngineTest {
                         p.addLast(handler);
                         p.addLast(new ChannelHandler() {
                             @Override
-                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                 if (evt instanceof SslHandshakeCompletionEvent &&
                                         ((SslHandshakeCompletionEvent) evt).isSuccess()) {
                                     // This data will be sent to the client before any of the re-negotiation data can be
@@ -1377,7 +1377,7 @@ public abstract class SSLEngineTest {
                                     // renegotiation which was expected, and respond with a fatal alert.
                                     ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] { 100 }));
                                 }
-                                ctx.fireUserEventTriggered(evt);
+                                ctx.fireInboundEventTriggered(evt);
                             }
 
                             @Override
@@ -1431,7 +1431,7 @@ public abstract class SSLEngineTest {
                         p.addLast(new ChannelHandler() {
                             private int handshakeCount;
                             @Override
-                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                 // OpenSSL SSLEngine sends a fatal alert for the renegotiation handshake because the
                                 // user data read as part of the handshake. The client receives this fatal alert and is
                                 // expected to shutdown the connection. The "invalid data" during the renegotiation
@@ -1444,7 +1444,7 @@ public abstract class SSLEngineTest {
                                     ctx.close();
                                     return;
                                 }
-                                ctx.fireUserEventTriggered(evt);
+                                ctx.fireInboundEventTriggered(evt);
                             }
 
                             @Override
@@ -1815,7 +1815,7 @@ public abstract class SSLEngineTest {
                 ch.pipeline().addFirst(sslHandler);
                 ch.pipeline().addLast(new ChannelHandler() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt instanceof SslHandshakeCompletionEvent) {
                             Throwable cause = ((SslHandshakeCompletionEvent) evt).cause();
                             if (cause == null) {

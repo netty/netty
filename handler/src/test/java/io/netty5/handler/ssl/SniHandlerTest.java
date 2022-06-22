@@ -156,7 +156,7 @@ public class SniHandlerTest {
             SniHandler handler = new SniHandler(new DomainNameMappingBuilder<>(nettyContext).build());
             final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                     if (evt instanceof SslHandshakeCompletionEvent) {
                         assertTrue(evtRef.compareAndSet(null, (SslHandshakeCompletionEvent) evt));
                     }
@@ -202,11 +202,11 @@ public class SniHandlerTest {
             SniHandler handler = new SniHandler(mapping);
             EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                     if (evt instanceof SniCompletionEvent) {
                         assertTrue(evtRef.compareAndSet(null, (SniCompletionEvent) evt));
                     } else {
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireInboundEventTriggered(evt);
                     }
                 }
             });

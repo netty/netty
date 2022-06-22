@@ -816,8 +816,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline fireUserEventTriggered(Object event) {
-        head.invokeUserEventTriggered(event);
+    public final ChannelPipeline fireInboundEventTriggered(Object event) {
+        head.invokeCustomInboundEventTriggered(event);
         return this;
     }
 
@@ -902,6 +902,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public final Future<Void> triggerOutboundEvent(Object event) {
+        return tail.triggerOutboundEvent(event);
+    }
+
+    @Override
     public final Promise<Void> newPromise() {
         return executor().newPromise();
     }
@@ -977,7 +982,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once an user event hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}. This method is responsible
+     * in {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)}. This method is responsible
      * to call {@link Resource#dispose(Object)} on the given event at some point.
      */
     protected void onUnhandledInboundUserEventTriggered(Object evt) {
@@ -1043,7 +1048,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
             ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundUserEventTriggered(evt);
         }
 
@@ -1132,6 +1137,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void flush(ChannelHandlerContext ctx) {
             ctx.channel().unsafe().flush();
+        }
+
+        @Override
+        public Future<Void> triggerOutboundEvent(ChannelHandlerContext ctx, Object event) {
+            Promise<Void> promise = ctx.newPromise();
+            ctx.channel().unsafe().triggerOutboundEvent(event, promise);
+            return promise.asFuture();
         }
     }
 }

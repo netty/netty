@@ -47,8 +47,8 @@ public abstract class OcspClientHandler implements ChannelHandler {
     protected abstract boolean verify(ChannelHandlerContext ctx, ReferenceCountedOpenSslEngine engine) throws Exception;
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireUserEventTriggered(evt);
+    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireInboundEventTriggered(evt);
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
             if (event.isSuccess() && !verify(ctx, engine)) {
