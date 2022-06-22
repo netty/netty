@@ -690,14 +690,16 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      * Returns the {@link ThreadProperties} of the {@link Thread} that powers the {@link SingleThreadEventExecutor}.
      * If the {@link SingleThreadEventExecutor} is not started yet, this operation will start it and block until
      * it is fully started.
+     *
+     * @throws InterruptedException if this thread is interrupted while waiting for the thread to start.
      */
-    public final ThreadProperties threadProperties() {
+    public final ThreadProperties threadProperties() throws InterruptedException {
         ThreadProperties threadProperties = this.threadProperties;
         if (threadProperties == null) {
             Thread thread = this.thread;
             if (thread == null) {
                 assert !inEventLoop();
-                submit(NOOP_TASK).syncUninterruptibly();
+                submit(NOOP_TASK).sync();
                 thread = this.thread;
                 assert thread != null;
             }

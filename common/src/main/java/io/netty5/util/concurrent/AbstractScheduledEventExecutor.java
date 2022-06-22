@@ -397,20 +397,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public RunnableFuture<V> syncUninterruptibly() {
-            future.syncUninterruptibly();
-            return this;
-        }
-
-        @Override
         public RunnableFuture<V> await() throws InterruptedException {
             future.await();
-            return this;
-        }
-
-        @Override
-        public RunnableFuture<V> awaitUninterruptibly() {
-            future.awaitUninterruptibly();
             return this;
         }
 
@@ -442,16 +430,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         @Override
         public boolean await(long timeoutMillis) throws InterruptedException {
             return future.await(timeoutMillis);
-        }
-
-        @Override
-        public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-            return future.awaitUninterruptibly(timeout, unit);
-        }
-
-        @Override
-        public boolean awaitUninterruptibly(long timeoutMillis) {
-            return future.awaitUninterruptibly(timeoutMillis);
         }
 
         @Override

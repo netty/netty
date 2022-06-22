@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-
 /**
  * The default {@link ChannelGroupFuture} implementation.
  */
@@ -122,18 +121,6 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     @Override
     public DefaultChannelGroupFuture await() throws InterruptedException {
         super.await();
-        return this;
-    }
-
-    @Override
-    public DefaultChannelGroupFuture awaitUninterruptibly() {
-        super.awaitUninterruptibly();
-        return this;
-    }
-
-    @Override
-    public DefaultChannelGroupFuture syncUninterruptibly() {
-        super.syncUninterruptibly();
         return this;
     }
 

@@ -146,12 +146,6 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<Future<Void>>
     ChannelGroupFuture await() throws InterruptedException;
 
     @Override
-    ChannelGroupFuture awaitUninterruptibly();
-
-    @Override
-    ChannelGroupFuture syncUninterruptibly();
-
-    @Override
     ChannelGroupFuture sync() throws InterruptedException;
 
     /**

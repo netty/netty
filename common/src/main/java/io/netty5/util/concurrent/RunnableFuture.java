@@ -30,11 +30,5 @@ public interface RunnableFuture<V> extends Runnable, Future<V> {
     RunnableFuture<V> sync() throws InterruptedException;
 
     @Override
-    RunnableFuture<V> syncUninterruptibly();
-
-    @Override
     RunnableFuture<V> await() throws InterruptedException;
-
-    @Override
-    RunnableFuture<V> awaitUninterruptibly();
 }

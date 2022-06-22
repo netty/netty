@@ -327,10 +327,10 @@ public class NettyBlockHoundIntegrationTest {
             assertNull(error.get());
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
             Resource.dispose(sslClientCtx);
@@ -476,10 +476,10 @@ public class NettyBlockHoundIntegrationTest {
             serverSslHandler.handshakeFuture().await().sync();
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
             group.shutdownGracefully();
             Resource.dispose(sslClientCtx);

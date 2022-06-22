@@ -92,17 +92,7 @@ abstract class Cache<E> {
         }
 
         @Override
-        public Future<Object> syncUninterruptibly() {
-            return this;
-        }
-
-        @Override
         public Future<Object> await() throws InterruptedException {
-            return this;
-        }
-
-        @Override
-        public Future<Object> awaitUninterruptibly() {
             return this;
         }
 
@@ -113,16 +103,6 @@ abstract class Cache<E> {
 
         @Override
         public boolean await(long timeoutMillis) throws InterruptedException {
-            return true;
-        }
-
-        @Override
-        public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-            return true;
-        }
-
-        @Override
-        public boolean awaitUninterruptibly(long timeoutMillis) {
             return true;
         }
 

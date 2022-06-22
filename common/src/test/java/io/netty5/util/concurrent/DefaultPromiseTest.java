@@ -332,7 +332,7 @@ public class DefaultPromiseTest {
     }
 
     @Test
-    public void testSignalRace() {
+    public void testSignalRace() throws Exception {
         final long wait = TimeUnit.NANOSECONDS.convert(10, TimeUnit.SECONDS);
         EventExecutor executor = null;
         try {
@@ -349,7 +349,7 @@ public class DefaultPromiseTest {
             for (final Map.Entry<Thread, DefaultPromise<Void>> promise : promises.entrySet()) {
                 promise.getKey().start();
                 final long start = System.nanoTime();
-                promise.getValue().awaitUninterruptibly(wait, TimeUnit.NANOSECONDS);
+                promise.getValue().await(wait, TimeUnit.NANOSECONDS);
                 assertThat(System.nanoTime() - start).isLessThan(wait);
             }
         } finally {
@@ -421,20 +421,6 @@ public class DefaultPromiseTest {
 
         try {
             promise.sync();
-        } catch (CompletionException e) {
-            assertSame(exception, e.getCause());
-        }
-    }
-
-    @Test
-    public void throwUncheckedSyncUninterruptibly() {
-        Exception exception = new Exception();
-        DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
-        promise.setFailure(exception);
-        assertTrue(promise.isFailed());
-
-        try {
-            promise.syncUninterruptibly();
         } catch (CompletionException e) {
             assertSame(exception, e.getCause());
         }

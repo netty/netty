@@ -26,23 +26,23 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 public class FutureCompletionStageTest {
 
     @Test
-    public void testCompleteFuture() {
-        FutureCompletionStage stage = FutureCompletionStage.toFutureCompletionStage(
+    public void testCompleteFuture() throws Exception {
+        FutureCompletionStage<Boolean> stage = FutureCompletionStage.toFutureCompletionStage(
                 CompletableFuture.completedFuture(Boolean.TRUE), ImmediateEventExecutor.INSTANCE);
         assertSame(ImmediateEventExecutor.INSTANCE, stage.executor());
-        assertSame(Boolean.TRUE, stage.future().syncUninterruptibly().getNow());
+        assertSame(Boolean.TRUE, stage.future().sync().getNow());
     }
 
     @Test
-    public void testCompleteFutureFailed() {
+    public void testCompleteFutureFailed() throws Exception {
         IllegalStateException exception = new IllegalStateException();
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         future.completeExceptionally(exception);
 
-        FutureCompletionStage stage = FutureCompletionStage.toFutureCompletionStage(
+        FutureCompletionStage<Boolean> stage = FutureCompletionStage.toFutureCompletionStage(
                 future, ImmediateEventExecutor.INSTANCE);
         assertSame(ImmediateEventExecutor.INSTANCE, stage.executor());
-        assertSame(exception, stage.future().awaitUninterruptibly().cause());
+        assertSame(exception, stage.future().await().cause());
     }
 
     @Test
@@ -53,14 +53,14 @@ public class FutureCompletionStageTest {
     }
 
     @Test
-    public void testFutureCompletionStageWithDifferentExecutor() {
+    public void testFutureCompletionStageWithDifferentExecutor() throws Exception {
         MultithreadEventExecutorGroup group = new MultithreadEventExecutorGroup(1, Executors.defaultThreadFactory());
         try {
             FutureCompletionStage<Boolean> stage = group.next().newSucceededFuture(Boolean.TRUE).asStage();
             FutureCompletionStage<Boolean> stage2 = FutureCompletionStage.toFutureCompletionStage(
                     stage, ImmediateEventExecutor.INSTANCE);
             assertNotSame(stage, stage2);
-            assertSame(stage.future().syncUninterruptibly().getNow(), stage2.future().syncUninterruptibly().getNow());
+            assertSame(stage.future().sync().getNow(), stage2.future().sync().getNow());
         } finally {
             group.shutdownGracefully();
         }

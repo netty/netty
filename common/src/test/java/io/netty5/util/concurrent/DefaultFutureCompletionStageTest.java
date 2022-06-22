@@ -93,7 +93,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenApply() {
+    public void testThenApply() throws Exception {
         testThenApply0(stage -> stage.thenApply(v -> {
             assertSame(INITIAL_BOOLEAN, v);
             assertTrue(stage.executor().inEventLoop());
@@ -103,7 +103,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenApplyAsync() {
+    public void testThenApplyAsync() throws Exception {
         testThenApply0(stage -> stage.thenApplyAsync(v -> {
             assertSame(INITIAL_BOOLEAN, v);
             assertFalse(stage.executor().inEventLoop());
@@ -113,7 +113,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenApplyAsyncWithExecutor() {
+    public void testThenApplyAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenApply0(stage -> stage.thenApplyAsync(v -> {
             assertSame(INITIAL_BOOLEAN, v);
@@ -124,7 +124,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenApplyCallbackNotExecuted() {
+    public void testThenApplyCallbackNotExecuted() throws Exception {
         testHandle0(newFailedFuture(), stage -> stage.thenApply(v -> {
             fail();
             return null;
@@ -132,7 +132,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenApplyAsyncCallbackNotExecuted() {
+    public void testThenApplyAsyncCallbackNotExecuted() throws Exception {
         testHandle0(newFailedFuture(), stage -> stage.thenApplyAsync(v -> {
             fail();
             return null;
@@ -140,7 +140,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenApplyAsyncWithExecutorCallbackNotExecuted() {
+    public void testThenApplyAsyncWithExecutorCallbackNotExecuted() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testHandle0(newFailedFuture(), stage -> stage.thenApplyAsync(v -> {
             fail();
@@ -149,21 +149,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenApplyFunctionThrows() {
+    public void testThenApplyFunctionThrows() throws Exception {
         testThenApply0(stage -> stage.thenApply(v -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenApplyAsyncFunctionThrows() {
+    public void testThenApplyAsyncFunctionThrows() throws Exception {
         testThenApply0(stage -> stage.thenApplyAsync(v -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenApplyAsyncWithExecutorFunctionThrows() {
+    public void testThenApplyAsyncWithExecutorFunctionThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenApply0(stage -> stage.thenApplyAsync(v -> {
             throw EXPECTED_EXCEPTION;
@@ -172,20 +172,20 @@ public class DefaultFutureCompletionStageTest {
 
     private void testHandle0(Future<Boolean> future,
                              Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Boolean>> fn,
-                             boolean exception) {
+                             boolean exception) throws Exception {
         FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(future);
 
-        Future<Boolean> f = fn.apply(stage).future().awaitUninterruptibly();
+        Future<Boolean> f = fn.apply(stage).future().await();
         if (exception) {
             assertSame(EXPECTED_EXCEPTION, f.cause());
         } else {
-            assertSame(EXPECTED_BOOLEAN, f.syncUninterruptibly().getNow());
+            assertSame(EXPECTED_BOOLEAN, f.sync().getNow());
         }
     }
 
     private void testWhenComplete0(Future<Boolean> future,
                              Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Boolean>> fn,
-                             boolean exception) {
+                             boolean exception) throws Exception {
         testHandle0(future, stage -> fn.apply(stage).thenApply(v -> {
             assertSame(INITIAL_BOOLEAN, v);
             return EXPECTED_BOOLEAN;
@@ -193,12 +193,13 @@ public class DefaultFutureCompletionStageTest {
     }
 
     private void testThenApply0(
-            Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Boolean>> fn, boolean exception) {
+            Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Boolean>> fn, boolean exception)
+            throws Exception {
         testHandle0(newSucceededFuture(), fn, exception);
     }
 
     @Test
-    public void testThenAccept() {
+    public void testThenAccept() throws Exception {
         testThenAccept0(stage -> stage.thenAccept(v -> {
             assertSame(INITIAL_BOOLEAN, v);
             assertTrue(stage.executor().inEventLoop());
@@ -206,7 +207,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptAsync() {
+    public void testThenAcceptAsync() throws Exception {
         testThenAccept0(stage -> stage.thenAcceptAsync(v -> {
             assertSame(INITIAL_BOOLEAN, v);
 
@@ -215,7 +216,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptAsyncWithExecutor() {
+    public void testThenAcceptAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenAccept0(stage -> stage.thenAcceptAsync(v -> {
             assertSame(INITIAL_BOOLEAN, v);
@@ -226,21 +227,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptCallbackNotExecuted() {
+    public void testThenAcceptCallbackNotExecuted() throws Exception {
         testThenAccept0(newFailedFuture(), stage -> stage.thenAccept(v -> {
             fail();
         }), true);
     }
 
     @Test
-    public void testThenAcceptAsyncCallbackNotExecuted() {
+    public void testThenAcceptAsyncCallbackNotExecuted() throws Exception {
         testThenAccept0(newFailedFuture(), stage -> stage.thenAcceptAsync(v -> {
             fail();
         }), true);
     }
 
     @Test
-    public void testThenAcceptAsyncWithExecutorCallbackNotExecuted() {
+    public void testThenAcceptAsyncWithExecutorCallbackNotExecuted() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenAccept0(newFailedFuture(), stage -> stage.thenAcceptAsync(v -> {
            fail();
@@ -248,21 +249,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptConsumerThrows() {
+    public void testThenAcceptConsumerThrows() throws Exception {
         testThenAccept0(stage -> stage.thenAccept(v -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenAcceptAsyncConsumerThrows() {
+    public void testThenAcceptAsyncConsumerThrows() throws Exception {
         testThenAccept0(stage -> stage.thenAcceptAsync(v -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenAcceptAsyncWithExecutorConsumerThrows() {
+    public void testThenAcceptAsyncWithExecutorConsumerThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenAccept0(stage -> stage.thenAcceptAsync(v -> {
             throw EXPECTED_EXCEPTION;
@@ -270,37 +271,39 @@ public class DefaultFutureCompletionStageTest {
     }
 
     private void testThenAccept0(
-            Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Void>> fn, boolean exception) {
+            Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Void>> fn, boolean exception)
+            throws Exception {
         testThenAccept0(newSucceededFuture(), fn, exception);
     }
 
     private void testThenAccept0(Future<Boolean> future,
-            Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Void>> fn, boolean exception) {
+            Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Void>> fn, boolean exception)
+            throws Exception {
         FutureCompletionStage<Boolean> stage = new DefaultFutureCompletionStage<>(future);
-        Future<Void> f = fn.apply(stage).future().awaitUninterruptibly();
+        Future<Void> f = fn.apply(stage).future().await();
         if (exception) {
             assertSame(EXPECTED_EXCEPTION, f.cause());
         } else {
-            assertNull(f.syncUninterruptibly().getNow());
+            assertNull(f.sync().getNow());
         }
     }
 
     @Test
-    public void testThenRun() {
+    public void testThenRun() throws Exception {
         testThenAccept0(stage -> stage.thenRun(() -> {
             assertTrue(stage.executor().inEventLoop());
         }), false);
     }
 
     @Test
-    public void testThenRunAsync() {
+    public void testThenRunAsync() throws Exception {
         testThenAccept0(stage -> stage.thenRunAsync(() -> {
             assertFalse(stage.executor().inEventLoop());
         }), false);
     }
 
     @Test
-    public void testThenRunAsyncWithExecutor() {
+    public void testThenRunAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenAccept0(stage -> stage.thenRunAsync(() -> {
             assertFalse(stage.executor().inEventLoop());
@@ -309,21 +312,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenRunCallbackNotExecuted() {
+    public void testThenRunCallbackNotExecuted() throws Exception {
         testThenAccept0(newFailedFuture(), stage -> stage.thenRun(() -> {
             fail();
         }), true);
     }
 
     @Test
-    public void testThenRunAsyncCallbackNotExecuted() {
+    public void testThenRunAsyncCallbackNotExecuted() throws Exception {
         testThenAccept0(newFailedFuture(), stage -> stage.thenRunAsync(() -> {
             fail();
         }), true);
     }
 
     @Test
-    public void testThenRunAsyncWithExecutorCallbackNotExecuted() {
+    public void testThenRunAsyncWithExecutorCallbackNotExecuted() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenAccept0(newFailedFuture(), stage -> stage.thenRunAsync(() -> {
             fail();
@@ -331,21 +334,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenRunTaskThrows() {
+    public void testThenRunTaskThrows() throws Exception {
         testThenAccept0(stage -> stage.thenRun(() -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenRunAsyncTaskThrows() {
+    public void testThenRunAsyncTaskThrows() throws Exception {
         testThenAccept0(stage -> stage.thenRunAsync(() -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenRunAsyncWithExecutorTaskThrows() {
+    public void testThenRunAsyncWithExecutorTaskThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testThenAccept0(stage -> stage.thenRunAsync(() -> {
             throw EXPECTED_EXCEPTION;
@@ -353,7 +356,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCombine() {
+    public void testThenCombine() throws Exception {
         testCombination0((stage, other) -> stage.thenCombine(other, (v1, v2) -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertSame(v2, INITIAL_BOOLEAN);
@@ -364,7 +367,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCombineAsync() {
+    public void testThenCombineAsync() throws Exception {
         testCombination0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertSame(v2, INITIAL_BOOLEAN);
@@ -375,7 +378,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCombineAsyncWithExecutor() {
+    public void testThenCombineAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testCombination0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
@@ -388,7 +391,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCombineThrowable() {
+    public void testThenCombineThrowable() throws Exception {
         testCombination0((stage, other) -> stage.thenCombine(other, (v1, v2) -> {
             fail();
             return 1;
@@ -396,7 +399,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCombineAsyncThrowable() {
+    public void testThenCombineAsyncThrowable() throws Exception {
         testCombination0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
             fail();
             return 1;
@@ -404,7 +407,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCombineAsyncWithExecutorThrowable() {
+    public void testThenCombineAsyncWithExecutorThrowable() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testCombination0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
@@ -414,21 +417,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCombineThrows() {
+    public void testThenCombineThrows() throws Exception {
         testCombination0((stage, other) -> stage.thenCombine(other, (v1, v2) -> {
             throw EXPECTED_EXCEPTION;
         }), true, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testThenCombineAsyncThrows() {
+    public void testThenCombineAsyncThrows() throws Exception {
         testCombination0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
             throw EXPECTED_EXCEPTION;
         }), true, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testThenCombineAsyncWithExecutorThrows() {
+    public void testThenCombineAsyncWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testCombination0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
@@ -437,7 +440,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptBoth() {
+    public void testThenAcceptBoth() throws Exception {
         testBoth0((stage, other) -> stage.thenAcceptBoth(other, (v1, v2) -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertSame(v2, INITIAL_BOOLEAN);
@@ -446,7 +449,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptBothAsync() {
+    public void testThenAcceptBothAsync() throws Exception {
         testBoth0((stage, other) -> stage.thenAcceptBothAsync(other, (v1, v2) -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertSame(v2, INITIAL_BOOLEAN);
@@ -455,7 +458,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptBothAsyncWithExecutor() {
+    public void testThenAcceptBothAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testBoth0((stage, other) -> stage.thenAcceptBothAsync(other, (v1, v2) -> {
@@ -467,21 +470,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptBothThrowable() {
+    public void testThenAcceptBothThrowable() throws Exception {
         testBoth0((stage, other) -> stage.thenAcceptBoth(other, (v1, v2) -> {
             fail();
         }), CombinationTestMode.COMPLETE_EXCEPTIONAL);
     }
 
     @Test
-    public void testThenAcceptBothAsyncThrowable() {
+    public void testThenAcceptBothAsyncThrowable() throws Exception {
         testBoth0((stage, other) -> stage.thenAcceptBothAsync(other, (v1, v2) -> {
             fail();
         }), CombinationTestMode.COMPLETE_EXCEPTIONAL);
     }
 
     @Test
-    public void testThenAcceptBothAsyncWithExecutorThrowable() {
+    public void testThenAcceptBothAsyncWithExecutorThrowable() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testBoth0((stage, other) -> stage.thenAcceptBothAsync(other, (v1, v2) -> {
@@ -490,21 +493,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenAcceptBothThrows() {
+    public void testThenAcceptBothThrows() throws Exception {
         testBoth0((stage, other) -> stage.thenAcceptBoth(other, (v1, v2) -> {
             throw EXPECTED_EXCEPTION;
         }), CombinationTestMode.THROW);
     }
 
     @Test
-    public void testThenAcceptBothAsyncThrows() {
+    public void testThenAcceptBothAsyncThrows() throws Exception {
         testBoth0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
             throw EXPECTED_EXCEPTION;
         }), CombinationTestMode.THROW);
     }
 
     @Test
-    public void testThenAcceptBothAsyncWithExecutorThrows() {
+    public void testThenAcceptBothAsyncWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testBoth0((stage, other) -> stage.thenCombineAsync(other, (v1, v2) -> {
@@ -513,21 +516,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testRunAfterBoth() {
+    public void testRunAfterBoth() throws Exception {
         testBoth0((stage, other) -> stage.runAfterBoth(other, () -> {
             assertTrue(stage.executor().inEventLoop());
         }), CombinationTestMode.COMPLETE);
     }
 
     @Test
-    public void testRunAfterBothAsync() {
+    public void testRunAfterBothAsync() throws Exception {
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
             assertFalse(stage.executor().inEventLoop());
         }), CombinationTestMode.COMPLETE);
     }
 
     @Test
-    public void testRunAfterBothAsyncWithExecutor() {
+    public void testRunAfterBothAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
@@ -537,21 +540,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testRunAfterBothThrowable() {
+    public void testRunAfterBothThrowable() throws Exception {
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
             fail();
         }), CombinationTestMode.COMPLETE_EXCEPTIONAL);
     }
 
     @Test
-    public void testRunAfterBothAsyncThrowable() {
+    public void testRunAfterBothAsyncThrowable() throws Exception {
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
             fail();
         }), CombinationTestMode.COMPLETE_EXCEPTIONAL);
     }
 
     @Test
-    public void testRunAfterBothAsyncWithExecutorThrowable() {
+    public void testRunAfterBothAsyncWithExecutorThrowable() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
@@ -560,21 +563,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testRunAfterBothThrows() {
+    public void testRunAfterBothThrows() throws Exception {
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
             throw EXPECTED_EXCEPTION;
         }), CombinationTestMode.THROW);
     }
 
     @Test
-    public void testRunAfterBothAsyncThrows() {
+    public void testRunAfterBothAsyncThrows() throws Exception {
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
             throw EXPECTED_EXCEPTION;
         }), CombinationTestMode.THROW);
     }
 
     @Test
-    public void testRunAfterBothAsyncWithExecutorThrows() {
+    public void testRunAfterBothAsyncWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testBoth0((stage, other) -> stage.runAfterBothAsync(other, () -> {
@@ -583,7 +586,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testApplyToEither() {
+    public void testApplyToEither() throws Exception {
         testCombination0((stage, other) -> stage.applyToEither(other, v1 -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertTrue(stage.executor().inEventLoop());
@@ -593,7 +596,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testApplyToEitherAsync() {
+    public void testApplyToEitherAsync() throws Exception {
         testCombination0((stage, other) -> stage.applyToEitherAsync(other, v1 -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertFalse(stage.executor().inEventLoop());
@@ -603,7 +606,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testApplyToEitherAsyncWithExecutor() {
+    public void testApplyToEitherAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testCombination0((stage, other) -> stage.applyToEitherAsync(other, v1 -> {
@@ -615,21 +618,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testApplyToEitherThrows() {
+    public void testApplyToEitherThrows() throws Exception {
         testCombination0((stage, other) -> stage.applyToEither(other, v1 -> {
             throw EXPECTED_EXCEPTION;
         }), false, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testApplyToEitherAsyncThrows() {
+    public void testApplyToEitherAsyncThrows() throws Exception {
         testCombination0((stage, other) -> stage.applyToEitherAsync(other, v1 -> {
             throw EXPECTED_EXCEPTION;
         }), false, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testApplyToEitherAsyncWithExecutorThrows() {
+    public void testApplyToEitherAsyncWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testCombination0((stage, other) -> stage.applyToEitherAsync(other, v1 -> {
@@ -638,7 +641,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testAcceptEither() {
+    public void testAcceptEither() throws Exception {
         testEither0((stage, other) -> stage.acceptEither(other, v1 -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertTrue(stage.executor().inEventLoop());
@@ -646,7 +649,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testAcceptEitherAsync() {
+    public void testAcceptEitherAsync() throws Exception {
         testEither0((stage, other) -> stage.acceptEitherAsync(other, v1 -> {
             assertSame(v1, INITIAL_BOOLEAN);
             assertFalse(stage.executor().inEventLoop());
@@ -654,7 +657,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testAcceptEitherAsyncWithExecutor() {
+    public void testAcceptEitherAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testEither0((stage, other) -> stage.acceptEitherAsync(other, v1 -> {
@@ -665,21 +668,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testAcceptEitherThrows() {
+    public void testAcceptEitherThrows() throws Exception {
         testEither0((stage, other) -> stage.acceptEither(other, v1 -> {
             throw EXPECTED_EXCEPTION;
         }), false, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testAcceptEitherAsyncThrows() {
+    public void testAcceptEitherAsyncThrows() throws Exception {
         testEither0((stage, other) -> stage.acceptEitherAsync(other, v1 -> {
             throw EXPECTED_EXCEPTION;
         }), false, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testAcceptEitherAsyncWithExecutorThrows() {
+    public void testAcceptEitherAsyncWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testEither0((stage, other) -> stage.acceptEitherAsync(other, v1 -> {
@@ -688,21 +691,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testRunAfterEither() {
+    public void testRunAfterEither() throws Exception {
         testEither0((stage, other) -> stage.runAfterEither(other, () -> {
             assertTrue(stage.executor().inEventLoop());
         }), false, CombinationTestMode.COMPLETE);
     }
 
     @Test
-    public void testRunAfterEitherAsync() {
+    public void testRunAfterEitherAsync() throws Exception {
         testEither0((stage, other) -> stage.runAfterEitherAsync(other, () -> {
             assertFalse(stage.executor().inEventLoop());
         }), false, CombinationTestMode.COMPLETE);
     }
 
     @Test
-    public void testRunAfterEitherAsyncWithExecutor() {
+    public void testRunAfterEitherAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testEither0((stage, other) -> stage.runAfterEitherAsync(other, () -> {
@@ -712,21 +715,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testRunAfterEitherThrows() {
+    public void testRunAfterEitherThrows() throws Exception {
         testEither0((stage, other) -> stage.runAfterEither(other, () -> {
             throw EXPECTED_EXCEPTION;
         }), false, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testRunAfterEitherAsyncThrows() {
+    public void testRunAfterEitherAsyncThrows() throws Exception {
         testEither0((stage, other) -> stage.runAfterEitherAsync(other, () -> {
             throw EXPECTED_EXCEPTION;
         }), false, CombinationTestMode.THROW);
     }
 
     @Test
-    public void testRunAfterEitherAsyncWithExecutorThrows() {
+    public void testRunAfterEitherAsyncWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testEither0((stage, other) -> stage.runAfterEitherAsync(other, () -> {
@@ -742,7 +745,7 @@ public class DefaultFutureCompletionStageTest {
 
     private void testEither0(BiFunction<FutureCompletionStage<Boolean>,
             CompletionStage<Boolean>, FutureCompletionStage<Void>> fn,
-                             boolean notifyAll, CombinationTestMode testMode) {
+                             boolean notifyAll, CombinationTestMode testMode) throws Exception {
         testCombination0((futureStage, stage) -> fn.apply(futureStage, stage).thenApply(v -> {
             assertNull(v);
             return EXPECTED_INTEGER;
@@ -750,7 +753,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     private void testBoth0(BiFunction<FutureCompletionStage<Boolean>,
-            CompletionStage<Boolean>, FutureCompletionStage<Void>> fn, CombinationTestMode testMode) {
+            CompletionStage<Boolean>, FutureCompletionStage<Void>> fn, CombinationTestMode testMode) throws Exception {
         testCombination0((futureStage, stage) -> fn.apply(futureStage, stage).thenApply(v -> {
             assertNull(v);
             return EXPECTED_INTEGER;
@@ -759,7 +762,7 @@ public class DefaultFutureCompletionStageTest {
 
     private void testCombination0(BiFunction<FutureCompletionStage<Boolean>,
             CompletionStage<Boolean>, FutureCompletionStage<Integer>> fn,
-                           boolean notifyAll, CombinationTestMode testMode) {
+                           boolean notifyAll, CombinationTestMode testMode) throws Exception {
         EventExecutor executor = executor();
 
         // We run this in a loop as we we need to ensure our implementation is thread-safe as the both stages
@@ -807,7 +810,7 @@ public class DefaultFutureCompletionStageTest {
                 }
             }
 
-            f.awaitUninterruptibly();
+            f.await();
 
             switch (testMode) {
                 case COMPLETE_EXCEPTIONAL:
@@ -815,7 +818,7 @@ public class DefaultFutureCompletionStageTest {
                     assertSame(EXPECTED_EXCEPTION, f.cause());
                     break;
                 case COMPLETE:
-                    assertEquals(EXPECTED_INTEGER, f.syncUninterruptibly().getNow());
+                    assertEquals(EXPECTED_INTEGER, f.sync().getNow());
                     break;
                 default:
                     fail();
@@ -824,7 +827,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenCompose() {
+    public void testThenCompose() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.thenCompose(v -> {
             assertSame(INITIAL_BOOLEAN, v);
 
@@ -835,7 +838,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenComposeAsync() {
+    public void testThenComposeAsync() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.thenComposeAsync(v -> {
             assertSame(INITIAL_BOOLEAN, v);
 
@@ -846,7 +849,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenComposeAsyncWithExecutor() {
+    public void testThenComposeAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testHandle0(newSucceededFuture(), stage -> stage.thenComposeAsync(v -> {
@@ -860,21 +863,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testThenComposeThrows() {
+    public void testThenComposeThrows() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.thenCompose(v -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenComposeAsyncThrows() {
+    public void testThenComposeAsyncThrows() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.thenComposeAsync(v -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testThenComposeWithExecutorThrows() {
+    public void testThenComposeWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testHandle0(newSucceededFuture(), stage -> stage.thenComposeAsync(v -> {
             throw EXPECTED_EXCEPTION;
@@ -882,7 +885,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testExceptionally() {
+    public void testExceptionally() throws Exception {
         testHandle0(newFailedFuture(), stage -> stage.exceptionally(error -> {
             assertSame(EXPECTED_EXCEPTION, error);
             return EXPECTED_BOOLEAN;
@@ -890,14 +893,14 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testExceptionallyThrows() {
+    public void testExceptionallyThrows() throws Exception {
         testHandle0(newFailedFuture(), stage -> stage.exceptionally(error -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testWhenComplete() {
+    public void testWhenComplete() throws Exception {
         testWhenComplete0(newSucceededFuture(), stage -> stage.whenComplete((v, cause) -> {
             assertSame(INITIAL_BOOLEAN, v);
             assertNull(cause);
@@ -906,7 +909,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testWhenCompleteAsync() {
+    public void testWhenCompleteAsync() throws Exception {
         testWhenComplete0(newSucceededFuture(), stage -> stage.whenCompleteAsync((v, cause) -> {
             assertSame(INITIAL_BOOLEAN, v);
             assertNull(cause);
@@ -916,7 +919,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testWhenCompleteAsyncWithExecutor() {
+    public void testWhenCompleteAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testWhenComplete0(newSucceededFuture(), stage -> stage.whenCompleteAsync((v, cause) -> {
@@ -929,7 +932,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testWhenCompleteThrowable() {
+    public void testWhenCompleteThrowable() throws Exception {
         testWhenComplete0(newFailedFuture(), stage -> stage.whenComplete((v, cause) -> {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
@@ -939,7 +942,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testWhenCompleteAsyncThrowable() {
+    public void testWhenCompleteAsyncThrowable() throws Exception {
         testWhenComplete0(newFailedFuture(), stage -> stage.whenCompleteAsync((v, cause) -> {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
@@ -949,7 +952,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testWhenCompleteAsyncWithExecutorThrowable() {
+    public void testWhenCompleteAsyncWithExecutorThrowable() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testWhenComplete0(newFailedFuture(), stage -> stage.whenCompleteAsync((v, cause) -> {
             assertSame(EXPECTED_EXCEPTION, cause);
@@ -961,21 +964,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testWhenCompleteThrows() {
+    public void testWhenCompleteThrows() throws Exception {
         testWhenComplete0(newSucceededFuture(), stage -> stage.whenComplete((v, cause) -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testWhenCompleteAsyncThrows() {
+    public void testWhenCompleteAsyncThrows() throws Exception {
         testWhenComplete0(newSucceededFuture(), stage -> stage.whenCompleteAsync((v, cause) -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testWhenCompleteAsyncWithExecutorThrows() {
+    public void testWhenCompleteAsyncWithExecutorThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testWhenComplete0(newSucceededFuture(), stage -> stage.whenCompleteAsync((v, cause) -> {
             throw EXPECTED_EXCEPTION;
@@ -983,7 +986,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testHandle() {
+    public void testHandle() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.handle((v, cause) -> {
             assertSame(INITIAL_BOOLEAN, v);
             assertNull(cause);
@@ -995,7 +998,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testHandleAsync() {
+    public void testHandleAsync() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.handleAsync((v, cause) -> {
             assertSame(INITIAL_BOOLEAN, v);
             assertNull(cause);
@@ -1007,7 +1010,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testHandleAsyncWithExecutor() {
+    public void testHandleAsyncWithExecutor() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
 
         testHandle0(newSucceededFuture(), stage -> stage.handleAsync((v, cause) -> {
@@ -1022,7 +1025,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testHandleThrowable() {
+    public void testHandleThrowable() throws Exception {
         testHandle0(newFailedFuture(), stage -> stage.handle((v, cause) -> {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
@@ -1034,7 +1037,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testHandleAsyncThrowable() {
+    public void testHandleAsyncThrowable() throws Exception {
         testHandle0(newFailedFuture(), stage -> stage.handleAsync((v, cause) -> {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
@@ -1046,7 +1049,7 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testHandleAsyncWithExecutorThrowable() {
+    public void testHandleAsyncWithExecutorThrowable() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testHandle0(newFailedFuture(), stage -> stage.handleAsync((v, cause) -> {
             assertSame(EXPECTED_EXCEPTION, cause);
@@ -1060,21 +1063,21 @@ public class DefaultFutureCompletionStageTest {
     }
 
     @Test
-    public void testHandleFunctionThrows() {
+    public void testHandleFunctionThrows() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.handle((v, cause) -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testHandleAsyncFunctionThrows() {
+    public void testHandleAsyncFunctionThrows() throws Exception {
         testHandle0(newSucceededFuture(), stage -> stage.handleAsync((v, cause) -> {
             throw EXPECTED_EXCEPTION;
         }), true);
     }
 
     @Test
-    public void testHandleAsyncWithExecutorFunctionThrows() {
+    public void testHandleAsyncWithExecutorFunctionThrows() throws Exception {
         EventExecutor asyncExecutor = asyncExecutor();
         testHandle0(newSucceededFuture(), stage -> stage.handleAsync((v, cause) -> {
             throw EXPECTED_EXCEPTION;

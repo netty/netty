@@ -49,36 +49,36 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
         final List<Future<Void>> futures = new ArrayList<>();
 
         @Setup(Level.Invocation)
-        public void reset() {
+        public void reset() throws Exception {
             futures.clear();
             executor.submit(() -> {
                 for (int i = 1; i <= num; i++) {
                     futures.add(executor.schedule(NO_OP, i, TimeUnit.HOURS));
                 }
-            }).syncUninterruptibly();
+            }).sync();
         }
     }
 
     @TearDown(Level.Trial)
     public void stop() throws Exception {
-        executor.shutdownGracefully().syncUninterruptibly();
+        executor.shutdownGracefully().sync();
     }
 
     @Benchmark
-    public Future<?> cancelInOrder(final FuturesHolder futuresHolder) {
+    public Future<?> cancelInOrder(final FuturesHolder futuresHolder) throws Exception {
         return executor.submit(() -> {
             for (int i = 0; i < futuresHolder.num; i++) {
                 futuresHolder.futures.get(i).cancel();
             }
-        }).syncUninterruptibly();
+        }).sync();
     }
 
     @Benchmark
-    public Future<?> cancelInReverseOrder(final FuturesHolder futuresHolder) {
+    public Future<?> cancelInReverseOrder(final FuturesHolder futuresHolder) throws Exception {
         return executor.submit(() -> {
             for (int i = futuresHolder.num - 1; i >= 0; i--) {
                 futuresHolder.futures.get(i).cancel();
             }
-        }).syncUninterruptibly();
+        }).sync();
     }
 }
