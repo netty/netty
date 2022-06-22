@@ -87,9 +87,11 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
                 I cast = (I) msg;
                 try {
                     encode(ctx, cast, out);
-                } finally {
-                    ReferenceCountUtil.release(cast);
+                } catch (Throwable th) {
+                    ReferenceCountUtil.safeRelease(cast);
+                    throw th;
                 }
+                ReferenceCountUtil.release(cast);
 
                 if (out.isEmpty()) {
                     throw new EncoderException(
