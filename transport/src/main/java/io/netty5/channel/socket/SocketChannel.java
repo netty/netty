@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 /**
  * A TCP/IP socket {@link Channel}.
  */
-public interface SocketChannel extends DuplexChannel {
+public interface SocketChannel extends Channel {
     @Override
     ServerSocketChannel parent();
 

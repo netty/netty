@@ -19,6 +19,7 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.AbstractServerChannel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
@@ -131,7 +132,7 @@ public class LocalServerChannel extends AbstractServerChannel {
                 break;
             }
             pipeline.fireChannelRead(m);
-        } while (handle.continueReading());
+        } while (handle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
         pipeline.fireChannelReadComplete();
         readIfIsAutoRead();

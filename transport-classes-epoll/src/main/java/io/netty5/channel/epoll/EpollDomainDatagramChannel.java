@@ -22,6 +22,7 @@ import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.DomainDatagramChannel;
@@ -60,6 +61,8 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     private volatile boolean connected;
     private volatile DomainSocketAddress local;
     private volatile DomainSocketAddress remote;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     private final EpollDomainDatagramChannelConfig config;
 
@@ -112,6 +115,35 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     @Override
     protected void doDisconnect() throws Exception {
         doClose();
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        switch (direction) {
+            case Inbound:
+                inputShutdown = true;
+                break;
+            case Outbound:
+                outputShutdown = true;
+                break;
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
+        }
     }
 
     @Override

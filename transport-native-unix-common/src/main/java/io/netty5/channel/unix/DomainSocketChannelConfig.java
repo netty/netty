@@ -20,14 +20,13 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.MessageSizeEstimator;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.WriteBufferWaterMark;
-import io.netty5.channel.socket.DuplexChannelConfig;
 
 import java.net.StandardSocketOptions;
 
 /**
  * Special {@link ChannelConfig} for {@link DomainSocketChannel}s.
  */
-public interface DomainSocketChannelConfig extends DuplexChannelConfig {
+public interface DomainSocketChannelConfig extends ChannelConfig {
 
     @Override
     @Deprecated

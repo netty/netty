@@ -20,7 +20,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.socket.ChannelInputShutdownEvent;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.internal.RecyclableArrayList;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -155,12 +155,16 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
                 }
             }
         } else {
-            if (evt instanceof ChannelInputShutdownEvent) {
-                fireBufferedMessages();
-            }
-
             ctx.fireUserEventTriggered(evt);
         }
+    }
+
+    @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
+        if (direction == ChannelShutdownDirection.Inbound) {
+            fireBufferedMessages();
+        }
+        ctx.fireChannelShutdown(direction);
     }
 
     @Override

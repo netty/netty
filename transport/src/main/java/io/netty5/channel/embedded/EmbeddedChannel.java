@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.embedded;
 
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
@@ -72,6 +73,8 @@ public class EmbeddedChannel extends AbstractChannel {
     private Queue<Object> outboundMessages;
     private Throwable lastException;
     private State state;
+    private boolean inputShutdown;
+    private boolean outputShutdown;
 
     /**
      * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
@@ -714,6 +717,35 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        switch (direction) {
+            case Inbound:
+                inputShutdown = true;
+                break;
+            case Outbound:
+                outputShutdown = true;
+                break;
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    @Override
     protected void doDisconnect() throws Exception {
         if (!metadata.hasDisconnect()) {
             doClose();
@@ -829,6 +861,12 @@ public class EmbeddedChannel extends AbstractChannel {
             @Override
             public void close(Promise<Void> promise) {
                 EmbeddedUnsafe.this.close(promise);
+                mayRunPendingTasks();
+            }
+
+            @Override
+            public void shutdown(ChannelShutdownDirection direction, Promise<Void> promise) {
+                EmbeddedUnsafe.this.shutdown(direction, promise);
                 mayRunPendingTasks();
             }
 

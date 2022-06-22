@@ -18,6 +18,7 @@ package io.netty5.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty5.channel.ChannelOption.ALLOCATOR;
+import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty5.channel.ChannelOption.AUTO_READ;
 import static io.netty5.channel.ChannelOption.BUFFER_ALLOCATOR;
@@ -71,6 +73,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
+    private volatile boolean allowHalfClosure;
 
     public DefaultChannelConfig(Channel channel) {
         this(channel, new AdaptiveRecvBufferAllocator());
@@ -89,7 +92,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR,
                 WRITE_BUFFER_HIGH_WATER_MARK, WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK,
-                MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE);
+                MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -162,6 +165,10 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == MAX_MESSAGES_PER_WRITE) {
             return (T) Integer.valueOf(getMaxMessagesPerWrite());
         }
+        if (option == ALLOW_HALF_CLOSURE) {
+            return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
+
         return null;
     }
 
@@ -196,6 +203,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setMessageSizeEstimator((MessageSizeEstimator) value);
         } else if (option == MAX_MESSAGES_PER_WRITE) {
             setMaxMessagesPerWrite((Integer) value);
+        } else if (option == ALLOW_HALF_CLOSURE) {
+            setAllowHalfClosure((Boolean) value);
         } else {
             return false;
         }
@@ -443,6 +452,17 @@ public class DefaultChannelConfig implements ChannelConfig {
     public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         requireNonNull(estimator, "estimator");
         msgSizeEstimator = estimator;
+        return this;
+    }
+
+    @Override
+    public boolean isAllowHalfClosure() {
+        return allowHalfClosure;
+    }
+
+    @Override
+    public ChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        this.allowHalfClosure = allowHalfClosure;
         return this;
     }
 }

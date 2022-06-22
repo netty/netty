@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.internal.DelegatingChannelHandlerContext;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.channel.ChannelFutureListeners;

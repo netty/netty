@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.ServerChannel;
@@ -87,7 +88,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                         }
 
                         allocHandle.incMessagesRead(localRead);
-                    } while (continueReading(allocHandle));
+                    } while (continueReading(allocHandle) && !isShutdown(ChannelShutdownDirection.Inbound));
                 } catch (Throwable t) {
                     exception = t;
                 }

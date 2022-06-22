@@ -27,6 +27,7 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 
 
@@ -125,6 +126,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * Return {@code true} if the {@link Channel} is active and so connected.
      */
     boolean isActive();
+
+    /**
+     * Returns {@code true} if the {@link ChannelShutdownDirection} of the {@link Channel} was shutdown before.
+     */
+    boolean isShutdown(ChannelShutdownDirection direction);
 
     /**
      * Return the {@link ChannelMetadata} of the {@link Channel} which describe the nature of the {@link Channel}.
@@ -255,6 +261,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
+    default Future<Void> shutdown(ChannelShutdownDirection direction) {
+        return pipeline().shutdown(direction);
+    }
+
+    @Override
     default Future<Void> register() {
         return pipeline().register();
     }
@@ -344,6 +355,12 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
          * operation was complete.
          */
         void close(Promise<Void> promise);
+
+        /**
+         * Shutdown the given direction of the {@link Channel} and notify the {@link Promise} once the
+         * operation was complete.
+         */
+        void shutdown(ChannelShutdownDirection direction, Promise<Void> promise);
 
         /**
          * Closes the {@link Channel} immediately without firing any events.  Probably only useful

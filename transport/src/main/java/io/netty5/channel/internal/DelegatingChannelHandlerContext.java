@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.codec.http;
+package io.netty5.channel.internal;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
@@ -21,6 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -28,12 +29,16 @@ import io.netty5.util.concurrent.Promise;
 import java.net.SocketAddress;
 import java.util.Objects;
 
-abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext {
+public abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext {
 
     private final ChannelHandlerContext ctx;
 
-    DelegatingChannelHandlerContext(ChannelHandlerContext ctx) {
+    protected DelegatingChannelHandlerContext(ChannelHandlerContext ctx) {
         this.ctx = Objects.requireNonNull(ctx, "ctx");
+    }
+
+    public final ChannelHandlerContext delegatingCtx() {
+        return ctx;
     }
 
     @Override
@@ -82,6 +87,12 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     @Override
     public ChannelHandlerContext fireChannelInactive() {
         ctx.fireChannelInactive();
+        return this;
+    }
+
+    @Override
+    public ChannelHandlerContext fireChannelShutdown(ChannelShutdownDirection direction) {
+        ctx.fireChannelShutdown(direction);
         return this;
     }
 
@@ -166,6 +177,11 @@ abstract class DelegatingChannelHandlerContext implements ChannelHandlerContext 
     @Override
     public Future<Void> close() {
         return ctx.close();
+    }
+
+    @Override
+    public Future<Void> shutdown(ChannelShutdownDirection direction) {
+        return ctx.shutdown(direction);
     }
 
     @Override

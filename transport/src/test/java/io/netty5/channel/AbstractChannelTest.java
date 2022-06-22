@@ -266,5 +266,15 @@ public class AbstractChannelTest {
 
         @Override
         protected void doWrite(ChannelOutboundBuffer in) throws Exception { }
+
+        @Override
+        protected void doShutdown(ChannelShutdownDirection direction) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isShutdown(ChannelShutdownDirection direction) {
+            return !isActive();
+        }
     }
 }

@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -255,6 +256,11 @@ class BufferConversionHandlerTest {
         }
 
         @Override
+        public ChannelHandlerContext fireChannelShutdown(ChannelShutdownDirection direction) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
             throw new UnsupportedOperationException();
         }
@@ -301,6 +307,11 @@ class BufferConversionHandlerTest {
 
         @Override
         public Future<Void> close() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Future<Void> shutdown(ChannelShutdownDirection direction) {
             throw new UnsupportedOperationException();
         }
 

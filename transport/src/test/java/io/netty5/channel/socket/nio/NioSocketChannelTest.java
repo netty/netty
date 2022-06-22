@@ -25,6 +25,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -239,7 +240,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress()).get();
 
             accepted = socket.accept();
-            channel.shutdownOutput().syncUninterruptibly();
+            channel.shutdown(ChannelShutdownDirection.Outbound).syncUninterruptibly();
 
             channel.close().syncUninterruptibly();
         } finally {

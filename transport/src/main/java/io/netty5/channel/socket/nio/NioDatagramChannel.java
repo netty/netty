@@ -18,6 +18,7 @@ package io.netty5.channel.socket.nio;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
@@ -80,6 +81,8 @@ public final class NioDatagramChannel
             StringUtil.simpleClassName(Buffer.class) + ')';
 
     private final DatagramChannelConfig config;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     private Map<InetAddress, List<MembershipKey>> memberships;
 
@@ -149,6 +152,35 @@ public final class NioDatagramChannel
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket) {
         super(null, eventLoop, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(this, socket);
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        switch (direction) {
+            case Inbound:
+                inputShutdown = true;
+                break;
+            case Outbound:
+                outputShutdown = true;
+                break;
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
+        }
     }
 
     @Override

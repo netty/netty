@@ -23,6 +23,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
@@ -52,14 +53,14 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 .bind(newSocketAddress()).get();
         try {
             try {
-                ch.shutdownInput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Inbound).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);
             }
 
             try {
-                ch.shutdownOutput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownDirection.Outbound).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);

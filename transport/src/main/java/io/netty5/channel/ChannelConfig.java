@@ -56,6 +56,8 @@ import java.util.Map;
  * <td>{@link ChannelOption#BUFFER_ALLOCATOR}</td><td>{@link #setBufferAllocator(BufferAllocator)}</td>
  * </tr><tr>
  * <td>{@link ChannelOption#AUTO_READ}</td><td>{@link #setAutoRead(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#ALLOW_HALF_CLOSURE}</td><td>{@link #setAllowHalfClosure(boolean)}</td>
  * </tr>
  * </table>
  * <p>
@@ -282,4 +284,20 @@ public interface ChannelConfig {
      * water mark of the write buffer.
      */
     ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
+
+    /**
+     * Returns {@code true} if and only if the channel should not close itself when its remote
+     * peer shuts down output to make the connection half-closed. If {@code false}, the connection
+     * is closed automatically when the remote peer shuts down output.
+     */
+    boolean isAllowHalfClosure();
+
+    /**
+     * Sets whether the channel should not close itself when its remote peer shuts down output to
+     * make the connection half-closed. If {@code true} the connection is not closed when the
+     * remote peer shuts down output. Instead,
+     * {@link ChannelHandler#channelShutdown(ChannelHandlerContext, ChannelShutdownDirection)}
+     * If {@code false}, the connection is closed automatically.
+     */
+    ChannelConfig setAllowHalfClosure(boolean allowHalfClosure);
 }

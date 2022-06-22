@@ -230,6 +230,19 @@ public interface ChannelHandler {
     }
 
     /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was shutdown in one direction.
+     * This might either be because the remote peer did cause a shutdown of one direction or the shutdown was requested
+     * explicit by us and was executed.
+     *
+     * @param ctx       the {@link ChannelHandlerContext} for which we notify about the completed shutdown.
+     * @param direction the {@link ChannelShutdownDirection} of the completed shutdown.
+     */
+    @Skip
+    default void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) throws Exception {
+        ctx.fireChannelShutdown(direction);
+    }
+
+    /**
      * Invoked when the current {@link Channel} has read a message from the peer.
      */
     @Skip
@@ -320,6 +333,18 @@ public interface ChannelHandler {
     @Skip
     default Future<Void> close(ChannelHandlerContext ctx) {
         return ctx.close();
+    }
+
+    /**
+     * Called once a shutdown operation was requested and should be executed.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the shutdown operation is made
+     * @param direction         the {@link ChannelShutdownDirection} that is used.
+     * @return                  the {@link Future} which will be notified once the operation completes.
+     */
+    @Skip
+    default Future<Void> shutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
+        return ctx.shutdown(direction);
     }
 
     /**

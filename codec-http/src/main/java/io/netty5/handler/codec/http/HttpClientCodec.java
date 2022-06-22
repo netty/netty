@@ -20,8 +20,8 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.CombinedChannelDuplexHandler;
+import io.netty5.channel.internal.DelegatingChannelHandlerContext;
 import io.netty5.handler.codec.PrematureChannelClosureException;
-import io.netty5.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
 import java.util.List;

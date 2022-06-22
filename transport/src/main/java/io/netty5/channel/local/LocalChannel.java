@@ -16,6 +16,7 @@
 package io.netty5.channel.local;
 
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
@@ -77,6 +78,8 @@ public class LocalChannel extends AbstractChannel {
     private volatile boolean readInProgress;
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     public LocalChannel(EventLoop eventLoop) {
         super(null, eventLoop);
@@ -145,6 +148,35 @@ public class LocalChannel extends AbstractChannel {
     protected void doBind(SocketAddress localAddress) throws Exception {
         this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
         state = State.BOUND;
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        switch (direction) {
+            case Inbound:
+                inputShutdown = true;
+                break;
+            case Outbound:
+                outputShutdown = true;
+                break;
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
+        }
     }
 
     @Override
@@ -242,7 +274,7 @@ public class LocalChannel extends AbstractChannel {
                 break;
             }
             pipeline.fireChannelRead(received);
-        } while (handle.continueReading());
+        } while (handle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
         pipeline.fireChannelReadComplete();
         readIfIsAutoRead();

@@ -32,7 +32,7 @@ import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 import static java.util.Objects.requireNonNull;
 
-public final class EpollDomainSocketChannelConfig extends EpollDuplexChannelConfig
+public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         implements DomainSocketChannelConfig {
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
 

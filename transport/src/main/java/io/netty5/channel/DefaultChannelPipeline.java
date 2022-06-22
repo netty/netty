@@ -804,6 +804,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public final ChannelPipeline fireChannelShutdown(ChannelShutdownDirection direction) {
+        head.invokeChannelShutdown(direction);
+        return this;
+    }
+
+    @Override
     public final ChannelPipeline fireExceptionCaught(Throwable cause) {
         head.invokeExceptionCaught(cause);
         return this;
@@ -856,6 +862,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final Future<Void> close() {
         return tail.close();
+    }
+
+    @Override
+    public Future<Void> shutdown(ChannelShutdownDirection direction) {
+        return tail.shutdown(direction);
     }
 
     @Override
@@ -932,6 +943,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      * the end of the {@link ChannelPipeline}.
      */
     protected void onUnhandledInboundChannelInactive() {
+    }
+
+    /**
+     * Called once the {@link ChannelHandler#channelShutdown(ChannelHandlerContext, ChannelShutdownDirection)} event hit
+     * the end of the {@link ChannelPipeline}.
+     */
+    protected void onUnhandledInboundChannelShutdown(ChannelShutdownDirection direction) {
     }
 
     /**
@@ -1015,6 +1033,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
+            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundChannelShutdown(direction);
+        }
+
+        @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) {
             ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledChannelWritabilityChanged();
         }
@@ -1070,6 +1093,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public Future<Void> close(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
             ctx.channel().unsafe().close(promise);
+            return promise.asFuture();
+        }
+
+        @Override
+        public Future<Void> shutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
+            Promise<Void> promise = ctx.newPromise();
+            ctx.channel().unsafe().shutdown(direction, promise);
             return promise.asFuture();
         }
 

@@ -187,6 +187,8 @@ public class DefaultChannelPipelineTailTest {
 
         private boolean active;
         private boolean closed;
+        private boolean inputShutdown;
+        private boolean outputShutdown;
 
         protected MyChannel(EventLoop eventLoop) {
             super(null, eventLoop);
@@ -252,6 +254,35 @@ public class DefaultChannelPipelineTailTest {
         @Override
         protected void doWrite(ChannelOutboundBuffer in) throws Exception {
             throw new IOException();
+        }
+
+        @Override
+        protected void doShutdown(ChannelShutdownDirection direction) {
+            switch (direction) {
+                case Inbound:
+                    inputShutdown = true;
+                    break;
+                case Outbound:
+                    outputShutdown = true;
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+        }
+
+        @Override
+        public boolean isShutdown(ChannelShutdownDirection direction) {
+            if (!isActive()) {
+                return true;
+            }
+            switch (direction) {
+                case Inbound:
+                    return inputShutdown;
+                case Outbound:
+                    return outputShutdown;
+                default:
+                    throw new AssertionError();
+            }
         }
 
         protected void onUnhandledInboundChannelActive() {

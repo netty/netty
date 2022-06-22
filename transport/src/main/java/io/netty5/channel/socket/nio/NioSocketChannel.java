@@ -20,6 +20,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.RecvBufferAllocator;
@@ -28,13 +29,8 @@ import io.netty5.channel.socket.DefaultSocketChannelConfig;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannelConfig;
-import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SocketUtils;
-import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -54,7 +50,6 @@ import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WR
  * {@link io.netty5.channel.socket.SocketChannel} which uses NIO selector based implementation.
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty5.channel.socket.SocketChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
@@ -133,19 +128,18 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public boolean isOutputShutdown() {
-        return javaChannel().socket().isOutputShutdown() || !isActive();
-    }
-
-    @Override
-    public boolean isInputShutdown() {
-        return javaChannel().socket().isInputShutdown() || !isActive();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        Socket socket = javaChannel().socket();
-        return socket.isInputShutdown() && socket.isOutputShutdown() || !isActive();
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Outbound:
+                return javaChannel().socket().isOutputShutdown();
+            case Inbound:
+                return javaChannel().socket().isInputShutdown();
+            default:
+                throw new AssertionError();
+        }
     }
 
     @Override
@@ -158,103 +152,18 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         return (InetSocketAddress) super.remoteAddress();
     }
 
-    @UnstableApi
     @Override
-    protected final void doShutdownOutput() throws Exception {
-        javaChannel().shutdownOutput();
-    }
-
-    @Override
-    public Future<Void> shutdownOutput() {
-        return shutdownOutput(newPromise());
-    }
-
-    @Override
-    public Future<Void> shutdownOutput(final Promise<Void> promise) {
-        final EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
-        } else {
-            loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
+    protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+        switch (direction) {
+            case Inbound:
+                javaChannel().shutdownInput();
+                break;
+            case Outbound:
+                javaChannel().shutdownOutput();
+                break;
+            default:
+                throw new AssertionError();
         }
-        return promise.asFuture();
-    }
-
-    @Override
-    public Future<Void> shutdownInput() {
-        return shutdownInput(newPromise());
-    }
-
-    @Override
-    protected boolean isInputShutdown0() {
-        return isInputShutdown();
-    }
-
-    @Override
-    public Future<Void> shutdownInput(final Promise<Void> promise) {
-        EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            shutdownInput0(promise);
-        } else {
-            loop.execute(() -> shutdownInput0(promise));
-        }
-        return promise.asFuture();
-    }
-
-    @Override
-    public Future<Void> shutdown() {
-        return shutdown(newPromise());
-    }
-
-    @Override
-    public Future<Void> shutdown(final Promise<Void> promise) {
-        Future<Void> shutdownOutputFuture = shutdownOutput();
-        if (shutdownOutputFuture.isDone()) {
-            shutdownOutputDone(promise, shutdownOutputFuture);
-        } else {
-            shutdownOutputFuture.addListener(promise, this::shutdownOutputDone);
-        }
-        return promise.asFuture();
-    }
-
-    private void shutdownOutputDone(Promise<Void> promise, Future<?> shutdownOutputFuture) {
-        Future<Void> shutdownInputFuture = shutdownInput();
-        if (shutdownInputFuture.isDone()) {
-            shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-        } else {
-            shutdownInputFuture.addListener(shutdownInputFuture1 ->
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
-        }
-    }
-
-    private static void shutdownDone(Future<?> shutdownOutputFuture,
-                                     Future<?> shutdownInputFuture,
-                                     Promise<Void> promise) {
-        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
-        Throwable shutdownInputCause = shutdownInputFuture.cause();
-        if (shutdownOutputCause != null) {
-            if (shutdownInputCause != null) {
-                logger.debug("Exception suppressed because a previous exception occurred.",
-                        shutdownInputCause);
-            }
-            promise.setFailure(shutdownOutputCause);
-        } else if (shutdownInputCause != null) {
-            promise.setFailure(shutdownInputCause);
-        } else {
-            promise.setSuccess(null);
-        }
-    }
-    private void shutdownInput0(Promise<Void> promise) {
-        try {
-            shutdownInput0();
-            promise.setSuccess(null);
-        } catch (Throwable t) {
-            promise.setFailure(t);
-        }
-    }
-
-    private void shutdownInput0() throws Exception {
-        javaChannel().shutdownInput();
     }
 
     @Override

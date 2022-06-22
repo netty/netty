@@ -40,7 +40,7 @@ import static io.netty5.channel.kqueue.KQueueChannelOption.SO_SNDLOWAT;
 import static io.netty5.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
 
 @UnstableApi
-public final class KQueueSocketChannelConfig extends KQueueDuplexChannelConfig implements SocketChannelConfig {
+public final class KQueueSocketChannelConfig extends KQueueChannelConfig implements SocketChannelConfig {
     private volatile boolean tcpFastopen;
 
     KQueueSocketChannelConfig(KQueueSocketChannel channel) {

@@ -18,6 +18,7 @@ package io.netty5.channel.epoll;
 import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelMetadata;
@@ -64,6 +65,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     /**
      * Returns {@code true} if {@link SegmentedDatagramPacket} is supported natively.
@@ -274,6 +277,35 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     @Override
     protected AbstractEpollUnsafe newUnsafe() {
         return new EpollDatagramChannelUnsafe();
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        switch (direction) {
+            case Inbound:
+                inputShutdown = true;
+                break;
+            case Outbound:
+                outputShutdown = true;
+                break;
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
+        }
     }
 
     @Override

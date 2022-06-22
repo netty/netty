@@ -15,6 +15,8 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.channel.ChannelOutputShutdownException;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -35,12 +37,14 @@ import io.netty5.util.DefaultAttributeMap;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
+import io.netty5.util.internal.ThrowableUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.RejectedExecutionException;
@@ -139,11 +143,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     private volatile long totalPendingSize;
     private volatile int unwritable;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     // Cached to reduce GC
     private Runnable fireChannelWritabilityChangedTask;
 
-    private boolean outboundClosed;
     private int flowControlledBytes;
 
     /**
@@ -265,7 +270,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     void closeOutbound() {
-        outboundClosed = true;
+        outputShutdown = true;
     }
 
     void streamClosed() {
@@ -293,6 +298,21 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     @Override
     public boolean isActive() {
         return isOpen();
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
+        }
     }
 
     @Override
@@ -411,7 +431,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
             // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
             // cost of additional readComplete notifications on the rare path.
-            if (allocHandle.continueReading()) {
+            if (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound)) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
                 unsafe.notifyReadComplete(allocHandle, true);
@@ -544,11 +564,55 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
 
             // The promise should be notified before we call fireChannelInactive().
-            outboundClosed = true;
+            outputShutdown = true;
             closePromise.setSuccess(null);
             promise.setSuccess(null);
 
             fireChannelInactiveAndDeregister(newPromise(), wasActive);
+        }
+
+        @Override
+        public void shutdown(ChannelShutdownDirection direction, Promise<Void> promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+            if (!isActive()) {
+                if (isOpen()) {
+                    promise.setFailure(new NotYetConnectedException());
+                } else {
+                    promise.setFailure(new ClosedChannelException());
+                }
+                return;
+            }
+            if (isShutdown(direction)) {
+                // Already shutdown so let's just make this a noop.
+                promise.setSuccess(null);
+                return;
+            }
+            boolean fireEvent = false;
+            switch (direction) {
+                case Outbound:
+                    outputShutdown = true;
+                    promise.setSuccess(null);
+                    fireEvent = true;
+                    break;
+                case Inbound:
+                    try {
+                        inputShutdown = true;
+                        promise.setSuccess(null);
+                        fireEvent = true;
+                    } catch (Throwable cause) {
+                        promise.setFailure(cause);
+                    }
+                    break;
+                default:
+                    // Should never happen
+                    promise.setFailure(new IllegalStateException());
+                    break;
+            }
+            if (fireEvent) {
+                pipeline().fireChannelShutdown(direction);
+            }
         }
 
         @Override
@@ -730,6 +794,14 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         void doRead0(Http2Frame frame, RecvBufferAllocator.Handle allocHandle) {
+            if (isShutdown(ChannelShutdownDirection.Inbound)) {
+                // Let's drop data and header frames in the case of shutdown input. Other frames are still valid for
+                // HTTP2.
+                if (frame instanceof Http2DataFrame || frame instanceof Http2HeadersFrame) {
+                    Resource.dispose(frame);
+                    return;
+                }
+            }
             final int bytes;
             if (frame instanceof Http2DataFrame) {
                 bytes = ((Http2DataFrame) frame).initialFlowControlledBytes();
@@ -759,11 +831,16 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 return;
             }
 
-            if (!isActive() ||
-                    // Once the outbound side was closed we should not allow header / data frames
-                    outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
+            if (!isActive()) {
                 Resource.dispose(msg);
                 promise.setFailure(new ClosedChannelException());
+                return;
+            }
+
+            if (outputShutdown // Once the outbound side was closed we should not allow header / data frames
+                    && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
+                Resource.dispose(msg);
+                promise.setFailure(newOutputShutdownException(Http2ChannelUnsafe.class, "write(Object, Promise)"));
                 return;
             }
 
@@ -844,8 +921,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         // Close channel if needed.
                         closeForcibly();
                     } else {
-                        // TODO: Once Http2StreamChannel extends DuplexChannel we should call shutdownOutput(...)
-                        outboundClosed = true;
+                        shutdown(ChannelShutdownDirection.Outbound, newPromise());
                     }
                 }
                 promise.setFailure(error);
@@ -933,4 +1009,17 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     protected abstract boolean isParentReadInProgress();
     protected abstract void addChannelToReadCompletePendingQueue();
     protected abstract ChannelHandlerContext parentContext();
+
+    /**
+     * Creates a new {@link ChannelOutputShutdownException} which has the origin of the given {@link Class} and method.
+     */
+    private static ChannelOutputShutdownException newOutputShutdownException(Class<?> clazz, String method) {
+        return ThrowableUtil.unknownStackTrace(new ChannelOutputShutdownException() {
+            @Override
+            public Throwable fillInStackTrace() {
+                // Suppress a warning since this method doesn't need synchronization
+                return this; // lgtm [java/non-sync-override]
+            }
+        }, clazz, method);
+    }
 }

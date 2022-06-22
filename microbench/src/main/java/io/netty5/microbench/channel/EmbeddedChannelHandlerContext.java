@@ -20,6 +20,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Resource;
@@ -101,6 +102,11 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
 
     @Override
     public final ChannelHandlerContext fireChannelInactive() {
+        return this;
+    }
+
+    @Override
+    public final ChannelHandlerContext fireChannelShutdown(ChannelShutdownDirection direction) {
         return this;
     }
 
@@ -202,6 +208,16 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     public final Future<Void> close() {
         try {
             return channel().close();
+        } catch (Exception e) {
+            handleException(e);
+            return channel().newFailedFuture(e);
+        }
+    }
+
+    @Override
+    public final Future<Void> shutdown(ChannelShutdownDirection direction) {
+        try {
+            return channel().shutdown(direction);
         } catch (Exception e) {
             handleException(e);
             return channel().newFailedFuture(e);

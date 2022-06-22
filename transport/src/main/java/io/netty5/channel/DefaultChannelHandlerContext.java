@@ -35,6 +35,7 @@ import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INACTIVE;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ_COMPLETE;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_REGISTERED;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_SHUTDOWN;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_UNREGISTERED;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_WRITABILITY_CHANGED;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CLOSE;
@@ -45,6 +46,7 @@ import static io.netty5.channel.ChannelHandlerMask.MASK_EXCEPTION_CAUGHT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_FLUSH;
 import static io.netty5.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty5.channel.ChannelHandlerMask.MASK_REGISTER;
+import static io.netty5.channel.ChannelHandlerMask.MASK_SHUTDOWN;
 import static io.netty5.channel.ChannelHandlerMask.MASK_USER_EVENT_TRIGGERED;
 import static io.netty5.channel.ChannelHandlerMask.MASK_WRITE;
 import static io.netty5.channel.ChannelHandlerMask.mask;
@@ -249,6 +251,34 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     void invokeChannelInactive() {
         try {
             handler().channelInactive(this);
+        } catch (Throwable t) {
+            invokeExceptionCaught(t);
+        }
+    }
+
+    @Override
+    public ChannelHandlerContext fireChannelShutdown(ChannelShutdownDirection direction) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            findAndInvokeChannelShutdown(direction);
+        } else {
+            executor.execute(() -> findAndInvokeChannelShutdown(direction));
+        }
+        return this;
+    }
+
+    private void findAndInvokeChannelShutdown(ChannelShutdownDirection direction) {
+        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_SHUTDOWN);
+        if (ctx == null) {
+            notifyHandlerRemovedAlready();
+            return;
+        }
+        ctx.invokeChannelShutdown(direction);
+    }
+
+    void invokeChannelShutdown(ChannelShutdownDirection direction) {
+        try {
+            handler().channelShutdown(this, direction);
         } catch (Throwable t) {
             invokeExceptionCaught(t);
         }
@@ -556,6 +586,33 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Future<Void> invokeClose() {
         try {
             return handler().close(this);
+        } catch (Throwable t) {
+            return handleOutboundHandlerException(t, true);
+        }
+    }
+
+    @Override
+    public Future<Void> shutdown(ChannelShutdownDirection direction) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            return findAndInvokeShutdown(direction);
+        }
+        Promise<Void> promise  = newPromise();
+        safeExecute(executor, () -> findAndInvokeShutdown(direction).cascadeTo(promise), promise, null);
+        return promise.asFuture();
+    }
+
+    private Future<Void> findAndInvokeShutdown(ChannelShutdownDirection direction) {
+        DefaultChannelHandlerContext ctx = findContextOutbound(MASK_SHUTDOWN);
+        if (ctx == null) {
+            return failRemoved(this);
+        }
+        return ctx.invokeShutdown(direction);
+    }
+
+    private Future<Void> invokeShutdown(ChannelShutdownDirection direction) {
+        try {
+            return handler().shutdown(this, direction);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, true);
         }

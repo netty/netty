@@ -30,7 +30,7 @@ import java.net.StandardSocketOptions;
  *
  * <h3>Available options</h3>
  *
- * In addition to the options provided by {@link DuplexChannelConfig},
+ * In addition to the options provided by {@link ChannelConfig},
  * {@link SocketChannelConfig} allows the following options in the option map:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
@@ -55,7 +55,7 @@ import java.net.StandardSocketOptions;
  * </tr>
  * </table>
  */
-public interface SocketChannelConfig extends DuplexChannelConfig {
+public interface SocketChannelConfig extends ChannelConfig {
 
     /**
      * Gets the {@link StandardSocketOptions#TCP_NODELAY} option.  Please note that the default value of this option

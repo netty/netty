@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;
@@ -32,7 +31,6 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -695,6 +693,11 @@ public final class ChannelOutboundBuffer {
         return flushed == 0;
     }
 
+    void failFlushedAndClose(Throwable failCause, boolean notify, Throwable closeCause, boolean allowChannelOpen) {
+        failFlushed(failCause, notify);
+        close(closeCause, allowChannelOpen);
+    }
+
     void failFlushed(Throwable cause, boolean notify) {
         // Make sure that this method does not reenter.  A listener added to the current promise can be notified by the
         // current thread in the tryFailure() call of the loop below, and the listener can trigger another fail() call
@@ -717,7 +720,7 @@ public final class ChannelOutboundBuffer {
         }
     }
 
-    void close(final Throwable cause, final boolean allowChannelOpen) {
+    private void close(final Throwable cause, final boolean allowChannelOpen) {
         if (inFail) {
             channel.executor().execute(() -> close(cause, allowChannelOpen));
             return;
@@ -751,10 +754,6 @@ public final class ChannelOutboundBuffer {
             inFail = false;
         }
         clearNioBuffers();
-    }
-
-    void close(ClosedChannelException cause) {
-        close(cause, false);
     }
 
     private static void safeSuccess(Promise<Void> promise) {

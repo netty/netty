@@ -24,9 +24,9 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.socket.ChannelInputShutdownEvent;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -534,7 +534,7 @@ public class ByteToMessageDecoderTest {
         assertNull(channel.readInbound());
         removeHandler.set(true);
         // This should trigger channelInputClosed(...)
-        channel.pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+        channel.pipeline().fireChannelShutdown(ChannelShutdownDirection.Inbound);
 
         assertTrue(channel.finish());
         assertBuffer(Unpooled.wrappedBuffer(bytes), channel.readInbound());

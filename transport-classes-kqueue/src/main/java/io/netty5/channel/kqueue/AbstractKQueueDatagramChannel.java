@@ -18,12 +18,15 @@ package io.netty5.channel.kqueue;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 
 import java.io.IOException;
 
 abstract class AbstractKQueueDatagramChannel extends AbstractKQueueChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     AbstractKQueueDatagramChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
         super(parent, eventLoop, fd, active);
@@ -72,5 +75,34 @@ abstract class AbstractKQueueDatagramChannel extends AbstractKQueueChannel {
 
         // Whether all messages were written or not.
         writeFilter(!in.isEmpty());
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        switch (direction) {
+            case Inbound:
+                inputShutdown = true;
+                break;
+            case Outbound:
+                outputShutdown = true;
+                break;
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
+        }
     }
 }
