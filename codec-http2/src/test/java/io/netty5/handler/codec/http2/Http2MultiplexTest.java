@@ -14,9 +14,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.util.Resource;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -28,6 +27,7 @@ import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
 import io.netty5.util.AsciiString;
 import io.netty5.util.AttributeKey;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -193,6 +193,36 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Channel childChannel = newOutboundStream(new ChannelHandler() { });
         assertTrue(childChannel.isActive());
+    }
+
+    @Test
+    public void shutdownDone() throws Exception {
+        LastInboundHandler handler = new LastInboundHandler();
+
+        Http2StreamChannel channel = newInboundStream(3, false, handler);
+        assertFalse(channel.isShutdown(ChannelShutdownDirection.Inbound));
+        assertFalse(handler.isInboundShutdown());
+        assertFalse(channel.isShutdown(ChannelShutdownDirection.Outbound));
+        assertFalse(handler.isOutboundShutdown());
+
+        frameInboundWriter.writeInboundData(channel.stream().id(), onHeapAllocator().allocate(0), 0, true);
+        assertTrue(channel.isShutdown(ChannelShutdownDirection.Inbound));
+        assertTrue(handler.isInboundShutdown());
+
+        assertFalse(channel.isShutdown(ChannelShutdownDirection.Outbound));
+        assertFalse(handler.isOutboundShutdown());
+
+        // header frame and data frame
+        verifyFramesMultiplexedToCorrectChannel(channel, handler, 2);
+
+        channel.write(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+        assertFalse(channel.isShutdown(ChannelShutdownDirection.Outbound));
+        assertFalse(handler.isOutboundShutdown());
+
+        channel.write(new DefaultHttp2DataFrame(onHeapAllocator().allocate(0).send(), true));
+
+        assertTrue(channel.isShutdown(ChannelShutdownDirection.Outbound));
+        assertTrue(handler.isOutboundShutdown());
     }
 
     @Test
@@ -870,7 +900,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // and verify that this only affect the writability of the parent channel while the child stays writable
         // until it used all of its credits.
         parentChannel.unsafe().outboundBuffer().addMessage(
-                Unpooled.buffer().writeZero(800), 800, parentChannel.newPromise());
+                onHeapAllocator().allocate(800).fill((byte) '0'), 800, parentChannel.newPromise());
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());
