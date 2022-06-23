@@ -175,7 +175,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
      */
     protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
         if (!closed) {
-            ctx.fireExceptionCaught(WriteTimeoutException.INSTANCE);
+            ctx.fireChannelExceptionCaught(WriteTimeoutException.INSTANCE);
             ctx.close();
             closed = true;
         }
@@ -205,7 +205,7 @@ public class WriteTimeoutHandler implements ChannelHandler {
                 try {
                     writeTimedOut(ctx);
                 } catch (Throwable t) {
-                    ctx.fireExceptionCaught(t);
+                    ctx.fireChannelExceptionCaught(t);
                 }
             }
             removeWriteTimeoutTask(this);

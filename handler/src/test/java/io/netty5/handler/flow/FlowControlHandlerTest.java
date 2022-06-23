@@ -407,7 +407,7 @@ public class FlowControlHandlerTest {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 causeRef.set(cause);
             }
         };
@@ -466,11 +466,11 @@ public class FlowControlHandlerTest {
                 }
 
                 @Override
-                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                     if (evt instanceof IdleStateEvent) {
                         userEvents.add((IdleStateEvent) evt);
                     }
-                    ctx.fireInboundEventTriggered(evt);
+                    ctx.fireChannelInboundEvent(evt);
                 }
             }
         );

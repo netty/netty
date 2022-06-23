@@ -200,22 +200,22 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
-            inboundHandler.exceptionCaught(inboundCtx, cause);
+            inboundHandler.channelExceptionCaught(inboundCtx, cause);
         } else {
-            inboundCtx.fireExceptionCaught(cause);
+            inboundCtx.fireChannelExceptionCaught(cause);
         }
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
             assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
-            inboundHandler.inboundEventTriggered(inboundCtx, evt);
+            inboundHandler.channelInboundEvent(inboundCtx, evt);
         } else {
-            inboundCtx.fireInboundEventTriggered(evt);
+            inboundCtx.fireChannelInboundEvent(evt);
         }
     }
 
@@ -388,7 +388,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
                 try {
                     handler.handlerRemoved(this);
                 } catch (Throwable cause) {
-                    fireExceptionCaught(new ChannelPipelineException(
+                    this.fireChannelExceptionCaught(new ChannelPipelineException(
                             handler.getClass().getName() + ".handlerRemoved() has thrown an exception.", cause));
                 }
             }

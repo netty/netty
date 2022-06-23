@@ -208,19 +208,19 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "EXCEPTION", cause), cause);
         }
-        ctx.fireExceptionCaught(cause);
+        ctx.fireChannelExceptionCaught(cause);
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "USER_EVENT", evt));
         }
-        ctx.fireInboundEventTriggered(evt);
+        ctx.fireChannelInboundEvent(evt);
     }
 
     @Override

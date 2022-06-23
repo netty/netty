@@ -224,7 +224,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 if (listener == null) {
                     continueResponseWriteListener = listener = (context, future) -> {
                         if (future.isFailed()) {
-                            context.fireExceptionCaught(future.cause());
+                            context.fireChannelExceptionCaught(future.cause());
                         }
                     };
                 }
@@ -410,7 +410,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * @param oversized the accumulated message up to this point, whose type is {@code S} or {@code O}
      */
     protected void handleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
-        ctx.fireExceptionCaught(
+        ctx.fireChannelExceptionCaught(
                 new TooLongFrameException("content length exceeded " + maxContentLength() + " bytes."));
     }
 

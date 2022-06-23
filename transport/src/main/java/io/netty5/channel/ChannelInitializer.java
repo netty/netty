@@ -57,8 +57,8 @@ public abstract class ChannelInitializer<C extends Channel> implements ChannelHa
      *
      * @param ch            the {@link Channel} which was registered.
      * @throws Exception    is thrown if an error occurs. In that case it will be handled by
-     *                      {@link #exceptionCaught(ChannelHandlerContext, Throwable)} which will by default close
-     *                      the {@link Channel}.
+     *                      {@link #channelExceptionCaught(ChannelHandlerContext, Throwable)} which will by
+     *                      default close the {@link Channel}.
      */
     protected abstract void initChannel(C ch) throws Exception;
 
@@ -66,7 +66,7 @@ public abstract class ChannelInitializer<C extends Channel> implements ChannelHa
      * Handle the {@link Throwable} by logging and closing the {@link Channel}. Sub-classes may override this.
      */
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (logger.isWarnEnabled()) {
             logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), cause);
         }
@@ -84,7 +84,7 @@ public abstract class ChannelInitializer<C extends Channel> implements ChannelHa
         } catch (Throwable cause) {
             // Explicitly call exceptionCaught(...) as we removed the handler before calling initChannel(...).
             // We do so to prevent multiple calls to initChannel(...).
-            exceptionCaught(ctx, cause);
+            channelExceptionCaught(ctx, cause);
         } finally {
             if (!ctx.isRemoved()) {
                 ctx.pipeline().remove(this);

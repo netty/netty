@@ -157,7 +157,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 donePromise.tryFailure(new IllegalStateException("exceptionCaught: " + ctx.channel(), cause));
                 ctx.close();

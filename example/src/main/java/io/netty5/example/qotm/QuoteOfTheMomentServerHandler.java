@@ -59,7 +59,7 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelInboundHandler<D
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         // We don't close the channel because we can keep serving requests.
     }

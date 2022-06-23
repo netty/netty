@@ -259,7 +259,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         } catch (Throwable cause) {
             // If cleanup throws any error we need to propagate it through the pipeline
             // so we don't fail to propagate pipeline events.
-            ctx.fireExceptionCaught(cause);
+            ctx.fireChannelExceptionCaught(cause);
         }
     }
 

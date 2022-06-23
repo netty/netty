@@ -192,7 +192,7 @@ public class LoggingHandlerTest {
     public void shouldLogChannelUserEvent() throws Exception {
         String userTriggered = "iAmCustom!";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.pipeline().fireInboundEventTriggered(new String(userTriggered));
+        channel.pipeline().fireChannelInboundEvent(new String(userTriggered));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+USER_EVENT: " + userTriggered + '$')));
     }
 
@@ -201,7 +201,7 @@ public class LoggingHandlerTest {
         String msg = "illegalState";
         Throwable cause = new IllegalStateException(msg);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.pipeline().fireExceptionCaught(cause);
+        channel.pipeline().fireChannelExceptionCaught(cause);
         verify(appender).doAppend(argThat(new RegexLogMatcher(
                 ".+EXCEPTION: " + cause.getClass().getCanonicalName() + ": " + msg + '$')));
     }

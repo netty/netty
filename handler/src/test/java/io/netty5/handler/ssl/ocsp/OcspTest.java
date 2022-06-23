@@ -240,7 +240,7 @@ public class OcspTest {
 
         ChannelHandler clientHandler = new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 try {
                     causeRef.set(cause);
                 } finally {
@@ -334,7 +334,7 @@ public class OcspTest {
 
         ChannelHandler clientHandler = new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 try {
                     causeRef.set(cause);
                 } finally {

@@ -180,7 +180,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
             } catch (Throwable t) {
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
-                pipeline.fireExceptionCaught(t);
+                pipeline.fireChannelExceptionCaught(t);
             } finally {
                 readIfIsAutoRead();
                 readReadyFinally(config);

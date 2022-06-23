@@ -901,8 +901,8 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void triggerOutboundEvent(Object event, Promise<Void> promise) {
-                EmbeddedUnsafe.this.triggerOutboundEvent(event, promise);
+            public void sendOutboundEvent(Object event, Promise<Void> promise) {
+                EmbeddedUnsafe.this.sendOutboundEvent(event, promise);
                 mayRunPendingTasks();
             }
 

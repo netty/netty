@@ -102,7 +102,7 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         log(Event.EXCEPTION, cause.toString());
     }
 
@@ -143,9 +143,9 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
         log(Event.USER, evt.toString());
-        ctx.fireInboundEventTriggered(evt);
+        ctx.fireChannelInboundEvent(evt);
     }
 
     String getLog() {

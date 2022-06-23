@@ -249,11 +249,11 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public final void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 handleException(ctx, cause);
             }
-            super.exceptionCaught(ctx, cause);
+            super.channelExceptionCaught(ctx, cause);
         }
 
         void handleException(ChannelHandlerContext ctx, Throwable cause) {

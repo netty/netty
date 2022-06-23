@@ -614,7 +614,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
         assertTrue(channel.isActive());
         StreamException cause = new StreamException(channel.stream().id(), Http2Error.PROTOCOL_ERROR, "baaam!");
-        parentChannel.pipeline().fireExceptionCaught(cause);
+        parentChannel.pipeline().fireChannelExceptionCaught(cause);
 
         assertFalse(channel.isActive());
 
@@ -933,7 +933,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() {
 
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 ctx.close();
                 throw new Exception("Exception for test");
             }
@@ -948,9 +948,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 exceptionCaught.set(count.getAndIncrement());
-                ctx.fireExceptionCaught(cause);
+                ctx.fireChannelExceptionCaught(cause);
             }
 
             @Override
@@ -960,7 +960,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             }
         });
 
-        childChannel.pipeline().fireInboundEventTriggered(new Object());
+        childChannel.pipeline().fireChannelInboundEvent(new Object());
 
         // The events should have happened in this order because the inactive and deregistration events
         // get deferred as they do in the AbstractChannel.

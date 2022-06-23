@@ -68,7 +68,7 @@ public class SocketRstTest extends AbstractSocketTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new ChannelHandler() {
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         throwableRef.compareAndSet(null, cause);
                     }
 
@@ -122,7 +122,7 @@ public class SocketRstTest extends AbstractSocketTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new ChannelHandler() {
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         throwableRef.compareAndSet(null, cause);
                     }
 

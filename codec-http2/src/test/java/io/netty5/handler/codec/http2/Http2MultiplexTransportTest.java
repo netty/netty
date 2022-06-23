@@ -82,7 +82,7 @@ public class Http2MultiplexTransportTest {
         }
 
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             Resource.dispose(evt);
         }
     };
@@ -372,7 +372,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
-                        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent handshakeCompletionEvent =
                                         (SslHandshakeCompletionEvent) evt;
@@ -387,7 +387,7 @@ public class Http2MultiplexTransportTest {
                                             new Http2StreamChannelBootstrap(ctx.channel());
                                     h2Bootstrap.handler(new ChannelHandler() {
                                         @Override
-                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                             if (cause.getCause() instanceof SSLException) {
                                                 latch.countDown();
                                             } else {
@@ -529,7 +529,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
-                        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent handshakeCompletionEvent =
                                         (SslHandshakeCompletionEvent) evt;

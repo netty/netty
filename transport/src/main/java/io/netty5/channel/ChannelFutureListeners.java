@@ -67,7 +67,7 @@ public final class ChannelFutureListeners {
         @Override
         public void operationComplete(Channel context, Future<?> future) throws Exception {
             if (future.isFailed()) {
-                context.pipeline().fireExceptionCaught(future.cause());
+                context.pipeline().fireChannelExceptionCaught(future.cause());
             }
         }
     }

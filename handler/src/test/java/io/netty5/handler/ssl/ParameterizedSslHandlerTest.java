@@ -170,7 +170,7 @@ public class ParameterizedSslHandlerTest {
                                 private Throwable writeCause;
 
                                 @Override
-                                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (sslEvt.isSuccess()) {
@@ -191,11 +191,11 @@ public class ParameterizedSslHandlerTest {
                                             donePromise.tryFailure(sslEvt.cause());
                                         }
                                     }
-                                    ctx.fireInboundEventTriggered(evt);
+                                    ctx.fireChannelInboundEvent(evt);
                                 }
 
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     donePromise.tryFailure(new IllegalStateException("server exception sentData: " +
                                             sentData + " writeCause: " + writeCause, cause));
                                 }
@@ -234,7 +234,7 @@ public class ParameterizedSslHandlerTest {
                                 }
 
                                 @Override
-                                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (!sslEvt.isSuccess()) {
@@ -244,7 +244,7 @@ public class ParameterizedSslHandlerTest {
                                 }
 
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     donePromise.tryFailure(new IllegalStateException("client exception. bytesSeen: " +
                                             bytesSeen, cause));
                                 }
@@ -332,7 +332,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     // Just trigger a close
                                     ctx.close();
                                 }
@@ -349,7 +349,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.bufferAllocator()));
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     if (cause.getCause() instanceof SSLException) {
                                         // We received the alert and so produce an SSLException.
                                         promise.trySuccess(null);
@@ -657,7 +657,7 @@ public class ParameterizedSslHandlerTest {
         }
 
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                 if (sslEvt.isSuccess()) {
@@ -667,13 +667,13 @@ public class ParameterizedSslHandlerTest {
                     appendError(sslEvt.cause());
                 }
             }
-            ctx.fireInboundEventTriggered(evt);
+            ctx.fireChannelInboundEvent(evt);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             appendError(cause);
-            ctx.fireExceptionCaught(cause);
+            ctx.fireChannelExceptionCaught(cause);
         }
 
         private void appendError(Throwable cause) {

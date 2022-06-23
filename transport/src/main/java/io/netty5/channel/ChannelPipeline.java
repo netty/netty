@@ -131,8 +131,8 @@ import java.util.NoSuchElementException;
  *     <li>{@link ChannelHandlerContext#fireChannelActive()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelRead(Object)}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelReadComplete()}</li>
- *     <li>{@link ChannelHandlerContext#fireExceptionCaught(Throwable)}</li>
- *     <li>{@link ChannelHandlerContext#fireInboundEventTriggered(Object)}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelExceptionCaught(Throwable)}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelInboundEvent(Object)}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelWritabilityChanged()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelInactive()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelShutdown(ChannelShutdownDirection)}</li>
@@ -525,10 +525,10 @@ public interface ChannelPipeline
     ChannelPipeline fireChannelShutdown(ChannelShutdownDirection direction);
 
     @Override
-    ChannelPipeline fireExceptionCaught(Throwable cause);
+    ChannelPipeline fireChannelExceptionCaught(Throwable cause);
 
     @Override
-    ChannelPipeline fireInboundEventTriggered(Object event);
+    ChannelPipeline fireChannelInboundEvent(Object event);
 
     @Override
     ChannelPipeline fireChannelRead(Object msg);

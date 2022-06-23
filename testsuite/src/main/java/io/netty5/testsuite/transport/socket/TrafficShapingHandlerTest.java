@@ -452,7 +452,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 promise.setFailure(cause);
@@ -542,7 +542,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 ctx.close();

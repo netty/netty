@@ -165,14 +165,14 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
                                                      ChannelPipeline pipeline) {
         if (HttpUtil.isUnsupportedExpectation(start)) {
             // if the request contains an unsupported expectation, we return 417
-            pipeline.fireInboundEventTriggered(HttpExpectationFailedEvent.INSTANCE);
+            pipeline.fireChannelInboundEvent(HttpExpectationFailedEvent.INSTANCE);
             return newErrorResponse(EXPECTATION_FAILED, pipeline.channel().bufferAllocator(), true, false);
         } else if (HttpUtil.is100ContinueExpected(start)) {
             // if the request contains 100-continue but the content-length is too large, we return 413
             if (getContentLength(start, -1L) <= maxContentLength) {
                 return newErrorResponse(CONTINUE, pipeline.channel().bufferAllocator(), false, false);
             }
-            pipeline.fireInboundEventTriggered(HttpExpectationFailedEvent.INSTANCE);
+            pipeline.fireChannelInboundEvent(HttpExpectationFailedEvent.INSTANCE);
             return newErrorResponse(REQUEST_ENTITY_TOO_LARGE, pipeline.channel().bufferAllocator(), true, false);
         }
 
@@ -284,8 +284,8 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.channelExceptionCaught(ctx, cause);
         if (cause instanceof ResponseTooLargeException) {
             ctx.close();
         }

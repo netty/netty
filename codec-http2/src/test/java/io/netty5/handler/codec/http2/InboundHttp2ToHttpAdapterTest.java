@@ -629,19 +629,19 @@ public class InboundHttp2ToHttpAdapterTest {
                 p.addLast(clientDelegator);
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         Http2Exception e = getEmbeddedHttp2Exception(cause);
                         if (e != null) {
                             clientException = e;
                             clientLatch.countDown();
                         } else {
-                            ctx.fireExceptionCaught(cause);
+                            ctx.fireChannelExceptionCaught(cause);
                         }
                     }
                 });
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
                             ctx.pipeline().remove(this);

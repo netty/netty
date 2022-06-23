@@ -167,9 +167,9 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      */
     private static class UserEventLogger implements ChannelHandler {
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
             System.out.println("User Event Triggered: " + evt);
-            ctx.fireInboundEventTriggered(evt);
+            ctx.fireChannelInboundEvent(evt);
         }
     }
 }

@@ -165,9 +165,9 @@ public class CipherSuiteCanaryTest {
                             }
 
                             @Override
-                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                 if (!serverPromise.tryFailure(cause)) {
-                                    ctx.fireExceptionCaught(cause);
+                                    ctx.fireChannelExceptionCaught(cause);
                                 }
                             }
                         });
@@ -199,10 +199,10 @@ public class CipherSuiteCanaryTest {
                                 }
 
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause)
                                         throws Exception {
                                     if (!clientPromise.tryFailure(cause)) {
-                                        ctx.fireExceptionCaught(cause);
+                                        ctx.fireChannelExceptionCaught(cause);
                                     }
                                 }
                             });

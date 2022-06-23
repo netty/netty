@@ -96,7 +96,7 @@ public class DefaultChannelPipelineTailTest {
 
         try {
             IOException ex = new IOException("testOnUnhandledInboundException");
-            myChannel.pipeline().fireExceptionCaught(ex);
+            myChannel.pipeline().fireChannelExceptionCaught(ex);
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
             assertSame(ex, causeRef.get());
         } finally {
@@ -154,7 +154,7 @@ public class DefaultChannelPipelineTailTest {
         };
 
         try {
-            myChannel.pipeline().fireInboundEventTriggered("testOnUnhandledInboundUserEventTriggered");
+            myChannel.pipeline().fireChannelInboundEvent("testOnUnhandledInboundUserEventTriggered");
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
         } finally {
             myChannel.close();

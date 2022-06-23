@@ -363,10 +363,10 @@ public class IdleStateHandler implements ChannelHandler {
 
     /**
      * Is called when an {@link IdleStateEvent} should be fired. This implementation calls
-     * {@link ChannelHandlerContext#fireInboundEventTriggered(Object)}.
+     * {@link ChannelHandlerContext#fireChannelInboundEvent(Object)}.
      */
     protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
-        ctx.fireInboundEventTriggered(evt);
+        ctx.fireChannelInboundEvent(evt);
     }
 
     /**
@@ -498,7 +498,7 @@ public class IdleStateHandler implements ChannelHandler {
                     IdleStateEvent event = newIdleStateEvent(IdleState.READER_IDLE, first);
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
-                    ctx.fireExceptionCaught(t);
+                    ctx.fireChannelExceptionCaught(t);
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
@@ -533,7 +533,7 @@ public class IdleStateHandler implements ChannelHandler {
                     IdleStateEvent event = newIdleStateEvent(IdleState.WRITER_IDLE, first);
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
-                    ctx.fireExceptionCaught(t);
+                    ctx.fireChannelExceptionCaught(t);
                 }
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
@@ -571,7 +571,7 @@ public class IdleStateHandler implements ChannelHandler {
                     IdleStateEvent event = newIdleStateEvent(IdleState.ALL_IDLE, first);
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
-                    ctx.fireExceptionCaught(t);
+                    ctx.fireChannelExceptionCaught(t);
                 }
             } else {
                 // Either read or write occurred before the timeout - set a new

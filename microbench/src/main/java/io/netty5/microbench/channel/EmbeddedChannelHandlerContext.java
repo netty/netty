@@ -111,9 +111,9 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+    public final ChannelHandlerContext fireChannelExceptionCaught(Throwable cause) {
         try {
-            handler().exceptionCaught(this, cause);
+            handler().channelExceptionCaught(this, cause);
         } catch (Exception e) {
             handleException(e);
         }
@@ -121,7 +121,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final ChannelHandlerContext fireInboundEventTriggered(Object event) {
+    public final ChannelHandlerContext fireChannelInboundEvent(Object event) {
         Resource.dispose(event);
         return this;
     }
@@ -246,8 +246,8 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public Future<Void> triggerOutboundEvent(Object event) {
-        return channel().triggerOutboundEvent(event);
+    public Future<Void> sendOutboundEvent(Object event) {
+        return channel().sendOutboundEvent(event);
     }
 
     @Override

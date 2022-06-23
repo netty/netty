@@ -75,7 +75,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

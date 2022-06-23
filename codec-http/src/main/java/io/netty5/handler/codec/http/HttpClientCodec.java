@@ -325,7 +325,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
             if (failOnMissingResponse) {
                 long missingResponses = requestResponseCounter.get();
                 if (missingResponses > 0) {
-                    ctx.fireExceptionCaught(new PrematureChannelClosureException(
+                    ctx.fireChannelExceptionCaught(new PrematureChannelClosureException(
                             "channel gone inactive with " + missingResponses +
                             " missing response(s)"));
                 }

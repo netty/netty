@@ -141,17 +141,17 @@ class BufferConversionHandlerTest {
             Buffer userEventBuffer;
 
             @Override
-            public ChannelHandlerContext fireInboundEventTriggered(Object evt) {
+            public ChannelHandlerContext fireChannelInboundEvent(Object evt) {
                 userEventBuffer = (Buffer) evt;
                 return this;
             }
         }
         UserEventContext ctx = new UserEventContext();
-        handler.inboundEventTriggered(ctx, testData.byteBuf);
+        handler.channelInboundEvent(ctx, testData.byteBuf);
         assertThat(ctx.userEventBuffer).isEqualTo(testData.buffer);
 
         ctx.userEventBuffer = null;
-        handler.inboundEventTriggered(ctx, testData.buffer);
+        handler.channelInboundEvent(ctx, testData.buffer);
         assertThat(ctx.userEventBuffer).isSameAs(testData.buffer);
     }
 
@@ -261,12 +261,12 @@ class BufferConversionHandlerTest {
         }
 
         @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+        public ChannelHandlerContext fireChannelExceptionCaught(Throwable cause) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelHandlerContext fireInboundEventTriggered(Object evt) {
+        public ChannelHandlerContext fireChannelInboundEvent(Object evt) {
             throw new UnsupportedOperationException();
         }
 
@@ -346,7 +346,7 @@ class BufferConversionHandlerTest {
         }
 
         @Override
-        public Future<Void> triggerOutboundEvent(Object event) {
+        public Future<Void> sendOutboundEvent(Object event) {
             throw new UnsupportedOperationException();
         }
 

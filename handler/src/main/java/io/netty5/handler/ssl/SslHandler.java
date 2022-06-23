@@ -78,7 +78,7 @@ import static java.util.Objects.requireNonNull;
  * <p>
  * Beside using the handshake {@link Future} to get notified about the completion of the handshake it's
  * also possible to detect it by implement the
- * {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)}
+ * {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)}
  * method and check for a {@link SslHandshakeCompletionEvent}.
  *
  * <h3>Handshake</h3>
@@ -585,7 +585,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
             if (!handshakePromise.isDone()) {
                 cause = new SSLHandshakeException("SslHandler removed before handshake completed");
                 if (handshakePromise.tryFailure(cause)) {
-                    ctx.fireInboundEventTriggered(new SslHandshakeCompletionEvent(cause));
+                    ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(cause));
                 }
             }
             if (!sslClosePromise.isDone()) {
@@ -922,7 +922,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (ignoreException(cause)) {
             // It is safe to ignore the 'connection reset by peer' or
             // 'broken pipe' error after sending close_notify.
@@ -939,7 +939,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
                 ctx.close();
             }
         } else {
-            ctx.fireExceptionCaught(cause);
+            ctx.fireChannelExceptionCaught(cause);
 
             if (cause instanceof SSLException ||
                 cause instanceof DecoderException && cause.getCause() instanceof SSLException) {
@@ -1093,7 +1093,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
             // listeners immediately close the Channel then we may end up firing the handshake event after the Channel
             // has been closed.
             if (handshakePromise.tryFailure(cause)) {
-                ctx.fireInboundEventTriggered(new SslHandshakeCompletionEvent(cause));
+                ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(cause));
             }
 
             // We need to flush one time as there may be an alert that we should send to the remote peer because
@@ -1453,9 +1453,9 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
         // Try to call exceptionCaught(...)
         private void safeExceptionCaught(Throwable cause) {
             try {
-                exceptionCaught(ctx, wrapIfNeeded(cause));
+                channelExceptionCaught(ctx, wrapIfNeeded(cause));
             } catch (Throwable error) {
-                ctx.fireExceptionCaught(error);
+                ctx.fireChannelExceptionCaught(error);
             }
         }
 
@@ -1615,7 +1615,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
                     clearState(STATE_PROCESS_TASK);
                     // the context itself will handle the rejected exception when try to schedule the operation so
                     // ignore the RejectedExecutionException
-                    ctx.fireExceptionCaught(cause);
+                    ctx.fireChannelExceptionCaught(cause);
                 }
             }
         }
@@ -1640,7 +1640,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
                         session.getProtocol(),
                         session.getCipherSuite());
             }
-            ctx.fireInboundEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
+            ctx.fireChannelInboundEvent(SslHandshakeCompletionEvent.SUCCESS);
         }
         if (isStateSet(STATE_READ_DURING_HANDSHAKE)) {
             clearState(STATE_READ_DURING_HANDSHAKE);
@@ -1702,7 +1702,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
             SSLException transportFailure = new SSLException("failure when writing TLS control frames", cause);
             releaseAndFailAll(ctx, transportFailure);
             if (handshakePromise.tryFailure(transportFailure)) {
-                ctx.fireInboundEventTriggered(new SslHandshakeCompletionEvent(transportFailure));
+                ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(transportFailure));
             }
         } finally {
             ctx.close();
@@ -1718,11 +1718,11 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
     private void notifyClosePromise(Throwable cause) {
         if (cause == null) {
             if (sslClosePromise.trySuccess(ctx.channel())) {
-                ctx.fireInboundEventTriggered(SslCloseCompletionEvent.SUCCESS);
+                ctx.fireChannelInboundEvent(SslCloseCompletionEvent.SUCCESS);
             }
         } else {
             if (sslClosePromise.tryFailure(cause)) {
-                ctx.fireInboundEventTriggered(new SslCloseCompletionEvent(cause));
+                ctx.fireChannelInboundEvent(new SslCloseCompletionEvent(cause));
             }
         }
     }

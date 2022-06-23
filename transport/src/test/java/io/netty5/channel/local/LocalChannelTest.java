@@ -1192,8 +1192,8 @@ public class LocalChannelTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            ctx.fireExceptionCaught(cause);
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            ctx.fireChannelExceptionCaught(cause);
             ctx.close();
         }
     }

@@ -270,7 +270,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
+                    pipeline.fireChannelExceptionCaught(exception);
                 } else {
                     readIfIsAutoRead();
                 }

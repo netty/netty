@@ -58,7 +58,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
         final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
         cb.handler(new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 promise.trySuccess(cause);
             }
         });

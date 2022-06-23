@@ -51,7 +51,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
 
     private static class TestHandler implements ChannelHandler {
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             cause.printStackTrace();
         }
     }

@@ -64,18 +64,18 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
      * on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
      */
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof HttpServerUpgradeHandler.UpgradeEvent) {
             HttpServerUpgradeHandler.UpgradeEvent upgradeEvent =
                     (HttpServerUpgradeHandler.UpgradeEvent) evt;
             onHeadersRead(ctx, 1, http1HeadersToHttp2Headers(upgradeEvent.upgradeRequest()), 0 , true);
         }
-        super.inboundEventTriggered(ctx, evt);
+        super.channelInboundEvent(ctx, evt);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.channelExceptionCaught(ctx, cause);
         cause.printStackTrace();
         ctx.close();
     }

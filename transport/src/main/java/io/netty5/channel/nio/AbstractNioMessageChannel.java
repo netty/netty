@@ -105,7 +105,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 if (exception != null) {
                     closed = closeOnReadError(exception);
 
-                    pipeline.fireExceptionCaught(exception);
+                    pipeline.fireChannelExceptionCaught(exception);
                 }
 
                 if (closed) {

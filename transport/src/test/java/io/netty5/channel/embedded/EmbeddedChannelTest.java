@@ -539,7 +539,7 @@ public class EmbeddedChannelTest {
         final AtomicBoolean inactive = new AtomicBoolean();
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 ctx.close();
             }
 
@@ -548,7 +548,7 @@ public class EmbeddedChannelTest {
                 inactive.set(true);
             }
         });
-        channel.pipeline().fireExceptionCaught(new IllegalStateException());
+        channel.pipeline().fireChannelExceptionCaught(new IllegalStateException());
 
         assertTrue(inactive.get());
     }

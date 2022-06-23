@@ -354,7 +354,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
+                    pipeline.fireChannelExceptionCaught(exception);
                 }
                 readIfIsAutoRead();
             } finally {

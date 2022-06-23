@@ -277,7 +277,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             final ChannelConfig config = ctx.channel().config();
             if (config.isAutoRead()) {
                 // stop accept new connections for 1 second to allow the channel to recover
@@ -287,7 +287,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
             // still let the exceptionCaught event flow through the pipeline to give the user
             // a chance to do something with it
-            ctx.fireExceptionCaught(cause);
+            ctx.fireChannelExceptionCaught(cause);
         }
     }
 

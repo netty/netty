@@ -99,13 +99,13 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
     private static class ExceptionHandler implements ChannelHandler {
         final AtomicLong count = new AtomicLong();
         /**
-         * We expect to get 1 call to {@link #exceptionCaught(ChannelHandlerContext, Throwable)}.
+         * We expect to get 1 call to {@link #channelExceptionCaught(ChannelHandlerContext, Throwable)}.
          */
         final CountDownLatch latch1 = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (count.incrementAndGet() <= 2) {
                 latch1.countDown();
             } else {

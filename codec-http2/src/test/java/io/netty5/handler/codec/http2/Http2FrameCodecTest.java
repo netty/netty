@@ -430,7 +430,7 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
 
         StreamException streamEx = new StreamException(3, Http2Error.INTERNAL_ERROR, "foo");
-        channel.pipeline().fireExceptionCaught(streamEx);
+        channel.pipeline().fireChannelExceptionCaught(streamEx);
 
         Http2FrameStreamEvent event = inboundHandler.readInboundMessageOrUserEvent();
         assertEquals(Http2FrameStreamEvent.Type.State, event.type());
@@ -876,7 +876,7 @@ public class Http2FrameCodecTest {
                 "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
                                                      preferredAllocator().allocate(0)));
         assertTrue(upgradeEvent.isAccessible());
-        channel.pipeline().fireInboundEventTriggered(upgradeEvent);
+        channel.pipeline().fireChannelInboundEvent(upgradeEvent);
         assertFalse(upgradeEvent.isAccessible());
     }
 
@@ -892,7 +892,7 @@ public class Http2FrameCodecTest {
                                               .stream(data.stream())).addListener(future -> {
                         Throwable cause = future.cause();
                         if (cause != null) {
-                            ctx.fireExceptionCaught(cause);
+                            ctx.fireChannelExceptionCaught(cause);
                         }
                     });
                 }
@@ -916,7 +916,7 @@ public class Http2FrameCodecTest {
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
             "HTTP/2", request);
-        channel.pipeline().fireInboundEventTriggered(upgradeEvent);
+        channel.pipeline().fireChannelInboundEvent(upgradeEvent);
     }
 
     @Test

@@ -1317,7 +1317,7 @@ public class DnsNameResolver extends InetNameResolver {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx1, Throwable cause) {
+                    public void channelExceptionCaught(ChannelHandlerContext ctx1, Throwable cause) {
                         if (tcpCtx.tryFailure("TCP fallback error", cause, false) && logger.isDebugEnabled()) {
                             logger.debug("{} Error during processing response: TCP [{}: {}]",
                                     ctx1.channel(), queryId,
@@ -1348,7 +1348,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (cause instanceof CorruptedFrameException) {
                 logger.debug("Unable to decode DNS response: UDP [{}]", ctx.channel(), cause);
             } else {

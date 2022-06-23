@@ -298,11 +298,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 sch.pipeline().addLast("clientHandler", clientHandler);
                 sch.pipeline().addLast(new ChannelHandler() {
                     @Override
-                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof SslHandshakeCompletionEvent) {
                             clientHandshakeEventLatch.countDown();
                         }
-                        ctx.fireInboundEventTriggered(evt);
+                        ctx.fireChannelInboundEvent(evt);
                     }
                 });
             }
@@ -480,7 +480,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public final void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
                 if (handshakeEvt.cause() != null) {
@@ -490,11 +490,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 negoCounter.incrementAndGet();
                 logStats("HANDSHAKEN");
             }
-            ctx.fireInboundEventTriggered(evt);
+            ctx.fireChannelInboundEvent(evt);
         }
 
         @Override
-        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public final void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the client side:", cause);
             }
