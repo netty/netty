@@ -592,9 +592,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             boolean fireEvent = false;
             switch (direction) {
                 case Outbound:
-                    outputShutdown = true;
-                    promise.setSuccess(null);
-                    fireEvent = true;
+                    fireEvent = shutdownOutput(true, promise);
                     break;
                 case Inbound:
                     try {
@@ -613,6 +611,24 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             if (fireEvent) {
                 pipeline().fireChannelShutdown(direction);
             }
+        }
+
+        private boolean shutdownOutput(boolean writeFrame, Promise<Void> promise) {
+            if (!promise.setUncancellable()) {
+                return false;
+            }
+            if (isShutdown(ChannelShutdownDirection.Outbound)) {
+                // Already shutdown so let's just make this a noop.
+                promise.setSuccess(null);
+                return false;
+            }
+            if (writeFrame) {
+                // Write a headers frame with endOfStream flag set
+                write(new DefaultHttp2HeadersFrame(EmptyHttp2Headers.INSTANCE, true), newPromise());
+            }
+            outputShutdown = true;
+            promise.setSuccess(null);
+            return true;
         }
 
         @Override
@@ -820,7 +836,21 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             allocHandle.lastBytesRead(bytes);
             allocHandle.incMessagesRead(1);
 
+            boolean shutdownInput = isShutdownNeeded(frame);
             pipeline().fireChannelRead(frame);
+            if (shutdownInput) {
+                shutdown(ChannelShutdownDirection.Inbound, newPromise());
+            }
+        }
+
+        private boolean isShutdownNeeded(Http2Frame frame) {
+            if (frame instanceof Http2HeadersFrame) {
+                return ((Http2HeadersFrame) frame).isEndStream();
+            }
+            if (frame instanceof Http2DataFrame) {
+                return ((Http2DataFrame) frame).isEndStream();
+            }
+            return false;
         }
 
         @Override
@@ -837,7 +867,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 return;
             }
 
-            if (outputShutdown // Once the outbound side was closed we should not allow header / data frames
+            // Once the outbound side was closed we should not allow header / data frames
+            if (isShutdown(ChannelShutdownDirection.Outbound)
                     && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
                 Resource.dispose(msg);
                 promise.setFailure(newOutputShutdownException(Http2ChannelUnsafe.class, "write(Object, Promise)"));
@@ -847,7 +878,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             try {
                 if (msg instanceof Http2StreamFrame) {
                     Http2StreamFrame frame = validateStreamFrame((Http2StreamFrame) msg).stream(stream());
+                    boolean shutdownOutput = isShutdownNeeded(frame);
                     writeHttp2StreamFrame(frame, promise);
+                    if (shutdownOutput) {
+                        if (shutdownOutput(false, newPromise())) {
+                            pipeline().fireChannelShutdown(ChannelShutdownDirection.Outbound);
+                        }
+                    }
                 } else {
                     String msgStr = msg.toString();
                     Resource.dispose(msg);

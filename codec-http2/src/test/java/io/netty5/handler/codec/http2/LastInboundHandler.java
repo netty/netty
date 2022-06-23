@@ -18,6 +18,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.PlatformDependent;
@@ -40,6 +41,8 @@ public class LastInboundHandler implements ChannelHandler {
     private ChannelHandlerContext ctx;
     private boolean channelActive;
     private String writabilityStates = "";
+    private boolean inboundShutdown;
+    private boolean outboundShutdown;
 
     private static final Consumer<Object> NOOP_CONSUMER = obj -> {
     };
@@ -72,6 +75,29 @@ public class LastInboundHandler implements ChannelHandler {
 
     public boolean isChannelActive() {
         return channelActive;
+    }
+
+    public boolean isInboundShutdown() {
+        return inboundShutdown;
+    }
+
+    public boolean isOutboundShutdown() {
+        return outboundShutdown;
+    }
+
+    @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) throws Exception {
+        ctx.fireChannelShutdown(direction);
+        switch (direction) {
+            case Inbound:
+                inboundShutdown = true;
+                break;
+            case Outbound:
+                outboundShutdown = true;
+                break;
+            default:
+                throw new AssertionError();
+        }
     }
 
     public String writabilityStates() {

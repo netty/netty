@@ -88,9 +88,6 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     private static final FutureContextListener<Channel, Void> CHILD_CHANNEL_REGISTRATION_LISTENER =
             Http2MultiplexHandler::registerDone;
 
-    static final FutureContextListener<Channel, Void> CHILD_CHANNEL_SHUTDOWN_REGISTRATION_LISTENER = (c, v) ->
-        registerDoneShutdown(c, v, true);
-
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
     private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
@@ -127,7 +124,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         this.upgradeStreamHandler = upgradeStreamHandler;
     }
 
-    static boolean registerDone(Channel childChannel, Future<?> future) {
+    private static void registerDone(Channel childChannel, Future<?> future) {
         // Handle any errors that occurred on the local thread while registering. Even though
         // failures can happen after this point, they will be handled by the channel by closing the
         // childChannel.
@@ -137,14 +134,6 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             } else {
                 childChannel.unsafe().closeForcibly();
             }
-            return false;
-        }
-        return true;
-    }
-
-    static void registerDoneShutdown(Channel childChannel, Future<?> future, boolean shutdownInput) {
-        if (!registerDone(childChannel, future) && shutdownInput) {
-            childChannel.shutdown(ChannelShutdownDirection.Inbound);
         }
     }
 
@@ -217,19 +206,14 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 switch (stream.state()) {
                     case HALF_CLOSED_LOCAL:
                         // Ignore everything which was not caused by an upgrade
-                        if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
-                            createStreamChannelIfNeeded(stream, false);
+                        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
+                            break;
                         }
-                        break;
+                        // fall-through
                     case HALF_CLOSED_REMOTE:
-                        if (stream.attachment != null) {
-                            stream.attachment.shutdown(ChannelShutdownDirection.Inbound);
-                        } else {
-                            createStreamChannelIfNeeded(stream, true);
-                        }
-                        break;
+                        // fall-through
                     case OPEN:
-                        createStreamChannelIfNeeded(stream, false);
+                        createStreamChannelIfNeeded(stream);
                         break;
                     case CLOSED:
                         AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
@@ -247,7 +231,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         ctx.fireInboundEventTriggered(evt);
     }
 
-    private void createStreamChannelIfNeeded(DefaultHttp2FrameStream stream, boolean shutdownInputOnceRegistered)
+    private void createStreamChannelIfNeeded(DefaultHttp2FrameStream stream)
             throws Http2Exception {
         if (stream.attachment != null) {
             // ignore if child channel was already created.
@@ -268,13 +252,9 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         }
         Future<Void> future = ch.register();
         if (future.isDone()) {
-            registerDoneShutdown(ch, future, shutdownInputOnceRegistered);
+            registerDone(ch, future);
         } else {
-            if (shutdownInputOnceRegistered) {
-                future.addListener(ch, CHILD_CHANNEL_SHUTDOWN_REGISTRATION_LISTENER);
-            } else {
-                future.addListener(ch, CHILD_CHANNEL_REGISTRATION_LISTENER);
-            }
+            future.addListener(ch, CHILD_CHANNEL_REGISTRATION_LISTENER);
         }
     }
 
