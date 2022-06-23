@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -420,16 +421,14 @@ public final class Http2TestUtil {
         return onHeapAllocator().allocate(0);
     }
 
-    static void assertEqualsAndRelease(Http2Frame expected, Http2Frame actual) {
-        try {
+    static void assertEqualsAndRelease(Http2Frame expected, Http2Frame actual) throws Exception {
+        try (AutoCloseable ignore1 = autoClosing(expected);
+             AutoCloseable ignore2 = autoClosing(actual)) {
             assertEquals(expected, actual);
-        } finally {
-            Resource.dispose(expected);
-            Resource.dispose(actual);
-            // Will return 'false' when not implements Resource or ReferenceCounted.
-            assertFalse(Resource.isAccessible(expected, false));
-            assertFalse(Resource.isAccessible(actual, false));
         }
+        // Will return 'false' when not implements Resource or ReferenceCounted.
+        assertFalse(Resource.isAccessible(expected, false));
+        assertFalse(Resource.isAccessible(actual, false));
     }
 
 }

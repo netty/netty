@@ -16,7 +16,6 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -49,6 +48,7 @@ import java.util.Set;
 import static io.netty5.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
 import static io.netty5.handler.ssl.SslUtils.addIfSupported;
 import static io.netty5.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -201,7 +201,7 @@ public class JdkSslContext extends SslContext {
      */
     @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient,
-                         ClientAuth clientAuth) {
+                         ClientAuth clientAuth) throws Exception {
         this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
                 JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, null, false);
     }
@@ -221,7 +221,7 @@ public class JdkSslContext extends SslContext {
     @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers,
                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                         ClientAuth clientAuth) {
+                         ClientAuth clientAuth) throws Exception {
         this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, null, false);
     }
 
@@ -244,7 +244,7 @@ public class JdkSslContext extends SslContext {
                          ApplicationProtocolConfig apn,
                          ClientAuth clientAuth,
                          String[] protocols,
-                         boolean startTls) {
+                         boolean startTls) throws Exception {
         this(sslContext,
                 isClient,
                 ciphers,
@@ -257,7 +257,8 @@ public class JdkSslContext extends SslContext {
 
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
+                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls)
+            throws Exception {
         super(startTls);
         this.apn = requireNonNull(apn, "apn");
         this.clientAuth = requireNonNull(clientAuth, "clientAuth");
@@ -280,7 +281,7 @@ public class JdkSslContext extends SslContext {
             // the same protocols and ciphers are supported. For example even if Java11+ is used Conscrypt will
             // not support TLSv1.3 and the TLSv1.3 ciphersuites.
             SSLEngine engine = sslContext.createSSLEngine();
-            try {
+            try (AutoCloseable ignore = autoClosing(engine)) {
                 if (protocols == null) {
                     this.protocols = defaultProtocols(sslContext, engine);
                 } else {
@@ -295,8 +296,6 @@ public class JdkSslContext extends SslContext {
                         defaultCiphers.remove(cipher);
                     }
                 }
-            } finally {
-                Resource.dispose(engine);
             }
         }
 

@@ -45,6 +45,7 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
             final int readableBytes = limit - position;
             final BufferAllocator alloc = alloc();
             Buffer buffer = null;
+            boolean dispose = true;
             try {
                 if (alloc.isPooling() && alloc.getAllocationType().isDirect()) {
                     buffer = alloc.allocate(readableBytes);
@@ -52,6 +53,8 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
                     buffer = BufferUtil.threadLocalDirectBuffer();
                     if (buffer == null) {
                         buffer = DefaultBufferAllocators.offHeapAllocator().allocate(readableBytes);
+                    } else {
+                        dispose = false; // Avoid disposing of the thread-loca buffer.
                     }
                 }
                 buffer.writeBytes(src.duplicate());
@@ -61,7 +64,17 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
                     written = fd.write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
                     assert component.next() == null;
                 }
-            } finally {
+            } catch (Throwable throwable) {
+                if (dispose) {
+                    try {
+                        Resource.dispose(buffer);
+                    } catch (Exception e) {
+                        throwable.addSuppressed(e);
+                    }
+                }
+                throw throwable;
+            }
+            if (dispose) {
                 Resource.dispose(buffer);
             }
         }

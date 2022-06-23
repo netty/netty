@@ -182,8 +182,8 @@ public abstract class AbstractCoalescingBufferQueue {
                 entryBuffer = null;
             }
         } catch (Throwable cause) {
-            safeDispose(entryBuffer);
-            safeDispose(toReturn);
+            SilentDispose.dispose(entryBuffer, logger);
+            SilentDispose.dispose(toReturn, logger);
             aggregatePromise.setFailure(cause);
             throw cause;
         }
@@ -340,7 +340,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry instanceof Buffer) {
                     Buffer buffer = (Buffer) entry;
                     decrementReadableBytes(buffer.readableBytes());
-                    safeDispose(buffer);
+                    SilentDispose.dispose(buffer, logger);
                 } else {
                     ((FutureListener<Void>) entry).operationComplete(future);
                 }
@@ -374,9 +374,5 @@ public abstract class AbstractCoalescingBufferQueue {
         if (tracker != null) {
             tracker.decrementPendingOutboundBytes(decrement);
         }
-    }
-
-    private void safeDispose(Object object) {
-        SilentDispose.dispose(object, logger);
     }
 }

@@ -18,11 +18,12 @@ package io.netty5.handler.codec;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.ReferenceCounted;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.TypeParameterMatcher;
 
 import java.util.List;
+
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 
 /**
  * A Codec for on-the-fly encoding/decoding of message.
@@ -147,10 +148,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
      * @see MessageToMessageEncoder#encodeAndClose(ChannelHandlerContext, Object, List)
      */
     protected void encodeAndClose(ChannelHandlerContext ctx, OUTBOUND_IN msg, List<Object> out) throws Exception {
-        try {
+        try (AutoCloseable ignore = autoClosing(msg)) {
             encode(ctx, msg, out);
-        } finally {
-            Resource.dispose(msg);
         }
     }
 
@@ -165,10 +164,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
      * @see MessageToMessageDecoder#decodeAndClose(ChannelHandlerContext, Object)
      */
     protected void decodeAndClose(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
-        try {
+        try (AutoCloseable ignore = autoClosing(msg)) {
             decode(ctx, msg);
-        } finally {
-            Resource.dispose(msg);
         }
     }
 }

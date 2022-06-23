@@ -66,6 +66,7 @@ import java.util.regex.Pattern;
 
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -569,7 +570,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
 
     @Override
     public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        try {
+        try (AutoCloseable ignore = autoClosing(engine)) {
             if (pendingUnencryptedWrites != null && !pendingUnencryptedWrites.isEmpty()) {
                 // Check if queue is not empty first because create a new ChannelException is expensive
                 pendingUnencryptedWrites.releaseAndFailAll(ctx,
@@ -594,8 +595,6 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
                 }
                 notifyClosePromise(cause);
             }
-        } finally {
-            Resource.dispose(engine);
         }
     }
 

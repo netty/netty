@@ -34,10 +34,12 @@ import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.Resource;
 import io.netty5.util.UncheckedBooleanSupplier;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -47,9 +49,8 @@ import static io.netty5.util.CharsetUtil.UTF_8;
 
 @UnstableApi
 public final class EpollDomainDatagramChannel extends AbstractEpollChannel implements DomainDatagramChannel {
-
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDomainDatagramChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
-
     private static final String EXPECTED_TYPES =
             " (expected: " +
                     StringUtil.simpleClassName(DomainDatagramPacket.class) + ", " +
@@ -271,7 +272,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                         try {
                             return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(null, buf), domainRecipient);
                         } finally {
-                            Resource.dispose(e);
+                            SilentDispose.dispose(e, logger); // Don't fail here, because we allocated a buffer.
                         }
                     }
                     return e;

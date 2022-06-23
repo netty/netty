@@ -38,7 +38,6 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.resolver.dns.DnsNameResolverBuilder;
 import io.netty5.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty5.util.HashedWheelTimer;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -74,6 +73,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -283,57 +283,59 @@ public class NettyBlockHoundIntegrationTest {
 
         Channel sc = null;
         Channel cc = null;
-        try {
-            sc = new ServerBootstrap()
-                    .group(group)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0))
-                    .get();
+        try (AutoCloseable ignore = autoClosing(sslClientCtx)) {
+            try {
+                sc = new ServerBootstrap()
+                        .group(group)
+                        .channel(NioServerSocketChannel.class)
+                        .childHandler(new ChannelHandler() {
+                        })
+                        .bind(new InetSocketAddress(0))
+                        .get();
 
-            cc = new Bootstrap()
-                    .group(group)
-                    .channel(NioSocketChannel.class)
-                    .handler(new ChannelInitializer<Channel>() {
+                cc = new Bootstrap()
+                        .group(group)
+                        .channel(NioSocketChannel.class)
+                        .handler(new ChannelInitializer<Channel>() {
 
-                        @Override
-                        protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(sslHandler);
-                            ch.pipeline().addLast(new ChannelHandler() {
+                            @Override
+                            protected void initChannel(Channel ch) {
+                                ch.pipeline().addLast(sslHandler);
+                                ch.pipeline().addLast(new ChannelHandler() {
 
-                                @Override
-                                public void channelActive(ChannelHandlerContext ctx) {
-                                    activeLatch.countDown();
-                                }
-
-                                @Override
-                                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                                    if (evt instanceof SslHandshakeCompletionEvent &&
-                                            ((SslHandshakeCompletionEvent) evt).cause() != null) {
-                                        Throwable cause = ((SslHandshakeCompletionEvent) evt).cause();
-                                        cause.printStackTrace();
-                                        error.set(cause);
+                                    @Override
+                                    public void channelActive(ChannelHandlerContext ctx) {
+                                        activeLatch.countDown();
                                     }
-                                    ctx.fireChannelInboundEvent(evt);
-                                }
-                            });
-                        }
-                    })
-                    .connect(sc.localAddress())
-                    .addListener(future -> future.get().writeAndFlush(alloc.copyOf(new byte [] { 1, 2, 3, 4 })))
-                    .get();
 
-            assertTrue(activeLatch.await(5, TimeUnit.SECONDS));
-            assertNull(error.get());
-        } finally {
-            if (cc != null) {
-                cc.close().sync();
+                                    @Override
+                                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                                        if (evt instanceof SslHandshakeCompletionEvent &&
+                                            ((SslHandshakeCompletionEvent) evt).cause() != null) {
+                                            Throwable cause = ((SslHandshakeCompletionEvent) evt).cause();
+                                            cause.printStackTrace();
+                                            error.set(cause);
+                                        }
+                                        ctx.fireChannelInboundEvent(evt);
+                                    }
+                                });
+                            }
+                        })
+                        .connect(sc.localAddress())
+                        .addListener(future -> future.get().writeAndFlush(alloc.copyOf(new byte[] { 1, 2, 3, 4 })))
+                        .get();
+
+                assertTrue(activeLatch.await(5, TimeUnit.SECONDS));
+                assertNull(error.get());
+            } finally {
+                if (cc != null) {
+                    cc.close().sync();
+                }
+                if (sc != null) {
+                    sc.close().sync();
+                }
+                group.shutdownGracefully();
             }
-            if (sc != null) {
-                sc.close().sync();
-            }
-            group.shutdownGracefully();
-            Resource.dispose(sslClientCtx);
         }
     }
 
@@ -442,47 +444,48 @@ public class NettyBlockHoundIntegrationTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
-        try {
-            sc = new ServerBootstrap()
-                    .group(group)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(serverSslHandler)
-                    .bind(new InetSocketAddress(0)).get();
+        try (AutoCloseable ignore = autoClosing(sslClientCtx)) {
+            try {
+                sc = new ServerBootstrap()
+                        .group(group)
+                        .channel(NioServerSocketChannel.class)
+                        .childHandler(serverSslHandler)
+                        .bind(new InetSocketAddress(0)).get();
 
-            Future<Channel> future = new Bootstrap()
-                    .group(group)
-                    .channel(NioSocketChannel.class)
-                    .handler(new ChannelInitializer<Channel>() {
-                        @Override
-                        protected void initChannel(Channel ch) {
-                            ch.pipeline()
-                              .addLast(clientSslHandler)
-                              .addLast(new ChannelHandler() {
+                Future<Channel> future = new Bootstrap()
+                        .group(group)
+                        .channel(NioSocketChannel.class)
+                        .handler(new ChannelInitializer<Channel>() {
+                            @Override
+                            protected void initChannel(Channel ch) {
+                                ch.pipeline()
+                                  .addLast(clientSslHandler)
+                                  .addLast(new ChannelHandler() {
 
-                                  @Override
-                                  public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                                      if (evt instanceof SslHandshakeCompletionEvent &&
+                                      @Override
+                                      public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                                          if (evt instanceof SslHandshakeCompletionEvent &&
                                               ((SslHandshakeCompletionEvent) evt).cause() != null) {
-                                          ((SslHandshakeCompletionEvent) evt).cause().printStackTrace();
+                                              ((SslHandshakeCompletionEvent) evt).cause().printStackTrace();
+                                          }
+                                          ctx.fireChannelInboundEvent(evt);
                                       }
-                                      ctx.fireChannelInboundEvent(evt);
-                                  }
-                              });
-                        }
-                    }).connect(sc.localAddress());
-            cc = future.get();
+                                  });
+                            }
+                        }).connect(sc.localAddress());
+                cc = future.get();
 
-            clientSslHandler.handshakeFuture().await().sync();
-            serverSslHandler.handshakeFuture().await().sync();
-        } finally {
-            if (cc != null) {
-                cc.close().sync();
+                clientSslHandler.handshakeFuture().await().sync();
+                serverSslHandler.handshakeFuture().await().sync();
+            } finally {
+                if (cc != null) {
+                    cc.close().sync();
+                }
+                if (sc != null) {
+                    sc.close().sync();
+                }
+                group.shutdownGracefully();
             }
-            if (sc != null) {
-                sc.close().sync();
-            }
-            group.shutdownGracefully();
-            Resource.dispose(sslClientCtx);
         }
     }
 

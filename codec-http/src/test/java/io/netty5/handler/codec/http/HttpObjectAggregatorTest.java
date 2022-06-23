@@ -28,6 +28,7 @@ import java.nio.channels.ClosedChannelException;
 import static io.netty5.buffer.api.CompositeBuffer.isComposite;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -547,7 +548,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testSelectiveRequestAggregation() {
+    public void testSelectiveRequestAggregation() throws Exception {
         HttpObjectAggregator<?> myPostAggregator =
                 new HttpObjectAggregator<DefaultHttpContent>(1024 * 1024) {
                     @Override
@@ -578,10 +579,8 @@ public class HttpObjectAggregatorTest {
 
             // Getting an aggregated response out
             Object msg1 = channel.readInbound();
-            try {
+            try (AutoCloseable ignore = autoClosing(msg1)) {
                 assertTrue(msg1 instanceof FullHttpRequest);
-            } finally {
-                Resource.dispose(msg1);
             }
 
             // Don't aggregate: non-POST
@@ -589,7 +588,8 @@ public class HttpObjectAggregatorTest {
             HttpContent<?> content2 = new DefaultHttpContent(preferredAllocator().copyOf(data));
             request2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
 
-            try {
+            try (AutoCloseable ignore1 = autoClosing(request2);
+                 AutoCloseable ignore2 = autoClosing(content2)) {
                 assertTrue(channel.writeInbound(request2, content2,
                         new EmptyLastHttpContent(preferredAllocator())));
 
@@ -597,9 +597,6 @@ public class HttpObjectAggregatorTest {
                 assertSame(request2, channel.readInbound());
                 assertSame(content2, channel.readInbound());
                 assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
-            } finally {
-              Resource.dispose(request2);
-              Resource.dispose(content2);
             }
 
             assertFalse(channel.finish());
@@ -609,7 +606,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testSelectiveResponseAggregation() {
+    public void testSelectiveResponseAggregation() throws Exception {
         HttpObjectAggregator<?> myTextAggregator =
                 new HttpObjectAggregator<DefaultHttpContent>(1024 * 1024) {
                     @Override
@@ -641,10 +638,8 @@ public class HttpObjectAggregatorTest {
 
             // Getting an aggregated response out
             Object msg1 = channel.readInbound();
-            try {
+            try (AutoCloseable ignore = autoClosing(msg1)) {
                 assertTrue(msg1 instanceof FullHttpResponse);
-            } finally {
-                Resource.dispose(msg1);
             }
 
             // Don't aggregate: application/json
@@ -653,7 +648,8 @@ public class HttpObjectAggregatorTest {
                     "{key: 'value'}", UTF_8));
             response2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
 
-            try {
+            try (AutoCloseable ignore1 = autoClosing(response2);
+                 AutoCloseable ignore2 = autoClosing(content2)) {
                 assertTrue(channel.writeInbound(response2, content2,
                         new EmptyLastHttpContent(preferredAllocator())));
 
@@ -661,9 +657,6 @@ public class HttpObjectAggregatorTest {
                 assertSame(response2, channel.readInbound());
                 assertSame(content2, channel.readInbound());
                 assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
-            } finally {
-                Resource.dispose(response2);
-                Resource.dispose(content2);
             }
 
             assertFalse(channel.finish());

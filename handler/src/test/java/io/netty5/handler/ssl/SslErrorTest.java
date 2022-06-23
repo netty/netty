@@ -31,7 +31,6 @@ import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Timeout;
@@ -60,6 +59,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 
 public class SslErrorTest {
 
@@ -142,7 +143,8 @@ public class SslErrorTest {
         Channel clientChannel = null;
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         final Promise<Void> promise = group.next().newPromise();
-        try {
+        try (AutoCloseable ignore1 = autoClosing(sslServerCtx);
+             AutoCloseable ignore2 = autoClosing(sslClientCtx)) {
             serverChannel = new ServerBootstrap().group(group)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
@@ -194,9 +196,6 @@ public class SslErrorTest {
                 serverChannel.close().sync();
             }
             group.shutdownGracefully();
-
-            Resource.dispose(sslServerCtx);
-            Resource.dispose(sslClientCtx);
         }
     }
 

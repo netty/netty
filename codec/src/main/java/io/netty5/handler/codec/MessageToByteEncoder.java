@@ -21,9 +21,10 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.TypeParameterMatcher;
+
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 
 
 /**
@@ -103,10 +104,8 @@ public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
                 buf = allocateBuffer(ctx, cast, preferDirect);
-                try {
+                try (AutoCloseable ignore = autoClosing(cast)) {
                     encode(ctx, cast, buf);
-                } finally {
-                    Resource.dispose(cast);
                 }
 
                 if (buf.isReadable()) {
