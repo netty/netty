@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -87,9 +88,11 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
                 I cast = (I) msg;
                 try {
                     encode(ctx, cast, out);
-                } finally {
-                    ReferenceCountUtil.release(cast);
+                } catch (Throwable th) {
+                    ReferenceCountUtil.safeRelease(cast);
+                    PlatformDependent.throwException(th);
                 }
+                ReferenceCountUtil.release(cast);
 
                 if (out.isEmpty()) {
                     throw new EncoderException(
