@@ -14,7 +14,6 @@
  */
 package io.netty5.microbench.channel;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -22,14 +21,6 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 
 public abstract class EmbeddedChannelWriteReleaseHandlerContext extends EmbeddedChannelHandlerContext {
-    protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler) {
-        this(alloc, handler, new EmbeddedChannel());
-    }
-
-    protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-            EmbeddedChannel channel) {
-        super(alloc, handler, channel);
-    }
     protected EmbeddedChannelWriteReleaseHandlerContext(BufferAllocator alloc, ChannelHandler handler) {
         this(alloc, handler, new EmbeddedChannel());
     }

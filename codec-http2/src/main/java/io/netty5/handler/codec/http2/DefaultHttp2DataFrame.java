@@ -15,9 +15,10 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferClosedException;
+import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
@@ -29,7 +30,7 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implements Http2DataFrame {
-    private final ByteBuf content;
+    private final Buffer content;
     private final boolean endStream;
     private final int padding;
     private final int initialFlowControlledBytes;
@@ -39,7 +40,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      *
      * @param content non-{@code null} payload
      */
-    public DefaultHttp2DataFrame(ByteBuf content) {
+    public DefaultHttp2DataFrame(Send<Buffer> content) {
         this(content, false);
     }
 
@@ -49,7 +50,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      * @param endStream whether this data should terminate the stream
      */
     public DefaultHttp2DataFrame(boolean endStream) {
-        this(Unpooled.EMPTY_BUFFER, endStream);
+        this(DefaultBufferAllocators.onHeapAllocator().allocate(0), endStream, 0);
     }
 
     /**
@@ -58,7 +59,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      * @param content non-{@code null} payload
      * @param endStream whether this data should terminate the stream
      */
-    public DefaultHttp2DataFrame(ByteBuf content, boolean endStream) {
+    public DefaultHttp2DataFrame(Send<Buffer> content, boolean endStream) {
         this(content, endStream, 0);
     }
 
@@ -70,7 +71,11 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
      *                256 (inclusive).
      */
-    public DefaultHttp2DataFrame(ByteBuf content, boolean endStream, int padding) {
+    public DefaultHttp2DataFrame(Send<Buffer> content, boolean endStream, int padding) {
+        this(content.receive(), endStream, padding);
+    }
+
+    private DefaultHttp2DataFrame(Buffer content, boolean endStream, int padding) {
         this.content = requireNonNull(content, "content");
         this.endStream = endStream;
         verifyPadding(padding);
@@ -103,8 +108,11 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
-    public ByteBuf content() {
-        return ByteBufUtil.ensureAccessible(content);
+    public Buffer content() {
+        if (content.isAccessible()) {
+            return content;
+        }
+        throw new BufferClosedException();
     }
 
     @Override
@@ -114,49 +122,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     @Override
     public DefaultHttp2DataFrame copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public DefaultHttp2DataFrame duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public DefaultHttp2DataFrame retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public DefaultHttp2DataFrame replace(ByteBuf content) {
-        return new DefaultHttp2DataFrame(content, endStream, padding);
-    }
-
-    @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
-
-    @Override
-    public boolean release() {
-        return content.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content.release(decrement);
-    }
-
-    @Override
-    public DefaultHttp2DataFrame retain() {
-        content.retain();
-        return this;
-    }
-
-    @Override
-    public DefaultHttp2DataFrame retain(int increment) {
-        content.retain(increment);
-        return this;
+        return new DefaultHttp2DataFrame(content.copy(), endStream, padding);
     }
 
     @Override
@@ -166,9 +132,19 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
-    public DefaultHttp2DataFrame touch() {
-        content.touch();
-        return this;
+    public Send<Http2DataFrame> send() {
+        return content.send().map(Http2DataFrame.class,
+                                  content -> new DefaultHttp2DataFrame(content, endStream, padding));
+    }
+
+    @Override
+    public void close() {
+        content.close();
+    }
+
+    @Override
+    public boolean isAccessible() {
+        return content.isAccessible();
     }
 
     @Override

@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
@@ -25,7 +25,7 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ServerChannel;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
-import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
 import io.netty5.util.internal.UnstableApi;
@@ -43,7 +43,7 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
  * with {@link Http2FrameCodec}.
  *
  * <p>When a new stream is created, a new {@link Channel} is created for it. Applications send and
- * receive {@link Http2StreamFrame}s on the created channel. {@link ByteBuf}s cannot be processed by the channel;
+ * receive {@link Http2StreamFrame}s on the created channel. {@link Buffer}s cannot be processed by the channel;
  * all writes that reach the head of the pipeline must be an instance of {@link Http2StreamFrame}. Writes that reach
  * the head of the pipeline are processed directly by this handler and cannot be intercepted.
  *
@@ -60,13 +60,11 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
  *
  * <p>{@link ChannelConfig#setMaxMessagesPerRead(int)} and {@link ChannelConfig#setAutoRead(boolean)} are supported.
  *
- * <h3>Reference Counting</h3>
+ * <h3>Resources</h3>
  *
- * Some {@link Http2StreamFrame}s implement the {@link ReferenceCounted} interface, as they carry
- * reference counted objects (e.g. {@link ByteBuf}s). The multiplex codec will call {@link ReferenceCounted#retain()}
- * before propagating a reference counted object through the pipeline, and thus an application handler needs to release
- * such an object after having consumed it. For more information on reference counting take a look at
- * https://netty.io/wiki/reference-counted-objects.html
+ * Some {@link Http2StreamFrame}s implement the {@link Resource} interface, as they carry
+ * resource objects (e.g. {@link Buffer}s). An application handler needs to close or dispose of
+ * such objects after having consumed them.
  *
  * <h3>Channel Events</h3>
  *
@@ -327,7 +325,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                     final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                             ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireInboundEventTriggered(goAwayFrame.retainedDuplicate());
+                    childChannel.pipeline().fireInboundEventTriggered(goAwayFrame.copy());
                 }
                 return true;
             });

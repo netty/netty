@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.util.Resource;
@@ -38,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultHttp2PushPromiseFrameTest {
@@ -134,8 +134,7 @@ public class DefaultHttp2PushPromiseFrameTest {
 
                     // Write Data of actual request
                     channelFuture.addListener(fut -> {
-                        Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
-                                Unpooled.wrappedBuffer("Meow".getBytes()), true);
+                        Http2DataFrame dataFrame = new DefaultHttp2DataFrame(bb("Meow").send(), true);
                         dataFrame.stream(receivedFrame.stream());
                         ctx.writeAndFlush(dataFrame);
                     });
@@ -157,7 +156,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                 ctx.writeAndFlush(headersFrame);
 
                 // Write Data of Priority request
-                Http2DataFrame dataFrame = new DefaultHttp2DataFrame(Unpooled.wrappedBuffer(content.getBytes()), true);
+                Http2DataFrame dataFrame = new DefaultHttp2DataFrame(bb(content).send(), true);
                 dataFrame.stream(priorityFrame.stream());
                 ctx.writeAndFlush(dataFrame);
             }

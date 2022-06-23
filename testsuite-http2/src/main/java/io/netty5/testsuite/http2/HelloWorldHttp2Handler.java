@@ -15,7 +15,6 @@
 
 package io.netty5.testsuite.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.FullHttpRequest;
@@ -35,7 +34,6 @@ import io.netty5.handler.codec.http2.Http2Settings;
 import java.util.function.Supplier;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty5.util.CharsetUtil.US_ASCII;
 import static io.netty5.util.CharsetUtil.UTF_8;
@@ -89,7 +87,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
-    private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
+    private void sendResponse(ChannelHandlerContext ctx, int streamId, Buffer payload) {
         // Send a frame for the response status
         Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
         encoder().writeHeaders(ctx, streamId, headers, 0, false);
@@ -99,10 +97,10 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream) {
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding, boolean endOfStream) {
         int processed = data.readableBytes() + padding;
         if (endOfStream) {
-            sendResponse(ctx, streamId, data.retain());
+            sendResponse(ctx, streamId, data.copy());
         }
         return processed;
     }
@@ -113,7 +111,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
         if (endOfStream) {
             final Buffer content = RESPONSE_BYTES_SUPPLIER.get().copy()
                     .writeCharSequence(" - via HTTP/2", US_ASCII);
-            sendResponse(ctx, streamId, intoByteBuf(content));
+            sendResponse(ctx, streamId, content);
         }
     }
 
@@ -154,7 +152,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     }
 
     @Override
-    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
+    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData) {
     }
 
     @Override
@@ -163,6 +161,6 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
 
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-                               Http2Flags flags, ByteBuf payload) {
+                               Http2Flags flags, Buffer payload) {
     }
 }

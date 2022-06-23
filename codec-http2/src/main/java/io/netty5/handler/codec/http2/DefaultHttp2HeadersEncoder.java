@@ -15,8 +15,8 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty5.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
@@ -27,7 +27,7 @@ import static java.util.Objects.requireNonNull;
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final HpackEncoder hpackEncoder;
     private final SensitivityDetector sensitivityDetector;
-    private final ByteBuf tableSizeChangeOutput = Unpooled.buffer();
+    private final Buffer tableSizeChangeOutput = BufferAllocator.onHeapUnpooled().allocate(256);
 
     public DefaultHttp2HeadersEncoder() {
         this(NEVER_SENSITIVE);
@@ -62,13 +62,13 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     }
 
     @Override
-    public void encodeHeaders(int streamId, Http2Headers headers, ByteBuf buffer) throws Http2Exception {
+    public void encodeHeaders(int streamId, Http2Headers headers, Buffer buffer) throws Http2Exception {
         try {
             // If there was a change in the table size, serialize the output from the hpackEncoder
             // resulting from that change.
-            if (tableSizeChangeOutput.isReadable()) {
+            if (tableSizeChangeOutput.readableBytes() > 0) {
                 buffer.writeBytes(tableSizeChangeOutput);
-                tableSizeChangeOutput.clear();
+                tableSizeChangeOutput.resetOffsets();
             }
 
             hpackEncoder.encodeHeaders(streamId, buffer, headers, sensitivityDetector);

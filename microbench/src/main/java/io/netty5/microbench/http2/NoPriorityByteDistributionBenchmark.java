@@ -14,7 +14,7 @@
  */
 package io.netty5.microbench.http2;
 
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.DefaultHttp2Connection;
 import io.netty5.handler.codec.http2.DefaultHttp2RemoteFlowController;
@@ -62,6 +62,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     @Param
     private Algorithm algorithm;
 
+    private BufferAllocator allocator;
     private Http2Connection connection;
     private Http2Connection.PropertyKey dataRefresherKey;
     private Http2RemoteFlowController controller;
@@ -110,10 +111,12 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     @TearDown(Level.Trial)
     public void tearDownTrial() throws Exception {
         ctx.close();
+        allocator.close();
     }
 
     @Setup(Level.Trial)
     public void setupTrial() throws Exception {
+        allocator = BufferAllocator.offHeapPooled();
         connection = new DefaultHttp2Connection(false);
         dataRefresherKey = connection.newKey();
 
@@ -133,7 +136,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
             .frameListener(new Http2FrameAdapter())
             .connection(connection)
             .build();
-        ctx = new EmbeddedChannelWriteReleaseHandlerContext(PooledByteBufAllocator.DEFAULT, handler) {
+        ctx = new EmbeddedChannelWriteReleaseHandlerContext(allocator, handler) {
             @Override
             protected void handleException(Throwable t) {
                 handleUnexpectedException(t);
@@ -172,7 +175,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     }
 
     private DataRefresher dataRefresher(Http2Stream stream) {
-        return (DataRefresher) stream.getProperty(dataRefresherKey);
+        return stream.getProperty(dataRefresherKey);
     }
 
     private void addData(Http2Stream stream, final int dataSize) {

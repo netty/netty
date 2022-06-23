@@ -14,8 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -54,6 +53,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;
@@ -141,7 +141,7 @@ public class Http2FrameCodecTest {
         // Handshake
         verify(frameWriter).writeSettings(any(ChannelHandlerContext.class), anyHttp2Settings());
         verifyNoMoreInteractions(frameWriter);
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuffer());
 
         frameInboundWriter.writeInboundSettings(initialRemoteSettings);
 
@@ -254,10 +254,10 @@ public class Http2FrameCodecTest {
         assertEquals(new DefaultHttp2HeadersFrame(request, false).stream(stream2), inboundHeaders);
         assertNull(inboundHandler.readInbound());
 
-        ByteBuf hello = bb("hello");
+        Buffer hello = bb("hello");
         frameInboundWriter.writeInboundData(1, hello, 31, true);
         Http2DataFrame inboundData = inboundHandler.readInbound();
-        Http2DataFrame expected = new DefaultHttp2DataFrame(bb("hello"), true, 31).stream(stream2);
+        Http2DataFrame expected = new DefaultHttp2DataFrame(bb("hello").send(), true, 31).stream(stream2);
         assertEqualsAndRelease(expected, inboundData);
 
         assertNull(inboundHandler.readInbound());
@@ -266,16 +266,16 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeHeaders(any(ChannelHandlerContext.class), eq(1), eq(response), eq(0),
                 eq(false));
 
-        channel.writeOutbound(new DefaultHttp2DataFrame(bb("world"), true, 27).stream(stream2));
-        ArgumentCaptor<ByteBuf> outboundData = ArgumentCaptor.forClass(ByteBuf.class);
+        channel.writeOutbound(new DefaultHttp2DataFrame(bb("world").send(), true, 27).stream(stream2));
+        ArgumentCaptor<Buffer> outboundData = ArgumentCaptor.forClass(Buffer.class);
         verify(frameWriter).writeData(any(ChannelHandlerContext.class), eq(1), outboundData.capture(), eq(27),
                                       eq(true));
 
-        ByteBuf bb = bb("world");
+        Buffer bb = bb("world");
         assertEquals(bb, outboundData.getValue());
-        assertEquals(1, outboundData.getValue().refCnt());
-        bb.release();
-        outboundData.getValue().release();
+        assertTrue(outboundData.getValue().isAccessible());
+        bb.close();
+        outboundData.getValue().close();
 
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class),
                 anyInt(), anyLong());
@@ -332,11 +332,11 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
         assertEquals(State.OPEN, stream.state());
 
-        ByteBuf debugData = bb("debug");
-        ByteBuf expected = debugData.copy();
+        Buffer debugData = bb("debug");
+        Buffer expected = debugData.copy();
 
         Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
-                debugData.retainedDuplicate());
+                debugData.send());
         goAwayFrame.setExtraStreamIds(2);
 
         channel.writeOutbound(goAwayFrame);
@@ -344,15 +344,14 @@ public class Http2FrameCodecTest {
                 eq(NO_ERROR.code()), eq(expected));
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
-        expected.release();
-        debugData.release();
+        expected.close();
     }
 
     @Test
     public void receiveGoaway() throws Exception {
-        ByteBuf debugData = bb("foo");
+        Buffer debugData = bb("foo");
         frameInboundWriter.writeInboundGoAway(2, NO_ERROR.code(), debugData);
-        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo"));
+        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo").send());
         Http2GoAwayFrame actualFrame = inboundHandler.readInbound();
 
         assertEqualsAndRelease(expectedFrame, actualFrame);
@@ -393,11 +392,11 @@ public class Http2FrameCodecTest {
     public void unknownFrameTypeOnConnectionStream() throws Exception {
         // handle the case where unknown frames are sent before a stream is created,
         // for example: HTTP/2 GREASE testing
-        ByteBuf debugData = bb("debug");
+        Buffer debugData = bb("debug");
         frameInboundWriter.writeInboundFrame((byte) 0xb, 0, new Http2Flags(), debugData);
         channel.flush();
 
-        assertEquals(0, debugData.refCnt());
+        assertFalse(debugData.isAccessible());
         assertTrue(channel.isActive());
     }
 
@@ -409,16 +408,16 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
         assertEquals(State.OPEN, stream.state());
 
-        ByteBuf debugData = bb("debug");
+        Buffer debugData = bb("debug");
         Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
-                debugData.retainedDuplicate());
+                debugData.copy().send());
         goAwayFrame.setExtraStreamIds(Integer.MAX_VALUE);
 
         channel.writeOutbound(goAwayFrame);
         // When the last stream id computation overflows, the last stream id should just be set to 2^31 - 1.
         verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                 eq(NO_ERROR.code()), eq(debugData));
-        debugData.release();
+        debugData.close();
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
     }
@@ -476,7 +475,7 @@ public class Http2FrameCodecTest {
         Http2Stream stream = connection.stream(3);
         assertNotNull(stream);
 
-        ByteBuf data = Unpooled.buffer(100).writeZero(100);
+        Buffer data = bb(100);
         frameInboundWriter.writeInboundData(3, data, 0, false);
 
         Http2HeadersFrame inboundHeaders = inboundHandler.readInbound();
@@ -583,7 +582,7 @@ public class Http2FrameCodecTest {
     public void writeUnknownFrame() {
         final Http2FrameStream stream = frameCodec.newStream();
 
-        ByteBuf buffer = Unpooled.buffer().writeByte(1);
+        Buffer buffer = onHeapAllocator().allocate(1).writeByte((byte) 1);
         DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame(
                 (byte) 20, new Http2Flags().ack(true), buffer);
         unknownFrame.stream(stream);
@@ -618,8 +617,7 @@ public class Http2FrameCodecTest {
                    listenerExecuted.setSuccess(null);
                }
                );
-        ByteBuf data = Unpooled.buffer().writeZero(100);
-        Future<Void> f = channel.writeAndFlush(new DefaultHttp2DataFrame(data).stream(stream));
+        Future<Void> f = channel.writeAndFlush(new DefaultHttp2DataFrame(bb(100).send()).stream(stream));
         assertTrue(f.isSuccess());
 
         listenerExecuted.asFuture().sync();
@@ -705,7 +703,7 @@ public class Http2FrameCodecTest {
                 new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1));
         channel.runPendingTasks();
 
-        frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, Unpooled.EMPTY_BUFFER);
+        frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, onHeapAllocator().allocate(0));
 
         Future<Void> stream2HeaderFuture = channel.writeAndFlush(
                 new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
@@ -737,7 +735,7 @@ public class Http2FrameCodecTest {
         assertNotNull(goAwayFrame);
         assertEquals(NO_ERROR.code(), goAwayFrame.errorCode());
         assertEquals(Integer.MAX_VALUE, goAwayFrame.lastStreamId());
-        goAwayFrame.release();
+        goAwayFrame.close();
         assertThat(writeFuture.cause(), instanceOf(Http2NoMoreStreamIdsException.class));
     }
 

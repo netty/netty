@@ -39,8 +39,7 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.StringUtil;
 
 import java.io.InputStream;
@@ -52,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2TestUtil.newTestEncoder;
@@ -162,7 +162,7 @@ final class HpackTestCase {
         }
 
         try {
-            return newTestEncoder(true, MAX_HEADER_LIST_SIZE, maxHeaderTableSize);
+            return newTestEncoder(MAX_HEADER_LIST_SIZE, maxHeaderTableSize);
         } catch (Http2Exception e) {
             throw new Error("invalid initial values!", e);
         }
@@ -181,18 +181,15 @@ final class HpackTestCase {
                                  final boolean sensitive) throws Http2Exception {
         Http2Headers http2Headers = toHttp2Headers(headers);
         Http2HeadersEncoder.SensitivityDetector sensitivityDetector = (name, value) -> sensitive;
-        ByteBuf buffer = Unpooled.buffer();
-        try {
+        try (Buffer buffer = onHeapAllocator().allocate(256)) {
             if (maxHeaderTableSize != -1) {
                 hpackEncoder.setMaxHeaderTableSize(buffer, maxHeaderTableSize);
             }
 
             hpackEncoder.encodeHeaders(3 /* randomly chosen */, buffer, http2Headers, sensitivityDetector);
             byte[] bytes = new byte[buffer.readableBytes()];
-            buffer.readBytes(bytes);
+            buffer.readBytes(bytes, 0, bytes.length);
             return bytes;
-        } finally {
-            buffer.release();
         }
     }
 
@@ -205,14 +202,11 @@ final class HpackTestCase {
     }
 
     private static List<HpackHeaderField> decode(HpackDecoder hpackDecoder, byte[] expected) throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(expected);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(expected)) {
             List<HpackHeaderField> headers = new ArrayList<>();
             TestHeaderListener listener = new TestHeaderListener(headers);
             hpackDecoder.decode(0, in, listener, true);
             return headers;
-        } finally {
-            in.release();
         }
     }
 

@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -35,11 +36,11 @@ import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty5.util.internal.logging.InternalLogLevel.DEBUG;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
@@ -364,12 +365,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private Future<Void> writeGoAwayFrame(ChannelHandlerContext ctx, Http2GoAwayFrame frame) {
         if (frame.lastStreamId() > -1) {
-            frame.release();
+            frame.close();
             return ctx.newFailedFuture(new IllegalArgumentException("Last stream id must not be set on GOAWAY frame"));
         }
 
         int lastStreamCreated = connection().remote().lastStreamCreated();
-        long lastStreamId = lastStreamCreated + ((long) frame.extraStreamIds()) * 2;
+        long lastStreamId = lastStreamCreated + (long) frame.extraStreamIds() * 2;
         // Check if the computation overflowed.
         if (lastStreamId > Integer.MAX_VALUE) {
             lastStreamId = Integer.MAX_VALUE;
@@ -445,7 +446,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // valid stream ID for the current peer.
             onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? Integer.MAX_VALUE :
                     Integer.MAX_VALUE - 1, NO_ERROR.code(),
-                    writeAscii(ctx.alloc(), "Stream IDs exhausted on local stream creation")));
+                    ctx.bufferAllocator().copyOf("Stream IDs exhausted on local stream creation", US_ASCII).send()));
 
             return f;
         }
@@ -574,13 +575,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onUnknownFrame(
-                ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+                ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, Buffer payload) {
             if (streamId == 0) {
                 // Ignore unknown frames on connection stream, for example: HTTP/2 GREASE testing
                 return;
             }
             onHttp2Frame(ctx, new DefaultHttp2UnknownFrame(frameType, flags, payload)
-                    .stream(requireStream(streamId)).retain());
+                    .stream(requireStream(streamId)).copy());
         }
 
         @Override
@@ -627,17 +628,17 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
 
         @Override
-        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+        public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding,
                               boolean endOfStream) {
-            onHttp2Frame(ctx, new DefaultHttp2DataFrame(data, endOfStream, padding)
-                    .stream(requireStream(streamId)).retain());
+            onHttp2Frame(ctx, new DefaultHttp2DataFrame(data.send(), endOfStream, padding)
+                    .stream(requireStream(streamId)));
             // We return the bytes in consumeBytes() once the stream channel consumed the bytes.
             return 0;
         }
 
         @Override
-        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
-            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData).retain());
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData) {
+            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData.send()));
         }
 
         @Override

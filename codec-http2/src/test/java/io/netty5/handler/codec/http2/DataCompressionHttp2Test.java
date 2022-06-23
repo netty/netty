@@ -14,10 +14,9 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -33,10 +32,8 @@ import io.netty5.util.AsciiString;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -48,6 +45,7 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty5.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -64,7 +62,6 @@ import static org.mockito.Mockito.verify;
 /**
  * Test for data decompression in the HTTP/2 codec.
  */
-@Disabled("This will probably have to be rewritten as we port H2 to Buffer")
 public class DataCompressionHttp2Test {
     private static final AsciiString GET = new AsciiString("GET");
     private static final AsciiString POST = new AsciiString("POST");
@@ -152,152 +149,123 @@ public class DataCompressionHttp2Test {
     @Test
     public void gzipEncodingSingleEmptyMessage() throws Exception {
         final String text = "";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     @Test
     public void gzipEncodingSingleMessage() throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     @Test
     public void gzipEncodingMultipleMessages() throws Exception {
         final String text1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final String text2 = "dddddddddddddddddddeeeeeeeeeeeeeeeeeeeffffffffffffffffffff";
-        final ByteBuf data1 = Unpooled.copiedBuffer(text1.getBytes());
-        final ByteBuf data2 = Unpooled.copiedBuffer(text2.getBytes());
+        final Buffer data1 = bb(text1);
+        final Buffer data2 = bb(text2);
         bootstrapEnv(data1.readableBytes() + data2.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data1.retain(), 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data2.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(text1 + text2, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data1.release();
-            data2.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data1, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data2, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text1 + text2, serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     @Test
     public void brotliEncodingSingleEmptyMessage() throws Exception {
         final String text = "";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     @Test
     public void brotliEncodingSingleMessage() throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     @Test
     public void zstdEncodingSingleEmptyMessage() throws Exception {
         final String text = "";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     @Test
     public void zstdEncodingSingleMessage() throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     @Test
@@ -306,22 +274,18 @@ public class DataCompressionHttp2Test {
         final byte[] bytes = new byte[BUFFER_SIZE];
         new Random().nextBytes(bytes);
         bootstrapEnv(BUFFER_SIZE);
-        final ByteBuf data = Unpooled.wrappedBuffer(bytes);
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
+        final Buffer data = bb(bytes);
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
 
-            runInChannel(clientChannel, () -> {
-                clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
-                clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true);
-                clientHandler.flush(ctxClient());
-            });
-            awaitServer();
-            assertEquals(data.readerIndex(0).toString(CharsetUtil.UTF_8),
-                    serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(data.readerOffset(0).toString(CharsetUtil.UTF_8),
+                     serverOut.toString(CharsetUtil.UTF_8.name()));
     }
 
     private void bootstrapEnv(int serverOutSize) throws Exception {
@@ -343,18 +307,24 @@ public class DataCompressionHttp2Test {
         });
 
         doAnswer(in -> {
-            ByteBuf buf = (ByteBuf) in.getArguments()[2];
+            Buffer buf = (Buffer) in.getArguments()[2];
             int padding = (Integer) in.getArguments()[3];
             int processedBytes = buf.readableBytes() + padding;
 
-            buf.readBytes(serverOut, buf.readableBytes());
+            try (var iterator = buf.forEachReadable()) {
+                for (var component = iterator.first(); component != null; component = component.next()) {
+                    byte[] bytes = new byte[component.readableBytes()];
+                    component.readableBuffer().get(bytes);
+                    serverOut.write(bytes);
+                }
+            }
 
             if (in.getArgument(4)) {
-                serverConnection.stream((Integer) in.getArgument(1)).close();
+                serverConnection.stream(in.getArgument(1)).close();
             }
             return processedBytes;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
-                any(ByteBuf.class), anyInt(), anyBoolean());
+                any(Buffer.class), anyInt(), anyBoolean());
 
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
@@ -432,9 +402,5 @@ public class DataCompressionHttp2Test {
 
     private ChannelHandlerContext ctxClient() {
         return clientChannel.pipeline().firstContext();
-    }
-
-    private Promise<Void> newPromiseClient() {
-        return ctxClient().newPromise();
     }
 }

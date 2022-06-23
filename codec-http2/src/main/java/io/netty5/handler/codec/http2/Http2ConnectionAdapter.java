@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -43,10 +43,10 @@ public class Http2ConnectionAdapter implements Http2Connection.Listener {
     }
 
     @Override
-    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+    public void onGoAwaySent(int lastStreamId, long errorCode, Buffer debugData) {
     }
 
     @Override
-    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+    public void onGoAwayReceived(int lastStreamId, long errorCode, Buffer debugData) {
     }
 }

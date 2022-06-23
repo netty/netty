@@ -31,16 +31,16 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Random;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HpackHuffmanTest {
@@ -185,28 +185,22 @@ public class HpackHuffmanTest {
 
     private static void roundTrip(HpackHuffmanEncoder encoder, byte[] buf)
             throws Http2Exception {
-        ByteBuf buffer = Unpooled.buffer();
-        try {
+        try (Buffer buffer = onHeapAllocator().allocate(256)) {
             encoder.encode(buffer, new AsciiString(buf, false));
             byte[] bytes = new byte[buffer.readableBytes()];
-            buffer.readBytes(bytes);
+            buffer.readBytes(bytes, 0, bytes.length);
 
             byte[] actualBytes = decode(bytes);
 
             assertArrayEquals(buf, actualBytes);
-        } finally {
-            buffer.release();
         }
     }
 
     private static byte[] decode(byte[] bytes) throws Http2Exception {
-        ByteBuf buffer = Unpooled.wrappedBuffer(bytes);
-        try {
+        try (Buffer buffer = onHeapAllocator().copyOf(bytes)) {
             AsciiString decoded = new HpackHuffmanDecoder().decode(buffer, buffer.readableBytes());
-            assertFalse(buffer.isReadable());
+            assertEquals(0, buffer.readableBytes());
             return decoded.toByteArray();
-        } finally {
-            buffer.release();
         }
     }
 }

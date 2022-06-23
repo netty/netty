@@ -24,14 +24,13 @@ import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty5.util.internal.UnstableApi;
 
-import static io.netty5.handler.adaptor.BufferConversionHandler.bufferToByteBuf;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.CONNECTION_PREFACE_BUFFER;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Performing cleartext upgrade, by h2c HTTP upgrade or Prior Knowledge.
+ * Performing clear-text upgrade, by h2c HTTP upgrade or Prior Knowledge.
  * This handler config pipeline for h2c upgrade when handler added.
- * And will update pipeline once it detect the connection is starting HTTP/2 by
+ * And will update pipeline once it detects the connection is starting HTTP/2 by
  * prior knowledge or not.
  */
 @UnstableApi
@@ -76,7 +75,6 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
 
             if (!BufferUtil.equals(connectionPreface, connectionPreface.readerOffset(),
                                    in, in.readerOffset(), bytesRead)) {
-                ctx.pipeline().addBefore(ctx.name(), null, bufferToByteBuf());
                 ctx.pipeline().remove(this);
             } else if (bytesRead == prefaceLength) {
                 // Full h2 preface match, removed source codec, using http2 codec to handle
@@ -85,9 +83,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
                    .remove(httpServerCodec)
                    .remove(httpServerUpgradeHandler);
 
-                String bufferToByteBufName = ctx.name() + "-bufferToByteBuf";
-                ctx.pipeline().addAfter(ctx.name(), bufferToByteBufName, bufferToByteBuf());
-                ctx.pipeline().addAfter(bufferToByteBufName, null, http2ServerHandler);
+                ctx.pipeline().addAfter(ctx.name(), null, http2ServerHandler);
                 ctx.fireInboundEventTriggered(PriorKnowledgeUpgradeEvent.INSTANCE);
                 ctx.pipeline().remove(this);
             }

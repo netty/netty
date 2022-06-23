@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 
@@ -37,12 +37,12 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
     }
 
     @Override
-    public void readFrame(ChannelHandlerContext ctx, ByteBuf input, final Http2FrameListener listener)
+    public void readFrame(ChannelHandlerContext ctx, Buffer input, final Http2FrameListener listener)
             throws Http2Exception {
         reader.readFrame(ctx, input, new Http2FrameListener() {
 
             @Override
-            public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data,
                     int padding, boolean endOfStream)
                     throws Http2Exception {
                 logger.logData(INBOUND, ctx, streamId, data, padding, endOfStream);
@@ -115,7 +115,7 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
 
             @Override
             public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-                    ByteBuf debugData) throws Http2Exception {
+                                     Buffer debugData) throws Http2Exception {
                 logger.logGoAway(INBOUND, ctx, lastStreamId, errorCode, debugData);
                 listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
             }
@@ -129,7 +129,7 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
 
             @Override
             public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-                    Http2Flags flags, ByteBuf payload) throws Http2Exception {
+                                       Http2Flags flags, Buffer payload) throws Http2Exception {
                 logger.logUnknownFrame(INBOUND, ctx, frameType, streamId, flags, payload);
                 listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             }

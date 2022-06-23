@@ -15,8 +15,8 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -133,11 +133,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         connection().addListener(new Http2ConnectionAdapter() {
 
             @Override
-            public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+            public void onGoAwayReceived(int lastStreamId, long errorCode, Buffer debugData) {
                 goAwayDetail = new GoAwayDetail(
-                    // Using getBytes(..., false) is safe here as GoAwayDetail(...) will clone the byte[].
-                    lastStreamId, errorCode,
-                    ByteBufUtil.getBytes(debugData, debugData.readerIndex(), debugData.readableBytes(), false));
+                        // Using getBytes(..., false) is safe here as GoAwayDetail(...) will clone the byte[].
+                        lastStreamId, errorCode,
+                        BufferUtil.getBytes(debugData, debugData.readerOffset(), debugData.readableBytes()));
                 cancelGoAwayStreams(goAwayDetail);
             }
 
@@ -209,7 +209,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
-    public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+    public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, Buffer data,
                                   int padding, boolean endOfStream) {
         if (isExistingStream(streamId)) {
             return super.writeData(ctx, streamId, data, padding, endOfStream);
@@ -362,11 +362,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     private final class DataFrame extends Frame {
-        final ByteBuf data;
+        final Buffer data;
         final int padding;
         final boolean endOfStream;
 
-        DataFrame(ByteBuf data, int padding, boolean endOfStream, Promise<Void> promise) {
+        DataFrame(Buffer data, int padding, boolean endOfStream, Promise<Void> promise) {
             super(promise);
             this.data = data;
             this.padding = padding;

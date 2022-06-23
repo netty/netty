@@ -12,12 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
@@ -46,13 +43,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuffer;
 import static io.netty5.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty5.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty5.handler.codec.http2.Http2Stream.State.IDLE;
+import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty5.util.CharsetUtil.US_ASCII;
 import static io.netty5.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -61,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -154,12 +153,12 @@ public class Http2ConnectionHandlerTest {
         when(encoder.flowController()).thenReturn(remoteFlow);
         when(decoder.flowController()).thenReturn(localFlow);
         doAnswer((Answer<Future<Void>>) invocation -> {
-            ByteBuf buf = invocation.getArgument(3);
+            Buffer buf = invocation.getArgument(3);
             goAwayDebugCap = buf.toString(UTF_8);
-            buf.release();
+            buf.close();
             return future;
         }).when(frameWriter).writeGoAway(
-                any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
+                any(ChannelHandlerContext.class), anyInt(), anyLong(), any(Buffer.class));
         doAnswer((Answer<Future<Void>>) invocation -> {
             Object o = invocation.getArguments()[0];
             if (o instanceof FutureListener) {
@@ -185,11 +184,11 @@ public class Http2ConnectionHandlerTest {
         when(connection.stream(NON_EXISTANT_STREAM_ID)).thenReturn(null);
         when(connection.numActiveStreams()).thenReturn(1);
         when(connection.stream(STREAM_ID)).thenReturn(stream);
-        when(connection.goAwaySent(anyInt(), anyLong(), any(ByteBuf.class))).thenReturn(true);
+        when(connection.goAwaySent(anyInt(), anyLong(), any(Buffer.class))).thenReturn(true);
         when(stream.open(anyBoolean())).thenReturn(stream);
         when(encoder.writeSettings(any(ChannelHandlerContext.class),
                 any(Http2Settings.class))).thenReturn(future);
-        when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.bufferAllocator()).thenReturn(onHeapAllocator());
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newFailedFuture(any(Throwable.class)))
                 .thenAnswer(invocationOnMock ->
@@ -266,7 +265,9 @@ public class Http2ConnectionHandlerTest {
         final AtomicBoolean verified = new AtomicBoolean(false);
         final Answer<Object> verifier = in -> {
             assertEquals(in.getArgument(0), evt);  // sanity check...
-            verify(ctx).write(eq(connectionPrefaceBuf()));
+            try (Buffer prefaceBuffer = connectionPrefaceBuffer()) {
+                verify(ctx).write(eq(prefaceBuffer));
+            }
             verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class));
             verified.set(true);
             return null;
@@ -290,7 +291,9 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         when(channel.isActive()).thenReturn(true);
         handler.channelActive(ctx);
-        verify(ctx).write(eq(connectionPrefaceBuf()));
+        try (Buffer prefaceBuffer = connectionPrefaceBuffer()) {
+            verify(ctx).write(eq(prefaceBuffer));
+        }
     }
 
     @Test
@@ -300,29 +303,31 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         when(channel.isActive()).thenReturn(true);
         handler.channelActive(ctx);
-        verify(ctx, never()).write(eq(connectionPrefaceBuf()));
+        try (Buffer prefaceBuffer = connectionPrefaceBuffer()) {
+            verify(ctx, never()).write(eq(prefaceBuffer));
+        }
     }
 
     @Test
     public void serverReceivingInvalidClientPrefaceStringShouldHandleException() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
-        handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        handler.channelRead(ctx, onHeapAllocator().copyOf("BAD_PREFACE", UTF_8));
+        ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
         verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class),
                 eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture());
-        assertEquals(0, captor.getValue().refCnt());
+        assertFalse(captor.getValue().isAccessible());
     }
 
     @Test
     public void serverReceivingHttp1ClientPrefaceStringShouldIncludePreface() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
-        handler.channelRead(ctx, copiedBuffer("GET /path HTTP/1.1", US_ASCII));
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        handler.channelRead(ctx, onHeapAllocator().copyOf("GET /path HTTP/1.1", US_ASCII));
+        ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
         verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                 eq(PROTOCOL_ERROR.code()), captor.capture());
-        assertEquals(0, captor.getValue().refCnt());
+        assertFalse(captor.getValue().isAccessible());
         assertTrue(goAwayDebugCap.contains("/path"));
     }
 
@@ -333,22 +338,23 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
 
         // Create a connection preface followed by a bunch of zeros (i.e. not a settings frame).
-        ByteBuf buf = Unpooled.buffer().writeBytes(connectionPrefaceBuf()).writeZero(10);
-        handler.channelRead(ctx, buf);
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        try (Buffer preface = connectionPrefaceBuffer()) {
+            handler.channelRead(ctx, preface.copy().writeLong(0).writeShort((short) 0));
+        }
+        ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
         verify(frameWriter, atLeastOnce()).writeGoAway(any(ChannelHandlerContext.class),
                 eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), captor.capture());
-        assertEquals(0, captor.getValue().refCnt());
+        assertFalse(captor.getValue().isAccessible());
     }
 
     @Test
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
-        ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
+        Buffer prefacePlusSome = addSettingsHeader(connectionPrefaceBuffer());
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class));
+                any(Buffer.class));
     }
 
     @Test
@@ -357,19 +363,18 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         // Only read the connection preface...after preface is read internal state of Http2ConnectionHandler
         // is expected to change relative to the pipeline.
-        ByteBuf preface = connectionPrefaceBuf();
-        handler.channelRead(ctx, preface);
+        handler.channelRead(ctx, connectionPrefaceBuffer());
         verify(decoder, never()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class));
+                any(Buffer.class));
 
         // Now remove and add the handler...this is setting up the test condition.
         handler.handlerRemoved(ctx);
         handler.handlerAdded(ctx);
 
         // Now verify we can continue as normal, reading connection preface plus more.
-        ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
+        Buffer prefacePlusSome = addSettingsHeader(connectionPrefaceBuffer());
         handler.channelRead(ctx, prefacePlusSome);
-        verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class), any(ByteBuf.class));
+        verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class), any(Buffer.class));
     }
 
     @SuppressWarnings("unchecked")
@@ -389,10 +394,7 @@ public class Http2ConnectionHandlerTest {
         // https://github.com/netty/netty/issues/10670
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
-        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
-                captor.capture());
-        captor.getValue().release();
+        verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), any(Buffer.class));
     }
 
     @Test
@@ -594,7 +596,7 @@ public class Http2ConnectionHandlerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void canSendGoAwayFrame() throws Exception {
-        ByteBuf data = dummyData();
+        Buffer data = dummyData();
         long errorCode = Http2Error.INTERNAL_ERROR.code();
         when(future.isDone()).thenReturn(true);
         when(future.isSuccess()).thenReturn(true);
@@ -608,34 +610,36 @@ public class Http2ConnectionHandlerTest {
         verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
         verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data));
         verify(ctx).close();
-        assertEquals(0, data.refCnt());
+        assertFalse(data.isAccessible());
     }
 
     @Test
     public void canSendGoAwayFramesWithDecreasingLastStreamIds() throws Exception {
         handler = newHandler();
-        ByteBuf data = dummyData();
+        Buffer data = dummyData();
         long errorCode = Http2Error.INTERNAL_ERROR.code();
 
-        handler.goAway(ctx, STREAM_ID + 2, errorCode, data.retain());
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID + 2), eq(errorCode), eq(data));
-        verify(connection).goAwaySent(eq(STREAM_ID + 2), eq(errorCode), eq(data));
+        Buffer copy = data.copy();
+        handler.goAway(ctx, STREAM_ID + 2, errorCode, copy);
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID + 2), eq(errorCode), same(copy));
+        verify(connection).goAwaySent(eq(STREAM_ID + 2), eq(errorCode), same(copy));
         promise = ImmediateEventExecutor.INSTANCE.newPromise();
         handler.goAway(ctx, STREAM_ID, errorCode, data);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data));
-        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
-        assertEquals(0, data.refCnt());
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), same(data));
+        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), same(data));
+        assertFalse(data.isAccessible());
     }
 
     @Test
     public void cannotSendGoAwayFrameWithIncreasingLastStreamIds() throws Exception {
         handler = newHandler();
-        ByteBuf data = dummyData();
+        Buffer data = dummyData();
         long errorCode = Http2Error.INTERNAL_ERROR.code();
 
-        Future<Void> future = handler.goAway(ctx, STREAM_ID, errorCode, data.retain());
-        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data));
+        Buffer copy = data.copy();
+        Future<Void> future = handler.goAway(ctx, STREAM_ID, errorCode, copy);
+        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), same(copy));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), same(copy));
         // The frameWriter is only mocked, so it should not have interacted with the promise.
         assertFalse(future.isDone());
 
@@ -645,13 +649,13 @@ public class Http2ConnectionHandlerTest {
         Exception ex = new IllegalStateException();
         doAnswer((Answer<Boolean>) invocationOnMock -> {
             throw ex;
-        }).when(connection).goAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+        }).when(connection).goAwaySent(anyInt(), anyLong(), any(Buffer.class));
         Future<Void> future2 = handler.goAway(ctx, STREAM_ID + 2, errorCode, data);
         assertTrue(future2.isDone());
         assertFalse(future2.isSuccess());
         assertSame(ex, future2.cause());
 
-        assertEquals(0, data.refCnt());
+        assertFalse(data.isAccessible());
         verifyNoMoreInteractions(frameWriter);
     }
 
@@ -677,7 +681,7 @@ public class Http2ConnectionHandlerTest {
         when(channel.isActive()).thenReturn(false);
         handler.channelInactive(ctx);
         verify(frameWriter, never()).writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                                                 any(ByteBuf.class));
+                                                 any(Buffer.class));
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong());
     }
 
@@ -758,15 +762,18 @@ public class Http2ConnectionHandlerTest {
         assertTrue(f2.isSuccess());
     }
 
-    private static ByteBuf dummyData() {
-        return Unpooled.buffer().writeBytes("abcdefgh".getBytes(UTF_8));
+    private static Buffer dummyData() {
+        return bb("abcdefgh");
     }
 
-    private static ByteBuf addSettingsHeader(ByteBuf buf) {
-        buf.writeMedium(Http2CodecUtil.SETTING_ENTRY_LENGTH);
-        buf.writeByte(Http2FrameTypes.SETTINGS);
-        buf.writeByte(0);
-        buf.writeInt(0);
-        return buf;
+    private static Buffer addSettingsHeader(Buffer buf) {
+        try (buf) {
+            Buffer copy = buf.copy();
+            copy.writeMedium(Http2CodecUtil.SETTING_ENTRY_LENGTH);
+            copy.writeByte(Http2FrameTypes.SETTINGS);
+            copy.writeByte((byte) 0);
+            copy.writeInt(0);
+            return copy;
+        }
     }
 }

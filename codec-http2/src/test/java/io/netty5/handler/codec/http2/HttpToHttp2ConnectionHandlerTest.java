@@ -14,9 +14,9 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -376,10 +376,10 @@ public class HttpToHttp2ConnectionHandlerTest {
         final String text = "foooooogoooo";
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer((Answer<Void>) in -> {
-            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            receivedBuffers.add(((Buffer) in.getArguments()[2]).toString(UTF_8));
             return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
-                any(ByteBuf.class), eq(0), eq(true));
+                any(Buffer.class), eq(0), eq(true));
         bootstrapEnv(3, 1, 0);
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, POST, "http://your_user-name123@www.example.org:5555/example",
@@ -403,7 +403,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
+        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0),
                 eq(true));
         assertEquals(1, receivedBuffers.size());
         assertEquals(text, receivedBuffers.get(0));
@@ -414,10 +414,10 @@ public class HttpToHttp2ConnectionHandlerTest {
         final String text = "foooooogoooo";
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer((Answer<Void>) in -> {
-            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            receivedBuffers.add(((Buffer) in.getArguments()[2]).toString(UTF_8));
             return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
-                any(ByteBuf.class), eq(0), eq(false));
+                any(Buffer.class), eq(0), eq(false));
         bootstrapEnv(4, 1, 1);
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, POST, "http://your_user-name123@www.example.org:5555/example",
@@ -446,7 +446,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
+        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0),
                 eq(false));
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2TrailingHeaders), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(true));
@@ -460,10 +460,10 @@ public class HttpToHttp2ConnectionHandlerTest {
         final String text2 = "goooo";
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer((Answer<Void>) in -> {
-            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            receivedBuffers.add(((Buffer) in.getArguments()[2]).toString(UTF_8));
             return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
-                any(ByteBuf.class), eq(0), eq(false));
+                any(Buffer.class), eq(0), eq(false));
         bootstrapEnv(4, 1, 1);
         final HttpRequest request = new DefaultHttpRequest(HTTP_1_1, POST,
                 "http://your_user-name123@www.example.org:5555/example");
@@ -508,7 +508,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
+        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0),
                 eq(false));
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2TrailingHeaders), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(true));
@@ -583,7 +583,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5),
                 eq(expected), eq(0), anyShort(), anyBoolean(), eq(0), eq(true));
         verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(),
-                any(ByteBuf.class), anyInt(), anyBoolean());
+                any(Buffer.class), anyInt(), anyBoolean());
     }
 
     private void awaitRequests() throws Exception {

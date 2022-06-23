@@ -31,13 +31,13 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.ByteCursor;
 import io.netty5.util.AsciiString;
-import io.netty5.util.ByteProcessor;
 
 import static io.netty5.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 
-final class HpackHuffmanDecoder implements ByteProcessor {
+final class HpackHuffmanDecoder {
 
     /* Scroll to the bottom! */
 
@@ -4672,8 +4672,6 @@ final class HpackHuffmanDecoder implements ByteProcessor {
     private int k;
     private int state;
 
-    HpackHuffmanDecoder() { }
-
     /**
      * Decompresses the given Huffman coded string literal.
      *
@@ -4681,19 +4679,23 @@ final class HpackHuffmanDecoder implements ByteProcessor {
      * @return the output stream for the compressed data
      * @throws Http2Exception EOS Decoded
      */
-    public AsciiString decode(ByteBuf buf, int length) throws Http2Exception {
+    public AsciiString decode(Buffer buf, int length) throws Http2Exception {
         if (length == 0) {
             return AsciiString.EMPTY_STRING;
         }
         dest = new byte[length * 8 / 5];
         try {
-            int readerIndex = buf.readerIndex();
-            // Using ByteProcessor to reduce bounds-checking and reference-count checking during byte-by-byte
-            // processing of the ByteBuf.
-            int endIndex = buf.forEachByte(readerIndex, length, this);
-            if (endIndex == -1) {
-                // We did consume the requested length
-                buf.readerIndex(readerIndex + length);
+            int readerOffset = buf.readerOffset();
+            ByteCursor cursor = buf.openCursor(readerOffset, length);
+            while (cursor.readByte()) {
+                int input = cursor.getByte();
+                if (!(processNibble(input >> 4) && processNibble(input))) {
+                    break;
+                }
+            }
+            if (cursor.bytesLeft() == 0) {
+                // We consumed the requested length
+                buf.readerOffset(readerOffset + length);
                 if ((state & HUFFMAN_COMPLETE_SHIFT) != HUFFMAN_COMPLETE_SHIFT) {
                     throw BAD_ENCODING;
                 }
@@ -4702,7 +4704,7 @@ final class HpackHuffmanDecoder implements ByteProcessor {
 
             // The process(...) method returned before the requested length was requested. This means there
             // was a bad encoding detected.
-            buf.readerIndex(endIndex);
+            buf.readerOffset(readerOffset + length - cursor.bytesLeft());
             throw BAD_ENCODING;
         } finally {
             dest = null;
@@ -4711,18 +4713,10 @@ final class HpackHuffmanDecoder implements ByteProcessor {
         }
     }
 
-    /**
-     * <strong>This should never be called from anything but this class itself!</strong>
-     */
-    @Override
-    public boolean process(byte input) {
-        return processNibble(input >> 4) && processNibble(input);
-    }
-
     private boolean processNibble(int input) {
         // The high nibble of the flags byte of each row is always zero
         // (low nibble after shifting row by 12), since there are only 3 flag bits
-        int index = state >> 12 | (input & 0x0F);
+        int index = state >> 12 | input & 0x0F;
         state = HUFFS[index];
         if ((state & HUFFMAN_FAIL_SHIFT) != 0) {
             return false;

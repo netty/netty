@@ -13,11 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -48,7 +47,7 @@ final class Http2FrameInboundWriter {
         this.writer = writer;
     }
 
-    void writeInboundData(int streamId, ByteBuf data, int padding, boolean endStream) throws Exception {
+    void writeInboundData(int streamId, Buffer data, int padding, boolean endStream) throws Exception {
         writer.writeData(ctx, streamId, data, padding, endStream).sync();
     }
 
@@ -92,7 +91,7 @@ final class Http2FrameInboundWriter {
                    headers, padding).sync();
     }
 
-    void writeInboundGoAway(int lastStreamId, long errorCode, ByteBuf debugData) throws Exception {
+    void writeInboundGoAway(int lastStreamId, long errorCode, Buffer debugData) throws Exception {
         writer.writeGoAway(ctx, lastStreamId, errorCode, debugData).sync();
     }
 
@@ -101,7 +100,7 @@ final class Http2FrameInboundWriter {
     }
 
     void writeInboundFrame(
-            byte frameType, int streamId, Http2Flags flags, ByteBuf payload) throws Exception {
+            byte frameType, int streamId, Http2Flags flags, Buffer payload) throws Exception {
         writer.writeFrame(ctx, frameType, streamId, flags, payload).sync();
     }
 

@@ -12,10 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
@@ -56,20 +55,6 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      *  (which is dangerous).
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize) {
-        this(validateHeaders, maxHeaderListSize, /* initialHuffmanDecodeCapacity= */ -1);
-    }
-
-    /**
-     * Create a new instance.
-     * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
-     * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
-     *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
-     *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
-     *  (which is dangerous).
-     * @param initialHuffmanDecodeCapacity Does nothing, do not use.
-     */
-    public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize,
-                                      @Deprecated int initialHuffmanDecodeCapacity) {
         this(validateHeaders, new HpackDecoder(maxHeaderListSize));
     }
 
@@ -120,7 +105,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     }
 
     @Override
-    public Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception {
+    public Http2Headers decodeHeaders(int streamId, Buffer headerBlock) throws Http2Exception {
         try {
             final Http2Headers headers = newHeaders();
             hpackDecoder.decode(streamId, headerBlock, headers, validateHeaders);

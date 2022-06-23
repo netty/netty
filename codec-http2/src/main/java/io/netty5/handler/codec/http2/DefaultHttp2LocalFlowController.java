@@ -12,10 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
@@ -264,8 +263,8 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     @Override
-    public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
-            boolean endOfStream) throws Http2Exception {
+    public void receiveFlowControlledFrame(Http2Stream stream, Buffer data, int padding,
+                                           boolean endOfStream) throws Http2Exception {
         assert ctx != null && ctx.executor().inEventLoop();
         int dataLength = data.readableBytes() + padding;
 

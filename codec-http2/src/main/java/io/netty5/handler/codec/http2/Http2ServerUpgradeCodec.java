@@ -14,23 +14,18 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty5.buffer.api.adaptor.ByteBufBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -150,27 +145,24 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      */
     private Http2Settings decodeSettingsHeader(ChannelHandlerContext ctx, CharSequence settingsHeader)
             throws Http2Exception {
-        ByteBuf header = ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(settingsHeader), CharsetUtil.UTF_8);
-        try {
+        try (Buffer header = ctx.bufferAllocator().allocate(settingsHeader.length())) {
+            header.writeCharSequence(settingsHeader, StandardCharsets.UTF_8);
             // Decode the SETTINGS payload.
-            try (Buffer payload = Base64.decode(ByteBufBuffer.wrap(header), URL_SAFE)) {
-
+            try (Buffer payload = Base64.decode(header, URL_SAFE)) {
                 // Create an HTTP/2 frame for the settings.
-                ByteBuf frame = createSettingsFrame(ctx, ByteBufAdaptor.intoByteBuf(payload));
+                Buffer frame = createSettingsFrame(ctx, payload);
 
                 // Decode the SETTINGS frame and return the settings object.
                 return decodeSettings(ctx, frame);
             }
-        } finally {
-            header.release();
         }
     }
 
     /**
      * Decodes the settings frame and returns the settings.
      */
-    private Http2Settings decodeSettings(ChannelHandlerContext ctx, ByteBuf frame) throws Http2Exception {
-        try {
+    private Http2Settings decodeSettings(ChannelHandlerContext ctx, Buffer frame) throws Http2Exception {
+        try (frame) {
             final Http2Settings decodedSettings = new Http2Settings();
             frameReader.readFrame(ctx, frame, new Http2FrameAdapter() {
                 @Override
@@ -179,16 +171,14 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
                 }
             });
             return decodedSettings;
-        } finally {
-            frame.release();
         }
     }
 
     /**
      * Creates an HTTP2-Settings header with the given payload. The payload buffer is released.
      */
-    private static ByteBuf createSettingsFrame(ChannelHandlerContext ctx, ByteBuf payload) {
-        ByteBuf frame = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payload.readableBytes());
+    private static Buffer createSettingsFrame(ChannelHandlerContext ctx, Buffer payload) {
+        Buffer frame = ctx.bufferAllocator().allocate(FRAME_HEADER_LENGTH + payload.readableBytes());
         writeFrameHeader(frame, payload.readableBytes(), SETTINGS, new Http2Flags(), 0);
         frame.writeBytes(payload);
         return frame;

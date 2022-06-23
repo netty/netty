@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 
@@ -59,7 +59,7 @@ public interface Http2ConnectionDecoder extends Closeable {
     /**
      * Called by the {@link Http2ConnectionHandler} to decode the next frame from the input buffer.
      */
-    void decodeFrame(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception;
+    void decodeFrame(ChannelHandlerContext ctx, Buffer in) throws Http2Exception;
 
     /**
      * Gets the local settings for this endpoint of the HTTP/2 connection.

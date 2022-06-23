@@ -12,10 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
@@ -173,7 +172,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @return the future for the write.
      */
     Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData);
+            Buffer debugData);
 
     /**
      * Writes a WINDOW_UPDATE frame to the remote endpoint.
@@ -198,7 +197,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @return the future for the write.
      */
     Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-            Http2Flags flags, ByteBuf payload);
+            Http2Flags flags, Buffer payload);
 
     /**
      * Get the configuration related elements for this {@link Http2FrameWriter}

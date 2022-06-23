@@ -54,7 +54,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty5.handler.codec.http.HttpMethod.GET;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
@@ -249,7 +248,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     new AsciiString("/some/path/resource2"));
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(hello.copy()),
+                clientHandler.encoder().writeData(ctxClient(), 3, hello.copy(),
                         0, true);
                 clientChannel.flush();
             });
@@ -278,9 +277,9 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
                 clientHandler.encoder().writeData(
-                        ctxClient(), 3, intoByteBuf(content.copy(0, midPoint)), 0, false);
+                        ctxClient(), 3, content.copy(0, midPoint), 0, false);
                 clientHandler.encoder().writeData(
-                        ctxClient(), 3, intoByteBuf(content.copy(midPoint, text.length() - midPoint)),
+                        ctxClient(), 3, content.copy(midPoint, text.length() - midPoint),
                         0, true);
                 clientChannel.flush();
             });
@@ -307,9 +306,9 @@ public class InboundHttp2ToHttpAdapterTest {
                     new AsciiString("/some/path/resource2"));
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 3, content.copy(), 0, false);
+                clientHandler.encoder().writeData(ctxClient(), 3, content.copy(), 0, false);
+                clientHandler.encoder().writeData(ctxClient(), 3, content.copy(), 0, true);
                 clientChannel.flush();
             });
             awaitRequests();
@@ -343,7 +342,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     .add(new AsciiString("foo2"), new AsciiString("goo3"));
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
-                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, false);
+                clientHandler.encoder().writeData(ctxClient(), 3, content.copy(), 0, false);
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers2, 0, true);
                 clientChannel.flush();
             });
@@ -385,8 +384,8 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 3, (short) 123, true, 0,
                         false);
                 clientChannel.flush(); // Headers are queued in the flow controller and so flush them.
-                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(content.copy()), 0, true);
-                clientHandler.encoder().writeData(ctxClient(), 5, intoByteBuf(content2.copy()), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 3, content.copy(), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 5, content2.copy(), 0, true);
                 clientChannel.flush();
             });
             awaitRequests();
@@ -450,8 +449,8 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(serverConnectedChannel, () -> {
                 serverHandler.encoder().writeHeaders(ctxServer(), 3, http2Headers, 0, false);
                 serverHandler.encoder().writePushPromise(ctxServer(), 3, 2, http2Headers2, 0);
-                serverHandler.encoder().writeData(ctxServer(), 3, intoByteBuf(content.copy()), 0, true);
-                serverHandler.encoder().writeData(ctxServer(), 5, intoByteBuf(content2.copy()), 0, true);
+                serverHandler.encoder().writeData(ctxServer(), 3, content.copy(), 0, true);
+                serverHandler.encoder().writeData(ctxServer(), 5, content2.copy(), 0, true);
                 serverConnectedChannel.flush();
             });
             awaitResponses();
@@ -507,7 +506,7 @@ public class InboundHttp2ToHttpAdapterTest {
             httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
             httpHeaders.remove(HttpHeaderNames.EXPECT);
             runInChannel(clientChannel, () -> {
-                clientHandler.encoder().writeData(ctxClient(), 3, intoByteBuf(payload.copy()), 0, true);
+                clientHandler.encoder().writeData(ctxClient(), 3, payload.copy(), 0, true);
                 clientChannel.flush();
             });
 

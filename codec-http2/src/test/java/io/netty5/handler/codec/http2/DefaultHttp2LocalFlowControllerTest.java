@@ -12,11 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.util.concurrent.EventExecutor;
@@ -29,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -113,7 +112,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     @Test
     public void connectionWindowShouldAutoRefillWhenDataReceived() throws Http2Exception {
-        // Reconfigure controller to auto-refill the connection window.
+        // Reconfigure the controller to auto-refill the connection window.
         initController(true);
 
         int dataSize = (int) (DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_UPDATE_RATIO) + 1;
@@ -172,7 +171,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         assertEquals(State.CLOSED, stream.state());
         assertNull(connection.stream(STREAM_ID));
 
-        // The window update for the connection should made it through but not the update for the already closed
+        // The window update for the connection should make it through but not the update for the already closed
         // stream
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
         verifyWindowUpdateNotSent(STREAM_ID);
@@ -202,7 +201,7 @@ public class DefaultHttp2LocalFlowControllerTest {
         int initialWindowSize = DEFAULT_WINDOW_SIZE;
         int windowDelta = getWindowDelta(initialWindowSize, initialWindowSize, dataSize);
 
-        // Don't set end-of-stream so we'll get a window update for the stream as well.
+        // Don't set end-of-stream, so we'll get a window update for the stream as well.
         receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
         assertTrue(consumeBytes(STREAM_ID, dataSize));
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, windowDelta);
@@ -398,17 +397,14 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     private void receiveFlowControlledFrame(Http2Stream stream, int dataSize, int padding,
                                             boolean endOfStream) throws Http2Exception {
-        final ByteBuf buf = dummyData(dataSize);
-        try {
+        try (Buffer buf = dummyData(dataSize)) {
             controller.receiveFlowControlledFrame(stream, buf, padding, endOfStream);
-        } finally {
-            buf.release();
         }
     }
 
-    private static ByteBuf dummyData(int size) {
-        final ByteBuf buffer = Unpooled.buffer(size);
-        buffer.writerIndex(size);
+    private static Buffer dummyData(int size) {
+        final Buffer buffer = onHeapAllocator().allocate(size);
+        buffer.skipWritableBytes(size);
         return buffer;
     }
 
@@ -424,7 +420,6 @@ public class DefaultHttp2LocalFlowControllerTest {
         verify(frameWriter, never()).writeWindowUpdate(eq(ctx), eq(streamId), anyInt());
     }
 
-    @SuppressWarnings("unchecked")
     private void verifyWindowUpdateNotSent() {
         verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt());
     }

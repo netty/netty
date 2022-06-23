@@ -14,10 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -42,12 +39,12 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty5.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static io.netty5.util.CharsetUtil.UTF_8;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -132,13 +129,13 @@ public class DefaultHttp2ConnectionEncoderTest {
         doAnswer((Answer<Future<Void>>) in -> ImmediateEventExecutor.INSTANCE.newSucceededFuture(null))
                 .when(writer).writeSettings(eq(ctx), any(Http2Settings.class));
         doAnswer((Answer<Future<Void>>) in -> {
-            ((ByteBuf) in.getArguments()[3]).release();
+            ((Buffer) in.getArguments()[3]).close();
             return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
-        }).when(writer).writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class));
+        }).when(writer).writeGoAway(eq(ctx), anyInt(), anyInt(), any(Buffer.class));
 
         writtenData = new ArrayList<>();
         writtenPadding = new ArrayList<>();
-        when(writer.writeData(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean()))
+        when(writer.writeData(eq(ctx), anyInt(), any(Buffer.class), anyInt(), anyBoolean()))
                 .then((Answer<Future<Void>>) in -> {
                     // Make sure we only receive stream closure on the last frame and that void promises
                     // are used for all writes except the last one.
@@ -148,10 +145,10 @@ public class DefaultHttp2ConnectionEncoderTest {
                         streamClosed = (Boolean) in.getArguments()[4];
                     }
                     writtenPadding.add((Integer) in.getArguments()[3]);
-                    ByteBuf data = (ByteBuf) in.getArguments()[2];
+                    Buffer data = (Buffer) in.getArguments()[2];
                     writtenData.add(data.toString(UTF_8));
                     // Release the buffer just as DefaultHttp2FrameWriter does
-                    data.release();
+                    data.close();
                     // Let the promise succeed to trigger listeners.
                     return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                 });
@@ -177,7 +174,7 @@ public class DefaultHttp2ConnectionEncoderTest {
                 });
         payloadCaptor = ArgumentCaptor.forClass(Http2RemoteFlowController.FlowControlled.class);
         doNothing().when(remoteFlow).addFlowControlled(any(Http2Stream.class), payloadCaptor.capture());
-        when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.bufferAllocator()).thenReturn(onHeapAllocator());
         when(ctx.channel()).thenReturn(channel);
         doAnswer((Answer<Promise<Void>>) in -> ImmediateEventExecutor.INSTANCE.newPromise()).when(ctx).newPromise();
         doAnswer((Answer<Future<Void>>) in -> ImmediateEventExecutor.INSTANCE.newSucceededFuture(null))
@@ -185,7 +182,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         doAnswer((Answer<Future<Void>>) in -> ImmediateEventExecutor.INSTANCE.newFailedFuture(in.getArgument(0)))
                 .when(ctx).newFailedFuture(any(Throwable.class));
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
-        when(channel.alloc()).thenReturn(PooledByteBufAllocator.DEFAULT);
+        when(channel.bufferAllocator()).thenReturn(onHeapAllocator());
         when(channel.bufferAllocator()).thenReturn(DefaultBufferAllocators.preferredAllocator());
         doAnswer((Answer<Future<Void>>) in -> ImmediateEventExecutor.INSTANCE.newFailedFuture(in.getArgument(0)))
                 .when(channel).newFailedFuture(any(Throwable.class));
@@ -209,7 +206,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     private void dataWriteShouldSignalThatFrameWasConsumedOnError0(boolean endOfStream) throws Exception {
         createStream(STREAM_ID, false);
-        final ByteBuf data = dummyData();
+        final Buffer data = dummyData();
         Future<Void> f = encoder.writeData(ctx, STREAM_ID, data, 0, endOfStream);
 
         FlowControlled controlled = payloadCaptor.getValue();
@@ -222,30 +219,29 @@ public class DefaultHttp2ConnectionEncoderTest {
         payloadCaptor.getValue().write(ctx, 8);
         assertEquals(0, controlled.size());
         assertEquals("abcd", writtenData.get(0));
-        assertEquals(0, data.refCnt());
+        assertFalse(data.isAccessible());
         assertSame(error, f.cause());
     }
 
     @Test
     public void dataWriteShouldSucceed() throws Exception {
         createStream(STREAM_ID, false);
-        final ByteBuf data = dummyData();
+        final Buffer data = dummyData();
         Future<Void> f = encoder.writeData(ctx, STREAM_ID, data, 0, true);
         assertEquals(8, payloadCaptor.getValue().size());
         payloadCaptor.getValue().write(ctx, 8);
         assertEquals(0, payloadCaptor.getValue().size());
         assertEquals("abcdefgh", writtenData.get(0));
-        assertEquals(0, data.refCnt());
+        assertFalse(data.isAccessible());
         assertTrue(f.isSuccess());
     }
 
     @Test
     public void dataFramesShouldMerge() throws Exception {
         createStream(STREAM_ID, false);
-        final ByteBuf data = dummyData().retain();
 
-        Future<Void> future1 = encoder.writeData(ctx, STREAM_ID, data, 0, true);
-        Future<Void> future2 = encoder.writeData(ctx, STREAM_ID, data, 0, true);
+        Future<Void> future1 = encoder.writeData(ctx, STREAM_ID, dummyData(), 0, true);
+        Future<Void> future2 = encoder.writeData(ctx, STREAM_ID, dummyData(), 0, true);
 
         // Now merge the two payloads.
         List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
@@ -259,7 +255,6 @@ public class DefaultHttp2ConnectionEncoderTest {
         mergedPayload.write(ctx, 16);
         assertEquals(0, mergedPayload.size());
         assertEquals("abcdefghabcdefgh", writtenData.get(0));
-        assertEquals(0, data.refCnt());
         assertTrue(future1.isSuccess());
         assertTrue(future2.isSuccess());
     }
@@ -267,7 +262,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void dataFramesDontMergeWithHeaders() throws Exception {
         createStream(STREAM_ID, false);
-        final ByteBuf data = dummyData().retain();
+        final Buffer data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 0, false);
         when(remoteFlow.hasFlowControlled(any(Http2Stream.class))).thenReturn(true);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
@@ -277,12 +272,12 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void emptyFrameShouldSplitPadding() throws Exception {
-        ByteBuf data = Unpooled.buffer(0);
+        Buffer data = onHeapAllocator().allocate(0);
         assertSplitPaddingOnEmptyBuffer(data);
-        assertEquals(0, data.refCnt());
+        assertFalse(data.isAccessible());
     }
 
-    private void assertSplitPaddingOnEmptyBuffer(ByteBuf data) throws Exception {
+    private void assertSplitPaddingOnEmptyBuffer(Buffer data) throws Exception {
         createStream(STREAM_ID, false);
         when(frameSizePolicy.maxFrameSize()).thenReturn(5);
         Future<Void> f = encoder.writeData(ctx, STREAM_ID, data, 10, true);
@@ -292,7 +287,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         assertEquals(1, writtenData.size());
         assertEquals("", writtenData.get(0));
         assertEquals(10, (int) writtenPadding.get(0));
-        assertEquals(0, data.refCnt());
+        assertFalse(data.isAccessible());
         assertTrue(f.isSuccess());
     }
 
@@ -612,13 +607,13 @@ public class DefaultHttp2ConnectionEncoderTest {
         writeAllFlowControlledFrames();
 
         Http2Stream stream = createStream(STREAM_ID, false);
-        ByteBuf data = dummyData();
-        Future<Void> f = encoder.writeData(ctx, STREAM_ID, data.retain(), 0, true);
+        Future<Void> f = encoder.writeData(ctx, STREAM_ID, dummyData(), 0, true);
         assertTrue(f.isSuccess());
         verify(remoteFlow).addFlowControlled(eq(stream), any(FlowControlled.class));
         verify(lifecycleManager).closeStreamLocal(eq(stream), eq(f));
-        assertEquals(data.toString(UTF_8), writtenData.get(0));
-        data.release();
+        try (Buffer data = dummyData()) {
+            assertEquals(data.toString(UTF_8), writtenData.get(0));
+        }
     }
 
     @Test
@@ -683,37 +678,37 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void encoderDelegatesGoAwayToLifeCycleManager() {
         encoder.writeGoAway(ctx, STREAM_ID, Http2Error.INTERNAL_ERROR.code(), null);
         verify(lifecycleManager).goAway(eq(ctx), eq(STREAM_ID), eq(Http2Error.INTERNAL_ERROR.code()),
-                eq((ByteBuf) null));
+                eq(null));
         verifyNoMoreInteractions(writer);
     }
 
     @Test
     public void dataWriteToClosedStreamShouldFail() throws Exception {
         createStream(STREAM_ID, false).close();
-        ByteBuf data = mock(ByteBuf.class);
+        Buffer data = mock(Buffer.class);
         Future<Void> f = encoder.writeData(ctx, STREAM_ID, data, 0, false);
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
         assertThat(f.cause(), instanceOf(IllegalArgumentException.class));
-        verify(data).release();
+        verify(data).close();
     }
 
     @Test
     public void dataWriteToHalfClosedLocalStreamShouldFail() throws Exception {
         createStream(STREAM_ID, true);
-        ByteBuf data = mock(ByteBuf.class);
+        Buffer data = mock(Buffer.class);
         Future<Void> f = encoder.writeData(ctx, STREAM_ID, data, 0, false);
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
         assertThat(f.cause(), instanceOf(IllegalStateException.class));
-        verify(data).release();
+        verify(data).close();
     }
 
     @Test
     public void canWriteDataFrameAfterGoAwaySent() throws Exception {
         Http2Stream stream = createStream(STREAM_ID, false);
-        connection.goAwaySent(0, 0, EMPTY_BUFFER);
-        ByteBuf data = mock(ByteBuf.class);
+        connection.goAwaySent(0, 0, onHeapAllocator().allocate(0));
+        Buffer data = mock(Buffer.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false);
         verify(remoteFlow).addFlowControlled(eq(stream), any(FlowControlled.class));
     }
@@ -732,7 +727,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void canWriteDataFrameAfterGoAwayReceived() throws Exception {
         Http2Stream stream = createStream(STREAM_ID, false);
         goAwayReceived(STREAM_ID);
-        ByteBuf data = mock(ByteBuf.class);
+        Buffer data = mock(Buffer.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false);
         verify(remoteFlow).addFlowControlled(eq(stream), any(FlowControlled.class));
     }
@@ -787,15 +782,15 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     private void goAwayReceived(int lastStreamId) throws Http2Exception {
-        connection.goAwayReceived(lastStreamId, 0, EMPTY_BUFFER);
+        connection.goAwayReceived(lastStreamId, 0, empty());
     }
 
     private void goAwaySent(int lastStreamId) throws Http2Exception {
-        connection.goAwaySent(lastStreamId, 0, EMPTY_BUFFER);
+        connection.goAwaySent(lastStreamId, 0, onHeapAllocator().allocate(0));
     }
 
-    private static ByteBuf dummyData() {
+    private static Buffer dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
-        return wrappedBuffer("abcdefgh".getBytes(UTF_8));
+        return onHeapAllocator().copyOf("abcdefgh".getBytes(UTF_8));
     }
 }

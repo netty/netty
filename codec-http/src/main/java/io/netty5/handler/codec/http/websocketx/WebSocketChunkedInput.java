@@ -15,12 +15,10 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.stream.ChunkedInput;
 
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extract;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -31,14 +29,14 @@ import static java.util.Objects.requireNonNull;
  * <p>
  */
 public final class WebSocketChunkedInput implements ChunkedInput<WebSocketFrame> {
-    private final ChunkedInput<ByteBuf> input;
+    private final ChunkedInput<Buffer> input;
     private final int rsv;
 
     /**
      * Creates a new instance using the specified input.
      * @param input {@link ChunkedInput} containing data to write
      */
-    public WebSocketChunkedInput(ChunkedInput<ByteBuf> input) {
+    public WebSocketChunkedInput(ChunkedInput<Buffer> input) {
         this(input, 0);
     }
 
@@ -49,7 +47,7 @@ public final class WebSocketChunkedInput implements ChunkedInput<WebSocketFrame>
      *
      * @throws  NullPointerException if {@code input} is null
      */
-    public WebSocketChunkedInput(ChunkedInput<ByteBuf> input, int rsv) {
+    public WebSocketChunkedInput(ChunkedInput<Buffer> input, int rsv) {
         this.input = requireNonNull(input, "input");
         this.rsv = rsv;
     }
@@ -72,36 +70,20 @@ public final class WebSocketChunkedInput implements ChunkedInput<WebSocketFrame>
     }
 
     /**
-     * @deprecated Use {@link #readChunk(ByteBufAllocator)}.
-     *
      * Fetches a chunked data from the stream. Once this method returns the last chunk
      * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
      * call must return {@code true}.
      *
-     * @param ctx {@link ChannelHandlerContext} context of channelHandler
-     * @return {@link WebSocketFrame} contain chunk of data
-     */
-    @Deprecated
-    @Override
-    public WebSocketFrame readChunk(ChannelHandlerContext ctx) throws Exception {
-        return readChunk(ctx.alloc());
-    }
-
-    /**
-     * Fetches a chunked data from the stream. Once this method returns the last chunk
-     * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
-     * call must return {@code true}.
-     *
-     * @param allocator {@link ByteBufAllocator}
+     * @param allocator {@link BufferAllocator}
      * @return {@link WebSocketFrame} contain chunk of data
      */
     @Override
-    public WebSocketFrame readChunk(ByteBufAllocator allocator) throws Exception {
-        ByteBuf buf = input.readChunk(allocator);
+    public WebSocketFrame readChunk(BufferAllocator allocator) throws Exception {
+        Buffer buf = input.readChunk(allocator);
         if (buf == null) {
             return null;
         }
-        return new ContinuationWebSocketFrame(input.isEndOfInput(), rsv, extract(buf));
+        return new ContinuationWebSocketFrame(input.isEndOfInput(), rsv, buf);
     }
 
     @Override

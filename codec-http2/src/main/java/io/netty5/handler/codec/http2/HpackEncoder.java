@@ -31,7 +31,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty5.util.AsciiString;
@@ -110,7 +110,7 @@ final class HpackEncoder {
      *
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    public void encodeHeaders(int streamId, ByteBuf out, Http2Headers headers, SensitivityDetector sensitivityDetector)
+    public void encodeHeaders(int streamId, Buffer out, Http2Headers headers, SensitivityDetector sensitivityDetector)
             throws Http2Exception {
         if (ignoreMaxHeaderListSize) {
             encodeHeadersIgnoreMaxHeaderListSize(out, headers, sensitivityDetector);
@@ -119,7 +119,7 @@ final class HpackEncoder {
         }
     }
 
-    private void encodeHeadersEnforceMaxHeaderListSize(int streamId, ByteBuf out, Http2Headers headers,
+    private void encodeHeadersEnforceMaxHeaderListSize(int streamId, Buffer out, Http2Headers headers,
                                                        SensitivityDetector sensitivityDetector)
             throws Http2Exception {
         long headerSize = 0;
@@ -137,7 +137,7 @@ final class HpackEncoder {
         encodeHeadersIgnoreMaxHeaderListSize(out, headers, sensitivityDetector);
     }
 
-    private void encodeHeadersIgnoreMaxHeaderListSize(ByteBuf out, Http2Headers headers,
+    private void encodeHeadersIgnoreMaxHeaderListSize(Buffer out, Http2Headers headers,
                                                       SensitivityDetector sensitivityDetector) throws Http2Exception {
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
@@ -152,7 +152,7 @@ final class HpackEncoder {
      *
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {
+    private void encodeHeader(Buffer out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
             int nameIndex = getNameIndex(name);
@@ -200,7 +200,7 @@ final class HpackEncoder {
     /**
      * Set the maximum table size.
      */
-    public void setMaxHeaderTableSize(ByteBuf out, long maxHeaderTableSize) throws Http2Exception {
+    public void setMaxHeaderTableSize(Buffer out, long maxHeaderTableSize) throws Http2Exception {
         if (maxHeaderTableSize < MIN_HEADER_TABLE_SIZE || maxHeaderTableSize > MAX_HEADER_TABLE_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header Table Size must be >= %d and <= %d but was %d",
                     MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderTableSize);
@@ -236,32 +236,32 @@ final class HpackEncoder {
     /**
      * Encode integer according to <a href="https://tools.ietf.org/html/rfc7541#section-5.1">Section 5.1</a>.
      */
-    private static void encodeInteger(ByteBuf out, int mask, int n, int i) {
+    private static void encodeInteger(Buffer out, int mask, int n, int i) {
         encodeInteger(out, mask, n, (long) i);
     }
 
     /**
      * Encode integer according to <a href="https://tools.ietf.org/html/rfc7541#section-5.1">Section 5.1</a>.
      */
-    private static void encodeInteger(ByteBuf out, int mask, int n, long i) {
+    private static void encodeInteger(Buffer out, int mask, int n, long i) {
         assert n >= 0 && n <= 8 : "N: " + n;
         int nbits = 0xFF >>> 8 - n;
         if (i < nbits) {
-            out.writeByte((int) (mask | i));
+            out.writeByte((byte) (mask | i));
         } else {
-            out.writeByte(mask | nbits);
+            out.writeByte((byte) (mask | nbits));
             long length = i - nbits;
             for (; (length & ~0x7F) != 0; length >>>= 7) {
-                out.writeByte((int) (length & 0x7F | 0x80));
+                out.writeByte((byte) (length & 0x7F | 0x80));
             }
-            out.writeByte((int) length);
+            out.writeByte((byte) length);
         }
     }
 
     /**
      * Encode string literal according to Section 5.2.
      */
-    private void encodeStringLiteral(ByteBuf out, CharSequence string) {
+    private void encodeStringLiteral(Buffer out, CharSequence string) {
         int huffmanLength;
         if (string.length() >= huffCodeThreshold
                 && (huffmanLength = hpackHuffmanEncoder.getEncodedLength(string)) < string.length()) {
@@ -284,7 +284,7 @@ final class HpackEncoder {
     /**
      * Encode literal header field according to Section 6.2.
      */
-    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, IndexType indexType,
+    private void encodeLiteral(Buffer out, CharSequence name, CharSequence value, IndexType indexType,
                                int nameIndex) {
         boolean nameIndexValid = nameIndex != NOT_FOUND;
         switch (indexType) {

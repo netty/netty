@@ -12,11 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalHandler;
@@ -37,6 +35,7 @@ import org.mockito.stubbing.Answer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -449,7 +448,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void goAwayReceivedShouldDisallowLocalCreation() throws Http2Exception {
-        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.goAwayReceived(0, 1L, onHeapAllocator().allocate(0));
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -460,13 +459,13 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void goAwayReceivedShouldAllowRemoteCreation() throws Http2Exception {
-        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.goAwayReceived(0, 1L, onHeapAllocator().allocate(0));
         server.remote().createStream(3, true);
     }
 
     @Test
     public void goAwaySentShouldDisallowRemoteCreation() throws Http2Exception {
-        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.goAwaySent(0, 1L, onHeapAllocator().allocate(0));
 
         assertThrows(Http2Exception.class, new Executable() {
             @Override
@@ -478,7 +477,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void goAwaySentShouldAllowLocalCreation() throws Http2Exception {
-        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.goAwaySent(0, 1L, onHeapAllocator().allocate(0));
         server.local().createStream(2, true);
     }
 
@@ -577,14 +576,14 @@ public class DefaultHttp2ConnectionTest {
             .when(clientListener2).onStreamRemoved(any(Http2Stream.class));
 
         doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+            .when(clientListener).onGoAwaySent(anyInt(), anyLong(), any(Buffer.class));
         doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+            .when(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(Buffer.class));
 
         doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
+            .when(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(Buffer.class));
         doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
+            .when(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(Buffer.class));
 
         doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
             .when(clientListener).onStreamAdded(any(Http2Stream.class));
@@ -618,14 +617,15 @@ public class DefaultHttp2ConnectionTest {
             verify(clientListener).onStreamRemoved(any(Http2Stream.class));
             verify(clientListener2).onStreamRemoved(any(Http2Stream.class));
 
-            client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(), Unpooled.EMPTY_BUFFER);
-            verify(clientListener).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
-            verify(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
+            client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(),
+                              onHeapAllocator().allocate(0));
+            verify(clientListener).onGoAwaySent(anyInt(), anyLong(), any(Buffer.class));
+            verify(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(Buffer.class));
 
             client.goAwayReceived(client.connectionStream().id(),
-                    Http2Error.INTERNAL_ERROR.code(), Unpooled.EMPTY_BUFFER);
-            verify(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
-            verify(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
+                    Http2Error.INTERNAL_ERROR.code(), onHeapAllocator().allocate(0));
+            verify(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(Buffer.class));
+            verify(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(Buffer.class));
         } finally {
             client.removeListener(clientListener2);
         }

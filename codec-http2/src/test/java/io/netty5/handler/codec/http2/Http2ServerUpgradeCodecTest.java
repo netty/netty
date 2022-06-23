@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.DefaultChannelId;
@@ -79,7 +79,7 @@ public class Http2ServerUpgradeCodecTest {
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuffer());
         Http2FrameInboundWriter writer = new Http2FrameInboundWriter(channel);
         writer.writeInboundSettings(new Http2Settings());
         writer.writeInboundRstStream(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, Http2Error.CANCEL.code());
@@ -89,13 +89,13 @@ public class Http2ServerUpgradeCodecTest {
         assertTrue(channel.finish());
 
         // Check that the preface was send (a.k.a the settings frame)
-        ByteBuf settingsBuffer = channel.readOutbound();
+        Buffer settingsBuffer = channel.readOutbound();
         assertNotNull(settingsBuffer);
-        settingsBuffer.release();
+        settingsBuffer.close();
 
-        ByteBuf buf = channel.readOutbound();
+        Buffer buf = channel.readOutbound();
         assertNotNull(buf);
-        buf.release();
+        buf.close();
 
         assertNull(channel.readOutbound());
     }

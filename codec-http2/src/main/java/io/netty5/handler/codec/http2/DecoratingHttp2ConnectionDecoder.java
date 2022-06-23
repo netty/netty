@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 
@@ -57,7 +57,7 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
     }
 
     @Override
-    public void decodeFrame(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
+    public void decodeFrame(ChannelHandlerContext ctx, Buffer in) throws Http2Exception {
         delegate.decodeFrame(ctx, in);
     }
 

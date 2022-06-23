@@ -15,7 +15,7 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
 
@@ -41,7 +41,7 @@ public interface Http2FrameListener {
      * {@link Http2LocalFlowController#consumeBytes(Http2Stream, int)}. The returned value must
      * be >= {@code 0} and <= {@code data.readableBytes()} + {@code padding}.
      */
-    int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+    int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding,
                    boolean endOfStream) throws Http2Exception;
 
     /**
@@ -192,7 +192,7 @@ public interface Http2FrameListener {
      * @param debugData application-defined debug data. If this buffer needs to be retained by the
      *            listener they must make a copy.
      */
-    void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+    void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData)
             throws Http2Exception;
 
     /**
@@ -215,6 +215,6 @@ public interface Http2FrameListener {
      * @param flags the flags in the frame header.
      * @param payload the payload of the frame.
      */
-    void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload)
+    void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, Buffer payload)
             throws Http2Exception;
 }

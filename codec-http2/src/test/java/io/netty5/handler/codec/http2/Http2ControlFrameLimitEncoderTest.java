@@ -15,8 +15,7 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -37,6 +36,7 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty5.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty5.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
@@ -110,7 +110,7 @@ public class Http2ControlFrameLimitEncoderTest {
                     }
                     return promise.asFuture();
                 });
-        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class)))
+        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(Buffer.class)))
                 .thenAnswer((Answer<Future<Void>>) invocationOnMock -> {
                     Resource.dispose(invocationOnMock.getArgument(3));
                     Promise<Void> promise =  ImmediateEventExecutor.INSTANCE.newPromise();
@@ -132,8 +132,8 @@ public class Http2ControlFrameLimitEncoderTest {
 
         // Set LifeCycleManager on encoder and decoder
         when(ctx.channel()).thenReturn(channel);
-        when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
-        when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.bufferAllocator()).thenReturn(onHeapAllocator());
+        when(channel.bufferAllocator()).thenReturn(onHeapAllocator());
         when(executor.inEventLoop()).thenReturn(true);
         doAnswer((Answer<Promise<Void>>) invocation -> newPromise()).when(ctx).newPromise();
         doAnswer((Answer<Future<Void>>) invocation ->
@@ -258,7 +258,7 @@ public class Http2ControlFrameLimitEncoderTest {
         verify(ctx, times(invocations)).close();
         if (failed) {
             verify(writer, times(1)).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(ENHANCE_YOUR_CALM.code()),
-                    any(ByteBuf.class));
+                    any(Buffer.class));
         }
     }
 

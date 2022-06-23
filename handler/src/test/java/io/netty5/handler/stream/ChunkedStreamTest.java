@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -41,11 +41,12 @@ public class ChunkedStreamTest {
             }
         });
 
+        BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
         assertFalse(chunkedStream.isEndOfInput());
-        assertNull(chunkedStream.readChunk(UnpooledByteBufAllocator.DEFAULT));
+        assertNull(chunkedStream.readChunk(allocator));
         assertEquals(0, chunkedStream.progress());
         chunkedStream.close();
         assertTrue(chunkedStream.isEndOfInput());
-        assertNull(chunkedStream.readChunk(UnpooledByteBufAllocator.DEFAULT));
+        assertNull(chunkedStream.readChunk(allocator));
     }
 }

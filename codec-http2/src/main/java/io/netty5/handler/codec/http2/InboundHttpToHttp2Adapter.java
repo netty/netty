@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.FullHttpMessage;
@@ -72,7 +71,7 @@ public class InboundHttpToHttp2Adapter implements ChannelHandler {
                 ctx, streamId, messageHeaders, 0, !(hasContent || hasTrailers));
         if (hasContent) {
             final Buffer payload = message.payload();
-            listener.onDataRead(ctx, streamId, ByteBufAdaptor.intoByteBuf(payload), 0, !hasTrailers);
+            listener.onDataRead(ctx, streamId, payload, 0, !hasTrailers);
         }
         if (hasTrailers) {
             Http2Headers headers = HttpConversionUtil.toHttp2Headers(message.trailingHeaders(), true);

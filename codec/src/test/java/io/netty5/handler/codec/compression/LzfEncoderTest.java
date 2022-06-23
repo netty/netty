@@ -16,8 +16,6 @@
 package io.netty5.handler.codec.compression;
 
 import com.ning.compress.lzf.LZFDecoder;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 

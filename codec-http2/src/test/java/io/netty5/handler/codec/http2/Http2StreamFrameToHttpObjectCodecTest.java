@@ -13,16 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.adaptor.BufferConversionHandler;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -55,6 +51,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
+import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -113,12 +111,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertThat(headersFrame.headers().status().toString(), is("200"));
         assertFalse(headersFrame.isEndStream());
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertTrue(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -159,12 +154,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertThat(headersFrame.headers().status().toString(), is("200"));
         assertFalse(headersFrame.isEndStream());
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertFalse(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         Http2HeadersFrame trailersFrame = ch.readOutbound();
@@ -196,12 +188,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         HttpContent<?> content = new DefaultHttpContent(hello);
         assertTrue(ch.writeOutbound(content));
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertFalse(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -214,12 +203,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         LastHttpContent<?> end = new EmptyLastHttpContent(preferredAllocator());
         assertTrue(ch.writeOutbound(end));
 
-        Http2DataFrame emptyFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame emptyFrame = ch.readOutbound()) {
             assertThat(emptyFrame.content().readableBytes(), is(0));
             assertTrue(emptyFrame.isEndStream());
-        } finally {
-            emptyFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -233,12 +219,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         LastHttpContent<?> end = new DefaultLastHttpContent(hello, true);
         assertTrue(ch.writeOutbound(end));
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertTrue(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -270,12 +253,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertFalse(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         Http2HeadersFrame headerFrame = ch.readOutbound();
@@ -369,8 +349,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDowngradeData() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello)));
+        Buffer hello = bb("hello world");
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send())));
 
         try (HttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(CharsetUtil.UTF_8), is("hello world"));
@@ -384,8 +364,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDowngradeEndData() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello, true)));
+        Buffer hello = bb("hello world");
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send(), true)));
 
         try (LastHttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(CharsetUtil.UTF_8), is("hello world"));
@@ -400,20 +380,17 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testPassThroughOther() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Http2ResetFrame reset = new DefaultHttp2ResetFrame(0);
-        Http2GoAwayFrame goaway = new DefaultHttp2GoAwayFrame(0);
-        assertTrue(ch.writeInbound(reset));
-        assertTrue(ch.writeInbound(goaway.retain()));
+        try (Http2GoAwayFrame goaway = new DefaultHttp2GoAwayFrame(0)) {
+            assertTrue(ch.writeInbound(reset));
+            assertTrue(ch.writeInbound(goaway.copy()));
 
-        assertEquals(reset, ch.readInbound());
+            assertEquals(reset, ch.readInbound());
 
-        Http2GoAwayFrame frame = ch.readInbound();
-        try {
-            assertEquals(goaway, frame);
-            assertThat(ch.readInbound(), is(nullValue()));
-            assertFalse(ch.finish());
-        } finally {
-            goaway.release();
-            frame.release();
+            try (Http2GoAwayFrame frame = ch.readInbound()) {
+                assertEquals(goaway, frame);
+                assertThat(ch.readInbound(), is(nullValue()));
+                assertFalse(ch.finish());
+            }
         }
     }
 
@@ -443,13 +420,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
         EmbeddedChannel ch = new EmbeddedChannel(
                 ctx.newHandler(offHeapAllocator()),
-                BufferConversionHandler.bufferToByteBuf(),
                 new ChannelHandler() {
                     @Override
                     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
                         if (msg instanceof Http2StreamFrame) {
                             frames.add((Http2StreamFrame) msg);
-                            return ctx.write(Unpooled.EMPTY_BUFFER);
+                            return ctx.write(empty());
                         }
                         return ctx.write(msg);
                     }
@@ -490,12 +466,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertThat(headers.path().toString(), is("/hello/world"));
         assertFalse(headersFrame.isEndStream());
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertTrue(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -548,12 +521,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertThat(headers.path().toString(), is("/hello/world"));
         assertFalse(headersFrame.isEndStream());
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertFalse(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         Http2HeadersFrame trailersFrame = ch.readOutbound();
@@ -589,12 +559,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         HttpContent<?> content = new DefaultHttpContent(hello);
         assertTrue(ch.writeOutbound(content));
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertFalse(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -607,12 +574,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         LastHttpContent<?> end = new EmptyLastHttpContent(preferredAllocator());
         assertTrue(ch.writeOutbound(end));
 
-        Http2DataFrame emptyFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame emptyFrame = ch.readOutbound()) {
             assertThat(emptyFrame.content().readableBytes(), is(0));
             assertTrue(emptyFrame.isEndStream());
-        } finally {
-            emptyFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -626,12 +590,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         LastHttpContent<?> end = new DefaultLastHttpContent(hello, true);
         assertTrue(ch.writeOutbound(end));
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertTrue(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -664,12 +625,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
 
-        Http2DataFrame dataFrame = ch.readOutbound();
-        try {
+        try (Http2DataFrame dataFrame = ch.readOutbound()) {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
             assertFalse(dataFrame.isEndStream());
-        } finally {
-            dataFrame.release();
         }
 
         Http2HeadersFrame headerFrame = ch.readOutbound();
@@ -806,8 +764,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDecodeDataAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello)));
+        Buffer hello = bb("hello world");
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send())));
 
         try (HttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(CharsetUtil.UTF_8), is("hello world"));
@@ -821,8 +779,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDecodeEndDataAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello, true)));
+        Buffer hello = bb("hello world");
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send(), true)));
 
         try (LastHttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(CharsetUtil.UTF_8), is("hello world"));
@@ -837,20 +795,17 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testPassThroughOtherAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2ResetFrame reset = new DefaultHttp2ResetFrame(0);
-        Http2GoAwayFrame goaway = new DefaultHttp2GoAwayFrame(0);
-        assertTrue(ch.writeInbound(reset));
-        assertTrue(ch.writeInbound(goaway.retain()));
+        try (Http2GoAwayFrame goaway = new DefaultHttp2GoAwayFrame(0)) {
+            assertTrue(ch.writeInbound(reset));
+            assertTrue(ch.writeInbound(goaway.copy()));
 
-        assertEquals(reset, ch.readInbound());
+            assertEquals(reset, ch.readInbound());
 
-        Http2GoAwayFrame frame = ch.readInbound();
-        try {
-            assertEquals(goaway, frame);
-            assertThat(ch.readInbound(), is(nullValue()));
-            assertFalse(ch.finish());
-        } finally {
-            goaway.release();
-            frame.release();
+            try (Http2GoAwayFrame frame = ch.readInbound()) {
+                assertEquals(goaway, frame);
+                assertThat(ch.readInbound(), is(nullValue()));
+                assertFalse(ch.finish());
+            }
         }
     }
 

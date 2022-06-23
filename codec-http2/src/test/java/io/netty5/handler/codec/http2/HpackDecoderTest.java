@@ -31,13 +31,13 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.HpackDecoder.decodeULE128;
 import static io.netty5.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty5.util.AsciiString.EMPTY_STRING;
@@ -64,12 +64,9 @@ public class HpackDecoderTest {
     }
 
     private void decode(String encoded) throws Http2Exception {
-        byte[] b = StringUtil.decodeHexDump(encoded);
-        ByteBuf in = Unpooled.wrappedBuffer(b);
-        try {
+        byte[] input = StringUtil.decodeHexDump(encoded);
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             hpackDecoder.decode(0, in, mockHeaders, true);
-        } finally {
-            in.release();
         }
     }
 
@@ -82,47 +79,33 @@ public class HpackDecoderTest {
     @Test
     public void testDecodeULE128IntMax() throws Http2Exception {
         byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x07};
-        ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             assertEquals(MAX_VALUE, decodeULE128(in, 0));
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testDecodeULE128IntOverflow1() throws Http2Exception {
         byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x07};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        final int readerIndex = in.readerIndex();
-        try {
-            assertThrows(Http2Exception.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    decodeULE128(in, 1);
-                }
-            });
-        } finally {
-            assertEquals(readerIndex, in.readerIndex());
-            in.release();
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
+            final int readerIndex = in.readerOffset();
+            assertThrows(Http2Exception.class, () -> decodeULE128(in, 1));
+            assertEquals(readerIndex, in.readerOffset());
         }
     }
 
     @Test
     public void testDecodeULE128IntOverflow2() throws Http2Exception {
         byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x08};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        final int readerIndex = in.readerIndex();
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
+            final int readerIndex = in.readerOffset();
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     decodeULE128(in, 0);
                 }
             });
-        } finally {
-            assertEquals(readerIndex, in.readerIndex());
-            in.release();
+            assertEquals(readerIndex, in.readerOffset());
         }
     }
 
@@ -130,11 +113,8 @@ public class HpackDecoderTest {
     public void testDecodeULE128LongMax() throws Http2Exception {
         byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
                         (byte) 0xFF, (byte) 0x7F};
-        ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             assertEquals(Long.MAX_VALUE, decodeULE128(in, 0L));
-        } finally {
-            in.release();
         }
     }
 
@@ -142,18 +122,15 @@ public class HpackDecoderTest {
     public void testDecodeULE128LongOverflow1() throws Http2Exception {
         byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
                         (byte) 0xFF, (byte) 0xFF};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        final int readerIndex = in.readerIndex();
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
+            final int readerIndex = in.readerOffset();
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     decodeULE128(in, 0L);
                 }
             });
-        } finally {
-            assertEquals(readerIndex, in.readerIndex());
-            in.release();
+            assertEquals(readerIndex, in.readerOffset());
         }
     }
 
@@ -161,40 +138,33 @@ public class HpackDecoderTest {
     public void testDecodeULE128LongOverflow2() throws Http2Exception {
         byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
                         (byte) 0xFF, (byte) 0x7F};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        final int readerIndex = in.readerIndex();
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
+            final int readerIndex = in.readerOffset();
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     decodeULE128(in, 1L);
                 }
             });
-        } finally {
-            assertEquals(readerIndex, in.readerIndex());
-            in.release();
+            assertEquals(readerIndex, in.readerOffset());
         }
     }
 
     @Test
     public void testSetTableSizeWithMaxUnsigned32BitValueSucceeds() throws Http2Exception {
         byte[] input = {(byte) 0x3F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x0E};
-        ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             final long expectedHeaderSize = 4026531870L; // based on the input above
             hpackDecoder.setMaxHeaderTableSize(expectedHeaderSize);
             hpackDecoder.decode(0, in, mockHeaders, true);
             assertEquals(expectedHeaderSize, hpackDecoder.getMaxHeaderTableSize());
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testSetTableSizeOverLimitFails() throws Http2Exception {
         byte[] input = {(byte) 0x3F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x0E};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             hpackDecoder.setMaxHeaderTableSize(4026531870L - 1); // based on the input above ... 1 less than is above.
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
@@ -202,76 +172,61 @@ public class HpackDecoderTest {
                     hpackDecoder.decode(0, in, mockHeaders, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testLiteralHuffmanEncodedWithEmptyNameAndValue() throws Http2Exception {
         byte[] input = {0, (byte) 0x80, 0};
-        ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             hpackDecoder.decode(0, in, mockHeaders, true);
             verify(mockHeaders, times(1)).add(EMPTY_STRING, EMPTY_STRING);
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testLiteralHuffmanEncodedWithPaddingGreaterThan7Throws() throws Http2Exception {
         byte[] input = {0, (byte) 0x81, -1};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     hpackDecoder.decode(0, in, mockHeaders, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testLiteralHuffmanEncodedWithDecodingEOSThrows() throws Http2Exception {
         byte[] input = {0, (byte) 0x84, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     hpackDecoder.decode(0, in, mockHeaders, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testLiteralHuffmanEncodedWithPaddingNotCorrespondingToMSBThrows() throws Http2Exception {
         byte[] input = {0, (byte) 0x81, 0};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     hpackDecoder.decode(0, in, mockHeaders, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testIncompleteIndex() throws Http2Exception {
-        byte[] compressed = StringUtil.decodeHexDump("FFF0");
-        final ByteBuf in = Unpooled.wrappedBuffer(compressed);
-        try {
+        byte[] input = StringUtil.decodeHexDump("FFF0");
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             assertEquals(2, in.readableBytes());
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
@@ -279,8 +234,6 @@ public class HpackDecoderTest {
                     hpackDecoder.decode(0, in, mockHeaders, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
@@ -409,16 +362,10 @@ public class HpackDecoderTest {
         verifyNoMoreInteractions(mockHeaders);
 
         reset(mockHeaders);
+        String value = "a".repeat(4096);
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4096; i++) {
-            sb.append('a');
-        }
-        String value = sb.toString();
-        sb = new StringBuilder();
         sb.append("417F811F");
-        for (int i = 0; i < 4096; i++) {
-            sb.append("61"); // 'a'
-        }
+        sb.append("61".repeat(4096)); // 'a'
         decode(sb.toString());
         verify(mockHeaders).contains(of(":authority"));
         verify(mockHeaders).add(of(":authority"), of(value));
@@ -438,9 +385,7 @@ public class HpackDecoderTest {
         sb.append("4004");
         sb.append(hex("name"));
         sb.append("7F813F");
-        for (int i = 0; i < 8192; i++) {
-            sb.append("61"); // 'a'
-        }
+        sb.append("61".repeat(8192)); // 'a'
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -460,9 +405,7 @@ public class HpackDecoderTest {
         // Ignore header name that exceeds max header size
         final StringBuilder sb = new StringBuilder();
         sb.append("007F817F");
-        for (int i = 0; i < 16384; i++) {
-            sb.append("61"); // 'a'
-        }
+        sb.append("61".repeat(16384)); // 'a'
         sb.append("00");
         assertThrows(Http2Exception.class, new Executable() {
             @Override
@@ -479,9 +422,7 @@ public class HpackDecoderTest {
         sb.append("0004");
         sb.append(hex("name"));
         sb.append("7F813F");
-        for (int i = 0; i < 8192; i++) {
-            sb.append("61"); // 'a'
-        }
+        sb.append("61".repeat(8192)); // 'a'
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -501,9 +442,7 @@ public class HpackDecoderTest {
         // Ignore header name that exceeds max header size
         final StringBuilder sb = new StringBuilder();
         sb.append("107F817F");
-        for (int i = 0; i < 16384; i++) {
-            sb.append("61"); // 'a'
-        }
+        sb.append("61".repeat(16384)); // 'a'
         sb.append("00");
         assertThrows(Http2Exception.class, new Executable() {
             @Override
@@ -520,9 +459,7 @@ public class HpackDecoderTest {
         sb.append("1004");
         sb.append(hex("name"));
         sb.append("7F813F");
-        for (int i = 0; i < 8192; i++) {
-            sb.append("61"); // 'a'
-        }
+        sb.append("61".repeat(8192)); // 'a'
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -533,8 +470,7 @@ public class HpackDecoderTest {
 
     @Test
     public void testDecodeLargerThanMaxHeaderListSizeUpdatesDynamicTable() throws Http2Exception {
-        final ByteBuf in = Unpooled.buffer(300);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(300)) {
             hpackDecoder.setMaxHeaderListSize(200);
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
@@ -557,25 +493,22 @@ public class HpackDecoderTest {
 
             // but the dynamic table should have been updated, so that later blocks
             // can refer to earlier headers
-            in.clear();
+            in.resetOffsets();
             // 0x80, "indexed header field representation"
             // index 62, the first (most recent) dynamic table entry
-            in.writeByte(0x80 | 62);
+            in.writeByte((byte) (0x80 | 62));
             Http2Headers decoded2 = new DefaultHttp2Headers();
             hpackDecoder.decode(1, in, decoded2, true);
 
             Http2Headers golden = new DefaultHttp2Headers();
             golden.add("test_3", "3");
             assertEquals(golden, decoded2);
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testDecodeCountsNamesOnlyOnce() throws Http2Exception {
-        ByteBuf in = Unpooled.buffer(200);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
             hpackDecoder.setMaxHeaderListSize(3500);
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
@@ -588,15 +521,12 @@ public class HpackDecoderTest {
             Http2Headers decoded = new DefaultHttp2Headers();
             hpackDecoder.decode(1, in, decoded, true);
             assertEquals(2, decoded.size());
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void testAccountForHeaderOverhead() throws Exception {
-        final ByteBuf in = Unpooled.buffer(100);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(100)) {
             String headerName = "12345";
             String headerValue = "56789";
             long headerSize = headerName.length() + headerValue.length();
@@ -619,8 +549,6 @@ public class HpackDecoderTest {
                     hpackDecoder.decode(1, in, decoded, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
@@ -628,23 +556,19 @@ public class HpackDecoderTest {
     public void testIncompleteHeaderFieldRepresentation() throws Http2Exception {
         // Incomplete Literal Header Field with Incremental Indexing
         byte[] input = {(byte) 0x40};
-        final ByteBuf in = Unpooled.wrappedBuffer(input);
-        try {
+        try (Buffer in = onHeapAllocator().copyOf(input)) {
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     hpackDecoder.decode(0, in, mockHeaders, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void unknownPseudoHeader() throws Exception {
-        final ByteBuf in = Unpooled.buffer(200);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             Http2Headers toEncode = new DefaultHttp2Headers();
@@ -659,15 +583,12 @@ public class HpackDecoderTest {
                     hpackDecoder.decode(1, in, decoded, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void disableHeaderValidation() throws Exception {
-        ByteBuf in = Unpooled.buffer(200);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             Http2Headers toEncode = new DefaultHttp2Headers();
@@ -683,15 +604,12 @@ public class HpackDecoderTest {
             assertThat(decoded.valueIterator(":test").next().toString(), is("1"));
             assertThat(decoded.status().toString(), is("200"));
             assertThat(decoded.method().toString(), is("GET"));
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void requestPseudoHeaderInResponse() throws Exception {
-        final ByteBuf in = Unpooled.buffer(200);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             Http2Headers toEncode = new DefaultHttp2Headers();
@@ -707,15 +625,12 @@ public class HpackDecoderTest {
                     hpackDecoder.decode(1, in, decoded, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void responsePseudoHeaderInRequest() throws Exception {
-        final ByteBuf in = Unpooled.buffer(200);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             Http2Headers toEncode = new DefaultHttp2Headers();
@@ -731,15 +646,12 @@ public class HpackDecoderTest {
                     hpackDecoder.decode(1, in, decoded, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void pseudoHeaderAfterRegularHeader() throws Exception {
-        final ByteBuf in = Unpooled.buffer(200);
-        try {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             Http2Headers toEncode = new InOrderHttp2Headers();
@@ -755,16 +667,13 @@ public class HpackDecoderTest {
                     hpackDecoder.decode(1, in, decoded, true);
                 }
             });
-        } finally {
-            in.release();
         }
     }
 
     @Test
     public void failedValidationDoesntCorruptHpack() throws Exception {
-        final ByteBuf in1 = Unpooled.buffer(200);
-        ByteBuf in2 = Unpooled.buffer(200);
-        try {
+        try (Buffer in1 = onHeapAllocator().allocate(200);
+             Buffer in2 = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             Http2Headers toEncode = new DefaultHttp2Headers();
@@ -793,9 +702,6 @@ public class HpackDecoderTest {
             assertEquals("GET", decoded.method().toString());
             assertEquals("200", decoded.status().toString());
             assertEquals("bar", decoded.get("foo").toString());
-        } finally {
-            in1.release();
-            in2.release();
         }
     }
 }

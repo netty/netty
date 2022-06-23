@@ -31,7 +31,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -74,7 +74,7 @@ public class HpackEncoderBenchmark extends AbstractMicrobenchmark {
     public boolean limitToAscii;
 
     private Http2Headers http2Headers;
-    private ByteBuf output;
+    private Buffer output;
     private Http2HeadersEncoder.SensitivityDetector sensitivityDetector;
 
     @Setup(Level.Trial)
@@ -97,14 +97,14 @@ public class HpackEncoderBenchmark extends AbstractMicrobenchmark {
 
     @TearDown(Level.Trial)
     public void tearDown() {
-        output.release();
+        output.close();
     }
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void encode(Blackhole bh) throws Exception {
         HpackEncoder hpackEncoder = HpackUtilBenchmark.newTestEncoder();
-        output.clear();
+        output.resetOffsets();
         hpackEncoder.encodeHeaders(3 /*randomly chosen*/, output, http2Headers, sensitivityDetector);
         bh.consume(output);
     }

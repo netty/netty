@@ -14,9 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
-import io.netty5.buffer.api.adaptor.ByteBufBuffer;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.CoalescingBufferQueue;
@@ -121,7 +119,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public Future<Void> writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
+    public Future<Void> writeData(final ChannelHandlerContext ctx, final int streamId, Buffer data, int padding,
                                   final boolean endOfStream) {
         final Http2Stream stream;
         try {
@@ -137,7 +135,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                     throw new IllegalStateException("Stream " + stream.id() + " in unexpected state " + stream.state());
             }
         } catch (Throwable e) {
-            data.release();
+            data.close();
             return ctx.newFailedFuture(e);
         }
 
@@ -373,7 +371,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
+    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData) {
         return lifecycleManager.goAway(ctx, lastStreamId, errorCode, debugData);
     }
 
@@ -385,7 +383,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
     @Override
     public Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                                   ByteBuf payload) {
+                                   Buffer payload) {
         return frameWriter.writeFrame(ctx, frameType, streamId, flags, payload);
     }
 
@@ -439,11 +437,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         private final CoalescingBufferQueue queue;
         private int dataSize;
 
-        FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
+        FlowControlledData(Http2Stream stream, Buffer buf, int padding, boolean endOfStream,
                            Promise<Void> promise, Channel channel) {
             super(stream, padding, endOfStream, promise);
             queue = new CoalescingBufferQueue(channel);
-            queue.add(ByteBufBuffer.wrap(buf), promise);
+            queue.add(buf, promise);
             dataSize = queue.readableBytes();
         }
 
@@ -496,7 +494,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             int writableData = min(queuedData, allowedBytes);
             Promise<Void> writePromise = ctx.newPromise();
             writePromise.asFuture().addListener(this);
-            ByteBuf toWrite = ByteBufAdaptor.intoByteBuf(queue.remove(writableData, writePromise));
+            Buffer toWrite = queue.remove(writableData, writePromise);
             dataSize = queue.readableBytes();
 
             // Determine how much padding to write.

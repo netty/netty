@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.ObjectUtil;
 
@@ -35,9 +35,9 @@ final class Http2EmptyDataFrameListener extends Http2FrameListenerDecorator {
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding, boolean endOfStream)
             throws Http2Exception {
-        if (endOfStream || data.isReadable()) {
+        if (endOfStream || data.readableBytes() > 0) {
             emptyDataFrames = 0;
         } else if (emptyDataFrames++ == maxConsecutiveEmptyFrames && !violationDetected) {
             violationDetected = true;

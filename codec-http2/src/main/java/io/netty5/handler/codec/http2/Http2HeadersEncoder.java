@@ -12,10 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -81,7 +80,7 @@ public interface Http2HeadersEncoder {
      * @param headers the headers to be encoded.
      * @param buffer the buffer to receive the encoded headers.
      */
-    void encodeHeaders(int streamId, Http2Headers headers, ByteBuf buffer) throws Http2Exception;
+    void encodeHeaders(int streamId, Http2Headers headers, Buffer buffer) throws Http2Exception;
 
     /**
      * Get the {@link Configuration} for this {@link Http2HeadersEncoder}

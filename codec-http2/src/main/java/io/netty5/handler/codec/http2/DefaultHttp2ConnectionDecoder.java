@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpStatusClass;
@@ -169,7 +169,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     @Override
-    public void decodeFrame(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception {
+    public void decodeFrame(ChannelHandlerContext ctx, Buffer in) throws Http2Exception {
         frameReader.readFrame(ctx, in, internalFrameListener);
     }
 
@@ -211,14 +211,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         return flowController().unconsumedBytes(stream);
     }
 
-    void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+    void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData)
             throws Http2Exception {
-        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData.copy(true));
         connection.goAwayReceived(lastStreamId, errorCode, debugData);
     }
 
-    void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-            ByteBuf payload) throws Http2Exception {
+    void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, Buffer payload)
+            throws Http2Exception {
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }
 
@@ -241,7 +241,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
      */
     private final class FrameReadListener implements Http2FrameListener {
         @Override
-        public int onDataRead(final ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+        public int onDataRead(final ChannelHandlerContext ctx, int streamId, Buffer data, int padding,
                               boolean endOfStream) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             Http2LocalFlowController flowController = flowController();
@@ -571,7 +571,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData)
                 throws Http2Exception {
             onGoAwayRead0(ctx, lastStreamId, errorCode, debugData);
         }
@@ -594,7 +594,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                ByteBuf payload) throws Http2Exception {
+                                   Buffer payload) throws Http2Exception {
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
 
@@ -668,7 +668,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         /**
          * Verifies that the HTTP/2 connection preface has been received from the remote endpoint.
          * It is possible that the current call to
-         * {@link Http2FrameReader#readFrame(ChannelHandlerContext, ByteBuf, Http2FrameListener)} will have multiple
+         * {@link Http2FrameReader#readFrame(ChannelHandlerContext, Buffer, Http2FrameListener)} will have multiple
          * frames to dispatch. So it may be OK for this class to get legitimate frames for the first readFrame.
          */
         private void verifyPrefaceReceived() throws Http2Exception {
@@ -678,7 +678,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+        public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding, boolean endOfStream)
                 throws Http2Exception {
             verifyPrefaceReceived();
             return internalFrameListener.onDataRead(ctx, streamId, data, padding, endOfStream);
@@ -748,7 +748,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData)
                 throws Http2Exception {
             onGoAwayRead0(ctx, lastStreamId, errorCode, debugData);
         }
@@ -762,7 +762,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-                ByteBuf payload) throws Http2Exception {
+                                   Buffer payload) throws Http2Exception {
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
     }

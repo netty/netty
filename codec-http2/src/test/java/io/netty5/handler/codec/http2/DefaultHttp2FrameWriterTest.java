@@ -14,9 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.Resource;
@@ -33,8 +31,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
+import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 
@@ -44,9 +46,9 @@ import static org.mockito.Mockito.when;
 public class DefaultHttp2FrameWriterTest {
     private DefaultHttp2FrameWriter frameWriter;
 
-    private ByteBuf outbound;
+    private Buffer outbound;
 
-    private ByteBuf expectedOutbound;
+    private Buffer expectedOutbound;
 
     private Http2HeadersEncoder http2HeadersEncoder;
 
@@ -68,20 +70,20 @@ public class DefaultHttp2FrameWriterTest {
         frameWriter = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(
                 Http2HeadersEncoder.NEVER_SENSITIVE, new HpackEncoder(false, 16, 0)));
 
-        outbound = Unpooled.buffer();
+        outbound = onHeapAllocator().allocate(256);
 
-        expectedOutbound = Unpooled.EMPTY_BUFFER;
+        expectedOutbound = empty();
 
         Answer<Object> answer = var1 -> {
             Object msg = var1.getArgument(0);
-            if (msg instanceof ByteBuf) {
-                outbound.writeBytes((ByteBuf) msg);
+            if (msg instanceof Buffer) {
+                outbound.writeBytes((Buffer) msg);
             }
             Resource.dispose(msg);
             return future;
         };
         when(ctx.write(any())).then(answer);
-        when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.bufferAllocator()).thenReturn(onHeapAllocator());
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
         when(ctx.newPromise()).thenReturn(ImmediateEventExecutor.INSTANCE.newPromise());
@@ -89,8 +91,8 @@ public class DefaultHttp2FrameWriterTest {
 
     @AfterEach
     public void tearDown() throws Exception {
-        outbound.release();
-        expectedOutbound.release();
+        outbound.close();
+        expectedOutbound.close();
         frameWriter.close();
     }
 
@@ -109,7 +111,7 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x05, // flags = (0x01 | 0x04)
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01 // stream id = 1
         };
-        expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes, expectedPayload);
+        expectedOutbound = onHeapAllocator().allocate(256).writeBytes(expectedFrameBytes).writeBytes(expectedPayload);
         assertEquals(expectedOutbound, outbound);
     }
 
@@ -128,7 +130,7 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x0d, // flags = (0x01 | 0x04 | 0x08)
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01 // stream id = 1
         };
-        expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes, expectedPayload);
+        expectedOutbound = onHeapAllocator().allocate(256).writeBytes(expectedFrameBytes).writeBytes(expectedPayload);
         assertEquals(expectedOutbound, outbound);
     }
 
@@ -147,7 +149,8 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x04, // flags = 0x04
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01 // stream id = 1
         };
-        ByteBuf expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes, expectedPayload);
+        Buffer expectedOutbound = onHeapAllocator().allocate(256)
+                                                   .writeBytes(expectedFrameBytes).writeBytes(expectedPayload);
         assertEquals(expectedOutbound, outbound);
     }
 
@@ -155,10 +158,10 @@ public class DefaultHttp2FrameWriterTest {
     public void writeEmptyDataWithPadding() {
         int streamId = 1;
 
-        ByteBuf payloadByteBuf = Unpooled.buffer();
+        Buffer payloadByteBuf = onHeapAllocator().allocate(256);
         frameWriter.writeData(ctx, streamId, payloadByteBuf, 2, true);
 
-        assertEquals(0, payloadByteBuf.refCnt());
+        assertFalse(payloadByteBuf.isAccessible());
 
         byte[] expectedFrameBytes = {
             (byte) 0x00, (byte) 0x00, (byte) 0x02, // payload length
@@ -167,7 +170,7 @@ public class DefaultHttp2FrameWriterTest {
             (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, // stream id
             (byte) 0x01, (byte) 0x00, // padding
         };
-        expectedOutbound = Unpooled.copiedBuffer(expectedFrameBytes);
+        expectedOutbound = bb(expectedFrameBytes);
         assertEquals(expectedOutbound, outbound);
     }
 
@@ -197,7 +200,7 @@ public class DefaultHttp2FrameWriterTest {
         assertEquals(streamId, outbound.readInt());
 
         byte[] firstPayload = new byte[Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND];
-        outbound.readBytes(firstPayload);
+        outbound.readBytes(firstPayload, 0, firstPayload.length);
 
         int remainPayloadLength = expectedPayload.length - Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
         // Second frame: CONTINUATION(length=remainPayloadLength, flags=0x04)
@@ -207,7 +210,7 @@ public class DefaultHttp2FrameWriterTest {
         assertEquals(streamId, outbound.readInt());
 
         byte[] secondPayload = new byte[remainPayloadLength];
-        outbound.readBytes(secondPayload);
+        outbound.readBytes(secondPayload, 0, secondPayload.length);
 
         assertArrayEquals(Arrays.copyOfRange(expectedPayload, 0, firstPayload.length),
                           firstPayload);
@@ -239,7 +242,7 @@ public class DefaultHttp2FrameWriterTest {
         assertEquals(streamId, outbound.readInt());
 
         byte[] firstPayload = new byte[Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND];
-        outbound.readBytes(firstPayload);
+        outbound.readBytes(firstPayload, 0, firstPayload.length);
 
         int remainPayloadLength = expectedPayload.length - Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
         // Second frame: CONTINUATION(length=remainPayloadLength, flags=0x04)
@@ -249,7 +252,7 @@ public class DefaultHttp2FrameWriterTest {
         assertEquals(streamId, outbound.readInt());
 
         byte[] secondPayload = new byte[remainPayloadLength];
-        outbound.readBytes(secondPayload);
+        outbound.readBytes(secondPayload, 0, secondPayload.length);
 
         assertArrayEquals(Arrays.copyOfRange(expectedPayload, 0, firstPayload.length),
                 firstPayload);
@@ -260,7 +263,7 @@ public class DefaultHttp2FrameWriterTest {
 
     @Test
     public void writeFrameZeroPayload() throws Exception {
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER);
+        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), empty());
 
         byte[] expectedFrameBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, // payload length
@@ -269,7 +272,7 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 // stream id
         };
 
-        expectedOutbound = Unpooled.wrappedBuffer(expectedFrameBytes);
+        expectedOutbound = bb(expectedFrameBytes);
         assertEquals(expectedOutbound, outbound);
     }
 
@@ -278,7 +281,7 @@ public class DefaultHttp2FrameWriterTest {
         byte[] payload = {(byte) 0x01, (byte) 0x03, (byte) 0x05, (byte) 0x07, (byte) 0x09};
 
         // will auto release after frameWriter.writeFrame succeed
-        ByteBuf payloadByteBuf = Unpooled.wrappedBuffer(payload);
+        Buffer payloadByteBuf = bb(payload);
         frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payloadByteBuf);
 
         byte[] expectedFrameHeaderBytes = {
@@ -287,7 +290,7 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x00, // flags
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 // stream id
         };
-        expectedOutbound = Unpooled.copiedBuffer(expectedFrameHeaderBytes, payload);
+        expectedOutbound = onHeapAllocator().allocate(256).writeBytes(expectedFrameHeaderBytes).writeBytes(payload);
         assertEquals(expectedOutbound, outbound);
     }
 
@@ -296,7 +299,7 @@ public class DefaultHttp2FrameWriterTest {
         frameWriter.writePriority(
             ctx, /* streamId= */ 1, /* dependencyId= */ 2, /* weight= */ (short) 256, /* exclusive= */ true);
 
-        expectedOutbound = Unpooled.copiedBuffer(new byte[] {
+        expectedOutbound = bb(new byte[] {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5
                 (byte) 0x02, // payload type = 2
                 (byte) 0x00, // flags = 0x00
@@ -312,7 +315,7 @@ public class DefaultHttp2FrameWriterTest {
         frameWriter.writePriority(
             ctx, /* streamId= */ 1, /* dependencyId= */ 0, /* weight= */ (short) 16, /* exclusive= */ false);
 
-        expectedOutbound = Unpooled.copiedBuffer(new byte[] {
+        expectedOutbound = bb(new byte[] {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length = 5
                 (byte) 0x02, // payload type = 2
                 (byte) 0x00, // flags = 0x00
@@ -340,14 +343,11 @@ public class DefaultHttp2FrameWriterTest {
     }
 
     private byte[] headerPayload(int streamId, Http2Headers headers) throws Http2Exception {
-        ByteBuf byteBuf = Unpooled.buffer();
-        try {
-            http2HeadersEncoder.encodeHeaders(streamId, headers, byteBuf);
-            byte[] bytes = new byte[byteBuf.readableBytes()];
-            byteBuf.readBytes(bytes);
+        try (Buffer buf = onHeapAllocator().allocate(256)) {
+            http2HeadersEncoder.encodeHeaders(streamId, headers, buf);
+            byte[] bytes = new byte[buf.readableBytes()];
+            buf.readBytes(bytes, 0, bytes.length);
             return bytes;
-        } finally {
-            byteBuf.release();
         }
     }
 

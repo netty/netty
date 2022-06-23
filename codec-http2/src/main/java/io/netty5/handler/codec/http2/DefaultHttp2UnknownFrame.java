@@ -15,26 +15,34 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferHolder;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
+import java.nio.charset.StandardCharsets;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+
 @UnstableApi
-public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder implements Http2UnknownFrame {
+public final class DefaultHttp2UnknownFrame extends BufferHolder<Http2UnknownFrame> implements Http2UnknownFrame {
     private final byte frameType;
     private final Http2Flags flags;
     private Http2FrameStream stream;
 
     public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags) {
-        this(frameType, flags, Unpooled.EMPTY_BUFFER);
+        this(frameType, flags, onHeapAllocator().allocate(0));
     }
 
-    public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags, ByteBuf data) {
+    public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags, Buffer data) {
         super(data);
         this.frameType = frameType;
         this.flags = flags;
+    }
+
+    @Override
+    public Buffer content() {
+        return getBuffer();
     }
 
     @Override
@@ -65,52 +73,18 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
 
     @Override
     public DefaultHttp2UnknownFrame copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public DefaultHttp2UnknownFrame duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public DefaultHttp2UnknownFrame retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public DefaultHttp2UnknownFrame replace(ByteBuf content) {
-        return new DefaultHttp2UnknownFrame(frameType, flags, content).stream(stream);
-    }
-
-    @Override
-    public DefaultHttp2UnknownFrame retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public DefaultHttp2UnknownFrame retain(int increment) {
-        super.retain(increment);
-        return this;
+        return receive(getBuffer().copy());
     }
 
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this) + "(frameType=" + frameType + ", stream=" + stream +
-               ", flags=" + flags + ", content=" + contentToString() + ')';
+               ", flags=" + flags + ", content=" + getBuffer().toString(StandardCharsets.UTF_8) + ')';
     }
 
     @Override
-    public DefaultHttp2UnknownFrame touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public DefaultHttp2UnknownFrame touch(Object hint) {
-        super.touch(hint);
-        return this;
+    protected DefaultHttp2UnknownFrame receive(Buffer buf) {
+        return new DefaultHttp2UnknownFrame(frameType, flags, buf).stream(stream);
     }
 
     @Override

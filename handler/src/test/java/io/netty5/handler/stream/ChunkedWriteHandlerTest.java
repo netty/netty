@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -41,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -152,20 +152,20 @@ public class ChunkedWriteHandlerTest {
 
     @Test
     public void testUnchunkedData() throws IOException {
-        check(Unpooled.wrappedBuffer(BYTES));
+        check(onHeapAllocator().copyOf(BYTES));
 
-        check(Unpooled.wrappedBuffer(BYTES), Unpooled.wrappedBuffer(BYTES), Unpooled.wrappedBuffer(BYTES));
+        check(onHeapAllocator().copyOf(BYTES), onHeapAllocator().copyOf(BYTES), onHeapAllocator().copyOf(BYTES));
     }
 
     // Test case which shows that there is not a bug like stated here:
     // https://stackoverflow.com/a/10426305
     @Test
     public void testListenerNotifiedWhenIsEnd() throws Exception {
-        ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+        Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
 
-        ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
+        ChunkedInput<Buffer> input = new ChunkedInput<Buffer>() {
             private boolean done;
-            private final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -174,22 +174,16 @@ public class ChunkedWriteHandlerTest {
 
             @Override
             public void close() throws Exception {
-                buffer.release();
-            }
-
-            @Deprecated
-            @Override
-            public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-                return readChunk(ctx.alloc());
+                buffer.close();
             }
 
             @Override
-            public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            public Buffer readChunk(BufferAllocator allocator) throws Exception {
                 if (done) {
                     return null;
                 }
                 done = true;
-                return buffer.retainedDuplicate();
+                return buffer.copy();
             }
 
             @Override
@@ -213,12 +207,12 @@ public class ChunkedWriteHandlerTest {
         // the listener should have been notified
         assertTrue(listenerNotified.get());
 
-        ByteBuf buffer2 = ch.readOutbound();
+        Buffer buffer2 = ch.readOutbound();
         assertEquals(buffer, buffer2);
         assertNull(ch.readOutbound());
 
-        buffer.release();
-        buffer2.release();
+        buffer.close();
+        buffer2.close();
     }
 
     @Test
@@ -237,14 +231,8 @@ public class ChunkedWriteHandlerTest {
                 // NOOP
             }
 
-            @Deprecated
             @Override
-            public Object readChunk(ChannelHandlerContext ctx) throws Exception {
-                return readChunk(ctx.alloc());
-            }
-
-            @Override
-            public Object readChunk(ByteBufAllocator ctx) throws Exception {
+            public Object readChunk(BufferAllocator ctx) throws Exception {
                 if (done) {
                     return false;
                 }
@@ -293,7 +281,7 @@ public class ChunkedWriteHandlerTest {
 
     @Test
     public void testWriteFailureUnchunkedData() throws IOException {
-        checkFirstFailed(Unpooled.wrappedBuffer(BYTES));
+        checkFirstFailed(onHeapAllocator().copyOf(BYTES));
     }
 
     @Test
@@ -344,12 +332,12 @@ public class ChunkedWriteHandlerTest {
         // 3 out of 4 chunks were already written
         int read = 0;
         for (;;) {
-            ByteBuf buffer = ch.readOutbound();
+            Buffer buffer = ch.readOutbound();
             if (buffer == null) {
                 break;
             }
             read += buffer.readableBytes();
-            buffer.release();
+            buffer.close();
         }
 
         assertEquals(1024 * 16 * 3, read);
@@ -360,9 +348,9 @@ public class ChunkedWriteHandlerTest {
 
         final AtomicBoolean closeWasCalled = new AtomicBoolean(false);
 
-        ChunkedInput<ByteBuf> notifiableInput = new ChunkedInput<ByteBuf>() {
+        ChunkedInput<Buffer> notifiableInput = new ChunkedInput<Buffer>() {
             private boolean done;
-            private final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -371,23 +359,17 @@ public class ChunkedWriteHandlerTest {
 
             @Override
             public void close() throws Exception {
-                buffer.release();
+                buffer.close();
                 closeWasCalled.set(true);
             }
 
-            @Deprecated
             @Override
-            public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-                return readChunk(ctx.alloc());
-            }
-
-            @Override
-            public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            public Buffer readChunk(BufferAllocator allocator) throws Exception {
                 if (done) {
                     return null;
                 }
                 done = true;
-                return buffer.retainedDuplicate();
+                return buffer.copy();
             }
 
             @Override
@@ -419,10 +401,10 @@ public class ChunkedWriteHandlerTest {
     // See https://github.com/netty/netty/issues/8700.
     @Test
     public void testStopConsumingChunksWhenFailed() throws Exception {
-        final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+        final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
         final AtomicInteger chunks = new AtomicInteger(0);
 
-        ChunkedInput<ByteBuf> nonClosableInput = new ChunkedInput<ByteBuf>() {
+        ChunkedInput<Buffer> nonClosableInput = new ChunkedInput<Buffer>() {
             @Override
             public boolean isEndOfInput() throws Exception {
                 return chunks.get() >= 5;
@@ -433,16 +415,10 @@ public class ChunkedWriteHandlerTest {
                 // no-op
             }
 
-            @Deprecated
             @Override
-            public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-                return readChunk(ctx.alloc());
-            }
-
-            @Override
-            public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            public Buffer readChunk(BufferAllocator allocator) throws Exception {
                 chunks.incrementAndGet();
-                return buffer.retainedDuplicate();
+                return buffer.copy();
             }
 
             @Override
@@ -468,7 +444,7 @@ public class ChunkedWriteHandlerTest {
         ch.writeAndFlush(nonClosableInput).await();
         // Should be `false` as we do not expect any messages to be written
         assertFalse(ch.finish());
-        buffer.release();
+        buffer.close();
 
         // We should expect only single chunked being read from the input.
         // It's possible to get a race condition here between resolving a promise and
@@ -485,9 +461,9 @@ public class ChunkedWriteHandlerTest {
         assertTrue(ch.writeOutbound(input));
 
         for (int i = 0; i < chunks; i++) {
-            ByteBuf buf = ch.readOutbound();
+            Buffer buf = ch.readOutbound();
             assertEquals(i, buf.readInt());
-            buf.release();
+            buf.close();
         }
 
         assertTrue(input.isClosed());
@@ -579,7 +555,7 @@ public class ChunkedWriteHandlerTest {
 
     @Test
     public void testEndOfInputWhenChannelIsClosedwhenWrite() throws Exception {
-        ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
+        ChunkedInput<Buffer> input = new ChunkedInput<Buffer>() {
 
             @Override
             public boolean isEndOfInput() {
@@ -590,14 +566,8 @@ public class ChunkedWriteHandlerTest {
             public void close() {
             }
 
-            @Deprecated
             @Override
-            public ByteBuf readChunk(ChannelHandlerContext ctx) {
-                return null;
-            }
-
-            @Override
-            public ByteBuf readChunk(ByteBufAllocator allocator) {
+            public Buffer readChunk(BufferAllocator allocator) {
                 return null;
             }
 
@@ -661,18 +631,18 @@ public class ChunkedWriteHandlerTest {
         int i = 0;
         int read = 0;
         for (;;) {
-            ByteBuf buffer = ch.readOutbound();
+            Buffer buffer = ch.readOutbound();
             if (buffer == null) {
                 break;
             }
-            while (buffer.isReadable()) {
+            while (buffer.readableBytes() > 0) {
                 assertEquals(BYTES[i++], buffer.readByte());
                 read++;
                 if (i == BYTES.length) {
                     i = 0;
                 }
             }
-            buffer.release();
+            buffer.close();
         }
 
         assertEquals(BYTES.length * inputs.length, read);
@@ -723,24 +693,24 @@ public class ChunkedWriteHandlerTest {
         int i = 0;
         int read = 0;
         for (;;) {
-            ByteBuf buffer = ch.readOutbound();
+            Buffer buffer = ch.readOutbound();
             if (buffer == null) {
                 break;
             }
-            while (buffer.isReadable()) {
+            while (buffer.readableBytes() > 0) {
                 assertEquals(BYTES[i++], buffer.readByte());
                 read++;
                 if (i == BYTES.length) {
                     i = 0;
                 }
             }
-            buffer.release();
+            buffer.close();
         }
 
         assertEquals(BYTES.length, read);
     }
 
-    private static final class TestChunkedInput implements ChunkedInput<ByteBuf> {
+    private static final class TestChunkedInput implements ChunkedInput<Buffer> {
         private final int chunksToProduce;
 
         private int chunksProduced;
@@ -761,13 +731,8 @@ public class ChunkedWriteHandlerTest {
         }
 
         @Override
-        public ByteBuf readChunk(ChannelHandlerContext ctx) {
-            return readChunk(ctx.alloc());
-        }
-
-        @Override
-        public ByteBuf readChunk(ByteBufAllocator allocator) {
-            ByteBuf buf = allocator.buffer();
+        public Buffer readChunk(BufferAllocator allocator) {
+            Buffer buf = allocator.allocate(256);
             buf.writeInt(chunksProduced);
             chunksProduced++;
             return buf;
@@ -788,7 +753,7 @@ public class ChunkedWriteHandlerTest {
         }
     }
 
-    private static final class ThrowingChunkedInput implements ChunkedInput<ByteBuf> {
+    private static final class ThrowingChunkedInput implements ChunkedInput<Buffer> {
         private final Exception error;
 
         private volatile boolean closed;
@@ -808,12 +773,7 @@ public class ChunkedWriteHandlerTest {
         }
 
         @Override
-        public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-            return readChunk(ctx.alloc());
-        }
-
-        @Override
-        public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+        public Buffer readChunk(BufferAllocator allocator) throws Exception {
             throw error;
         }
 
