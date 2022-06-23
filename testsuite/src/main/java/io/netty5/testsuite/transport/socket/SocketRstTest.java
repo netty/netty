@@ -134,7 +134,7 @@ public class SocketRstTest extends AbstractSocketTest {
             }
         });
         Channel sc = sb.bind().get();
-        cb.connect(sc.localAddress()).syncUninterruptibly();
+        cb.connect(sc.localAddress()).sync();
 
         // Wait for the server to get setup.
         latch.await();

@@ -94,7 +94,7 @@ public class EpollDatagramChannelTest {
             assertTrue(localAddressAfterBind instanceof InetSocketAddress);
             assertTrue(((InetSocketAddress) localAddressAfterBind).getPort() != 0);
 
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         } finally {
             group.shutdownGracefully();
         }

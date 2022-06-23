@@ -147,7 +147,7 @@ public class NonStickyEventExecutorGroupTest {
         }
         latch.await();
         for (Future<?> future: futures) {
-            future.syncUninterruptibly();
+            future.sync();
         }
         Throwable error = cause.get();
         if (error != null) {

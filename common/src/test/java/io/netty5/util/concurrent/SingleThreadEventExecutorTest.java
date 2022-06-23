@@ -60,7 +60,7 @@ public class SingleThreadEventExecutorTest {
         executeShouldFail(executor);
         executeShouldFail(executor);
         var exception = assertThrows(
-                CompletionException.class, () -> executor.shutdownGracefully().syncUninterruptibly());
+                CompletionException.class, () -> executor.shutdownGracefully().sync());
         assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
         assertTrue(executor.isShutdown());
     }
@@ -70,7 +70,7 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test
-    public void testThreadProperties() {
+    public void testThreadProperties() throws Exception {
         final AtomicReference<Thread> threadRef = new AtomicReference<Thread>();
         SingleThreadEventExecutor executor = new SingleThreadEventExecutor(new DefaultThreadFactory("test")) {
             @Override

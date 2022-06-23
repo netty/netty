@@ -255,9 +255,9 @@ public class Http2MultiplexTransportTest {
                     Resource.dispose(msg);
                 }
             });
-            Http2StreamChannel streamChannel = h2Bootstrap.open().syncUninterruptibly().getNow();
+            Http2StreamChannel streamChannel = h2Bootstrap.open().sync().getNow();
             streamChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true))
-                    .syncUninterruptibly();
+                    .sync();
 
             latch.await();
         } finally {

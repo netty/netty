@@ -34,7 +34,7 @@ public class DynamicAddressConnectHandlerTest {
     private static final SocketAddress REMOTE = new SocketAddress() { };
     private static final SocketAddress REMOTE_NEW = new SocketAddress() { };
     @Test
-    public void testReplaceAddresses() {
+    public void testReplaceAddresses() throws Exception {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
@@ -63,7 +63,7 @@ public class DynamicAddressConnectHandlerTest {
                 return REMOTE_NEW;
             }
         });
-        channel.connect(REMOTE, LOCAL).syncUninterruptibly();
+        channel.connect(REMOTE, LOCAL).sync();
         assertNull(channel.pipeline().get(DynamicAddressConnectHandler.class));
         assertFalse(channel.finish());
     }

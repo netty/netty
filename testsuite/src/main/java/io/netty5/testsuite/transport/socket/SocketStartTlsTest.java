@@ -194,9 +194,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             }
         }
 
-        sh.channel.close().awaitUninterruptibly();
-        cc.close().awaitUninterruptibly();
-        sc.close().awaitUninterruptibly();
+        sh.channel.close().await();
+        cc.close().await();
+        sc.close().await();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

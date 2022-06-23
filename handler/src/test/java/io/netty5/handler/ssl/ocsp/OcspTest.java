@@ -380,8 +380,8 @@ public class OcspTest {
                         try {
                             assertTrue(latch.await(10L, TimeUnit.SECONDS));
                         } finally {
-                            client.close().syncUninterruptibly();
-                            server.close().syncUninterruptibly();
+                            client.close().sync();
+                            server.close().sync();
                         }
                     } finally {
                         group.shutdownGracefully(1L, 1L, TimeUnit.SECONDS);

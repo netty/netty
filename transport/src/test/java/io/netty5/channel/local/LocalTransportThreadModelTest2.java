@@ -74,22 +74,25 @@ public class LocalTransportThreadModelTest2 {
                 clientHandler.count.get());
     }
 
-    public void close(final Channel localChannel, final LocalHandler localRegistrationHandler) {
+    public void close(final Channel localChannel, final LocalHandler localRegistrationHandler) throws Exception {
         // we want to make sure we actually shutdown IN the event loop
         if (localChannel.executor().inEventLoop()) {
             // Wait until all messages are flushed before closing the channel.
             if (localRegistrationHandler.lastWriteFuture != null) {
-                localRegistrationHandler.lastWriteFuture.awaitUninterruptibly();
+                localRegistrationHandler.lastWriteFuture.await();
             }
 
             localChannel.close();
             return;
         }
 
-        localChannel.executor().execute(() -> close(localChannel, localRegistrationHandler));
+        localChannel.executor().submit(() -> {
+            close(localChannel, localRegistrationHandler);
+            return null;
+        });
 
         // Wait until the connection is closed or the connection attempt fails.
-        localChannel.closeFuture().awaitUninterruptibly();
+        localChannel.closeFuture().await();
     }
 
     @Sharable

@@ -76,7 +76,7 @@ import java.util.Iterator;
  * public void messageReceived({@link ChannelHandlerContext} ctx, ShutdownMessage msg) {
  *     {@link ChannelGroup} allChannels = MyServer.getAllChannels();
  *     {@link ChannelGroupFuture} future = allChannels.close();
- *     future.awaitUninterruptibly();
+ *     future.await();
  *     // Perform post-shutdown operation
  *     // ...
  *
@@ -144,12 +144,6 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<Future<Void>>
 
     @Override
     ChannelGroupFuture await() throws InterruptedException;
-
-    @Override
-    ChannelGroupFuture awaitUninterruptibly();
-
-    @Override
-    ChannelGroupFuture syncUninterruptibly();
 
     @Override
     ChannelGroupFuture sync() throws InterruptedException;

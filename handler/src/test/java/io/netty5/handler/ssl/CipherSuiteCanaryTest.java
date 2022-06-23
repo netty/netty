@@ -212,7 +212,7 @@ public class CipherSuiteCanaryTest {
                     Channel client = client(server, clientHandler);
                     try {
                         client.writeAndFlush(preferredAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
-                              .syncUninterruptibly();
+                              .sync();
 
                         Future<Object> clientFuture = clientPromise.asFuture();
                         Future<Object> serverFuture = serverPromise.asFuture();

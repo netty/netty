@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Test
-    public void testScheduleBigDelayNotOverflow() {
+    public void testScheduleBigDelayNotOverflow() throws Exception {
         final AtomicReference<Throwable> capture = new AtomicReference<>();
 
         final EventLoopGroup group = new SingleThreadEventLoop(
@@ -60,7 +60,7 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
                 // NOOP
             }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
-            assertFalse(future.awaitUninterruptibly(1000));
+            assertFalse(future.await(1000));
             assertTrue(future.cancel());
             assertNull(capture.get());
         } finally {

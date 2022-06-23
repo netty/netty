@@ -73,11 +73,11 @@ public class BootstrapTest {
     private static final ChannelHandler dummyHandler = new DummyHandler();
 
     @AfterAll
-    public static void destroy() {
+    public static void destroy() throws Exception {
         groupA.shutdownGracefully();
         groupB.shutdownGracefully();
-        groupA.terminationFuture().syncUninterruptibly();
-        groupB.terminationFuture().syncUninterruptibly();
+        groupA.terminationFuture().sync();
+        groupB.terminationFuture().sync();
     }
 
     @Test
@@ -259,7 +259,7 @@ public class BootstrapTest {
             Future<Channel> future = bootstrapA.connect(LocalAddress.ANY);
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);
-            CompletionException cause = assertThrows(CompletionException.class, future::syncUninterruptibly);
+            CompletionException cause = assertThrows(CompletionException.class, future::sync);
             assertThat(cause.getCause(), instanceOf(ConnectException.class));
         } finally {
             group.shutdownGracefully();
@@ -300,7 +300,7 @@ public class BootstrapTest {
             registerHandler.registerPromise().setSuccess(null);
             registerFuture.sync();
             CompletionException exception =
-                    assertThrows(CompletionException.class, connectFuture::syncUninterruptibly);
+                    assertThrows(CompletionException.class, connectFuture::sync);
             assertTrue(exception.getCause() instanceof ConnectException);
         } finally {
             group.shutdownGracefully();
@@ -388,7 +388,7 @@ public class BootstrapTest {
                 .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1)
                 .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 2);
 
-        bootstrap.register().syncUninterruptibly();
+        bootstrap.register().sync();
 
         latch.await();
 

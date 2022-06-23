@@ -48,60 +48,61 @@ final class Http2FrameInboundWriter {
         this.writer = writer;
     }
 
-    void writeInboundData(int streamId, ByteBuf data, int padding, boolean endStream) {
-        writer.writeData(ctx, streamId, data, padding, endStream).syncUninterruptibly();
+    void writeInboundData(int streamId, ByteBuf data, int padding, boolean endStream) throws Exception {
+        writer.writeData(ctx, streamId, data, padding, endStream).sync();
     }
 
     void writeInboundHeaders(int streamId, Http2Headers headers,
-                         int padding, boolean endStream) {
-        writer.writeHeaders(ctx, streamId, headers, padding, endStream).syncUninterruptibly();
+                         int padding, boolean endStream) throws Exception {
+        writer.writeHeaders(ctx, streamId, headers, padding, endStream).sync();
     }
 
-    void writeInboundHeaders(int streamId, Http2Headers headers,
-                               int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
+    void writeInboundHeaders(
+            int streamId, Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+            int padding, boolean endStream) throws Exception {
         writer.writeHeaders(ctx, streamId, headers, streamDependency,
-                weight, exclusive, padding, endStream).syncUninterruptibly();
+                weight, exclusive, padding, endStream).sync();
     }
 
     void writeInboundPriority(int streamId, int streamDependency,
-                                short weight, boolean exclusive) {
+                                short weight, boolean exclusive) throws Exception {
         writer.writePriority(ctx, streamId, streamDependency, weight,
-                exclusive).syncUninterruptibly();
+                exclusive).sync();
     }
 
-    void writeInboundRstStream(int streamId, long errorCode) {
-        writer.writeRstStream(ctx, streamId, errorCode).syncUninterruptibly();
+    void writeInboundRstStream(int streamId, long errorCode) throws Exception {
+        writer.writeRstStream(ctx, streamId, errorCode).sync();
     }
 
-    void writeInboundSettings(Http2Settings settings) {
-        writer.writeSettings(ctx, settings).syncUninterruptibly();
+    void writeInboundSettings(Http2Settings settings) throws Exception {
+        writer.writeSettings(ctx, settings).sync();
     }
 
-    void writeInboundSettingsAck() {
-        writer.writeSettingsAck(ctx).syncUninterruptibly();
+    void writeInboundSettingsAck() throws Exception {
+        writer.writeSettingsAck(ctx).sync();
     }
 
-    void writeInboundPing(boolean ack, long data) {
-        writer.writePing(ctx, ack, data).syncUninterruptibly();
+    void writeInboundPing(boolean ack, long data) throws Exception {
+        writer.writePing(ctx, ack, data).sync();
     }
 
     void writePushPromise(int streamId, int promisedStreamId,
-                                   Http2Headers headers, int padding) {
+                                   Http2Headers headers, int padding) throws Exception {
            writer.writePushPromise(ctx, streamId, promisedStreamId,
-                   headers, padding).syncUninterruptibly();
+                   headers, padding).sync();
     }
 
-    void writeInboundGoAway(int lastStreamId, long errorCode, ByteBuf debugData) {
-        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData).syncUninterruptibly();
+    void writeInboundGoAway(int lastStreamId, long errorCode, ByteBuf debugData) throws Exception {
+        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData).sync();
     }
 
-    void writeInboundWindowUpdate(int streamId, int windowSizeIncrement) {
-        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement).syncUninterruptibly();
+    void writeInboundWindowUpdate(int streamId, int windowSizeIncrement) throws Exception {
+        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement).sync();
     }
 
-    void writeInboundFrame(byte frameType, int streamId,
-                             Http2Flags flags, ByteBuf payload) {
-        writer.writeFrame(ctx, frameType, streamId, flags, payload).syncUninterruptibly();
+    void writeInboundFrame(
+            byte frameType, int streamId, Http2Flags flags, ByteBuf payload) throws Exception {
+        writer.writeFrame(ctx, frameType, streamId, flags, payload).sync();
     }
 
     private static final class WriteInboundChannelHandlerContext

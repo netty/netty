@@ -266,36 +266,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     }
 
     @Override
-    public Future<V> awaitUninterruptibly() {
-        if (isDone()) {
-            return this;
-        }
-
-        checkDeadLock();
-
-        boolean interrupted = false;
-        synchronized (this) {
-            while (!isDone()) {
-                incWaiters();
-                try {
-                    wait();
-                } catch (InterruptedException e) {
-                    // Interrupted while waiting.
-                    interrupted = true;
-                } finally {
-                    decWaiters();
-                }
-            }
-        }
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
-
-        return this;
-    }
-
-    @Override
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
         return await0(unit.toNanos(timeout), true);
     }
@@ -303,26 +273,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
         return await0(MILLISECONDS.toNanos(timeoutMillis), true);
-    }
-
-    @Override
-    public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-        try {
-            return await0(unit.toNanos(timeout), false);
-        } catch (InterruptedException e) {
-            // Should not be raised at all.
-            throw new InternalError();
-        }
-    }
-
-    @Override
-    public boolean awaitUninterruptibly(long timeoutMillis) {
-        try {
-            return await0(MILLISECONDS.toNanos(timeoutMillis), false);
-        } catch (InterruptedException e) {
-            // Should not be raised at all.
-            throw new InternalError();
-        }
     }
 
     @SuppressWarnings("unchecked")
@@ -406,13 +356,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
     @Override
     public Future<V> sync() throws InterruptedException {
         await();
-        rethrowIfFailed();
-        return this;
-    }
-
-    @Override
-    public Future<V> syncUninterruptibly() {
-        awaitUninterruptibly();
         rethrowIfFailed();
         return this;
     }

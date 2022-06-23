@@ -112,24 +112,24 @@ public class InboundHttp2ToHttpAdapterTest {
         cleanupCapturedRequests();
         cleanupCapturedResponses();
         if (clientChannel != null) {
-            clientChannel.close().syncUninterruptibly();
+            clientChannel.close().sync();
             clientChannel = null;
         }
         if (serverChannel != null) {
-            serverChannel.close().syncUninterruptibly();
+            serverChannel.close().sync();
             serverChannel = null;
         }
         final Channel serverConnectedChannel = this.serverConnectedChannel;
         if (serverConnectedChannel != null) {
-            serverConnectedChannel.close().syncUninterruptibly();
+            serverConnectedChannel.close().sync();
             this.serverConnectedChannel = null;
         }
         Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 5, SECONDS);
         Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 5, SECONDS);
         Future<?> clientGroup = cb.config().group().shutdownGracefully(0, 5, SECONDS);
-        serverGroup.syncUninterruptibly();
-        serverChildGroup.syncUninterruptibly();
-        clientGroup.syncUninterruptibly();
+        serverGroup.sync();
+        serverChildGroup.sync();
+        clientGroup.sync();
     }
 
     @Test

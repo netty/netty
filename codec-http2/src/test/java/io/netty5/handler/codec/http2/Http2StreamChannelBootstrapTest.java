@@ -127,7 +127,7 @@ public class Http2StreamChannelBootstrapTest {
     private static void safeClose(Channel channel) {
         if (channel != null) {
             try {
-                channel.close().syncUninterruptibly();
+                channel.close().sync();
             } catch (Exception e) {
                 logger.error(e);
             }

@@ -187,9 +187,9 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             // Use the first previous enabled ciphersuite and try to renegotiate.
             clientSslHandler.engine().setEnabledCipherSuites(new String[]{renegotiation});
             clientSslHandler.renegotiate().await();
-            serverChannel.close().awaitUninterruptibly();
-            clientChannel.close().awaitUninterruptibly();
-            sc.close().awaitUninterruptibly();
+            serverChannel.close().await();
+            clientChannel.close().await();
+            sc.close().await();
             try {
                 if (serverException.get() != null) {
                     throw serverException.get();

@@ -348,7 +348,7 @@ public class SingleThreadEventLoopTest {
         try {
             Channel channel = new LocalChannel(loopA);
             Future<Void> f = channel.register();
-            f.awaitUninterruptibly();
+            f.await();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
             // TODO: What to do in this case ?
@@ -378,7 +378,7 @@ public class SingleThreadEventLoopTest {
 
         try {
             Future<Void> f = ch.register().addListener(future -> latch.countDown());
-            f.awaitUninterruptibly();
+            f.await();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
 

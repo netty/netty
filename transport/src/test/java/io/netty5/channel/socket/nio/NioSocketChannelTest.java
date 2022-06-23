@@ -212,7 +212,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             bootstrap.group(group).channel(NioSocketChannel.class);
             bootstrap.handler(new ChannelHandler() { });
             cc = bootstrap.connect(sc.localAddress()).get();
-            cc.writeAndFlush(onHeapAllocator().copyOf(bytes)).syncUninterruptibly();
+            cc.writeAndFlush(onHeapAllocator().copyOf(bytes)).sync();
             latch.await();
         } finally {
             if (cc != null) {
@@ -240,9 +240,9 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress()).get();
 
             accepted = socket.accept();
-            channel.shutdown(ChannelShutdownDirection.Outbound).syncUninterruptibly();
+            channel.shutdown(ChannelShutdownDirection.Outbound).sync();
 
-            channel.close().syncUninterruptibly();
+            channel.close().sync();
         } finally {
             if (accepted != null) {
                 try {

@@ -226,7 +226,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             SocketAddress localAddr = sc.localAddress();
             SocketAddress addr = localAddr instanceof InetSocketAddress ?
                     sendToAddress((InetSocketAddress) localAddr) : localAddr;
-            cc.connect(addr).syncUninterruptibly();
+            cc.connect(addr).sync();
 
             List<Future<Void>> futures = new ArrayList<>();
             for (int i = 0; i < count; i++) {
@@ -262,12 +262,12 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
             if (supportDisconnect()) {
                 // Test what happens when we call disconnect()
-                cc.disconnect().syncUninterruptibly();
+                cc.disconnect().sync();
                 assertFalse(isConnected(cc));
                 assertNotNull(cc.localAddress());
                 assertNull(cc.remoteAddress());
 
-                Future<Void> future = cc.writeAndFlush(buf.copy()).awaitUninterruptibly();
+                Future<Void> future = cc.writeAndFlush(buf.copy()).await();
                 assertThat(future.cause()).isInstanceOf(NotYetConnectedException.class);
             }
         } finally {

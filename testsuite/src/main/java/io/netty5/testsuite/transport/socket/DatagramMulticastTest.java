@@ -114,8 +114,8 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         assertTrue(cc.config().isLoopbackModeDisabled());
         assertTrue(sc.config().isLoopbackModeDisabled());
 
-        sc.close().awaitUninterruptibly();
-        cc.close().awaitUninterruptibly();
+        sc.close().await();
+        cc.close().await();
     }
 
     private static void assertInterfaceAddress(NetworkInterface networkInterface, InetAddress expected) {

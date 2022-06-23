@@ -570,7 +570,7 @@ public class DnsNameResolverTest {
     private static void testNonCachedResolveEmptyHostName(String inetHost) throws Exception {
         DnsNameResolver resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_ONLY).build();
         try {
-            InetAddress addr = resolver.resolve(inetHost).syncUninterruptibly().getNow();
+            InetAddress addr = resolver.resolve(inetHost).sync().getNow();
             assertEquals(SocketUtils.addressByName(inetHost), addr);
         } finally {
             resolver.close();
@@ -589,10 +589,10 @@ public class DnsNameResolverTest {
         testNonCachedResolveAllEmptyHostName(null);
     }
 
-    private static void testNonCachedResolveAllEmptyHostName(String inetHost) throws UnknownHostException {
+    private static void testNonCachedResolveAllEmptyHostName(String inetHost) throws Exception {
         DnsNameResolver resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_ONLY).build();
         try {
-            List<InetAddress> addrs = resolver.resolveAll(inetHost).syncUninterruptibly().getNow();
+            List<InetAddress> addrs = resolver.resolveAll(inetHost).sync().getNow();
             assertEquals(asList(
                     SocketUtils.allAddressesByName(inetHost)), addrs);
         } finally {
@@ -645,9 +645,8 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testQueryMx() {
-        DnsNameResolver resolver = newResolver().build();
-        try {
+    public void testQueryMx() throws Exception {
+        try (DnsNameResolver resolver = newResolver().build()) {
             assertThat(resolver.isRecursionDesired(), is(true));
 
             Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures =
@@ -662,7 +661,7 @@ public class DnsNameResolverTest {
 
             for (Entry<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> e : futures.entrySet()) {
                 String hostname = e.getKey();
-                Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
+                Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().await();
 
                 DnsResponse response = f.getNow().content();
                 assertThat(response.code(), is(DnsResponseCode.NOERROR));
@@ -699,15 +698,12 @@ public class DnsNameResolverTest {
                 // to query.
                 assertNoQueriesMade(resolver);
             }
-        } finally {
-            resolver.close();
         }
     }
 
     @Test
     public void testNegativeTtl() throws Exception {
-        final DnsNameResolver resolver = newResolver().negativeTtl(10).build();
-        try {
+        try (DnsNameResolver resolver = newResolver().negativeTtl(10).build()) {
             resolveNonExistentDomain(resolver);
 
             final int size = 10000;
@@ -717,11 +713,12 @@ public class DnsNameResolverTest {
             final Thread negativeLookupThread = new Thread() {
                 @Override
                 public void run() {
-                    for (int i = 0; i < size; i++) {
-                        exceptions.add(resolveNonExistentDomain(resolver));
-                        if (isInterrupted()) {
-                            break;
+                    try {
+                        for (int i = 0; i < size; i++) {
+                            exceptions.add(resolveNonExistentDomain(resolver));
                         }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 }
             };
@@ -735,14 +732,12 @@ public class DnsNameResolverTest {
             }
 
             assertThat(exceptions, hasSize(size));
-        } finally {
-            resolver.close();
         }
     }
 
-    private static UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
+    private static UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) throws Exception {
         try {
-            resolver.resolve("non-existent.netty.io").syncUninterruptibly();
+            resolver.resolve("non-existent.netty.io").sync();
             fail();
             return null;
         } catch (CompletionException cause) {
@@ -769,32 +764,29 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveIp() {
-        DnsNameResolver resolver = newResolver().build();
-        try {
-            InetAddress address = resolver.resolve("10.0.0.1").syncUninterruptibly().getNow();
+    public void testResolveIp() throws Exception {
+        try (DnsNameResolver resolver = newResolver().build()) {
+            InetAddress address = resolver.resolve("10.0.0.1").sync().getNow();
 
             assertEquals("10.0.0.1", address.getHostAddress());
 
             // This address is already resolved, and so we shouldn't have to query for anything.
             assertNoQueriesMade(resolver);
-        } finally {
-            resolver.close();
         }
     }
 
     @Test
-    public void testResolveEmptyIpv4() {
+    public void testResolveEmptyIpv4() throws Exception {
         testResolve0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, StringUtil.EMPTY_STRING);
     }
 
     @Test
-    public void testResolveEmptyIpv6() {
+    public void testResolveEmptyIpv6() throws Exception {
         testResolve0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, StringUtil.EMPTY_STRING);
     }
 
     @Test
-    public void testResolveLocalhostIpv4() {
+    public void testResolveLocalhostIpv4() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_LOCALHOST_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -802,7 +794,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveLocalhostIpv6() {
+    public void testResolveLocalhostIpv6() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_LOCALHOST_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -810,7 +802,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveHostNameIpv4() {
+    public void testResolveHostNameIpv4() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -818,7 +810,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveHostNameIpv6() {
+    public void testResolveHostNameIpv6() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -826,40 +818,38 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveNullIpv4() {
+    public void testResolveNullIpv4() throws Exception {
         testResolve0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, null);
     }
 
     @Test
-    public void testResolveNullIpv6() {
+    public void testResolveNullIpv6() throws Exception {
         testResolve0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, null);
     }
 
-    private static void testResolve0(ResolvedAddressTypes addressTypes, InetAddress expectedAddr, String name) {
-        DnsNameResolver resolver = newResolver(addressTypes).build();
-        try {
-            InetAddress address = resolver.resolve(name).syncUninterruptibly().getNow();
+    private static void testResolve0(ResolvedAddressTypes addressTypes, InetAddress expectedAddr, String name)
+            throws Exception {
+        try (DnsNameResolver resolver = newResolver(addressTypes).build()) {
+            InetAddress address = resolver.resolve(name).sync().getNow();
             assertEquals(expectedAddr, address);
 
             // We are resolving the local address, so we shouldn't make any queries.
             assertNoQueriesMade(resolver);
-        } finally {
-            resolver.close();
         }
     }
 
     @Test
-    public void testResolveAllEmptyIpv4() {
+    public void testResolveAllEmptyIpv4() throws Exception {
         testResolveAll0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, StringUtil.EMPTY_STRING);
     }
 
     @Test
-    public void testResolveAllEmptyIpv6() {
+    public void testResolveAllEmptyIpv6() throws Exception {
         testResolveAll0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, StringUtil.EMPTY_STRING);
     }
 
     @Test
-    public void testResolveAllLocalhostIpv4() {
+    public void testResolveAllLocalhostIpv4() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_LOCALHOST_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -867,7 +857,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveAllLocalhostIpv6() {
+    public void testResolveAllLocalhostIpv6() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_LOCALHOST_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -875,7 +865,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveAllHostNameIpv4() {
+    public void testResolveAllHostNameIpv4() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isNotEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -883,7 +873,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveAllHostNameIpv6() {
+    public void testResolveAllHostNameIpv6() throws Exception {
         assumeThat(PlatformDependent.isWindows()).isTrue();
         assumeThat(WINDOWS_HOSTS_FILE_HOST_NAME_ENTRY_EXISTS).isFalse();
         assumeThat(DEFAULT_RESOLVE_ADDRESS_TYPES).isEqualTo(ResolvedAddressTypes.IPV6_PREFERRED);
@@ -891,16 +881,16 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testCNAMEResolveAllIpv4() throws IOException {
+    public void testCNAMEResolveAllIpv4() throws Exception {
         testCNAMERecursiveResolve(true);
     }
 
     @Test
-    public void testCNAMEResolveAllIpv6() throws IOException {
+    public void testCNAMEResolveAllIpv6() throws Exception {
         testCNAMERecursiveResolve(false);
     }
 
-    private static void testCNAMERecursiveResolve(boolean ipv4Preferred) throws IOException {
+    private static void testCNAMERecursiveResolve(boolean ipv4Preferred) throws Exception {
         final String firstName = "firstname.com";
         final String secondName = "secondname.com";
         final String lastName = "lastname.com";
@@ -947,7 +937,7 @@ public class DnsNameResolverTest {
                 builder.resolvedAddressTypes(ResolvedAddressTypes.IPV6_PREFERRED);
             }
             resolver = builder.build();
-            InetAddress resolvedAddress = resolver.resolve(firstName).syncUninterruptibly().getNow();
+            InetAddress resolvedAddress = resolver.resolve(firstName).sync().getNow();
             if (ipv4Preferred) {
                 assertEquals(ipv4Addr, resolvedAddress.getHostAddress());
             } else {
@@ -963,16 +953,16 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testCNAMERecursiveResolveMultipleNameServersIPv4() throws IOException {
+    public void testCNAMERecursiveResolveMultipleNameServersIPv4() throws Exception {
         testCNAMERecursiveResolveMultipleNameServers(true);
     }
 
     @Test
-    public void testCNAMERecursiveResolveMultipleNameServersIPv6() throws IOException {
+    public void testCNAMERecursiveResolveMultipleNameServersIPv6() throws Exception {
         testCNAMERecursiveResolveMultipleNameServers(false);
     }
 
-    private static void testCNAMERecursiveResolveMultipleNameServers(boolean ipv4Preferred) throws IOException {
+    private static void testCNAMERecursiveResolveMultipleNameServers(boolean ipv4Preferred) throws Exception {
         final String firstName = "firstname.nettyfoo.com";
         final String lastName = "lastname.nettybar.com";
         final String ipv4Addr = "1.2.3.4";
@@ -1044,7 +1034,7 @@ public class DnsNameResolverTest {
                     return new InetSocketAddress(server, port);
                 }
             };
-            InetAddress resolvedAddress = resolver.resolve(firstName).syncUninterruptibly().getNow();
+            InetAddress resolvedAddress = resolver.resolve(firstName).sync().getNow();
             if (ipv4Preferred) {
                 assertEquals(ipv4Addr, resolvedAddress.getHostAddress());
             } else {
@@ -1061,33 +1051,30 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveAllNullIpv4() {
+    public void testResolveAllNullIpv4() throws Exception {
         testResolveAll0(ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, null);
     }
 
     @Test
-    public void testResolveAllNullIpv6() {
+    public void testResolveAllNullIpv6() throws Exception {
         testResolveAll0(ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, null);
     }
 
-    private static void testResolveAll0(ResolvedAddressTypes addressTypes, InetAddress expectedAddr, String name) {
-        DnsNameResolver resolver = newResolver(addressTypes).build();
-        try {
-            List<InetAddress> addresses = resolver.resolveAll(name).syncUninterruptibly().getNow();
+    private static void testResolveAll0(ResolvedAddressTypes addressTypes, InetAddress expectedAddr, String name)
+            throws Exception {
+        try (DnsNameResolver resolver = newResolver(addressTypes).build()) {
+            List<InetAddress> addresses = resolver.resolveAll(name).sync().getNow();
             assertEquals(1, addresses.size());
             assertEquals(expectedAddr, addresses.get(0));
 
             // We are resolving the local address, so we shouldn't make any queries.
             assertNoQueriesMade(resolver);
-        } finally {
-            resolver.close();
         }
     }
 
     @Test
-    public void testResolveAllMx() {
-        final DnsNameResolver resolver = newResolver().build();
-        try {
+    public void testResolveAllMx() throws Exception {
+        try (DnsNameResolver resolver = newResolver().build()) {
             assertThat(resolver.isRecursionDesired(), is(true));
 
             final Map<String, Future<List<DnsRecord>>> futures = new LinkedHashMap<>();
@@ -1101,7 +1088,7 @@ public class DnsNameResolverTest {
 
             for (Entry<String, Future<List<DnsRecord>>> e : futures.entrySet()) {
                 String hostname = e.getKey();
-                Future<List<DnsRecord>> f = e.getValue().awaitUninterruptibly();
+                Future<List<DnsRecord>> f = e.getValue().await();
 
                 final List<DnsRecord> mxList = f.getNow();
                 assertThat(mxList.size(), is(greaterThan(0)));
@@ -1124,13 +1111,11 @@ public class DnsNameResolverTest {
 
                 logger.info("{} has the following MX records:{}", hostname, buf);
             }
-        } finally {
-            resolver.close();
         }
     }
 
     @Test
-    public void testResolveAllHostsFile() {
+    public void testResolveAllHostsFile() throws Exception {
         final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
                 .channelType(NioDatagramChannel.class)
                 .hostsFileEntriesResolver((inetHost, resolvedAddressTypes) -> {
@@ -1144,8 +1129,7 @@ public class DnsNameResolverTest {
                     return null;
                 }).build();
 
-        final List<DnsRecord> records = resolver.resolveAll(new DefaultDnsQuestion("foo.com.", A))
-                .syncUninterruptibly().getNow();
+        final List<DnsRecord> records = resolver.resolveAll(new DefaultDnsQuestion("foo.com.", A)).sync().getNow();
         assertThat(records, hasSize(1));
         assertThat(records.get(0), instanceOf(DnsRawRecord.class));
 
@@ -1160,42 +1144,39 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveDecodeUnicode() {
+    public void testResolveDecodeUnicode() throws Exception {
         testResolveUnicode(true);
     }
 
     @Test
-    public void testResolveNotDecodeUnicode() {
+    public void testResolveNotDecodeUnicode() throws Exception {
         testResolveUnicode(false);
     }
 
-    private static void testResolveUnicode(boolean decode) {
-        DnsNameResolver resolver = newResolver(decode).build();
-        try {
+    private static void testResolveUnicode(boolean decode) throws Exception {
+        try (DnsNameResolver resolver = newResolver(decode).build()) {
             for (Entry<String, String> entries : DOMAINS_PUNYCODE.entrySet()) {
-                InetAddress address = resolver.resolve(entries.getKey()).syncUninterruptibly().getNow();
-                assertEquals(decode ? entries.getKey() : entries.getValue(), address.getHostName());
+                InetAddress address = resolver.resolve(entries.getKey()).sync().getNow();
+                assertEquals(decode? entries.getKey() : entries.getValue(), address.getHostName());
             }
 
             assertQueryObserver(resolver, AAAA);
-        } finally {
-            resolver.close();
         }
     }
 
     @Test
     @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
-    public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerNotStarted() throws IOException {
+    public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerNotStarted() throws Exception {
         secondDnsServerShouldBeUsedBeforeCNAME(false);
     }
 
     @Test
     @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
-    public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerFailResolve() throws IOException {
+    public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerFailResolve() throws Exception {
         secondDnsServerShouldBeUsedBeforeCNAME(true);
     }
 
-    private static void secondDnsServerShouldBeUsedBeforeCNAME(boolean startDnsServer1) throws IOException {
+    private static void secondDnsServerShouldBeUsedBeforeCNAME(boolean startDnsServer1) throws Exception {
         final String knownHostName = "netty.io";
         final TestDnsServer dnsServer1 = new TestDnsServer(Collections.singleton("notnetty.com"));
         final TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(knownHostName));
@@ -1225,7 +1206,7 @@ public class DnsNameResolverTest {
             builder.nameServerProvider(new SequentialDnsServerAddressStreamProvider(dnsServer1Address,
                     dnsServer2.localAddress()));
             resolver = builder.build();
-            assertNotNull(resolver.resolve(knownHostName).syncUninterruptibly().getNow());
+            assertNotNull(resolver.resolve(knownHostName).sync().getNow());
 
             TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
             assertNotNull(observer);
@@ -1251,7 +1232,7 @@ public class DnsNameResolverTest {
 
     @Test
     @Timeout(value = DEFAULT_TEST_TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
-    public void aAndAAAAQueryShouldTryFirstDnsServerBeforeSecond() throws IOException {
+    public void aAndAAAAQueryShouldTryFirstDnsServerBeforeSecond() throws Exception {
         final String knownHostName = "netty.io";
         final TestDnsServer dnsServer1 = new TestDnsServer(Collections.singleton("notnetty.com"));
         final TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(knownHostName));
@@ -1273,7 +1254,7 @@ public class DnsNameResolverTest {
             builder.nameServerProvider(new SequentialDnsServerAddressStreamProvider(dnsServer1.localAddress(),
                     dnsServer2.localAddress()));
             resolver = builder.build();
-            assertNotNull(resolver.resolve(knownHostName).syncUninterruptibly().getNow());
+            assertNotNull(resolver.resolve(knownHostName).sync().getNow());
 
             TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
             assertNotNull(observer);
@@ -1342,7 +1323,7 @@ public class DnsNameResolverTest {
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
                             nonCompliantDnsServer.localAddress()))
                     .build();
-            InetAddress resolved = resolver.resolve("netty.com").syncUninterruptibly().getNow();
+            InetAddress resolved = resolver.resolve("netty.com").sync().getNow();
             if (types == ResolvedAddressTypes.IPV4_PREFERRED) {
                 assertEquals(ipv4Address, resolved.getHostAddress());
             } else {
@@ -1353,7 +1334,7 @@ public class DnsNameResolverTest {
             InetAddress ipv6InetAddress = InetAddress.getByAddress("netty.com",
                     InetAddress.getByName(ipv6Address).getAddress());
 
-            List<InetAddress> resolvedAll = resolver.resolveAll("netty.com").syncUninterruptibly().getNow();
+            List<InetAddress> resolvedAll = resolver.resolveAll("netty.com").sync().getNow();
             List<InetAddress> expected = types == ResolvedAddressTypes.IPV4_PREFERRED ?
                     asList(ipv4InetAddress, ipv6InetAddress) :  asList(ipv6InetAddress, ipv4InetAddress);
             assertEquals(expected, resolvedAll);
@@ -1400,7 +1381,7 @@ public class DnsNameResolverTest {
         String expectedDnsName = "dns4.some.record.netty.io.";
 
         try {
-            resolver.resolveAll(hostname).syncUninterruptibly();
+            resolver.resolveAll(hostname).sync();
 
             TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
             assertNotNull(observer);
@@ -1429,7 +1410,7 @@ public class DnsNameResolverTest {
                 assertNull(nsCache.cache.get(hostname));
 
                 // Test again via cache.
-                resolver.resolveAll(hostname).syncUninterruptibly();
+                resolver.resolveAll(hostname).sync();
 
                 observer = lifecycleObserverFactory.observers.poll();
                 assertNotNull(observer);
@@ -1440,7 +1421,7 @@ public class DnsNameResolverTest {
                 assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
                 succeededEvent = (QuerySucceededEvent) observer.events.poll();
 
-                resolver.resolveAll(hostname2).syncUninterruptibly();
+                resolver.resolveAll(hostname2).sync();
 
                 observer = lifecycleObserverFactory.observers.poll();
                 assertNotNull(observer);
@@ -1568,11 +1549,11 @@ public class DnsNameResolverTest {
         };
 
         try {
-            List<InetAddress> resolved = resolver.resolveAll(expected.getHostName()).syncUninterruptibly().getNow();
+            List<InetAddress> resolved = resolver.resolveAll(expected.getHostName()).sync().getNow();
             assertEquals(1, resolved.size());
             assertEquals(expected, resolved.get(0));
 
-            List<InetAddress> resolved2 = resolver.resolveAll(expected.getHostName()).syncUninterruptibly().getNow();
+            List<InetAddress> resolved2 = resolver.resolveAll(expected.getHostName()).sync().getNow();
             assertEquals(1, resolved2.size());
             assertEquals(expected, resolved2.get(0));
 
@@ -2263,7 +2244,7 @@ public class DnsNameResolverTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testTimeoutNotCached() {
+    public void testTimeoutNotCached() throws Exception {
         DnsCache cache = new DnsCache() {
             @Override
             public void clear() {
@@ -2300,10 +2281,9 @@ public class DnsNameResolverTest {
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
                         new InetSocketAddress(NetUtil.LOCALHOST, 12345)));
         DnsNameResolver resolver = builder.build();
-        Future<InetAddress> result = resolver.resolve("doesnotexist.netty.io").awaitUninterruptibly();
+        Future<InetAddress> result = resolver.resolve("doesnotexist.netty.io").await();
         Throwable cause = result.cause();
         assertThat(cause, instanceOf(UnknownHostException.class));
-        cause.getCause().printStackTrace();
         assertThat(cause.getCause(), instanceOf(DnsNameResolverTimeoutException.class));
         assertTrue(DnsNameResolver.isTimeoutError(cause));
         assertTrue(DnsNameResolver.isTransportOrTimeoutError(cause));
@@ -2327,7 +2307,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testFollowCNAMEEvenIfARecordIsPresent() throws IOException {
+    public void testFollowCNAMEEvenIfARecordIsPresent() throws Exception {
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
             if (question.getDomainName().equals("cname.netty.io")) {
                 Map<String, Object> map1 = new HashMap<>();
@@ -2359,7 +2339,7 @@ public class DnsNameResolverTest {
 
             resolver = builder.build();
             List<InetAddress> resolvedAddresses =
-                    resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+                    resolver.resolveAll("somehost.netty.io").sync().getNow();
             assertEquals(2, resolvedAddresses.size());
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 })));
@@ -2404,7 +2384,7 @@ public class DnsNameResolverTest {
 
             resolver[0] = builder.build();
             final CompletionException completion = assertThrows(CompletionException.class,
-                () -> resolver[0].resolveAll("somehost.netty.io").syncUninterruptibly().getNow());
+                () -> resolver[0].resolveAll("somehost.netty.io").sync().getNow());
             assertTrue(completion.getCause() instanceof UnknownHostException);
         } catch (CompletionException e) {
             throw e.getCause();
@@ -2434,7 +2414,7 @@ public class DnsNameResolverTest {
             resolver[0].cnameCache().cache(name, name2, Long.MAX_VALUE, resolver[0].executor());
             resolver[0].cnameCache().cache(name2, name, Long.MAX_VALUE, resolver[0].executor());
             final CompletionException completion = assertThrows(CompletionException.class,
-                () -> resolver[0].resolve(name).syncUninterruptibly().getNow());
+                () -> resolver[0].resolve(name).sync().getNow());
             assertTrue(completion.getCause() instanceof UnknownHostException);
         } finally {
             if (resolver[0] != null) {
@@ -2461,7 +2441,7 @@ public class DnsNameResolverTest {
                 .ndots(1)
                 .searchDomains(singletonList(".")).build();
         try {
-            resolver.resolve("invalid.com").syncUninterruptibly();
+            resolver.resolve("invalid.com").sync();
         } catch (CompletionException cause) {
             throw cause.getCause();
         } finally {
@@ -2536,23 +2516,19 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testResolveACachedWithDot() {
+    public void testResolveACachedWithDot() throws Exception {
         final DnsCache cache = new DefaultDnsCache();
-        DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
-                .resolveCache(cache).build();
-
-        try {
+        try (DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
+                .resolveCache(cache).build()) {
             String domain = DOMAINS.iterator().next();
             String domainWithDot = domain + '.';
 
-            resolver.resolve(domain).syncUninterruptibly();
+            resolver.resolve(domain).sync();
             List<? extends DnsCacheEntry> cached = cache.get(domain, null);
             List<? extends DnsCacheEntry> cached2 = cache.get(domainWithDot, null);
 
             assertEquals(1, cached.size());
             assertSame(cached, cached2);
-        } finally {
-            resolver.close();
         }
     }
 
@@ -2561,12 +2537,11 @@ public class DnsNameResolverTest {
         final TestDnsCache cache = new TestDnsCache(new DefaultDnsCache());
         TestDnsServer server = new TestDnsServer(Collections.singleton("test.netty.io"));
         server.start();
-        DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
+        try (DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
                 .searchDomains(singletonList("netty.io"))
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(server.localAddress()))
-                .resolveCache(cache).build();
-        try {
-            resolver.resolve("test").syncUninterruptibly();
+                .resolveCache(cache).build()) {
+            resolver.resolve("test").sync();
 
             assertNull(cache.cacheHits.get("test.netty.io"));
 
@@ -2575,11 +2550,10 @@ public class DnsNameResolverTest {
             assertEquals(1, cached.size());
             assertSame(cached, cached2);
 
-            resolver.resolve("test").syncUninterruptibly();
+            resolver.resolve("test").sync();
             List<? extends DnsCacheEntry> entries = cache.cacheHits.get("test.netty.io");
             assertFalse(entries.isEmpty());
         } finally {
-            resolver.close();
             server.stop();
         }
     }
@@ -2664,7 +2638,7 @@ public class DnsNameResolverTest {
                     });
             resolver = builder.build();
             List<InetAddress> resolvedAddresses =
-                    resolver.resolveAll("x.netty.io").syncUninterruptibly().getNow();
+                    resolver.resolveAll("x.netty.io").sync().getNow();
             assertEquals(1, resolvedAddresses.size());
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
 
@@ -2673,7 +2647,7 @@ public class DnsNameResolverTest {
             assertEquals(1, aQueries.get());
 
             resolvedAddresses =
-                    resolver.resolveAll("x.netty.io").syncUninterruptibly().getNow();
+                    resolver.resolveAll("x.netty.io").sync().getNow();
             assertEquals(1, resolvedAddresses.size());
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
 
@@ -2682,7 +2656,7 @@ public class DnsNameResolverTest {
             assertEquals(2, aQueries.get());
 
             resolvedAddresses =
-                    resolver.resolveAll("y.netty.io").syncUninterruptibly().getNow();
+                    resolver.resolveAll("y.netty.io").sync().getNow();
             assertEquals(1, resolvedAddresses.size());
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
 
@@ -2693,7 +2667,7 @@ public class DnsNameResolverTest {
             assertEquals(3, aQueries.get());
 
             resolvedAddresses =
-                    resolver.resolveAll("y.netty.io").syncUninterruptibly().getNow();
+                    resolver.resolveAll("y.netty.io").sync().getNow();
             assertEquals(1, resolvedAddresses.size());
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
 
@@ -2757,7 +2731,7 @@ public class DnsNameResolverTest {
                 .build();
         try {
             AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = resolver.query(
-                    new DefaultDnsQuestion(hostname, DnsRecordType.TXT)).syncUninterruptibly().getNow();
+                    new DefaultDnsQuestion(hostname, DnsRecordType.TXT)).sync().getNow();
             assertNotNull(envelope.sender());
 
             DnsResponse response = envelope.content();
@@ -2800,7 +2774,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testNotIncludeDuplicates() throws IOException {
+    public void testNotIncludeDuplicates() throws Exception {
         final String name = "netty.io";
         final String ipv4Addr = "1.2.3.4";
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
@@ -2827,7 +2801,7 @@ public class DnsNameResolverTest {
             builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
 
             resolver = builder.build();
-            List<InetAddress> resolvedAddresses = resolver.resolveAll(name).syncUninterruptibly().getNow();
+            List<InetAddress> resolvedAddresses = resolver.resolveAll(name).sync().getNow();
             assertEquals(singletonList(InetAddress.getByAddress(name, new byte[] { 1, 2, 3, 4 })),
                          resolvedAddresses);
         } finally {
@@ -2839,7 +2813,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testIncludeDuplicates() throws IOException {
+    public void testIncludeDuplicates() throws Exception {
         final String name = "netty.io";
         final String ipv4Addr = "1.2.3.4";
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
@@ -2863,8 +2837,7 @@ public class DnsNameResolverTest {
             builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
 
             resolver = builder.build();
-            List<DnsRecord> resolvedAddresses = resolver.resolveAll(new DefaultDnsQuestion(name, A))
-                    .syncUninterruptibly().getNow();
+            List<DnsRecord> resolvedAddresses = resolver.resolveAll(new DefaultDnsQuestion(name, A)).sync().getNow();
             assertEquals(2, resolvedAddresses.size());
             for (DnsRecord record: resolvedAddresses) {
                 Resource.dispose(record);
@@ -2878,7 +2851,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testDropAAAA() throws IOException {
+    public void testDropAAAA() throws Exception {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
         dnsServer2.start(true);
@@ -2892,7 +2865,7 @@ public class DnsNameResolverTest {
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
             resolver = builder.build();
-            List<InetAddress> addressList = resolver.resolveAll(host).syncUninterruptibly().getNow();
+            List<InetAddress> addressList = resolver.resolveAll(host).sync().getNow();
             assertEquals(1, addressList.size());
             assertEquals(host, addressList.get(0).getHostName());
         } finally {
@@ -2905,7 +2878,7 @@ public class DnsNameResolverTest {
 
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
-    public void testDropAAAAResolveFast() throws IOException {
+    public void testDropAAAAResolveFast() throws Exception {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
         dnsServer2.start(true);
@@ -2919,7 +2892,7 @@ public class DnsNameResolverTest {
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
             resolver = builder.build();
-            InetAddress address = resolver.resolve(host).syncUninterruptibly().getNow();
+            InetAddress address = resolver.resolve(host).sync().getNow();
             assertEquals(host, address.getHostName());
         } finally {
             dnsServer2.stop();
@@ -2931,7 +2904,7 @@ public class DnsNameResolverTest {
 
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
-    public void testDropAAAAResolveAllFast() throws IOException {
+    public void testDropAAAAResolveAllFast() throws Exception {
         final String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
             String name = question.getDomainName();
@@ -2959,7 +2932,7 @@ public class DnsNameResolverTest {
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
             resolver = builder.build();
-            List<InetAddress> addresses = resolver.resolveAll(host).syncUninterruptibly().getNow();
+            List<InetAddress> addresses = resolver.resolveAll(host).sync().getNow();
             assertEquals(2, addresses.size());
             for (InetAddress address: addresses) {
                 assertThat(address, instanceOf(Inet4Address.class));
@@ -2975,19 +2948,19 @@ public class DnsNameResolverTest {
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testTruncatedWithoutTcpFallback() throws IOException {
+    public void testTruncatedWithoutTcpFallback() throws Exception {
         testTruncated0(false, false);
     }
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testTruncatedWithTcpFallback() throws IOException {
+    public void testTruncatedWithTcpFallback() throws Exception {
         testTruncated0(true, false);
     }
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testTruncatedWithTcpFallbackBecauseOfMtu() throws IOException {
+    public void testTruncatedWithTcpFallbackBecauseOfMtu() throws Exception {
         testTruncated0(true, true);
     }
 
@@ -3010,7 +2983,7 @@ public class DnsNameResolverTest {
         return modifier;
     }
 
-    private static void testTruncated0(boolean tcpFallback, final boolean truncatedBecauseOfMtu) throws IOException {
+    private static void testTruncated0(boolean tcpFallback, final boolean truncatedBecauseOfMtu) throws Exception {
         final String host = "somehost.netty.io";
         final String txt = "this is a txt record";
         final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
@@ -3102,13 +3075,13 @@ public class DnsNameResolverTest {
                 }
                 socket.getOutputStream().flush();
                 // Let's wait until we received the envelope before closing the socket.
-                envelopeFuture.syncUninterruptibly();
+                envelopeFuture.sync();
 
                 socket.close();
                 serverSocket.close();
             }
 
-            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = envelopeFuture.syncUninterruptibly().getNow();
+            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = envelopeFuture.sync().getNow();
             assertNotNull(envelope.sender());
 
             DnsResponse response = envelope.content();
@@ -3178,7 +3151,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testCNAMERecursiveResolveDifferentNameServersForDomains() throws IOException {
+    public void testCNAMERecursiveResolveDifferentNameServersForDomains() throws Exception {
         final String firstName = "firstname.com";
         final String secondName = "secondname.com";
         final String lastName = "lastname.com";
@@ -3220,31 +3193,26 @@ public class DnsNameResolverTest {
             }
         });
         dnsServer3.start();
-        DnsNameResolver resolver = null;
-        try {
-            resolver = newResolver()
-                    .resolveCache(NoopDnsCache.INSTANCE)
-                    .cnameCache(NoopDnsCnameCache.INSTANCE)
-                    .recursionDesired(true)
-                    .maxQueriesPerResolve(16)
-                    .nameServerProvider(new DnsServerAddressStreamProvider() {
-                        @Override
-                        public DnsServerAddressStream nameServerAddressStream(String hostname) {
-                            if (hostname.equals(secondName + '.')) {
-                                return DnsServerAddresses.singleton(dnsServer3.localAddress()).stream();
-                            }
-                            return DnsServerAddresses.singleton(dnsServer2.localAddress()).stream();
+        try (DnsNameResolver resolver = newResolver()
+                .resolveCache(NoopDnsCache.INSTANCE)
+                .cnameCache(NoopDnsCnameCache.INSTANCE)
+                .recursionDesired(true)
+                .maxQueriesPerResolve(16)
+                .nameServerProvider(new DnsServerAddressStreamProvider() {
+                    @Override
+                    public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                        if (hostname.equals(secondName + '.')) {
+                            return DnsServerAddresses.singleton(dnsServer3.localAddress()).stream();
                         }
-                    })
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED).build();
+                        return DnsServerAddresses.singleton(dnsServer2.localAddress()).stream();
+                    }
+                })
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED).build()) {
 
-            assertResolvedAddress(resolver.resolve(firstName).syncUninterruptibly().getNow(), ipv4Addr, firstName);
+            assertResolvedAddress(resolver.resolve(firstName).sync().getNow(), ipv4Addr, firstName);
         } finally {
             dnsServer2.stop();
             dnsServer3.stop();
-            if (resolver != null) {
-                resolver.close();
-            }
         }
     }
 
@@ -3254,7 +3222,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testAllNameServers() throws IOException {
+    public void testAllNameServers() throws Exception {
         final String domain = "netty.io";
         final String ipv4Addr = "1.2.3.4";
         final AtomicInteger server2Counter = new AtomicInteger();
@@ -3290,41 +3258,37 @@ public class DnsNameResolverTest {
             }
         });
         dnsServer3.start();
-        DnsNameResolver resolver = null;
-        try {
-            resolver = newResolver()
-                    .resolveCache(NoopDnsCache.INSTANCE)
-                    .cnameCache(NoopDnsCnameCache.INSTANCE)
-                    .recursionDesired(true)
-                    .maxQueriesPerResolve(16)
-                    .nameServerProvider(new DnsServerAddressStreamProvider() {
-                        private final DnsServerAddresses addresses =
-                                DnsServerAddresses.rotational(dnsServer2.localAddress(), dnsServer3.localAddress());
-                        @Override
-                        public DnsServerAddressStream nameServerAddressStream(String hostname) {
-                            return addresses.stream();
-                        }
-                    })
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY).build();
+        try (DnsNameResolver resolver = newResolver()
+                .resolveCache(NoopDnsCache.INSTANCE)
+                .cnameCache(NoopDnsCnameCache.INSTANCE)
+                .recursionDesired(true)
+                .maxQueriesPerResolve(16)
+                .nameServerProvider(new DnsServerAddressStreamProvider() {
+                    private final DnsServerAddresses addresses =
+                            DnsServerAddresses.rotational(dnsServer2.localAddress(), dnsServer3.localAddress());
 
-            assertResolvedAddress(resolver.resolve(domain).syncUninterruptibly().getNow(), ipv4Addr, domain);
+                    @Override
+                    public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                        return addresses.stream();
+                    }
+                })
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY).build()) {
+
+            assertResolvedAddress(resolver.resolve(domain).sync().getNow(), ipv4Addr, domain);
             assertEquals(1, server2Counter.get());
             assertEquals(0, server3Counter.get());
-            assertResolvedAddress(resolver.resolve(domain).syncUninterruptibly().getNow(), ipv4Addr, domain);
+            assertResolvedAddress(resolver.resolve(domain).sync().getNow(), ipv4Addr, domain);
             assertEquals(1, server2Counter.get());
             assertEquals(1, server3Counter.get());
-            assertResolvedAddress(resolver.resolve(domain).syncUninterruptibly().getNow(), ipv4Addr, domain);
+            assertResolvedAddress(resolver.resolve(domain).sync().getNow(), ipv4Addr, domain);
             assertEquals(2, server2Counter.get());
             assertEquals(1, server3Counter.get());
-            assertResolvedAddress(resolver.resolve(domain).syncUninterruptibly().getNow(), ipv4Addr, domain);
+            assertResolvedAddress(resolver.resolve(domain).sync().getNow(), ipv4Addr, domain);
             assertEquals(2, server2Counter.get());
             assertEquals(2, server3Counter.get());
         } finally {
             dnsServer2.stop();
             dnsServer3.stop();
-            if (resolver != null) {
-                resolver.close();
-            }
         }
     }
 

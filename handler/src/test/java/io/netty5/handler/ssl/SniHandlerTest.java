@@ -558,15 +558,15 @@ public class SniHandlerTest {
                            .connect(address).get();
 
                     cc.writeAndFlush(cc.bufferAllocator().copyOf("Hello, World!", UTF_8))
-                            .syncUninterruptibly();
+                            .sync();
 
                     // Notice how the server's SslContext refCnt is 2 as it is incremented when the SSLEngine is created
                     // and only decremented once it is destroyed.
                     assertEquals(2, ((ReferenceCounted) sslServerContext).refCnt());
 
                     // The client disconnects
-                    cc.close().syncUninterruptibly();
-                    if (!releasePromise.asFuture().awaitUninterruptibly(10L, TimeUnit.SECONDS)) {
+                    cc.close().sync();
+                    if (!releasePromise.asFuture().await(10L, TimeUnit.SECONDS)) {
                         throw new IllegalStateException("It doesn't seem #replaceHandler() got called.");
                     }
 
@@ -574,10 +574,10 @@ public class SniHandlerTest {
                     assertEquals(0, ((ReferenceCounted) sslServerContext).refCnt());
                 } finally {
                     if (cc != null) {
-                        cc.close().syncUninterruptibly();
+                        cc.close().sync();
                     }
                     if (sc != null) {
-                        sc.close().syncUninterruptibly();
+                        sc.close().sync();
                     }
                     if (sslContext != null) {
                         Resource.dispose(sslContext);

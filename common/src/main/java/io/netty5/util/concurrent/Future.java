@@ -88,7 +88,7 @@ import java.util.function.Function;
  * {@code @Override}
  * public void channelRead({@link io.netty5.channel.ChannelHandlerContext} ctx, Object msg) {
  *     {@link Future} future = ctx.channel().close();
- *     future.awaitUninterruptibly();
+ *     future.await();
  *     // Perform post-closure operation
  *     // ...
  * }
@@ -112,15 +112,15 @@ import java.util.function.Function;
  *
  * <h3>Do not confuse I/O timeout and await timeout</h3>
  * <p>
- * The timeout value you specify with {@link #await(long)}, {@link #await(long, TimeUnit)}, {@link
- * #awaitUninterruptibly(long)}, or {@link #awaitUninterruptibly(long, TimeUnit)} are not related with I/O timeout at
- * all.  If an I/O operation times out, the future will be marked as 'completed with failure,' as depicted in the
+ * The timeout value you specify with {@link #await(long)} or {@link #await(long, TimeUnit)} are not related with
+ * I/O timeout at all.
+ * If an I/O operation times out, the future will be marked as 'completed with failure,' as depicted in the
  * diagram above.  For example, connect timeout should be configured via a transport-specific option:
  * <pre>
  * // BAD - NEVER DO THIS
  * {@link io.netty5.bootstrap.Bootstrap} b = ...;
  * {@link Future} f = b.connect(...);
- * f.awaitUninterruptibly(10, TimeUnit.SECONDS);
+ * f.await(10, TimeUnit.SECONDS);
  * if (f.isCancelled()) {
  *     // Connection attempt cancelled by user
  * } else if (!f.isSuccess()) {
@@ -136,7 +136,7 @@ import java.util.function.Function;
  * // Configure the connect timeout option.
  * <b>b.option({@link io.netty5.channel.ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link Future} f = b.connect(...);
- * f.awaitUninterruptibly();
+ * f.await();
  *
  * // Now we are sure the future is completed.
  * assert f.isDone();
@@ -182,25 +182,11 @@ public interface Future<V> extends AsynchronousResult<V> {
     Future<V> sync() throws InterruptedException;
 
     /**
-     * Waits for this future until it is done, and rethrows the cause of the failure if this future failed.
-     *
-     * @throws CancellationException if the computation was cancelled
-     * @throws CompletionException   if the computation threw an exception.
-     */
-    Future<V> syncUninterruptibly();
-
-    /**
      * Waits for this future to be completed.
      *
      * @throws InterruptedException if the current thread was interrupted
      */
     Future<V> await() throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed without interruption.  This method catches an {@link InterruptedException}
-     * and discards it silently.
-     */
-    Future<V> awaitUninterruptibly();
 
     /**
      * Waits for this future to be completed within the specified time limit.
@@ -217,22 +203,6 @@ public interface Future<V> extends AsynchronousResult<V> {
      * @throws InterruptedException if the current thread was interrupted
      */
     boolean await(long timeoutMillis) throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed within the specified time limit without interruption.  This method catches
-     * an {@link InterruptedException} and discards it silently.
-     *
-     * @return {@code true} if and only if the future was completed within the specified time limit
-     */
-    boolean awaitUninterruptibly(long timeout, TimeUnit unit);
-
-    /**
-     * Waits for this future to be completed within the specified time limit without interruption.  This method catches
-     * an {@link InterruptedException} and discards it silently.
-     *
-     * @return {@code true} if and only if the future was completed within the specified time limit
-     */
-    boolean awaitUninterruptibly(long timeoutMillis);
 
     /**
      * Get the result of this future, if it has completed.

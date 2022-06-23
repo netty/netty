@@ -150,7 +150,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             sc = sb.bind(newSocketAddress()).get();
 
             if (connected) {
-                sc.connect(cc.localAddress()).syncUninterruptibly();
+                sc.connect(cc.localAddress()).sync();
             }
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
@@ -178,10 +178,10 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             }
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
         }
     }
@@ -251,7 +251,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             sc = sb.bind(newSocketAddress()).get();
 
             if (connected) {
-                sc.connect(cc.localAddress()).syncUninterruptibly();
+                sc.connect(cc.localAddress()).sync();
             }
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
@@ -267,10 +267,10 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             }
         } finally {
             if (cc != null) {
-                cc.close().syncUninterruptibly();
+                cc.close().sync();
             }
             if (sc != null) {
-                sc.close().syncUninterruptibly();
+                sc.close().sync();
             }
         }
     }

@@ -63,19 +63,19 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @param unit Units associated with {@code timeout}
      * @see HttpResponseHandler#put(int, Future, Promise)
      */
-    public void awaitResponses(long timeout, TimeUnit unit) {
+    public void awaitResponses(long timeout, TimeUnit unit) throws Exception {
         Iterator<Entry<Integer, Entry<Future<Void>, Promise<Void>>>> itr = streamidPromiseMap.entrySet().iterator();
         while (itr.hasNext()) {
             Entry<Integer, Entry<Future<Void>, Promise<Void>>> entry = itr.next();
             Future<Void> writeFuture = entry.getValue().getKey();
-            if (!writeFuture.awaitUninterruptibly(timeout, unit)) {
+            if (!writeFuture.await(timeout, unit)) {
                 throw new IllegalStateException("Timed out waiting to write for stream id " + entry.getKey());
             }
             if (writeFuture.isFailed()) {
                 throw new RuntimeException(writeFuture.cause());
             }
             Promise<Void> promise = entry.getValue().getValue();
-            if (!promise.asFuture().awaitUninterruptibly(timeout, unit)) {
+            if (!promise.asFuture().await(timeout, unit)) {
                 throw new IllegalStateException("Timed out waiting for response on stream id " + entry.getKey());
             }
             if (promise.isFailed()) {

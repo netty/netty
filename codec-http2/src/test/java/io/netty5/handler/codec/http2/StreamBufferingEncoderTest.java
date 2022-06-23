@@ -275,14 +275,14 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void receivingGoAwayFailsNewStreamIfMaxConcurrentStreamsReached() throws Http2Exception {
+    public void receivingGoAwayFailsNewStreamIfMaxConcurrentStreamsReached() throws Exception {
         encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
         encoderWriteHeaders(3);
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
         Future<Void> f = encoderWriteHeaders(5);
 
-        assertTrue(f.awaitUninterruptibly().cause() instanceof Http2GoAwayException);
+        assertTrue(f.await().cause() instanceof Http2GoAwayException);
         assertEquals(0, encoder.numBufferedStreams());
     }
 
@@ -459,7 +459,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void exhaustedStreamsDoNotBuffer() throws Http2Exception {
+    public void exhaustedStreamsDoNotBuffer() throws Exception {
         // Write the highest possible stream ID for the client.
         // This will cause the next stream ID to be negative.
         encoderWriteHeaders(Integer.MAX_VALUE);
@@ -471,7 +471,7 @@ public class StreamBufferingEncoderTest {
         Future<Void> f = encoderWriteHeaders(-1);
 
         // Verify that the write fails.
-        assertNotNull(f.awaitUninterruptibly().cause());
+        assertNotNull(f.await().cause());
     }
 
     @Test
@@ -493,7 +493,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void closeShouldCancelAllBufferedStreams() throws Http2Exception {
+    public void closeShouldCancelAllBufferedStreams() throws Exception {
         encoder.writeSettingsAck(ctx);
         connection.local().maxActiveStreams(0);
 
@@ -502,9 +502,9 @@ public class StreamBufferingEncoderTest {
         Future<Void> f3 = encoderWriteHeaders(7);
 
         encoder.close();
-        assertNotNull(f1.awaitUninterruptibly().cause());
-        assertNotNull(f2.awaitUninterruptibly().cause());
-        assertNotNull(f3.awaitUninterruptibly().cause());
+        assertNotNull(f1.await().cause());
+        assertNotNull(f2.await().cause());
+        assertNotNull(f3.await().cause());
     }
 
     @Test

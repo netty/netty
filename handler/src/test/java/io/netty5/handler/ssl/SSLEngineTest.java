@@ -800,7 +800,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        assertTrue(ccf.await().isSuccess());
         clientChannel = ccf.get();
     }
 
@@ -840,7 +840,7 @@ public abstract class SSLEngineTest {
                 "unexpected exception: " + serverException);
 
         // Verify that any pending writes are failed with the cached handshake exception and not a general SSLException.
-        clientWriteFuture.awaitUninterruptibly();
+        clientWriteFuture.await();
         Throwable actualCause = clientWriteFuture.cause();
         assertTrue(clientWriteFuture.isDone());
         assertTrue(clientWriteFuture.isFailed());
@@ -986,7 +986,7 @@ public abstract class SSLEngineTest {
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        assertTrue(ccf.await().isSuccess());
         clientChannel = ccf.get();
         return clientWritePromise.asFuture();
     }
@@ -1154,7 +1154,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        assertTrue(ccf.await().isSuccess());
         clientChannel = ccf.get();
     }
 
@@ -1459,7 +1459,7 @@ public abstract class SSLEngineTest {
                 });
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.syncUninterruptibly().isSuccess());
+        assertTrue(ccf.sync().isSuccess());
         clientChannel = ccf.get();
 
         serverLatch.await();
@@ -1780,7 +1780,7 @@ public abstract class SSLEngineTest {
         serverChannel = sb.bind(new InetSocketAddress(0)).get();
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.syncUninterruptibly().isSuccess());
+        assertTrue(ccf.sync().isSuccess());
         clientChannel = ccf.get();
     }
 
@@ -1892,7 +1892,7 @@ public abstract class SSLEngineTest {
 
         }).connect(serverChannel.localAddress()).get();
 
-        promise.asFuture().syncUninterruptibly();
+        promise.asFuture().sync();
 
         serverCert.delete();
         clientCert.delete();
