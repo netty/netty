@@ -73,7 +73,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
+public class Http2MultiplexTest {
     private final Http2Headers request = new DefaultHttp2Headers()
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
             .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
@@ -82,12 +82,17 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     private Http2FrameWriter frameWriter;
     private Http2FrameInboundWriter frameInboundWriter;
     private TestChannelInitializer childChannelInitializer;
-    private C codec;
+    private Http2FrameCodec codec;
 
     private static final int initialRemoteStreamWindow = 1024;
 
-    protected abstract C newCodec(TestChannelInitializer childChannelInitializer,  Http2FrameWriter frameWriter);
-    protected abstract ChannelHandler newMultiplexer(TestChannelInitializer childChannelInitializer);
+    private Http2FrameCodec newCodec(TestChannelInitializer childChannelInitializer, Http2FrameWriter frameWriter) {
+        return new Http2FrameCodecBuilder(true).frameWriter(frameWriter).build();
+    }
+
+    private ChannelHandler newMultiplexer(TestChannelInitializer childChannelInitializer) {
+        return new Http2MultiplexHandler(childChannelInitializer, null);
+    }
 
     @BeforeEach
     public void setUp() throws Exception {
@@ -1079,9 +1084,13 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         childChannel.closeFuture().sync();
     }
 
-    protected abstract boolean useUserEventForResetFrame();
+    private boolean useUserEventForResetFrame() {
+        return true;
+    }
 
-    protected abstract boolean ignoreWindowUpdateFrames();
+    private boolean ignoreWindowUpdateFrames() {
+        return true;
+    }
 
     @Test
     public void windowUpdateFrames() throws Exception {
