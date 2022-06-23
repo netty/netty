@@ -807,8 +807,8 @@ public class SslHandlerTest {
                                 SslHandler handler = sslClientCtx.newHandler(ch.bufferAllocator());
 
                                 // We propagate the SslHandler via an AtomicReference to the outer-scope as using
-                                // pipeline.get(...) may return null if the pipeline was teared down by the time we call it.
-                                // This will happen if the channel was closed in the meantime.
+                                // pipeline.get(...) may return null if the pipeline was teared down by the time we
+                                // call it. This will happen if the channel was closed in the meantime.
                                 sslHandlerRef.set(handler);
                                 ch.pipeline().addLast(handler);
                             }
@@ -895,9 +895,9 @@ public class SslHandlerTest {
                             future.get().writeAndFlush(offHeapAllocator().copyOf(new byte[] { 1, 2, 3, 4 }));
                         }).get();
 
-                // Ensure there is no AssertionError thrown by having the handshake failed by the writeAndFlush(...) before
-                // channelActive(...) was called. Let's first wait for the activeLatch countdown to happen and after this
-                // check if we saw and AssertionError (even if we timed out waiting).
+                // Ensure there is no AssertionError thrown by having the handshake failed by the writeAndFlush(...)
+                // before channelActive(...) was called. Let's first wait for the activeLatch countdown to happen and
+                // after this check if we saw and AssertionError (even if we timed out waiting).
                 activeLatch.await(5, TimeUnit.SECONDS);
                 AssertionError error = errorRef.get();
                 if (error != null) {
@@ -1340,9 +1340,9 @@ public class SslHandlerTest {
                                             handshakeCount++;
                                             ReferenceCountedOpenSslEngine engine =
                                                     (ReferenceCountedOpenSslEngine) sslHandler.engine();
-                                            // This test only works for non TLSv1.3 as TLSv1.3 will establish sessions after
-                                            // the handshake is done.
-                                            // See https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_sess_set_get_cb.html
+                                            // This test only works for non TLSv1.3 as TLSv1.3 will establish sessions
+                                            // after the handshake is done. See:
+                                            // https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_sess_set_get_cb.html
                                             if (!SslProtocols.TLS_v1_3.equals(engine.getSession().getProtocol())) {
                                                 // First should not re-use the session
                                                 try {
