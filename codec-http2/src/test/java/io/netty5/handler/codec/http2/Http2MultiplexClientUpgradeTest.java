@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec> {
+public class Http2MultiplexClientUpgradeTest {
 
     @ChannelHandler.Sharable
     static final class NoopHandler implements ChannelHandler {
@@ -56,14 +56,18 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
         }
     }
 
-    protected abstract C newCodec(ChannelHandler upgradeHandler);
+    private Http2FrameCodec newCodec() {
+        return Http2FrameCodecBuilder.forClient().build();
+    }
 
-    protected abstract ChannelHandler newMultiplexer(ChannelHandler upgradeHandler);
+    private ChannelHandler newMultiplexer(ChannelHandler upgradeHandler) {
+        return new Http2MultiplexHandler(new NoopHandler(), upgradeHandler);
+    }
 
     @Test
     public void upgradeHandlerGetsActivated() throws Exception {
         UpgradeHandler upgradeHandler = new UpgradeHandler();
-        C codec = newCodec(upgradeHandler);
+        Http2FrameCodec codec = newCodec();
         EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(upgradeHandler));
 
         ch.executor().submit(() -> {
@@ -81,7 +85,7 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
 
     @Test
     public void clientUpgradeWithoutUpgradeHandlerThrowsHttp2Exception() throws Http2Exception {
-        final C codec = newCodec(null);
+        final Http2FrameCodec codec = newCodec();
         final EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(null));
 
         assertThrows(Http2Exception.class, new Executable() {
