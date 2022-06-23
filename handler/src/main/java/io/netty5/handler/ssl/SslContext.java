@@ -463,10 +463,16 @@ public abstract class SslContext {
             if (enableOcsp) {
                 throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
             }
-            return new JdkSslServerContext(sslContextProvider,
-                    trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
-                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, keyStoreType);
+            try {
+                return new JdkSslServerContext(sslContextProvider,
+                        trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
+                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
+                        clientAuth, protocols, startTls, keyStoreType);
+            } catch (SSLException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new SSLException("Failed to build SslContext", e);
+            }
         case OPENSSL:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new OpenSslServerContext(
@@ -820,11 +826,17 @@ public abstract class SslContext {
                 if (enableOcsp) {
                     throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
                 }
-                return new JdkSslClientContext(sslContextProvider,
-                        trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
-                        sessionTimeout, keyStoreType);
-            case OPENSSL:
+                try {
+                    return new JdkSslClientContext(sslContextProvider,
+                            trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
+                            keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
+                            sessionTimeout, keyStoreType);
+                } catch (SSLException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new SSLException("Failed to build SslContext", e);
+                }
+        case OPENSSL:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
                 return new OpenSslClientContext(

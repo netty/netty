@@ -161,7 +161,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         try {
             promise.tryFailure(cause);
             writePromise.setFailure(cause);
-        } catch (Throwable throwable){
+        } catch (Throwable throwable) {
             SilentDispose.dispose(query, logger);
             throw throwable;
         }
