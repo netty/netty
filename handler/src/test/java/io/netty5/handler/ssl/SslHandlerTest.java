@@ -192,7 +192,7 @@ public class SslHandlerTest {
             }
         }, new ChannelHandler() {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslHandshakeCompletionEvent) {
                     throw (Exception) ((SslHandshakeCompletionEvent) evt).cause();
                 }
@@ -282,7 +282,7 @@ public class SslHandlerTest {
         final AtomicReference<Throwable> closeRef = new AtomicReference<>();
         EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof SslHandshakeCompletionEvent) {
                     handshakeRef.set(((SslHandshakeCompletionEvent) evt).cause());
                 } else if (evt instanceof SslCloseCompletionEvent) {
@@ -527,7 +527,7 @@ public class SslHandlerTest {
 
                 ch.pipeline().addLast(new ChannelHandler() {
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause instanceof CodecException) {
                             cause = cause.getCause();
                         }
@@ -572,7 +572,7 @@ public class SslHandlerTest {
         final BlockingQueue<SslCompletionEvent> events = new LinkedBlockingQueue<>();
         EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelHandler() {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslCompletionEvent) {
                     events.add((SslCompletionEvent) evt);
                 }
@@ -627,7 +627,7 @@ public class SslHandlerTest {
                           }
 
                           @Override
-                          public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                          public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                               logger.debug("[testHandshakeFailBeforeWritePromise] server user event triggered: " + evt);
                               if (evt instanceof SslCompletionEvent) {
                                   events.add(evt);
@@ -876,7 +876,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(sslHandler);
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause)
                                         throws Exception {
                                     if (cause instanceof AssertionError) {
                                         errorRef.set((AssertionError) cause);
@@ -1136,7 +1136,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(serverSslHandler);
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     causeRef.compareAndSet(null, cause);
                                 }
                             });
@@ -1153,7 +1153,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(clientSslHandler);
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     causeRef.compareAndSet(null, cause);
                                 }
                             });
@@ -1330,7 +1330,7 @@ public class SslHandlerTest {
                                 private int handshakeCount;
 
                                 @Override
-                                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt)  {
+                                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt)  {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         handshakeCount++;
                                         ReferenceCountedOpenSslEngine engine =
@@ -1398,7 +1398,7 @@ public class SslHandlerTest {
                                 }
 
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     queue.add(cause);
                                 }
                             });
@@ -1504,7 +1504,7 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(serverSslHandler);
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void exceptionCaught(final ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(final ChannelHandlerContext ctx, Throwable cause) {
                                     errorQueue.add(cause);
                                 }
 
@@ -1610,11 +1610,11 @@ public class SslHandlerTest {
             }
 
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslHandshakeCompletionEvent) {
                     ref.set((SslHandshakeCompletionEvent) evt);
                 }
-                ctx.fireInboundEventTriggered(evt);
+                ctx.fireChannelInboundEvent(evt);
             }
         }
         final AtomicReference<SslHandshakeCompletionEvent> clientEvent =
@@ -1771,7 +1771,7 @@ public class SslHandlerTest {
         }
 
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 completionEvents.add((SslHandshakeCompletionEvent) evt);
             }

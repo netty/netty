@@ -137,7 +137,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 }
 
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                     do {
                         Throwable throwable = errorRef.get();
                         if (throwable != null) {
@@ -147,7 +147,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                             break;
                         }
                     } while (!errorRef.compareAndSet(null, cause));
-                    super.exceptionCaught(ctx, cause);
+                    super.channelExceptionCaught(ctx, cause);
                 }
             }).bind(newSocketAddress()).get();
 

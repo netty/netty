@@ -134,7 +134,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
+                    pipeline.fireChannelExceptionCaught(exception);
                 }
                 readIfIsAutoRead();
             } finally {

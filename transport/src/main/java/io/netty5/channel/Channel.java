@@ -22,6 +22,7 @@ import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.util.AttributeKey;
 import io.netty5.util.AttributeMap;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -291,8 +292,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default Future<Void> triggerOutboundEvent(Object event) {
-        return pipeline().triggerOutboundEvent(event);
+    default Future<Void> sendOutboundEvent(Object event) {
+        return pipeline().sendOutboundEvent(event);
     }
 
     /**
@@ -395,9 +396,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         void flush();
 
         /**
-         * Trigger a custom outbound event.
+         * Send a custom outbound event.
          */
-        void triggerOutboundEvent(Object event, Promise<Void> promise);
+        void sendOutboundEvent(Object event, Promise<Void> promise);
 
         /**
          * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.

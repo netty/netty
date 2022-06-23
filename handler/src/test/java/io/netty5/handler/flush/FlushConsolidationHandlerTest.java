@@ -136,7 +136,7 @@ public class FlushConsolidationHandlerTest {
         channel.pipeline().fireChannelRead(1L);
         assertEquals(0, flushCount.get());
         assertNull(channel.readOutbound());
-        channel.pipeline().fireExceptionCaught(new IllegalStateException());
+        channel.pipeline().fireChannelExceptionCaught(new IllegalStateException());
         assertEquals(1, flushCount.get());
         assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());

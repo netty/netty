@@ -56,9 +56,9 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
         handshaker.handshake(ctx.channel()).addListener(future -> {
             if (future.isFailed()) {
                 handshakePromise.tryFailure(future.cause());
-                ctx.fireExceptionCaught(future.cause());
+                ctx.fireChannelExceptionCaught(future.cause());
             } else {
-                ctx.fireInboundEventTriggered(
+                ctx.fireChannelInboundEvent(
                         WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED);
             }
         });
@@ -86,7 +86,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
             if (!handshaker.isHandshakeComplete()) {
                 handshaker.finishHandshake(ctx.channel(), response);
                 handshakePromise.trySuccess(null);
-                ctx.fireInboundEventTriggered(
+                ctx.fireChannelInboundEvent(
                         ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
                 ctx.pipeline().remove(this);
                 return;
@@ -108,7 +108,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
 
             if (localHandshakePromise.tryFailure(new WebSocketClientHandshakeException("handshake timed out"))) {
                 ctx.flush()
-                   .fireInboundEventTriggered(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
+                   .fireChannelInboundEvent(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
                    .close();
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);

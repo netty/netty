@@ -65,8 +65,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + BufferUtil.hexDump(in));
                                 in.skipReadableBytes(in.readableBytes());
-                                ctx.fireInboundEventTriggered(new SniCompletionEvent(e));
-                                ctx.fireInboundEventTriggered(new SslHandshakeCompletionEvent(e));
+                                ctx.fireChannelInboundEvent(new SniCompletionEvent(e));
+                                ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(e));
                                 throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA) {
@@ -194,11 +194,11 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                         try {
                             onLookupComplete(ctx, f);
                         } catch (DecoderException err) {
-                            ctx.fireExceptionCaught(err);
+                            ctx.fireChannelExceptionCaught(err);
                         } catch (Exception cause) {
-                            ctx.fireExceptionCaught(new DecoderException(cause));
+                            ctx.fireChannelExceptionCaught(new DecoderException(cause));
                         } catch (Throwable cause) {
-                            ctx.fireExceptionCaught(cause);
+                            ctx.fireChannelExceptionCaught(cause);
                         }
                     } finally {
                         if (readPending) {

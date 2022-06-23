@@ -116,7 +116,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
     }

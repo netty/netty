@@ -99,7 +99,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 errorRef.compareAndSet(null, cause);
             }
         });
@@ -142,7 +142,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         errorRef.compareAndSet(null, cause);
                     }
                 });

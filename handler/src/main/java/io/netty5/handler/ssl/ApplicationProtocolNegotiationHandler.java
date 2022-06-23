@@ -124,10 +124,10 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             // Let's first fire the event before we try to modify the pipeline.
-            ctx.fireInboundEventTriggered(evt);
+            ctx.fireChannelInboundEvent(evt);
 
             SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
             try {
@@ -147,7 +147,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
                     // See https://github.com/netty/netty/issues/10342
                 }
             } catch (Throwable cause) {
-                exceptionCaught(ctx, cause);
+                channelExceptionCaught(ctx, cause);
             } finally {
                 // Handshake failures are handled in exceptionCaught(...).
                 if (handshakeEvent.isSuccess()) {
@@ -155,7 +155,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
                 }
             }
         } else {
-            ctx.fireInboundEventTriggered(evt);
+            ctx.fireChannelInboundEvent(evt);
         }
     }
 
@@ -199,7 +199,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Throwable wrapped;
         if (cause instanceof DecoderException && (wrapped = cause.getCause()) instanceof SSLException) {
             try {
@@ -210,7 +210,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
             }
         }
         logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
-        ctx.fireExceptionCaught(cause);
+        ctx.fireChannelExceptionCaught(cause);
         ctx.close();
     }
 }

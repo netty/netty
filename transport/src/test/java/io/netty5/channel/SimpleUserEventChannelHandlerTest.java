@@ -44,7 +44,7 @@ public class SimpleUserEventChannelHandlerTest {
     @Test
     public void testTypeMatch() {
         FooEvent fooEvent = new FooEvent();
-        channel.pipeline().fireInboundEventTriggered(fooEvent);
+        channel.pipeline().fireChannelInboundEvent(fooEvent);
         assertEquals(1, fooEventCatcher.caughtEvents.size());
         assertEquals(0, allEventCatcher.caughtEvents.size());
         assertEquals(0, fooEvent.refCnt());
@@ -54,7 +54,7 @@ public class SimpleUserEventChannelHandlerTest {
     @Test
     public void testTypeMismatch() {
         BarEvent barEvent = new BarEvent();
-        channel.pipeline().fireInboundEventTriggered(barEvent);
+        channel.pipeline().fireChannelInboundEvent(barEvent);
         assertEquals(0, fooEventCatcher.caughtEvents.size());
         assertEquals(1, allEventCatcher.caughtEvents.size());
         assertTrue(barEvent.release());
@@ -96,7 +96,7 @@ public class SimpleUserEventChannelHandlerTest {
         }
 
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             caughtEvents.add(evt);
         }
     }

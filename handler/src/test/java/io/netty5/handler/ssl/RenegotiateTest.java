@@ -71,7 +71,7 @@ public abstract class RenegotiateTest {
                                 }
 
                                 @Override
-                                public void inboundEventTriggered(
+                                public void channelInboundEvent(
                                         final ChannelHandlerContext ctx, Object evt) {
                                     if (!renegotiate && evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
@@ -116,7 +116,7 @@ public abstract class RenegotiateTest {
                             ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void inboundEventTriggered(
+                                public void channelInboundEvent(
                                         ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;

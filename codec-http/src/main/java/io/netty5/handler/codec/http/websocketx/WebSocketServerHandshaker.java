@@ -291,10 +291,10 @@ public abstract class WebSocketServerHandshaker {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 // Remove ourself and fail the handshake promise.
                 promise.tryFailure(cause);
-                ctx.fireExceptionCaught(cause);
+                ctx.fireChannelExceptionCaught(cause);
                 ctx.pipeline().remove(this);
             }
 

@@ -141,7 +141,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
             // Reserve local stream 1 for the response.
             connectionHandler.onHttpClientUpgrade();
         } catch (Http2Exception e) {
-            ctx.fireExceptionCaught(e);
+            ctx.fireChannelExceptionCaught(e);
             ctx.close();
         }
     }

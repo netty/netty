@@ -145,8 +145,8 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.fireExceptionCaught(cause);
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.fireChannelExceptionCaught(cause);
         ctx.close();
     }
 }

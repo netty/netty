@@ -134,12 +134,12 @@ public class LastInboundHandler implements ChannelHandler {
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
         queue.add(new UserEvent(evt));
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (lastException != null) {
             cause.printStackTrace();
         } else {

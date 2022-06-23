@@ -1078,7 +1078,7 @@ public class Http2ConnectionRoundtripTest {
                         .build());
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
                             ctx.pipeline().remove(this);

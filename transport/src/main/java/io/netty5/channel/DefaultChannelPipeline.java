@@ -569,11 +569,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             if (removed) {
-                fireExceptionCaught(new ChannelPipelineException(
+                fireChannelExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
                         ".handlerAdded() has thrown an exception; removed.", t));
             } else {
-                fireExceptionCaught(new ChannelPipelineException(
+                fireChannelExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
                         ".handlerAdded() has thrown an exception; also failed to remove.", t));
             }
@@ -585,7 +585,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             ctx.callHandlerRemoved();
         } catch (Throwable t) {
-            fireExceptionCaught(new ChannelPipelineException(
+            fireChannelExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
         }
     }
@@ -810,13 +810,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline fireExceptionCaught(Throwable cause) {
+    public final ChannelPipeline fireChannelExceptionCaught(Throwable cause) {
         head.invokeExceptionCaught(cause);
         return this;
     }
 
     @Override
-    public final ChannelPipeline fireInboundEventTriggered(Object event) {
+    public final ChannelPipeline fireChannelInboundEvent(Object event) {
         head.invokeCustomInboundEventTriggered(event);
         return this;
     }
@@ -902,8 +902,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final Future<Void> triggerOutboundEvent(Object event) {
-        return tail.triggerOutboundEvent(event);
+    public final Future<Void> sendOutboundEvent(Object event) {
+        return tail.sendOutboundEvent(event);
     }
 
     @Override
@@ -923,7 +923,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once a {@link Throwable} hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
+     * in {@link ChannelHandler#channelExceptionCaught(ChannelHandlerContext, Throwable)}.
      */
     protected void onUnhandledInboundException(Throwable cause) {
         try {
@@ -982,7 +982,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once an user event hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)}. This method is responsible
+     * in {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)}. This method is responsible
      * to call {@link Resource#dispose(Object)} on the given event at some point.
      */
     protected void onUnhandledInboundUserEventTriggered(Object evt) {
@@ -1048,12 +1048,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundUserEventTriggered(evt);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundException(cause);
         }
 
@@ -1140,9 +1140,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public Future<Void> triggerOutboundEvent(ChannelHandlerContext ctx, Object event) {
+        public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().triggerOutboundEvent(event, promise);
+            ctx.channel().unsafe().sendOutboundEvent(event, promise);
             return promise.asFuture();
         }
     }

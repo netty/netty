@@ -84,7 +84,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
                    .remove(httpServerUpgradeHandler);
 
                 ctx.pipeline().addAfter(ctx.name(), null, http2ServerHandler);
-                ctx.fireInboundEventTriggered(PriorKnowledgeUpgradeEvent.INSTANCE);
+                ctx.fireChannelInboundEvent(PriorKnowledgeUpgradeEvent.INSTANCE);
                 ctx.pipeline().remove(this);
             }
         }

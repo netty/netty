@@ -380,7 +380,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoderForBuffer implem
                 // If this handler is extended by the user and we directly fire the userEvent from this context then
                 // the user will not see the event. We should fire the event starting with this handler so this class
                 // (and extending classes) have a chance to process the event.
-                inboundEventTriggered(ctx, Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
+                channelInboundEvent(ctx, Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
             }
         }
     }
@@ -538,12 +538,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoderForBuffer implem
      * Handles {@link Http2Exception} objects that were thrown from other handlers. Ignores all other exceptions.
      */
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (getEmbeddedHttp2Exception(cause) != null) {
             // Some exception in the causality chain is an Http2Exception - handle it.
             onError(ctx, false, cause);
         } else {
-            super.exceptionCaught(ctx, cause);
+            super.channelExceptionCaught(ctx, cause);
         }
     }
 

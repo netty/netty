@@ -46,7 +46,7 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolCon
  * to the <tt>io.netty5.example.http.websocketx.server.WebSocketServer</tt> example.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)} and check if the event was instance
+ * {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)} and check if the event was instance
  * of {@link HandshakeComplete}, the event will contain extra information about the handshake such as the request and
  * selected subprotocol.
  */
@@ -245,7 +245,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof WebSocketHandshakeException) {
             final byte[] bytes = cause.getMessage().getBytes();
             FullHttpResponse response = new DefaultFullHttpResponse(
@@ -253,7 +253,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                     ctx.bufferAllocator().allocate(bytes.length).writeBytes(bytes));
             ctx.channel().writeAndFlush(response).addListener(ctx, ChannelFutureListeners.CLOSE);
         } else {
-            ctx.fireExceptionCaught(cause);
+            ctx.fireChannelExceptionCaught(cause);
             ctx.close();
         }
     }

@@ -117,15 +117,15 @@ public class CombinedChannelDuplexHandlerTest {
 
         ChannelHandler inboundHandler = new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 assertSame(exception, cause);
                 queue.add(this);
-                ctx.fireExceptionCaught(cause);
+                ctx.fireChannelExceptionCaught(cause);
             }
         };
         ChannelHandler lastHandler = new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 assertSame(exception, cause);
                 queue.add(this);
             }
@@ -133,7 +133,7 @@ public class CombinedChannelDuplexHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(
                 new CombinedChannelDuplexHandler<>(
                         inboundHandler, new ChannelHandler() { }), lastHandler);
-        channel.pipeline().fireExceptionCaught(exception);
+        channel.pipeline().fireChannelExceptionCaught(exception);
         assertFalse(channel.finish());
         assertSame(inboundHandler, queue.poll());
         assertSame(lastHandler, queue.poll());
@@ -233,8 +233,8 @@ public class CombinedChannelDuplexHandlerTest {
         channel.pipeline().fireChannelActive();
         channel.pipeline().fireChannelRead(MSG);
         channel.pipeline().fireChannelReadComplete();
-        channel.pipeline().fireExceptionCaught(CAUSE);
-        channel.pipeline().fireInboundEventTriggered(USER_EVENT);
+        channel.pipeline().fireChannelExceptionCaught(CAUSE);
+        channel.pipeline().fireChannelInboundEvent(USER_EVENT);
         channel.pipeline().fireChannelWritabilityChanged();
         channel.pipeline().fireChannelInactive();
         channel.pipeline().fireChannelUnregistered();
@@ -307,7 +307,7 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             queue.add(Event.USER_EVENT_TRIGGERED);
         }
 
@@ -317,7 +317,7 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             queue.add(Event.EXCEPTION_CAUGHT);
         }
 

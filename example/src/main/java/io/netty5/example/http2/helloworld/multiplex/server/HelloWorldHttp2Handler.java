@@ -42,8 +42,8 @@ public class HelloWorldHttp2Handler implements ChannelHandler {
     static final byte[] RESPONSE_BYTES = "Hello World".getBytes(StandardCharsets.UTF_8);
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.fireExceptionCaught(cause);
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.fireChannelExceptionCaught(cause);
         cause.printStackTrace();
         ctx.close();
     }

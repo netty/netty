@@ -42,13 +42,13 @@ import static io.netty5.channel.ChannelHandlerMask.MASK_CLOSE;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CONNECT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_DEREGISTER;
 import static io.netty5.channel.ChannelHandlerMask.MASK_DISCONNECT;
-import static io.netty5.channel.ChannelHandlerMask.MASK_EXCEPTION_CAUGHT;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_EXCEPTION_CAUGHT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_FLUSH;
 import static io.netty5.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty5.channel.ChannelHandlerMask.MASK_REGISTER;
 import static io.netty5.channel.ChannelHandlerMask.MASK_SHUTDOWN;
-import static io.netty5.channel.ChannelHandlerMask.MASK_CUSTOM_INBOUND_EVENT_TRIGGERED;
-import static io.netty5.channel.ChannelHandlerMask.MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INBOUND_EVENT;
+import static io.netty5.channel.ChannelHandlerMask.MASK_SEND_OUTBOUND_EVENT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_WRITE;
 import static io.netty5.channel.ChannelHandlerMask.mask;
 import static java.util.Objects.requireNonNull;
@@ -110,7 +110,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void notifyHandlerRemovedAlready(Throwable cause) {
-        pipeline().fireExceptionCaught(newRemovedException(this, cause));
+        pipeline().fireChannelExceptionCaught(newRemovedException(this, cause));
     }
 
     private static ChannelPipelineException newRemovedException(ChannelHandlerContext ctx, Throwable cause) {
@@ -286,7 +286,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+    public ChannelHandlerContext fireChannelExceptionCaught(Throwable cause) {
         requireNonNull(cause, "cause");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
@@ -305,7 +305,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeExceptionCaught(Throwable cause) {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_EXCEPTION_CAUGHT);
+        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_EXCEPTION_CAUGHT);
         if (ctx == null) {
             notifyHandlerRemovedAlready(cause);
             return;
@@ -315,7 +315,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeExceptionCaught(final Throwable cause) {
         try {
-            handler().exceptionCaught(this, cause);
+            handler().channelExceptionCaught(this, cause);
         } catch (Throwable error) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -333,7 +333,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public ChannelHandlerContext fireInboundEventTriggered(Object event) {
+    public ChannelHandlerContext fireChannelInboundEvent(Object event) {
         requireNonNull(event, "event");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
@@ -345,7 +345,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeCustomInboundEventTriggered(Object event) {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CUSTOM_INBOUND_EVENT_TRIGGERED);
+        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_INBOUND_EVENT);
         if (ctx == null) {
             Resource.dispose(event);
             notifyHandlerRemovedAlready();
@@ -356,7 +356,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeCustomInboundEventTriggered(Object event) {
         try {
-            handler().inboundEventTriggered(this, event);
+            handler().channelInboundEvent(this, event);
         } catch (Throwable t) {
             invokeExceptionCaught(t);
         }
@@ -781,7 +781,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     @Override
-    public Future<Void> triggerOutboundEvent(Object event) {
+    public Future<Void> sendOutboundEvent(Object event) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             return findAndInvokeTriggerCustomOutboundEvent(event);
@@ -792,7 +792,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> findAndInvokeTriggerCustomOutboundEvent(Object event) {
-        DefaultChannelHandlerContext ctx = findContextOutbound(MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT);
+        DefaultChannelHandlerContext ctx = findContextOutbound(MASK_SEND_OUTBOUND_EVENT);
         if (ctx == null) {
             return failRemoved(this);
         }
@@ -801,7 +801,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeTriggerCustomOutboundEvent(Object event) {
         try {
-            return handler().triggerOutboundEvent(this, event);
+            return handler().sendOutboundEvent(this, event);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
         }

@@ -89,7 +89,7 @@ public class WebSocketServerProtocolHandlerTest {
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         ch.pipeline().addLast(new ChannelHandler() {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
                     // We should have removed the handler already.
                     ctx.executor().execute(() -> ctx.pipeline().context(WebSocketServerProtocolHandshakeHandler.class));

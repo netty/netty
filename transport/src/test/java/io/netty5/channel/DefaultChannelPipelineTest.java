@@ -380,7 +380,7 @@ public class DefaultChannelPipelineTest {
                 }
 
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                     if (cause instanceof TestException) {
                         ctx.executor().execute(new Runnable() {
                             @Override
@@ -412,7 +412,7 @@ public class DefaultChannelPipelineTest {
             channel.register().sync();
             channel.pipeline().addLast(new ChannelHandler() {
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                     ctx.fireChannelReadComplete();
                 }
             }, new ChannelHandler() {
@@ -424,7 +424,7 @@ public class DefaultChannelPipelineTest {
                 }
 
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                     if (cause instanceof TestException) {
                         ctx.executor().execute(new Runnable() {
                             @Override
@@ -438,7 +438,7 @@ public class DefaultChannelPipelineTest {
                 }
             });
 
-            channel.pipeline().fireExceptionCaught(new Exception());
+            channel.pipeline().fireChannelExceptionCaught(new Exception());
             latch.await();
             assertEquals(1, counter.get());
         } finally {
@@ -713,8 +713,8 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                super.exceptionCaught(ctx, cause);
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                super.channelExceptionCaught(ctx, cause);
                 error.set(cause);
                 latch.countDown();
             }
@@ -869,7 +869,7 @@ public class DefaultChannelPipelineTest {
             private Promise<Void> validationPromise = ImmediateEventExecutor.INSTANCE.newPromise();
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 try {
                     assertThat(cause, Matchers.instanceOf(ChannelPipelineException.class));
                 } catch (Throwable error) {
@@ -891,13 +891,13 @@ public class DefaultChannelPipelineTest {
         ctx.fireChannelRead("");
         validator.validate();
 
-        ctx.fireInboundEventTriggered("");
+        ctx.fireChannelInboundEvent("");
         validator.validate();
 
         ctx.fireChannelReadComplete();
         validator.validate();
 
-        ctx.fireExceptionCaught(new Exception());
+        ctx.fireChannelExceptionCaught(new Exception());
         validator.validate();
 
         ctx.fireChannelActive();
@@ -1017,12 +1017,12 @@ public class DefaultChannelPipelineTest {
                     }
 
                     @Override
-                    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                         promise.setSuccess(event);
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         promise.setFailure(cause);
                     }
                 });
@@ -1031,7 +1031,7 @@ public class DefaultChannelPipelineTest {
                     return;
                 }
                 // This event must be captured by the added handler.
-                pipeline.fireInboundEventTriggered(event);
+                pipeline.fireChannelInboundEvent(event);
             });
             assertSame(event, promise.asFuture().sync().getNow());
         } finally {
@@ -1237,9 +1237,9 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                 fail();
-                ctx.fireInboundEventTriggered(evt);
+                ctx.fireChannelInboundEvent(evt);
             }
 
             @Skip
@@ -1251,9 +1251,9 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 fail();
-                ctx.fireExceptionCaught(cause);
+                ctx.fireChannelExceptionCaught(cause);
             }
 
             @Override
@@ -1356,7 +1356,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public Future<Void> triggerOutboundEvent(ChannelHandlerContext ctx, Object event) {
+            public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
                 executionMask |= MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT;
                 Resource.dispose(event);
                 return ctx.newSucceededFuture();
@@ -1439,7 +1439,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                 executionMask |= MASK_CUSTOM_INBOUND_EVENT_TRIGGERED;
             }
 
@@ -1449,7 +1449,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 executionMask |= MASK_EXCEPTION_CAUGHT;
             }
 
@@ -1484,8 +1484,8 @@ public class DefaultChannelPipelineTest {
         pipeline.fireChannelRead("");
         pipeline.fireChannelReadComplete();
         pipeline.fireChannelWritabilityChanged();
-        pipeline.fireInboundEventTriggered("");
-        pipeline.fireExceptionCaught(new Exception());
+        pipeline.fireChannelInboundEvent("");
+        pipeline.fireChannelExceptionCaught(new Exception());
 
         pipeline.register().sync();
         pipeline.deregister().sync();
@@ -1532,17 +1532,17 @@ public class DefaultChannelPipelineTest {
         Runnable r = () -> {
             pipeline.addLast(new ChannelHandler() {
                 @Override
-                public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                     if (evt == userEvent) {
                         ctx.write(writeObject);
                     }
-                    ctx.fireInboundEventTriggered(evt);
+                    ctx.fireChannelInboundEvent(evt);
                 }
             });
             pipeline.addFirst(new ChannelHandler() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) {
-                    ctx.fireInboundEventTriggered(userEvent);
+                    ctx.fireChannelInboundEvent(userEvent);
                 }
 
                 @Override

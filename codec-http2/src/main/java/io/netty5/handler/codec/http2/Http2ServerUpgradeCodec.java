@@ -135,7 +135,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             }
             connectionHandler.onHttpServerUpgrade(settings);
         } catch (Http2Exception e) {
-            ctx.fireExceptionCaught(e);
+            ctx.fireChannelExceptionCaught(e);
             ctx.close();
         }
     }

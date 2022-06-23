@@ -107,7 +107,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
 
             // Notify the child-channel and close it.
-            streamChannel.pipeline().fireExceptionCaught(cause);
+            streamChannel.pipeline().fireChannelExceptionCaught(cause);
             streamChannel.unsafe().close(streamChannel.newPromise());
         }
     }
@@ -1001,7 +1001,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public void triggerOutboundEvent(Object event, Promise<Void> promise) {
+        public void sendOutboundEvent(Object event, Promise<Void> promise) {
             Resource.dispose(event);
             promise.setSuccess(null);
         }

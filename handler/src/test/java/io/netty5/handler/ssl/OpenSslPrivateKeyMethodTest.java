@@ -252,9 +252,9 @@ public class OpenSslPrivateKeyMethodTest {
                             }
 
                             @Override
-                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                 if (!serverPromise.tryFailure(cause)) {
-                                    ctx.fireExceptionCaught(cause);
+                                    ctx.fireChannelExceptionCaught(cause);
                                 }
                             }
                         });
@@ -287,9 +287,9 @@ public class OpenSslPrivateKeyMethodTest {
                                 }
 
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     if (!clientPromise.tryFailure(cause)) {
-                                        ctx.fireExceptionCaught(cause);
+                                        ctx.fireChannelExceptionCaught(cause);
                                     }
                                 }
                             });

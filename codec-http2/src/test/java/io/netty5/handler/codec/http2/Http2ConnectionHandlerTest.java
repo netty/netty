@@ -273,7 +273,7 @@ public class Http2ConnectionHandlerTest {
             return null;
         };
 
-        doAnswer(verifier).when(ctx).fireInboundEventTriggered(evt);
+        doAnswer(verifier).when(ctx).fireChannelInboundEvent(evt);
 
         handler.channelActive(ctx);
         if (flushPreface) {
@@ -393,7 +393,7 @@ public class Http2ConnectionHandlerTest {
         // processing before it was updated. Thus, it should _not_ be used for the GOAWAY.
         // https://github.com/netty/netty/issues/10670
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
-        handler.exceptionCaught(ctx, e);
+        handler.channelExceptionCaught(ctx, e);
         verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()), any(Buffer.class));
     }
 
@@ -411,7 +411,7 @@ public class Http2ConnectionHandlerTest {
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
                 eq(PROTOCOL_ERROR.code()))).thenReturn(future);
 
-        handler.exceptionCaught(ctx, e);
+        handler.channelExceptionCaught(ctx, e);
 
         ArgumentCaptor<Http2Headers> captor = ArgumentCaptor.forClass(Http2Headers.class);
         verify(encoder).writeHeaders(eq(ctx), eq(STREAM_ID),
@@ -435,7 +435,7 @@ public class Http2ConnectionHandlerTest {
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
             eq(PROTOCOL_ERROR.code()))).thenReturn(future);
 
-        handler.exceptionCaught(ctx, e);
+        handler.channelExceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true));
@@ -456,7 +456,7 @@ public class Http2ConnectionHandlerTest {
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
                 eq(PROTOCOL_ERROR.code()))).thenReturn(future);
 
-        handler.exceptionCaught(ctx, e);
+        handler.channelExceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
                 any(Http2Headers.class), eq(padding), eq(true));
@@ -468,7 +468,7 @@ public class Http2ConnectionHandlerTest {
         final CountDownLatch latch = new CountDownLatch(1);
         handler = new Http2ConnectionHandler(decoder, encoder, new Http2Settings()) {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
                 if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                     latch.countDown();
                 }
@@ -491,7 +491,7 @@ public class Http2ConnectionHandlerTest {
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
             eq(PROTOCOL_ERROR.code()))).thenReturn(future);
-        handler.exceptionCaught(ctx, e);
+        handler.channelExceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true));
@@ -515,7 +515,7 @@ public class Http2ConnectionHandlerTest {
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
             eq(PROTOCOL_ERROR.code()))).thenReturn(future);
-        handler.exceptionCaught(ctx, e);
+        handler.channelExceptionCaught(ctx, e);
 
         verify(remote).createStream(STREAM_ID, true);
         verify(encoder).writeHeaders(eq(ctx), eq(STREAM_ID),

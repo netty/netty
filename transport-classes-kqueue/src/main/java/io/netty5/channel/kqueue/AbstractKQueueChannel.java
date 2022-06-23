@@ -491,7 +491,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             } catch (IOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.
-                pipeline().fireExceptionCaught(e);
+                pipeline().fireChannelExceptionCaught(e);
                 unsafe().close(newPromise());
             }
         }

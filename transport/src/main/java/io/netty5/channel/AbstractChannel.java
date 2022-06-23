@@ -682,7 +682,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBeginRead();
             } catch (final Exception e) {
-                invokeLater(() -> pipeline.fireExceptionCaught(e));
+                invokeLater(() -> pipeline.fireChannelExceptionCaught(e));
                 close(newPromise());
             }
         }
@@ -824,7 +824,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void triggerOutboundEvent(Object event, Promise<Void> promise) {
+        public void sendOutboundEvent(Object event, Promise<Void> promise) {
             Resource.dispose(event);
             promise.setSuccess(null);
         }

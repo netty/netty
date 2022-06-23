@@ -36,16 +36,15 @@ final class ChannelHandlerMask {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelHandlerMask.class);
 
     // Using to mask which methods must be called for a ChannelHandler.
-    static final int MASK_EXCEPTION_CAUGHT = 1;
+    static final int MASK_CHANNEL_EXCEPTION_CAUGHT = 1;
     static final int MASK_CHANNEL_REGISTERED = 1 << 1;
     static final int MASK_CHANNEL_UNREGISTERED = 1 << 2;
     static final int MASK_CHANNEL_ACTIVE = 1 << 3;
     static final int MASK_CHANNEL_INACTIVE = 1 << 4;
-
     static final int MASK_CHANNEL_SHUTDOWN = 1 << 5;
     static final int MASK_CHANNEL_READ = 1 << 6;
     static final int MASK_CHANNEL_READ_COMPLETE = 1 << 7;
-    static final int MASK_CUSTOM_INBOUND_EVENT_TRIGGERED = 1 << 8;
+    static final int MASK_CHANNEL_INBOUND_EVENT = 1 << 8;
     static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 9;
     static final int MASK_BIND = 1 << 10;
     static final int MASK_CONNECT = 1 << 11;
@@ -57,15 +56,15 @@ final class ChannelHandlerMask {
     static final int MASK_READ = 1 << 17;
     static final int MASK_WRITE = 1 << 18;
     static final int MASK_FLUSH = 1 << 19;
-    static final int MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT = 1 << 20;
+    static final int MASK_SEND_OUTBOUND_EVENT = 1 << 20;
 
-    private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_CHANNEL_REGISTERED |
+    private static final int MASK_ALL_INBOUND = MASK_CHANNEL_EXCEPTION_CAUGHT | MASK_CHANNEL_REGISTERED |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_SHUTDOWN |
             MASK_CHANNEL_READ | MASK_CHANNEL_READ_COMPLETE  | MASK_CHANNEL_WRITABILITY_CHANGED |
-            MASK_CUSTOM_INBOUND_EVENT_TRIGGERED;
+            MASK_CHANNEL_INBOUND_EVENT;
     private static final int MASK_ALL_OUTBOUND = MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
             MASK_CLOSE | MASK_SHUTDOWN | MASK_REGISTER | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH |
-            MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT;
+            MASK_SEND_OUTBOUND_EVENT;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
             new FastThreadLocal<>() {
@@ -107,8 +106,8 @@ final class ChannelHandlerMask {
         mask |= MASK_ALL_OUTBOUND;
 
         try {
-            if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
-                mask &= ~MASK_EXCEPTION_CAUGHT;
+            if (isSkippable(handlerType, "channelExceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
+                mask &= ~MASK_CHANNEL_EXCEPTION_CAUGHT;
             }
 
             if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
@@ -136,8 +135,8 @@ final class ChannelHandlerMask {
             if (isSkippable(handlerType, "channelWritabilityChanged", ChannelHandlerContext.class)) {
                 mask &= ~MASK_CHANNEL_WRITABILITY_CHANGED;
             }
-            if (isSkippable(handlerType, "inboundEventTriggered", ChannelHandlerContext.class, Object.class)) {
-                mask &= ~MASK_CUSTOM_INBOUND_EVENT_TRIGGERED;
+            if (isSkippable(handlerType, "channelInboundEvent", ChannelHandlerContext.class, Object.class)) {
+                mask &= ~MASK_CHANNEL_INBOUND_EVENT;
             }
             if (isSkippable(handlerType, "bind", ChannelHandlerContext.class, SocketAddress.class)) {
                 mask &= ~MASK_BIND;
@@ -171,8 +170,8 @@ final class ChannelHandlerMask {
             if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {
                 mask &= ~MASK_FLUSH;
             }
-            if (isSkippable(handlerType, "triggerOutboundEvent", ChannelHandlerContext.class, Object.class)) {
-                mask &= ~MASK_TRIGGER_CUSTOM_OUTBOUND_EVENT;
+            if (isSkippable(handlerType, "sendOutboundEvent", ChannelHandlerContext.class, Object.class)) {
+                mask &= ~MASK_SEND_OUTBOUND_EVENT;
             }
         } catch (Exception e) {
             // Should never reach here.

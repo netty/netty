@@ -184,7 +184,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
             } catch (Throwable t) {
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
-                pipeline.fireExceptionCaught(t);
+                pipeline.fireChannelExceptionCaught(t);
             } finally {
                 readIfIsAutoRead();
                 epollInFinally(config);

@@ -444,7 +444,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             }
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
-            pipeline.fireExceptionCaught(cause);
+            pipeline.fireChannelExceptionCaught(cause);
 
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434

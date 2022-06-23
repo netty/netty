@@ -127,7 +127,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  *
  * <h3>Error Handling</h3>
  * <p>
- * Exceptions and errors are propagated via {@link ChannelHandler#exceptionCaught}. Exceptions that apply to
+ * Exceptions and errors are propagated via {@link ChannelHandler#channelExceptionCaught}. Exceptions that apply to
  * a specific HTTP/2 stream are wrapped in a {@link Http2FrameStreamException} and have the corresponding
  * {@link Http2FrameStream} object attached.
  *
@@ -244,7 +244,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      * HTTP/2 on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
      */
     @Override
-    public final void inboundEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+    public final void channelInboundEvent(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
             // The user event implies that we are on the client.
             tryExpandConnectionFlowControlWindow(connection());
@@ -252,11 +252,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // We schedule this on the EventExecutor to allow to have any extra handlers added to the pipeline
             // before we pass the event to the next handler. This is needed as the event may be called from within
             // handlerAdded(...) which will be run before other handlers will be added to the pipeline.
-            ctx.executor().execute(() -> ctx.fireInboundEventTriggered(evt));
+            ctx.executor().execute(() -> ctx.fireChannelInboundEvent(evt));
         } else if (evt instanceof UpgradeEvent) {
             try (UpgradeEvent upgrade = (UpgradeEvent) evt) {
                 // TODO try to avoid full copy (maybe make it read-only?)
-                ctx.fireInboundEventTriggered(upgrade.copy());
+                ctx.fireChannelInboundEvent(upgrade.copy());
                 Http2Stream stream = connection().stream(HTTP_UPGRADE_STREAM_ID);
                 if (stream.getProperty(streamKey) == null) {
                     // TODO: improve handler/stream lifecycle so that stream isn't active before handler added.
@@ -271,7 +271,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                         ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest());
             }
         } else {
-            ctx.fireInboundEventTriggered(evt);
+            ctx.fireChannelInboundEvent(evt);
         }
     }
 
@@ -521,7 +521,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // If this is not desired behavior the user can override this method.
             //
             // We only forward non outbound errors as outbound errors will already be reflected by failing the promise.
-            ctx.fireExceptionCaught(cause);
+            ctx.fireChannelExceptionCaught(cause);
         }
         super.onConnectionError(ctx, outbound, cause, http2Ex);
     }
@@ -679,11 +679,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream,
                                                  @SuppressWarnings("unused") boolean writable) {
-        ctx.fireInboundEventTriggered(stream.writabilityChanged);
+        ctx.fireChannelInboundEvent(stream.writabilityChanged);
     }
 
     void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
-        ctx.fireInboundEventTriggered(stream.stateChanged);
+        ctx.fireChannelInboundEvent(stream.stateChanged);
     }
 
     void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
@@ -691,7 +691,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     void onHttp2FrameStreamException(ChannelHandlerContext ctx, Http2FrameStreamException cause) {
-        ctx.fireExceptionCaught(cause);
+        ctx.fireChannelExceptionCaught(cause);
     }
 
     private final class Http2RemoteFlowControllerListener implements Http2RemoteFlowController.Listener {

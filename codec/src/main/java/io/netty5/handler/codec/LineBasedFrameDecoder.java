@@ -153,7 +153,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
     }
 
     private void fail(final ChannelHandlerContext ctx, String length) {
-        ctx.fireExceptionCaught(
+        ctx.fireChannelExceptionCaught(
                 new TooLongFrameException(
                         "frame length (" + length + ") exceeds the allowed maximum (" + maxLength + ')'));
     }

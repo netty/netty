@@ -472,7 +472,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         }, new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 ctx.close();
             }
         });
@@ -513,7 +513,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         }, new ChannelHandler() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 ctx.close();
             }
         });

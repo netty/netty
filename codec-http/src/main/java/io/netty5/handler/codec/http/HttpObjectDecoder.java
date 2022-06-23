@@ -458,7 +458,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof HttpExpectationFailedEvent) {
             switch (currentState) {
             case READ_FIXED_LENGTH_CONTENT:
@@ -470,7 +470,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoderForBuffer {
                 break;
             }
         }
-        super.inboundEventTriggered(ctx, evt);
+        super.channelInboundEvent(ctx, evt);
     }
 
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {

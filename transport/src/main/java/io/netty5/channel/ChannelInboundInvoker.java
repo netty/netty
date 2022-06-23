@@ -66,20 +66,20 @@ public interface ChannelInboundInvoker {
     /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
      *
-     * This will result in having the  {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
+     * This will result in having the  {@link ChannelHandler#channelExceptionCaught(ChannelHandlerContext, Throwable)}
      * method  called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireExceptionCaught(Throwable cause);
+    ChannelInboundInvoker fireChannelExceptionCaught(Throwable cause);
 
     /**
      * A {@link Channel} received a custom defined inbound event.
      *
-     * This will result in having the {@link ChannelHandler#inboundEventTriggered(ChannelHandlerContext, Object)}
+     * This will result in having the {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)}
      * method  called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireInboundEventTriggered(Object event);
+    ChannelInboundInvoker fireChannelInboundEvent(Object event);
 
     /**
      * A {@link Channel} received a message.

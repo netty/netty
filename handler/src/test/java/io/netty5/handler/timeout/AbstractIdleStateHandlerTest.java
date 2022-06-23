@@ -73,7 +73,7 @@ public abstract class AbstractIdleStateHandlerTest {
         final List<Object> events = new ArrayList<>();
         ChannelHandler handler = new ChannelHandler() {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
             }
         };
@@ -144,7 +144,7 @@ public abstract class AbstractIdleStateHandlerTest {
         final List<Object> events = new ArrayList<>();
         ChannelHandler handler = new ChannelHandler() {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
             }
         };
@@ -206,7 +206,7 @@ public abstract class AbstractIdleStateHandlerTest {
         final List<Object> events = new ArrayList<>();
         ChannelHandler handler = new ChannelHandler() {
             @Override
-            public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
             }
         };

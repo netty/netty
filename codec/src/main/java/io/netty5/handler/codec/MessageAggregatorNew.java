@@ -179,7 +179,7 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
                 if (listener == null) {
                     continueResponseWriteListener = listener = (context, future) -> {
                         if (future.isFailed()) {
-                            context.fireExceptionCaught(future.cause());
+                            context.fireChannelExceptionCaught(future.cause());
                         }
                     };
                 }
@@ -340,7 +340,7 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
      */
     protected void handleOversizedMessage(ChannelHandlerContext ctx, @SuppressWarnings("unused") Object oversized)
             throws Exception {
-        ctx.fireExceptionCaught(
+        ctx.fireChannelExceptionCaught(
                 new TooLongFrameException("content length exceeded " + maxContentLength() + " bytes."));
     }
 

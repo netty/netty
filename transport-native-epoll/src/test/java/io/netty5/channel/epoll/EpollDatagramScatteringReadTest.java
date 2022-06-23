@@ -141,7 +141,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                 }
 
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)  {
+                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause)  {
                     errorRef.compareAndSet(null, cause);
                 }
             });
@@ -243,7 +243,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                 }
 
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)  {
+                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause)  {
                     errorRef.compareAndSet(null, cause);
                 }
             });

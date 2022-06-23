@@ -93,9 +93,9 @@ public class ChannelInitializerTest {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 causeRef.set(cause);
-                super.exceptionCaught(ctx, cause);
+                super.channelExceptionCaught(ctx, cause);
             }
         });
 

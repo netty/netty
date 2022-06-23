@@ -168,14 +168,14 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-            channel.pipeline().fireExceptionCaught(cause);
+        public ChannelHandlerContext fireChannelExceptionCaught(Throwable cause) {
+            channel.pipeline().fireChannelExceptionCaught(cause);
             return this;
         }
 
         @Override
-        public ChannelHandlerContext fireInboundEventTriggered(Object evt) {
-            channel.pipeline().fireInboundEventTriggered(evt);
+        public ChannelHandlerContext fireChannelInboundEvent(Object evt) {
+            channel.pipeline().fireChannelInboundEvent(evt);
             return this;
         }
 
@@ -210,8 +210,8 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public Future<Void> triggerOutboundEvent(Object event) {
-            return channel.pipeline().triggerOutboundEvent(event);
+        public Future<Void> sendOutboundEvent(Object event) {
+            return channel.pipeline().sendOutboundEvent(event);
         }
 
         @Override

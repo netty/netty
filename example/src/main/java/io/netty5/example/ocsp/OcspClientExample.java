@@ -140,9 +140,9 @@ public class OcspClientExample {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 if (!promise.tryFailure(cause)) {
-                    ctx.fireExceptionCaught(cause);
+                    ctx.fireChannelExceptionCaught(cause);
                 }
             }
         };
@@ -192,9 +192,9 @@ public class OcspClientExample {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (!promise.tryFailure(cause)) {
-                ctx.fireExceptionCaught(cause);
+                ctx.fireChannelExceptionCaught(cause);
             }
         }
     }

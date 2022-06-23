@@ -138,7 +138,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
         Future<Void> f = ctx.write(msg);
 
         // Notify that the upgrade request was issued.
-        ctx.fireInboundEventTriggered(UpgradeEvent.UPGRADE_ISSUED);
+        ctx.fireChannelInboundEvent(UpgradeEvent.UPGRADE_ISSUED);
         // Now we wait for the next HTTP response to see if we switch protocols.
         return f;
     }
@@ -159,7 +159,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
                     // and continue processing HTTP.
                     // NOTE: not releasing the response since we're letting it propagate to the
                     // next handler.
-                    ctx.fireInboundEventTriggered(UpgradeEvent.UPGRADE_REJECTED);
+                    ctx.fireChannelInboundEvent(UpgradeEvent.UPGRADE_REJECTED);
                     ctx.fireChannelRead(msg);
                     removeThisHandler(ctx);
                     return;
@@ -186,7 +186,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
             if (response != null && response.isAccessible()) {
                 response.close();
             }
-            ctx.fireExceptionCaught(t);
+            ctx.fireChannelExceptionCaught(t);
             removeThisHandler(ctx);
         }
     }
@@ -204,14 +204,14 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
             upgradeCodec.upgradeTo(ctx, response.send());
 
             // Notify that the upgrade to the new protocol completed successfully.
-            ctx.fireInboundEventTriggered(UpgradeEvent.UPGRADE_SUCCESSFUL);
+            ctx.fireChannelInboundEvent(UpgradeEvent.UPGRADE_SUCCESSFUL);
 
             // We guarantee UPGRADE_SUCCESSFUL event will be arrived at the next handler
             // before http2 setting frame and http response.
             sourceCodec.upgradeFrom(ctx);
             removeThisHandler(ctx);
         } catch (Throwable t) {
-            ctx.fireExceptionCaught(t);
+            ctx.fireChannelExceptionCaught(t);
             removeThisHandler(ctx);
         }
     }

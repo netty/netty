@@ -97,14 +97,14 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     }
 
     @Override
-    public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-        ctx.fireExceptionCaught(cause);
+    public ChannelHandlerContext fireChannelExceptionCaught(Throwable cause) {
+        ctx.fireChannelExceptionCaught(cause);
         return this;
     }
 
     @Override
-    public ChannelHandlerContext fireInboundEventTriggered(Object evt) {
-        ctx.fireInboundEventTriggered(evt);
+    public ChannelHandlerContext fireChannelInboundEvent(Object evt) {
+        ctx.fireChannelInboundEvent(evt);
         return this;
     }
 
@@ -140,8 +140,8 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     }
 
     @Override
-    public Future<Void> triggerOutboundEvent(Object event) {
-        return ctx.triggerOutboundEvent(event);
+    public Future<Void> sendOutboundEvent(Object event) {
+        return ctx.sendOutboundEvent(event);
     }
 
     @Override

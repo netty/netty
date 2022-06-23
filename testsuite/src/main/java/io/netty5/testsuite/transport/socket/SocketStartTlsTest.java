@@ -256,8 +256,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx,
+                                           Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the client side", cause);
             }
@@ -307,8 +307,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx,
+                                           Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the server side", cause);
             }

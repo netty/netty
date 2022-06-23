@@ -84,8 +84,8 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        decoder.inboundEventTriggered(ctx, evt);
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
+        decoder.channelInboundEvent(ctx, evt);
     }
 
     @Override
@@ -94,8 +94,8 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        decoder.exceptionCaught(ctx, cause);
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        decoder.channelExceptionCaught(ctx, cause);
     }
 
     @Override

@@ -261,11 +261,11 @@ public interface ChannelHandler {
     }
 
     /**
-     * Gets called if a custom inbound event was triggered.
+     * Gets called if a custom inbound event happened.
      */
     @Skip
-    default void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireInboundEventTriggered(evt);
+    default void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireChannelInboundEvent(evt);
     }
 
     /**
@@ -278,11 +278,11 @@ public interface ChannelHandler {
     }
 
     /**
-     * Gets called if a {@link Throwable} was thrown.
+     * Gets called if a {@link Throwable} was thrown when handling inbound events.
      */
     @Skip
-    default void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.fireExceptionCaught(cause);
+    default void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.fireChannelExceptionCaught(cause);
     }
 
     /**
@@ -402,15 +402,15 @@ public interface ChannelHandler {
     }
 
     /**
-     * Called once a custom defined outbound event was triggered. This operation will pass the event through the
-     * {@link ChannelPipeline}.
+     * Called once a custom defined outbound event was sent. This operation will pass the event through the
+     * {@link ChannelPipeline} in the outbound direction.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the operation is made.
      * @param event             the event.
      * @return                  the {@link Future} which will be notified once the operation completes.
      */
     @Skip
-    default Future<Void> triggerOutboundEvent(ChannelHandlerContext ctx, Object event) {
-        return ctx.triggerOutboundEvent(event);
+    default Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
+        return ctx.sendOutboundEvent(event);
     }
 }

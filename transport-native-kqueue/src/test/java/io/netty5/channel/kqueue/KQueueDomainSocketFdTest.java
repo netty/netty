@@ -80,7 +80,7 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 queue.add(cause);
                 ctx.close();
             }

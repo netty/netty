@@ -179,7 +179,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         try {
                             doDeregister();
                         } catch (Throwable cause) {
-                            pipeline().fireExceptionCaught(cause);
+                            pipeline().fireChannelExceptionCaught(cause);
                         }
                     });
                 }
@@ -449,7 +449,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             try {
                 clearFlag(Native.EPOLLRDHUP);
             } catch (IOException e) {
-                pipeline().fireExceptionCaught(e);
+                pipeline().fireChannelExceptionCaught(e);
                 close(newPromise());
             }
         }
@@ -517,7 +517,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             } catch (IOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.
-                pipeline().fireExceptionCaught(e);
+                pipeline().fireChannelExceptionCaught(e);
                 unsafe().close(newPromise());
             }
         }

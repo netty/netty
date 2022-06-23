@@ -191,8 +191,8 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx,
+                                           Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the client side", cause);
             }
@@ -219,8 +219,8 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx,
+                                           Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the server side", cause);
             }
@@ -230,7 +230,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        public void channelInboundEvent(final ChannelHandlerContext ctx, final Object evt) throws Exception {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 final SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                 if (event.isSuccess()) {
@@ -261,7 +261,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                     }
                 }
             }
-            ctx.fireInboundEventTriggered(evt);
+            ctx.fireChannelInboundEvent(evt);
         }
     }
 }

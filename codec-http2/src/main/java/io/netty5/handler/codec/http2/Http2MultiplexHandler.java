@@ -166,7 +166,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (msg instanceof Http2ResetFrame) {
                 // Reset frames needs to be propagated via user events as these are not flow-controlled and so
                 // must not be controlled by suppressing channel.read() on the child channel.
-                channel.pipeline().fireInboundEventTriggered(msg);
+                channel.pipeline().fireChannelInboundEvent(msg);
 
                 // RST frames will also trigger closing of the streams which then will call
                 // AbstractHttp2StreamChannel.streamClosed()
@@ -198,7 +198,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     }
 
     @Override
-    public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof Http2FrameStreamEvent) {
             Http2FrameStreamEvent event = (Http2FrameStreamEvent) evt;
             DefaultHttp2FrameStream stream = (DefaultHttp2FrameStream) event.stream();
@@ -228,7 +228,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             }
             return;
         }
-        ctx.fireInboundEventTriggered(evt);
+        ctx.fireChannelInboundEvent(evt);
     }
 
     private void createStreamChannelIfNeeded(DefaultHttp2FrameStream stream)
@@ -264,14 +264,14 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, final Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof Http2FrameStreamException) {
             Http2FrameStreamException exception = (Http2FrameStreamException) cause;
             Http2FrameStream stream = exception.stream();
             AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
             try {
-                childChannel.pipeline().fireExceptionCaught(cause.getCause());
+                childChannel.pipeline().fireChannelExceptionCaught(cause.getCause());
             } finally {
                 childChannel.unsafe().closeForcibly();
             }
@@ -281,11 +281,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             forEachActiveStream(stream -> {
                 AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                         ((DefaultHttp2FrameStream) stream).attachment;
-                childChannel.pipeline().fireExceptionCaught(cause);
+                childChannel.pipeline().fireChannelExceptionCaught(cause);
                 return true;
             });
         }
-        ctx.fireExceptionCaught(cause);
+        ctx.fireChannelExceptionCaught(cause);
     }
 
     private static boolean isServer(ChannelHandlerContext ctx) {
@@ -305,12 +305,12 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                     final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                             ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireInboundEventTriggered(goAwayFrame.copy());
+                    childChannel.pipeline().fireChannelInboundEvent(goAwayFrame.copy());
                 }
                 return true;
             });
         } catch (Http2Exception e) {
-            ctx.fireExceptionCaught(e);
+            ctx.fireChannelExceptionCaught(e);
             ctx.close();
         }
     }

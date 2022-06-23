@@ -145,10 +145,10 @@ public class FlushConsolidationHandler implements ChannelHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         // To ensure we not miss to flush anything, do it now.
         resetReadAndFlushIfNeeded(ctx);
-        ctx.fireExceptionCaught(cause);
+        ctx.fireChannelExceptionCaught(cause);
     }
 
     @Override

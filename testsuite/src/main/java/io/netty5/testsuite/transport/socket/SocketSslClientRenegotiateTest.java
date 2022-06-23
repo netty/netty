@@ -236,13 +236,13 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
             ctx.close();
         }
 
         @Override
-        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
                 if (handshakeCounter == 0) {
