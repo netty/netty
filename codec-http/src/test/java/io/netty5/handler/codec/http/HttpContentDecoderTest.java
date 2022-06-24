@@ -181,6 +181,40 @@ public class HttpContentDecoderTest {
         assertFalse(channel.finish()); // assert that no messages are left in channel
     }
 
+    @Test
+    public void testResponseDecompressionNoExpected() throws Exception {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+
+        byte[] headers = ("HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n").getBytes(StandardCharsets.US_ASCII);
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(headers)));
+
+        String chunkLength = Integer.toHexString(HELLO_WORLD.length());
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(chunkLength + "\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(HELLO_WORLD + "\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf("0\r\n\r\n", CharsetUtil.US_ASCII)));
+
+        Object o = channel.readInbound();
+        assertThat(o, is(instanceOf(HttpResponse.class)));
+
+        o = channel.readInbound();
+        assertThat(o, is(instanceOf(HttpContent.class)));
+        try (HttpContent<?> resp = (HttpContent<?>) o) {
+            assertEquals(HELLO_WORLD, resp.payload().toString(CharsetUtil.US_ASCII));
+        }
+
+        o = channel.readInbound();
+        assertThat(o, is(instanceOf(LastHttpContent.class)));
+        ((LastHttpContent<?>) o).close();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish());
+    }
+
     @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
     @Test
     public void testResponseBrotliDecompression() throws Throwable {

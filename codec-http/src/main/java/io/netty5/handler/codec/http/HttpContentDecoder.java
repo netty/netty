@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 import io.netty5.handler.codec.compression.Decompressor;
+import io.netty5.util.Resource;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
@@ -50,106 +51,115 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     private boolean needRead = true;
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
+    protected void decodeAndClose(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+        boolean dispose = true;
+        try {
+            if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
 
-            if (!(msg instanceof LastHttpContent)) {
+                if (!(msg instanceof LastHttpContent)) {
                     continueResponse = true;
-            }
-            // 100-continue response must be passed through.
-            fireChannelRead(ctx, msg);
-            return;
-        }
-
-        if (continueResponse) {
-            if (msg instanceof LastHttpContent) {
-                continueResponse = false;
-            }
-            // 100-continue response must be passed through.
-            fireChannelRead(ctx, msg);
-            return;
-        }
-
-        if (msg instanceof HttpMessage) {
-            cleanup();
-            final HttpMessage message = (HttpMessage) msg;
-            final HttpHeaders headers = message.headers();
-
-            // Determine the content encoding.
-            String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
-            if (contentEncoding != null) {
-                contentEncoding = contentEncoding.trim();
-            } else {
-                String transferEncoding = headers.get(HttpHeaderNames.TRANSFER_ENCODING);
-                if (transferEncoding != null) {
-                    int idx = transferEncoding.indexOf(",");
-                    if (idx != -1) {
-                        contentEncoding = transferEncoding.substring(0, idx).trim();
-                    } else {
-                        contentEncoding = transferEncoding.trim();
-                    }
-                } else {
-                    contentEncoding = IDENTITY;
                 }
-            }
-            decompressor = newContentDecoder(contentEncoding);
-
-            if (decompressor == null) {
-                fireChannelRead(ctx, message);
+                // 100-continue response must be passed through.
+                fireChannelRead(ctx, msg);
                 return;
             }
 
-            // Remove content-length header:
-            // the correct value can be set only after all chunks are processed/decoded.
-            // If buffering is not an issue, add HttpObjectAggregator down the chain, it will set the header.
-            // Otherwise, rely on LastHttpContent message.
-            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                headers.remove(HttpHeaderNames.CONTENT_LENGTH);
-                headers.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-            }
-            // Either it is already chunked or EOF terminated.
-            // See https://github.com/netty/netty/issues/5892
-
-            // set new content encoding,
-            CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
-            if (HttpHeaderValues.IDENTITY.contentEquals(targetContentEncoding)) {
-                // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
-                // as per: https://tools.ietf.org/html/rfc2616#section-14.11
-                headers.remove(HttpHeaderNames.CONTENT_ENCODING);
-            } else {
-                headers.set(HttpHeaderNames.CONTENT_ENCODING, targetContentEncoding);
-            }
-
-            if (message instanceof HttpContent) {
-                // If message is a full request or response object (headers + data), don't copy data part into out.
-                // Output headers only; data part will be decoded below.
-                // Note: "copy" object must not be an instance of LastHttpContent class,
-                // as this would (erroneously) indicate the end of the HttpMessage to other handlers.
-                HttpMessage copy;
-                if (message instanceof HttpRequest) {
-                    HttpRequest r = (HttpRequest) message; // HttpRequest or FullHttpRequest
-                    copy = new DefaultHttpRequest(r.protocolVersion(), r.method(), r.uri());
-                } else if (message instanceof HttpResponse) {
-                    HttpResponse r = (HttpResponse) message; // HttpResponse or FullHttpResponse
-                    copy = new DefaultHttpResponse(r.protocolVersion(), r.status());
-                } else {
-                    throw new CodecException("Object of class " + message.getClass().getName() +
-                            " is not an HttpRequest or HttpResponse");
+            if (continueResponse) {
+                if (msg instanceof LastHttpContent) {
+                    continueResponse = false;
                 }
-                copy.headers().set(message.headers());
-                copy.setDecoderResult(message.decoderResult());
-                fireChannelRead(ctx, copy);
-            } else {
-                fireChannelRead(ctx, message);
+                // 100-continue response must be passed through.
+                fireChannelRead(ctx, msg);
+                return;
             }
-        }
 
-        if (msg instanceof HttpContent) {
-            final HttpContent<?> c = (HttpContent<?>) msg;
-            if (decompressor == null) {
-                fireChannelRead(ctx, c);
-            } else {
-                decodeContent(ctx, c);
+            if (msg instanceof HttpMessage) {
+                cleanup();
+                final HttpMessage message = (HttpMessage) msg;
+                final HttpHeaders headers = message.headers();
+
+                // Determine the content encoding.
+                String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
+                if (contentEncoding != null) {
+                    contentEncoding = contentEncoding.trim();
+                } else {
+                    String transferEncoding = headers.get(HttpHeaderNames.TRANSFER_ENCODING);
+                    if (transferEncoding != null) {
+                        int idx = transferEncoding.indexOf(",");
+                        if (idx != -1) {
+                            contentEncoding = transferEncoding.substring(0, idx).trim();
+                        } else {
+                            contentEncoding = transferEncoding.trim();
+                        }
+                    } else {
+                        contentEncoding = IDENTITY;
+                    }
+                }
+                decompressor = newContentDecoder(contentEncoding);
+
+                if (decompressor == null) {
+                    dispose = false;
+                    fireChannelRead(ctx, message);
+                    return;
+                }
+
+                // Remove content-length header:
+                // the correct value can be set only after all chunks are processed/decoded.
+                // If buffering is not an issue, add HttpObjectAggregator down the chain, it will set the header.
+                // Otherwise, rely on LastHttpContent message.
+                if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                    headers.remove(HttpHeaderNames.CONTENT_LENGTH);
+                    headers.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+                }
+                // Either it is already chunked or EOF terminated.
+                // See https://github.com/netty/netty/issues/5892
+
+                // set new content encoding,
+                CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                if (HttpHeaderValues.IDENTITY.contentEquals(targetContentEncoding)) {
+                    // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
+                    // as per: https://tools.ietf.org/html/rfc2616#section-14.11
+                    headers.remove(HttpHeaderNames.CONTENT_ENCODING);
+                } else {
+                    headers.set(HttpHeaderNames.CONTENT_ENCODING, targetContentEncoding);
+                }
+
+                if (message instanceof HttpContent) {
+                    // If message is a full request or response object (headers + data), don't copy data part into out.
+                    // Output headers only; data part will be decoded below.
+                    // Note: "copy" object must not be an instance of LastHttpContent class,
+                    // as this would (erroneously) indicate the end of the HttpMessage to other handlers.
+                    HttpMessage copy;
+                    if (message instanceof HttpRequest) {
+                        HttpRequest r = (HttpRequest) message; // HttpRequest or FullHttpRequest
+                        copy = new DefaultHttpRequest(r.protocolVersion(), r.method(), r.uri());
+                    } else if (message instanceof HttpResponse) {
+                        HttpResponse r = (HttpResponse) message; // HttpResponse or FullHttpResponse
+                        copy = new DefaultHttpResponse(r.protocolVersion(), r.status());
+                    } else {
+                        throw new CodecException("Object of class " + message.getClass().getName() +
+                                " is not an HttpRequest or HttpResponse");
+                    }
+                    copy.headers().set(message.headers());
+                    copy.setDecoderResult(message.decoderResult());
+                    fireChannelRead(ctx, copy);
+                } else {
+                    fireChannelRead(ctx, message);
+                }
+            }
+
+            if (msg instanceof HttpContent) {
+                final HttpContent<?> c = (HttpContent<?>) msg;
+                if (decompressor == null) {
+                    dispose = false;
+                    fireChannelRead(ctx, c);
+                } else {
+                    decodeContent(ctx, c);
+                }
+            }
+        } finally {
+            if (dispose) {
+                Resource.dispose(msg);
             }
         }
     }
