@@ -1,0 +1,22 @@
+{
+  "resources":{
+  "includes":[
+    {
+      "condition":{"typeReachable":"io.netty.channel.epoll.Native"},
+      "pattern":"\\QMETA-INF/native/libnetty_transport_native_epoll_x86_64.so\\E"
+    }, 
+    {
+      "condition":{"typeReachable":"io.netty.handler.codec.compression.Brotli"},
+      "pattern":"\\Qlib/linux-x86_64/libbrotli.so\\E"
+    }, 
+    {
+      "condition":{"typeReachable":"io.netty.handler.codec.compression.ZstdEncoder"},
+      "pattern":"\\Qlinux/amd64/libzstd-jni-1.5.0-2.so\\E"
+    }, 
+    {
+      "condition":{"typeReachable":"io.netty.util.internal.logging.Slf4JLoggerFactory"},
+      "pattern":"\\Qorg/slf4j/impl/StaticLoggerBinder.class\\E"
+    }
+  ]},
+  "bundles":[]
+}

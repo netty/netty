@@ -1,0 +1,7 @@
+[
+{
+  "condition":{"typeReachable":"io.netty.util.internal.PlatformDependent0"},
+  "name":"java.nio.DirectByteBuffer",
+  "methods":[{"name":"<init>","parameterTypes":["long","int"] }]
+}
+]

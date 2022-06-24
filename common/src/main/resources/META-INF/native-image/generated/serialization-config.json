@@ -1,0 +1,28 @@
+{
+  "types":[
+    {
+      "condition":{"typeReachable":"io.netty.channel.epoll.EpollEventLoop"},
+      "name":"java.lang.String"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.handler.codec.marshalling.MarshallingEncoder"},
+      "name":"java.lang.String"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.handler.codec.marshalling.MarshallingEncoder"},
+      "name":"java.lang.String",
+      "customTargetConstructorClass":"java.lang.Object"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.handler.codec.marshalling.MarshallingEncoder"},
+      "name":"java.lang.String",
+      "customTargetConstructorClass":"java.lang.String"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.util.concurrent.FastThreadLocalRunnable"},
+      "name":"java.lang.String"
+    }
+  ],
+  "lambdaCapturingTypes":[
+  ]
+}

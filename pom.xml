@@ -1391,7 +1391,7 @@
             <logback.configurationFile>${logging.config}</logback.configurationFile>
             <logLevel>${logging.logLevel}</logLevel>
           </systemPropertyVariables>
-          <argLine>-agentlib:native-image-agent=config-output-dir=config/${project.artifactId}/{pid} ${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
+          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
           <properties>
             <property>
               <name>listener</name>

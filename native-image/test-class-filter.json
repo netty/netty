@@ -1,0 +1,14 @@
+{
+    "rules": [
+        {"includeClasses": "**"},
+        {"excludeClasses": "io.netty.testsuite.**"},
+        {"excludeClasses": "io.netty.test.**"},
+        {"excludeClasses": "sun.instrument.**"},
+        {"excludeClasses": "org.mockito.**"},
+        {"excludeClasses": "reactor.blockhound.**"}
+    ],
+    "regexRules": [
+        {"excludeClasses": ".*MockitoMock.*"},
+        {"excludeClasses": ".*Test.*"}
+    ]
+}
