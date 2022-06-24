@@ -28,12 +28,6 @@ public interface ChunkedInput<B> extends AutoCloseable {
     boolean isEndOfInput() throws Exception;
 
     /**
-     * Releases the resources associated with the input.
-     */
-    @Override
-    void close() throws Exception;
-
-    /**
      * Fetches a chunked data from the stream. Once this method returns the last chunk
      * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
      * call must return {@code true}.
