@@ -22,7 +22,6 @@ import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -998,20 +997,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     protected void onUnhandledChannelWritabilityChanged() {
     }
 
-    @UnstableApi
+    /**
+     * Called once the pending outbound bytes should be incremented.
+     * @param size the number of bytes to add.
+     */
     protected void incrementPendingOutboundBytes(long size) {
-        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.incrementPendingOutboundBytes(size);
-        }
+       // NOOP
     }
 
-    @UnstableApi
+    /**
+     * Called once the pending outbound bytes should be decremented.
+     * @param size the number of bytes decremented.
+     */
     protected void decrementPendingOutboundBytes(long size) {
-        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.decrementPendingOutboundBytes(size);
-        }
+        // NOOP
     }
 
     // A special catch-all handler that handles both bytes and messages.

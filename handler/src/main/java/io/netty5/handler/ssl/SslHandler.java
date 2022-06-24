@@ -29,7 +29,6 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
@@ -1789,9 +1788,7 @@ public class SslHandler extends ByteToMessageDecoderForBuffer {
             startHandshakeProcessing(active);
             // If we weren't able to include client_hello in the TCP SYN (e.g. no token, disabled at the OS) we have to
             // flush pending data in the outbound buffer later in channelActive().
-            final ChannelOutboundBuffer outboundBuffer;
-            if (fastOpen && ((outboundBuffer = channel.unsafe().outboundBuffer()) == null ||
-                    outboundBuffer.totalPendingWriteBytes() > 0)) {
+            if (fastOpen) {
                 setState(STATE_NEEDS_FLUSH);
             }
         }

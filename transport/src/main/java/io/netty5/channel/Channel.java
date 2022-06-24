@@ -176,32 +176,19 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * this method returns {@code false} are queued until the I/O thread is
      * ready to process the queued write requests.
      */
-    default boolean isWritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        return buf != null && buf.isWritable();
-    }
+    boolean isWritable();
 
     /**
      * Get how many bytes can be written until {@link #isWritable()} returns {@code false}.
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code false} then 0.
      */
-    default long bytesBeforeUnwritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeUnwritable() : 0;
-    }
+    long bytesBeforeUnwritable();
 
     /**
      * Get how many bytes must be drained from underlying buffers until {@link #isWritable()} returns {@code true}.
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code true} then 0.
      */
-    default long bytesBeforeWritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
-    }
+    long bytesBeforeWritable();
 
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
@@ -399,10 +386,5 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
          * Send a custom outbound event.
          */
         void sendOutboundEvent(Object event, Promise<Void> promise);
-
-        /**
-         * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.
-         */
-        ChannelOutboundBuffer outboundBuffer();
     }
 }

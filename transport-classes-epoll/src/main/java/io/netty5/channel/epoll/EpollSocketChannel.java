@@ -124,7 +124,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     boolean doConnect0(SocketAddress remote) throws Exception {
         if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT && config.isTcpFastOpenConnect()) {
-            ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
+            ChannelOutboundBuffer outbound = ((AbstractEpollUnsafe) unsafe()).outboundBuffer();
             outbound.addFlush();
             Object curr = outbound.current();
             if (curr instanceof Buffer) {

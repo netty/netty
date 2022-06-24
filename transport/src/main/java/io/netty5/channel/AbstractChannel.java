@@ -48,7 +48,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private final Channel parent;
     private final ChannelId id;
-    private final Unsafe unsafe;
+    private final AbstractUnsafe unsafe;
     private final ChannelPipeline pipeline;
     private final ClosePromise closePromise;
 
@@ -128,7 +128,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Returns a new {@link ChannelPipeline} instance.
      */
     protected ChannelPipeline newChannelPipeline() {
-        return new DefaultChannelPipeline(this);
+        return new DefaultAbstractChannelPipeline(this);
     }
 
     @Override
@@ -207,6 +207,28 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public Unsafe unsafe() {
         return unsafe;
+    }
+
+    @Override
+    public final boolean isWritable() {
+        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
+        return buf != null && buf.isWritable();
+    }
+
+    @Override
+    public final long bytesBeforeUnwritable() {
+        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
+        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
+        // We should be consistent with that here.
+        return buf != null ? buf.bytesBeforeUnwritable() : 0;
+    }
+
+    @Override
+    public final long bytesBeforeWritable() {
+        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
+        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
+        // We should be consistent with that here.
+        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
     }
 
     /**
@@ -318,8 +340,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return recvHandle;
         }
 
-        @Override
-        public final ChannelOutboundBuffer outboundBuffer() {
+        protected ChannelOutboundBuffer outboundBuffer() {
             return outboundBuffer;
         }
 
@@ -1059,5 +1080,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
             return this;
         }
+    }
+
+    protected static class DefaultAbstractChannelPipeline extends DefaultChannelPipeline {
+        protected DefaultAbstractChannelPipeline(AbstractChannel channel) {
+            super(channel);
+        }
+
+        @Override
+        protected void incrementPendingOutboundBytes(long size) {
+            ChannelOutboundBuffer buffer = ((AbstractChannel) channel()).outboundBuffer();
+            if (buffer != null) {
+                buffer.incrementPendingOutboundBytes(size);
+            }
+        }
+
+        @Override
+        protected void decrementPendingOutboundBytes(long size) {
+            ChannelOutboundBuffer buffer = ((AbstractChannel) channel()).outboundBuffer();
+            if (buffer != null) {
+                buffer.decrementPendingOutboundBytes(size);
+            }
+        }
+    }
+
+    // Just for testing.
+    ChannelOutboundBuffer outboundBuffer() {
+        return unsafe.outboundBuffer;
     }
 }

@@ -652,6 +652,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             setFlag(Native.EPOLLOUT);
             return false;
         }
+
+        // Override so we can access it from sub-classes
+        @Override
+        protected ChannelOutboundBuffer outboundBuffer() {
+            return super.outboundBuffer();
+        }
     }
 
     @Override

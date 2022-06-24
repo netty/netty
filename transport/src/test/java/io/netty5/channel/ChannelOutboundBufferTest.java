@@ -463,6 +463,10 @@ public class ChannelOutboundBufferTest {
         }
     }
 
+    private static ChannelOutboundBuffer outboundBuffer(EmbeddedChannel ch) {
+        return ((AbstractChannel) ch).outboundBuffer();
+    }
+
     @Test
     public void testWritability() {
         final StringBuilder buf = new StringBuilder();
@@ -482,16 +486,17 @@ public class ChannelOutboundBufferTest {
         ch.write(buffer().writeZero(2));
         assertThat(buf.toString()).isEmpty();
 
-        ch.unsafe().outboundBuffer().addFlush();
+        ChannelOutboundBuffer outboundBuffer = outboundBuffer(ch);
+        outboundBuffer.addFlush();
 
         // Ensure exceeding the high watermark makes channel unwritable.
         ch.write(buffer().writeZero(127));
         assertThat(buf.toString()).isEqualTo("false ");
 
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
-        assertTrue(ch.unsafe().outboundBuffer().remove());
-        assertTrue(ch.unsafe().outboundBuffer().remove());
-        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes()).isEqualTo(
+        outboundBuffer.remove();
+        outboundBuffer.remove();
+        assertThat(outboundBuffer.totalPendingWriteBytes()).isEqualTo(
                 127L + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD);
         assertThat(buf.toString()).isEqualTo("false true ");
 
@@ -512,7 +517,7 @@ public class ChannelOutboundBufferTest {
         ch.config().setWriteBufferLowWaterMark(128);
         ch.config().setWriteBufferHighWaterMark(256);
 
-        ChannelOutboundBuffer cob = ch.unsafe().outboundBuffer();
+        ChannelOutboundBuffer cob = outboundBuffer(ch);
 
         // Ensure that the default value of a user-defined writability flag is true.
         for (int i = 1; i <= 30; i ++) {
@@ -546,7 +551,7 @@ public class ChannelOutboundBufferTest {
         ch.config().setWriteBufferLowWaterMark(128);
         ch.config().setWriteBufferHighWaterMark(256);
 
-        ChannelOutboundBuffer cob = ch.unsafe().outboundBuffer();
+        ChannelOutboundBuffer cob = outboundBuffer(ch);
 
         // Ensure that setting a user-defined writability flag to false affects channel.isWritable()
         cob.setUserDefinedWritability(1, false);
@@ -586,7 +591,7 @@ public class ChannelOutboundBufferTest {
         ch.config().setWriteBufferLowWaterMark(128);
         ch.config().setWriteBufferHighWaterMark(256);
 
-        ChannelOutboundBuffer cob = ch.unsafe().outboundBuffer();
+        ChannelOutboundBuffer cob = outboundBuffer(ch);
 
         ch.executor().execute(() -> {
             // Trigger channelWritabilityChanged() by writing a lot.
