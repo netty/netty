@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ServerChannel;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
@@ -90,7 +89,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
-    private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
+    private final Queue<DefaultHttp2StreamChannel> readCompletePendingQueue =
             new MaxCapacityQueue<>(new ArrayDeque<>(8),
                     // Choose 100 which is what is used most of the times as default.
                     Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
@@ -162,7 +161,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             DefaultHttp2FrameStream s =
                     (DefaultHttp2FrameStream) streamFrame.stream();
 
-            AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
+            DefaultHttp2StreamChannel channel = (DefaultHttp2StreamChannel) s.attachment;
             if (msg instanceof Http2ResetFrame) {
                 // Reset frames needs to be propagated via user events as these are not flow-controlled and so
                 // must not be controlled by suppressing channel.read() on the child channel.
@@ -191,7 +190,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         if (ctx.channel().isWritable()) {
             // While the writability state may change during iterating of the streams we just set all of the streams
             // to writable to not affect fairness. These will be "limited" by their own watermarks in any case.
-            forEachActiveStream(AbstractHttp2StreamChannel.WRITABLE_VISITOR);
+            forEachActiveStream(DefaultHttp2StreamChannel.WRITABLE_VISITOR);
         }
 
         ctx.fireChannelWritabilityChanged();
@@ -216,7 +215,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                         createStreamChannelIfNeeded(stream);
                         break;
                     case CLOSED:
-                        AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
+                        DefaultHttp2StreamChannel channel = (DefaultHttp2StreamChannel) stream.attachment;
                         if (channel != null) {
                             channel.streamClosed();
                         }
@@ -237,7 +236,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             // ignore if child channel was already created.
             return;
         }
-        final AbstractHttp2StreamChannel ch;
+        final DefaultHttp2StreamChannel ch;
         // We need to handle upgrades special when on the client side.
         if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isServer(ctx)) {
             // We must have an upgrade handler or else we can't handle the stream
@@ -245,10 +244,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 throw connectionError(INTERNAL_ERROR,
                         "Client is misconfigured for upgrade requests");
             }
-            ch = new Http2MultiplexHandlerStreamChannel(stream, upgradeStreamHandler);
+            ch = new DefaultHttp2StreamChannel(this, stream, ++idCount, upgradeStreamHandler);
             ch.closeOutbound();
         } else {
-            ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
+            ch = new DefaultHttp2StreamChannel(this, stream, ++idCount, inboundStreamHandler);
         }
         Future<Void> future = ch.register();
         if (future.isDone()) {
@@ -260,7 +259,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.
     Http2StreamChannel newOutboundStream() {
-        return new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(), null);
+        return new DefaultHttp2StreamChannel(this, (DefaultHttp2FrameStream) newStream(), ++idCount, null);
     }
 
     @Override
@@ -268,7 +267,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         if (cause instanceof Http2FrameStreamException) {
             Http2FrameStreamException exception = (Http2FrameStreamException) cause;
             Http2FrameStream stream = exception.stream();
-            AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+            DefaultHttp2StreamChannel childChannel = (DefaultHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
             try {
                 childChannel.pipeline().fireChannelExceptionCaught(cause.getCause());
@@ -279,7 +278,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         }
         if (cause.getCause() instanceof SSLException) {
             forEachActiveStream(stream -> {
-                AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                DefaultHttp2StreamChannel childChannel = (DefaultHttp2StreamChannel)
                         ((DefaultHttp2FrameStream) stream).attachment;
                 childChannel.pipeline().fireChannelExceptionCaught(cause);
                 return true;
@@ -303,7 +302,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             forEachActiveStream(stream -> {
                 final int streamId = stream.id();
                 if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
-                    final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                    final DefaultHttp2StreamChannel childChannel = (DefaultHttp2StreamChannel)
                             ((DefaultHttp2FrameStream) stream).attachment;
                     childChannel.pipeline().fireChannelInboundEvent(goAwayFrame.copy());
                 }
@@ -329,7 +328,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         // If we have many child channel we can optimize for the case when multiple call flush() in
         // channelReadComplete(...) callbacks and only do it once as otherwise we will end-up with multiple
         // write calls on the socket which is expensive.
-        AbstractHttp2StreamChannel childChannel = readCompletePendingQueue.poll();
+        DefaultHttp2StreamChannel childChannel = readCompletePendingQueue.poll();
         if (childChannel != null) {
             try {
                 do {
@@ -346,29 +345,19 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         }
     }
 
-    private final class Http2MultiplexHandlerStreamChannel extends AbstractHttp2StreamChannel {
+    boolean isParentReadInProgress() {
+        return parentReadInProgress;
+    }
 
-        Http2MultiplexHandlerStreamChannel(DefaultHttp2FrameStream stream, ChannelHandler inboundHandler) {
-            super(stream, ++idCount, inboundHandler);
+    void addChannelToReadCompletePendingQueue(DefaultHttp2StreamChannel channel) {
+        // If there is no space left in the queue, just keep on processing everything that is already
+        // stored there and try again.
+        while (!readCompletePendingQueue.offer(channel)) {
+            processPendingReadCompleteQueue();
         }
+    }
 
-        @Override
-        protected boolean isParentReadInProgress() {
-            return parentReadInProgress;
-        }
-
-        @Override
-        protected void addChannelToReadCompletePendingQueue() {
-            // If there is no space left in the queue, just keep on processing everything that is already
-            // stored there and try again.
-            while (!readCompletePendingQueue.offer(this)) {
-                processPendingReadCompleteQueue();
-            }
-        }
-
-        @Override
-        protected ChannelHandlerContext parentContext() {
-            return ctx;
-        }
+    ChannelHandlerContext parentContext() {
+        return ctx;
     }
 }

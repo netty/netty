@@ -21,7 +21,6 @@ import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
@@ -54,16 +53,16 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static java.lang.Math.min;
 
-abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements Http2StreamChannel {
+final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Http2StreamChannel {
 
     static final Http2FrameStreamVisitor WRITABLE_VISITOR = stream -> {
-        final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+        final DefaultHttp2StreamChannel childChannel = (DefaultHttp2StreamChannel)
                 ((DefaultHttp2FrameStream) stream).attachment;
         childChannel.trySetWritable();
         return true;
     };
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractHttp2StreamChannel.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2StreamChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
@@ -91,11 +90,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
     }
 
-    private static final AtomicLongFieldUpdater<AbstractHttp2StreamChannel> TOTAL_PENDING_SIZE_UPDATER =
-            AtomicLongFieldUpdater.newUpdater(AbstractHttp2StreamChannel.class, "totalPendingSize");
+    private static final AtomicLongFieldUpdater<DefaultHttp2StreamChannel> TOTAL_PENDING_SIZE_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(DefaultHttp2StreamChannel.class, "totalPendingSize");
 
-    private static final AtomicIntegerFieldUpdater<AbstractHttp2StreamChannel> UNWRITABLE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractHttp2StreamChannel.class, "unwritable");
+    private static final AtomicIntegerFieldUpdater<DefaultHttp2StreamChannel> UNWRITABLE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultHttp2StreamChannel.class, "unwritable");
 
     private static void windowUpdateFrameWriteComplete(Channel streamChannel, Future<?> future) {
         Throwable cause = future.cause();
@@ -113,7 +112,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     /**
-     * The current status of the read-processing for a {@link AbstractHttp2StreamChannel}.
+     * The current status of the read-processing for a {@link DefaultHttp2StreamChannel}.
      */
     private enum ReadStatus {
         /**
@@ -132,6 +131,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         REQUESTED
     }
 
+    private final Http2MultiplexHandler handler;
     private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
     private final Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
     private final ChannelId channelId;
@@ -165,18 +165,20 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     private boolean firstFrameWritten;
     private boolean readCompletePending;
 
-    AbstractHttp2StreamChannel(DefaultHttp2FrameStream stream, int id, ChannelHandler inboundHandler) {
+    DefaultHttp2StreamChannel(Http2MultiplexHandler handler, DefaultHttp2FrameStream stream, int id,
+                               ChannelHandler inboundHandler) {
+        this.handler = handler;
         this.stream = stream;
         stream.attachment = this;
         pipeline = new DefaultChannelPipeline(this) {
             @Override
             protected void incrementPendingOutboundBytes(long size) {
-                AbstractHttp2StreamChannel.this.incrementPendingOutboundBytes(size, true);
+                DefaultHttp2StreamChannel.this.incrementPendingOutboundBytes(size, true);
             }
 
             @Override
             protected void decrementPendingOutboundBytes(long size) {
-                AbstractHttp2StreamChannel.this.decrementPendingOutboundBytes(size, true);
+                DefaultHttp2StreamChannel.this.decrementPendingOutboundBytes(size, true);
             }
         };
 
@@ -216,7 +218,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
     }
 
-    final void trySetWritable() {
+    void trySetWritable() {
         // The parent is writable again but the child channel itself may still not be writable.
         // Lets try to set the child channel writable to match the state of the parent channel
         // if (and only if) the totalPendingSize is smaller then the low water-mark.
@@ -332,7 +334,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     @Override
     public Channel parent() {
-        return parentContext().channel();
+        return handler.parentContext().channel();
     }
 
     @Override
@@ -743,7 +745,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 } while ((readEOS || (continueReading = allocHandle.continueReading()))
                         && (message = pollQueuedMessage()) != null);
 
-                if (continueReading && isParentReadInProgress() && !readEOS) {
+                if (continueReading && handler.isParentReadInProgress() && !readEOS) {
                     // Currently the parent and child channel are on the same EventLoop thread. If the parent is
                     // currently reading it is possible that more frames will be delivered to this child channel. In
                     // the case that this child channel still wants to read we delay the channelReadComplete on this
@@ -763,7 +765,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             if (flowControlledBytes != 0) {
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
-                Future<Void> future = write0(parentContext(), new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
+                Future<Void> future = handler.parentContext()
+                        .write(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
                 // window update frames are commonly swallowed by the Http2FrameCodec and the promise is synchronously
                 // completed but the flow controller _may_ have generated a wire level WINDOW_UPDATE. Therefore we need,
                 // to assume there was a write done that needs to be flushed or we risk flow control starvation.
@@ -773,10 +776,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 // already.
                 // See https://github.com/netty/netty/issues/9663
                 if (future.isDone()) {
-                    windowUpdateFrameWriteComplete(AbstractHttp2StreamChannel.this, future);
+                    windowUpdateFrameWriteComplete(DefaultHttp2StreamChannel.this, future);
                 } else {
-                    future.addListener(AbstractHttp2StreamChannel.this,
-                                       AbstractHttp2StreamChannel::windowUpdateFrameWriteComplete);
+                    future.addListener(DefaultHttp2StreamChannel.this,
+                            DefaultHttp2StreamChannel::windowUpdateFrameWriteComplete);
                 }
             }
         }
@@ -913,7 +916,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 firstWrite = firstFrameWritten = true;
             }
 
-            Future<Void> f = write0(parentContext(), frame);
+            Future<Void> f = handler.parentContext().write(frame);
             if (f.isDone()) {
                 if (firstWrite) {
                     firstWriteComplete(f, promise);
@@ -990,14 +993,14 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // We will ensure we trigger ctx.flush() after we processed all Channels later on and
             // so aggregate the flushes. This is done as ctx.flush() is expensive when as it may trigger an
             // write(...) or writev(...) operation on the socket.
-            if (!writeDoneAndNoFlush || isParentReadInProgress()) {
+            if (!writeDoneAndNoFlush || handler.isParentReadInProgress()) {
                 // There is nothing to flush so this is a NOOP.
                 return;
             }
             // We need to set this to false before we call flush0(...) as FutureListener may produce more data
             // that are explicit flushed.
             writeDoneAndNoFlush = false;
-            flush0(parentContext());
+            handler.parentContext().flush();
         }
 
         @Override
@@ -1037,21 +1040,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     private void maybeAddChannelToReadCompletePendingQueue() {
         if (!readCompletePending) {
             readCompletePending = true;
-            addChannelToReadCompletePendingQueue();
+            handler.addChannelToReadCompletePendingQueue(this);
         }
     }
-
-    protected void flush0(ChannelHandlerContext ctx) {
-        ctx.flush();
-    }
-
-    protected Future<Void> write0(ChannelHandlerContext ctx, Object msg) {
-        return ctx.write(msg);
-    }
-
-    protected abstract boolean isParentReadInProgress();
-    protected abstract void addChannelToReadCompletePendingQueue();
-    protected abstract ChannelHandlerContext parentContext();
 
     /**
      * Creates a new {@link ChannelOutputShutdownException} which has the origin of the given {@link Class} and method.
