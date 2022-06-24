@@ -24,6 +24,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -337,8 +338,10 @@ public class ChunkedWriteHandler implements ChannelHandler {
         }
 
         void fail(Throwable cause) {
-            Resource.dispose(msg);
             promise.tryFailure(cause);
+            if (Resource.isAccessible(msg, false)) {
+                SilentDispose.dispose(msg, logger);
+            }
         }
 
         void success() {
