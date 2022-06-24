@@ -49,11 +49,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
-    private final Runnable flushTask = () -> {
-        // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-        // meantime.
-        ((AbstractEpollUnsafe) unsafe()).flush0();
-    };
+    // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+    // meantime.
+    private final Runnable flushTask = this::flush0;
 
     private WritableByteChannel byteChannel;
 
@@ -85,11 +83,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         super(null, eventLoop, fd, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
-    }
-
-    @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollStreamUnsafe();
     }
 
     @Override
@@ -427,106 +420,104 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         }
     }
 
-    class EpollStreamUnsafe extends AbstractEpollUnsafe {
-        // Overridden here just to be able to access this method from AbstractEpollStreamChannel
-        @Override
-        protected Executor prepareToClose() {
-            return super.prepareToClose();
-        }
+    // Overridden here just to be able to access this method from AbstractEpollStreamChannel
+    @Override
+    protected Executor prepareToClose() {
+        return super.prepareToClose();
+    }
 
-        private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
-                EpollRecvBufferAllocatorHandle allocHandle) {
-            if (buffer.readableBytes() > 0) {
+    private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
+            EpollRecvBufferAllocatorHandle allocHandle) {
+        if (buffer.readableBytes() > 0) {
+            readPending = false;
+            pipeline.fireChannelRead(buffer);
+        } else {
+            buffer.close();
+        }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+        pipeline.fireChannelExceptionCaught(cause);
+
+        // If oom will close the read event, release connection.
+        // See https://github.com/netty/netty/issues/10434
+        if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+            shutdownInput(false);
+        } else {
+            readIfIsAutoRead();
+        }
+    }
+
+    @Override
+    EpollRecvBufferAllocatorHandle newEpollHandle(Handle handle) {
+        return new EpollRecvBufferAllocatorStreamingHandle(handle);
+    }
+
+    @Override
+    void epollInReady() {
+        final ChannelConfig config = config();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
+        }
+        final EpollRecvBufferAllocatorHandle recvAlloc = recvBufAllocHandle();
+
+        final ChannelPipeline pipeline = pipeline();
+        final BufferAllocator bufferAllocator = config.getBufferAllocator();
+        recvAlloc.reset(config);
+        epollInBefore();
+
+        Buffer buffer = null;
+        boolean close = false;
+        try {
+            do {
+                // we use a direct buffer here as the native implementations only be able
+                // to handle direct buffers.
+                buffer = recvAlloc.allocate(bufferAllocator);
+                doReadBytes(buffer);
+                if (recvAlloc.lastBytesRead() <= 0) {
+                    // nothing was read, release the buffer.
+                    Resource.dispose(buffer);
+                    buffer = null;
+                    close = recvAlloc.lastBytesRead() < 0;
+                    if (close) {
+                        // There is nothing left to read as we received an EOF.
+                        readPending = false;
+                    }
+                    break;
+                }
+                recvAlloc.incMessagesRead(1);
                 readPending = false;
                 pipeline.fireChannelRead(buffer);
-            } else {
-                buffer.close();
-            }
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-            pipeline.fireChannelExceptionCaught(cause);
+                buffer = null;
 
-            // If oom will close the read event, release connection.
-            // See https://github.com/netty/netty/issues/10434
-            if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+                if (shouldBreakEpollInReady(config)) {
+                    // We need to do this for two reasons:
+                    //
+                    // - If the input was shutdown in between (which may be the case when the user did it in the
+                    //   fireChannelRead(...) method we should not try to read again to not produce any
+                    //   miss-leading exceptions.
+                    //
+                    // - If the user closes the channel we need to ensure we not try to read from it again as
+                    //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
+                    //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
+                    //   reading data from a filedescriptor that belongs to another socket then the socket that
+                    //   was "wrapped" by this Channel implementation.
+                    break;
+                }
+            } while (recvAlloc.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+
+            recvAlloc.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (close) {
                 shutdownInput(false);
             } else {
                 readIfIsAutoRead();
             }
-        }
-
-        @Override
-        EpollRecvBufferAllocatorHandle newEpollHandle(Handle handle) {
-            return new EpollRecvBufferAllocatorStreamingHandle(handle);
-        }
-
-        @Override
-        void epollInReady() {
-            final ChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvBufferAllocatorHandle recvAlloc = recvBufAllocHandle();
-
-            final ChannelPipeline pipeline = pipeline();
-            final BufferAllocator bufferAllocator = config.getBufferAllocator();
-            recvAlloc.reset(config);
-            epollInBefore();
-
-            Buffer buffer = null;
-            boolean close = false;
-            try {
-                do {
-                    // we use a direct buffer here as the native implementations only be able
-                    // to handle direct buffers.
-                    buffer = recvAlloc.allocate(bufferAllocator);
-                    doReadBytes(buffer);
-                    if (recvAlloc.lastBytesRead() <= 0) {
-                        // nothing was read, release the buffer.
-                        Resource.dispose(buffer);
-                        buffer = null;
-                        close = recvAlloc.lastBytesRead() < 0;
-                        if (close) {
-                            // There is nothing left to read as we received an EOF.
-                            readPending = false;
-                        }
-                        break;
-                    }
-                    recvAlloc.incMessagesRead(1);
-                    readPending = false;
-                    pipeline.fireChannelRead(buffer);
-                    buffer = null;
-
-                    if (shouldBreakEpollInReady(config)) {
-                        // We need to do this for two reasons:
-                        //
-                        // - If the input was shutdown in between (which may be the case when the user did it in the
-                        //   fireChannelRead(...) method we should not try to read again to not produce any
-                        //   miss-leading exceptions.
-                        //
-                        // - If the user closes the channel we need to ensure we not try to read from it again as
-                        //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
-                        //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
-                        //   reading data from a filedescriptor that belongs to another socket then the socket that
-                        //   was "wrapped" by this Channel implementation.
-                        break;
-                    }
-                } while (recvAlloc.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
-
-                recvAlloc.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (close) {
-                    shutdownInput(false);
-                } else {
-                    readIfIsAutoRead();
-                }
-            } catch (Throwable t) {
-                handleReadException(pipeline, buffer, t, close, recvAlloc);
-            } finally {
-                epollInFinally(config);
-            }
+        } catch (Throwable t) {
+            handleReadException(pipeline, buffer, t, close, recvAlloc);
+        } finally {
+            epollInFinally(config);
         }
     }
 

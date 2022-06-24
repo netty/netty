@@ -386,11 +386,6 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new TestUnsafe();
-        }
-
-        @Override
         protected SocketAddress localAddress0() {
             throw new UnsupportedOperationException();
         }
@@ -455,11 +450,10 @@ public class ChannelOutboundBufferTest {
             return TEST_METADATA;
         }
 
-        final class TestUnsafe extends AbstractUnsafe {
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-                throw new UnsupportedOperationException();
-            }
+        @Override
+        protected void connectTransport(
+                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            throw new UnsupportedOperationException();
         }
     }
 

@@ -35,6 +35,10 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
+    // Will hold the remote address after accept(...) was successful.
+    // We need 24 bytes for the address as maximum + 1 byte for storing the length.
+    // So use 26 bytes as it's a power of two.
+    private final byte[] acceptedAddress = new byte[26];
 
     protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         this(eventLoop, childEventLoopGroup, new LinuxSocket(fd), false);
@@ -66,11 +70,6 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollServerSocketUnsafe();
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
@@ -82,64 +81,58 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
 
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
-    final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
-        // Will hold the remote address after accept(...) was successful.
-        // We need 24 bytes for the address as maximum + 1 byte for storing the length.
-        // So use 26 bytes as it's a power of two.
-        private final byte[] acceptedAddress = new byte[26];
+    @Override
+    protected void connectTransport(
+            SocketAddress socketAddress, SocketAddress socketAddress2, Promise<Void> channelPromise) {
+        // Connect not supported by ServerChannel implementations
+        channelPromise.setFailure(new UnsupportedOperationException());
+    }
 
-        @Override
-        public void connect(SocketAddress socketAddress, SocketAddress socketAddress2, Promise<Void> channelPromise) {
-            // Connect not supported by ServerChannel implementations
-            channelPromise.setFailure(new UnsupportedOperationException());
+    @Override
+    void epollInReady() {
+        assert executor().inEventLoop();
+        final ChannelConfig config = config();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
         }
+        final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
-        @Override
-        void epollInReady() {
-            assert executor().inEventLoop();
-            final ChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
+        allocHandle.attemptedBytesRead(1);
+        epollInBefore();
 
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
-            allocHandle.attemptedBytesRead(1);
-            epollInBefore();
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    do {
-                        // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                        // EpollRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
-                        // enabled.
-                        allocHandle.lastBytesRead(socket.accept(acceptedAddress));
-                        if (allocHandle.lastBytesRead() == -1) {
-                            // this means everything was handled for now
-                            break;
-                        }
-                        allocHandle.incMessagesRead(1);
+                do {
+                    // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
+                    // EpollRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
+                    // enabled.
+                    allocHandle.lastBytesRead(socket.accept(acceptedAddress));
+                    if (allocHandle.lastBytesRead() == -1) {
+                        // this means everything was handled for now
+                        break;
+                    }
+                    allocHandle.incMessagesRead(1);
 
-                        readPending = false;
-                        pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
-                                                                 acceptedAddress[0]));
-                    } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
-                } catch (Throwable t) {
-                    exception = t;
-                }
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    pipeline.fireChannelExceptionCaught(exception);
-                }
-                readIfIsAutoRead();
-            } finally {
-                epollInFinally(config);
+                    readPending = false;
+                    pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
+                                                             acceptedAddress[0]));
+                } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } catch (Throwable t) {
+                exception = t;
             }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireChannelExceptionCaught(exception);
+            }
+            readIfIsAutoRead();
+        } finally {
+            epollInFinally(config);
         }
     }
 

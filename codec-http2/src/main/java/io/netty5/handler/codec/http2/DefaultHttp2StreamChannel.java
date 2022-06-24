@@ -106,7 +106,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
             // Notify the child-channel and close it.
             streamChannel.pipeline().fireChannelExceptionCaught(cause);
-            streamChannel.unsafe().close(streamChannel.newPromise());
+            ((DefaultHttp2StreamChannel) streamChannel).closeTransport(streamChannel.newPromise());
         }
     }
 
@@ -132,7 +132,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     private final Http2MultiplexHandler handler;
     private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
-    private final Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
     private final ChannelId channelId;
     private final ChannelPipeline pipeline;
     private final DefaultHttp2FrameStream stream;
@@ -153,7 +152,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     /**
      * This variable represents if a read is in progress for the current channel or was requested.
      * Note that depending upon the {@link RecvBufferAllocator} behavior a read may extend beyond the
-     * {@link Http2ChannelUnsafe#beginRead()} method scope. The {@link Http2ChannelUnsafe#beginRead()} loop may
+     * {@link #readTransport()} method scope. The {@link #readTransport()} loop may
      * drain all pending data, and then if the parent channel is reading this channel may still accept frames.
      */
     private ReadStatus readStatus = ReadStatus.IDLE;
@@ -164,23 +163,17 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     private boolean firstFrameWritten;
     private boolean readCompletePending;
 
+    private RecvBufferAllocator.Handle recvHandle;
+    private boolean writeDoneAndNoFlush;
+    private boolean closeInitiated;
+    private boolean readEOS;
+
     DefaultHttp2StreamChannel(Http2MultiplexHandler handler, DefaultHttp2FrameStream stream, int id,
                                ChannelHandler inboundHandler) {
         this.handler = handler;
         this.stream = stream;
         stream.attachment = this;
-        pipeline = new DefaultChannelPipeline(this) {
-            @Override
-            protected void incrementPendingOutboundBytes(long size) {
-                DefaultHttp2StreamChannel.this.incrementPendingOutboundBytes(size, true);
-            }
-
-            @Override
-            protected void decrementPendingOutboundBytes(long size) {
-                DefaultHttp2StreamChannel.this.decrementPendingOutboundBytes(size, true);
-            }
-        };
-
+        pipeline = new DefaultHttp2ChannelPipeline(this);
         closePromise = pipeline.newPromise();
         channelId = new Http2StreamChannelId(parent().id(), id);
 
@@ -275,10 +268,10 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     void streamClosed() {
-        unsafe.readEOS();
+        readEOS();
         // Attempt to drain any queued data from the queue and deliver it to the application before closing this
         // channel.
-        unsafe.doBeginRead();
+        doBeginRead();
     }
 
     @Override
@@ -381,11 +374,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
-    }
-
-    @Override
     public ChannelPipeline pipeline() {
         return pipeline;
     }
@@ -426,8 +414,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             // If a read is in progress or has been requested, there cannot be anything in the queue,
             // otherwise we would have drained it from the queue and processed it during the read cycle.
             assert inboundBuffer == null || inboundBuffer.isEmpty();
-            final RecvBufferAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
-            unsafe.doRead0(frame, allocHandle);
+            final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
+            doRead0(frame, allocHandle);
             // We currently don't need to check for readEOS because the parent channel and child channel are limited
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
             // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
@@ -435,7 +423,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             if (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound)) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
-                unsafe.notifyReadComplete(allocHandle, true);
+                notifyReadComplete(allocHandle, true);
             }
         } else {
             if (inboundBuffer == null) {
@@ -448,565 +436,536 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     void fireChildReadComplete() {
         assert executor().inEventLoop();
         assert readStatus != ReadStatus.IDLE || !readCompletePending;
-        unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false);
+        notifyReadComplete(recvBufAllocHandle(), false);
     }
 
-    private final class Http2ChannelUnsafe implements Unsafe {
-        private RecvBufferAllocator.Handle recvHandle;
-        private boolean writeDoneAndNoFlush;
-        private boolean closeInitiated;
-        private boolean readEOS;
+    private void connectTransport(final SocketAddress remoteAddress,
+                        SocketAddress localAddress, Promise<Void> promise) {
+        if (!promise.setUncancellable()) {
+            return;
+        }
+        promise.setFailure(new UnsupportedOperationException());
+    }
 
-        @Override
-        public void connect(final SocketAddress remoteAddress,
-                            SocketAddress localAddress, Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-            promise.setFailure(new UnsupportedOperationException());
+    private RecvBufferAllocator.Handle recvBufAllocHandle() {
+        if (recvHandle == null) {
+            recvHandle = config().getRecvBufferAllocator().newHandle();
+            recvHandle.reset(config());
+        }
+        return recvHandle;
+    }
+
+    private void registerTransport(Promise<Void> promise) {
+        if (!promise.setUncancellable()) {
+            return;
+        }
+        if (registered) {
+            promise.setFailure(new UnsupportedOperationException("Re-register is not supported"));
+            return;
         }
 
-        @Override
-        public RecvBufferAllocator.Handle recvBufAllocHandle() {
-            if (recvHandle == null) {
-                recvHandle = config().getRecvBufferAllocator().newHandle();
-                recvHandle.reset(config());
-            }
-            return recvHandle;
-        }
+        registered = true;
 
-        @Override
-        public SocketAddress localAddress() {
-            return parent().unsafe().localAddress();
-        }
+        promise.setSuccess(null);
 
-        @Override
-        public SocketAddress remoteAddress() {
-            return parent().unsafe().remoteAddress();
-        }
-
-        @Override
-        public void register(Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-            if (registered) {
-                promise.setFailure(new UnsupportedOperationException("Re-register is not supported"));
-                return;
-            }
-
-            registered = true;
-
-            promise.setSuccess(null);
-
-            pipeline().fireChannelRegistered();
-            if (isActive()) {
-                pipeline().fireChannelActive();
-                if (config().isAutoRead()) {
-                    read();
-                }
-            }
-        }
-
-        @Override
-        public void bind(SocketAddress localAddress, Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-            promise.setFailure(new UnsupportedOperationException());
-        }
-
-        @Override
-        public void disconnect(Promise<Void> promise) {
-            close(promise);
-        }
-
-        @Override
-        public void close(final Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-            if (closeInitiated) {
-                if (closePromise.isDone()) {
-                    // Closed already.
-                    promise.setSuccess(null);
-                } else  {
-                    // This means close() was called before so we just register a listener and return
-                    closeFuture().addListener(promise, (p, future) -> p.setSuccess(null));
-                }
-                return;
-            }
-            closeInitiated = true;
-            // Just set to false as removing from an underlying queue would even be more expensive.
-            readCompletePending = false;
-
-            final boolean wasActive = isActive();
-
-            // There is no need to update the local window as once the stream is closed all the pending bytes will be
-            // given back to the connection window by the controller itself.
-
-            // Only ever send a reset frame if the connection is still alive and if the stream was created before
-            // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-            if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
-                Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
-                write(resetFrame, newPromise());
-                flush();
-            }
-
-            if (inboundBuffer != null) {
-                for (;;) {
-                    Object msg = inboundBuffer.poll();
-                    if (msg == null) {
-                        break;
-                    }
-                    Resource.dispose(msg);
-                }
-                inboundBuffer = null;
-            }
-
-            // The promise should be notified before we call fireChannelInactive().
-            outputShutdown = true;
-            closePromise.setSuccess(null);
-            promise.setSuccess(null);
-
-            fireChannelInactiveAndDeregister(newPromise(), wasActive);
-        }
-
-        @Override
-        public void shutdown(ChannelShutdownDirection direction, Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-            if (!isActive()) {
-                if (isOpen()) {
-                    promise.setFailure(new NotYetConnectedException());
-                } else {
-                    promise.setFailure(new ClosedChannelException());
-                }
-                return;
-            }
-            if (isShutdown(direction)) {
-                // Already shutdown so let's just make this a noop.
-                promise.setSuccess(null);
-                return;
-            }
-            boolean fireEvent = false;
-            switch (direction) {
-                case Outbound:
-                    fireEvent = shutdownOutput(true, promise);
-                    break;
-                case Inbound:
-                    try {
-                        inputShutdown = true;
-                        promise.setSuccess(null);
-                        fireEvent = true;
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
-                    }
-                    break;
-                default:
-                    // Should never happen
-                    promise.setFailure(new IllegalStateException());
-                    break;
-            }
-            if (fireEvent) {
-                pipeline().fireChannelShutdown(direction);
-            }
-        }
-
-        private boolean shutdownOutput(boolean writeFrame, Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return false;
-            }
-            if (isShutdown(ChannelShutdownDirection.Outbound)) {
-                // Already shutdown so let's just make this a noop.
-                promise.setSuccess(null);
-                return false;
-            }
-            if (writeFrame) {
-                // Write a headers frame with endOfStream flag set
-                write(new DefaultHttp2HeadersFrame(EmptyHttp2Headers.INSTANCE, true), newPromise());
-            }
-            outputShutdown = true;
-            promise.setSuccess(null);
-            return true;
-        }
-
-        @Override
-        public void closeForcibly() {
-            close(newPromise());
-        }
-
-        @Override
-        public void deregister(Promise<Void> promise) {
-            fireChannelInactiveAndDeregister(promise, false);
-        }
-
-        private void fireChannelInactiveAndDeregister(Promise<Void> promise,
-                                                      final boolean fireChannelInactive) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-
-            if (!registered) {
-                promise.setSuccess(null);
-                return;
-            }
-
-            // As a user may call deregister() from within any method while doing processing in the ChannelPipeline,
-            // we need to ensure we do the actual deregister operation later. This is necessary to preserve the
-            // behavior of the AbstractChannel, which always invokes channelUnregistered and channelInactive
-            // events 'later' to ensure the current events in the handler are completed before these events.
-            //
-            // See:
-            // https://github.com/netty/netty/issues/4435
-            invokeLater(()-> {
-                if (fireChannelInactive) {
-                    pipeline.fireChannelInactive();
-                }
-                // The user can fire `deregister` events multiple times but we only want to fire the pipeline
-                // event if the channel was actually registered.
-                if (registered) {
-                    registered = false;
-                    pipeline.fireChannelUnregistered();
-                }
-                safeSetSuccess(promise);
-            });
-        }
-
-        private void safeSetSuccess(Promise<Void> promise) {
-            if (!promise.trySuccess(null)) {
-                logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
-            }
-        }
-
-        private void invokeLater(Runnable task) {
-            try {
-                // This method is used by outbound operation implementations to trigger an inbound event later.
-                // They do not trigger an inbound event immediately because an outbound operation might have been
-                // triggered by another inbound event handler method.  If fired immediately, the call stack
-                // will look like this for example:
-                //
-                //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
-                //   -> handlerA.ctx.close()
-                //     -> channel.unsafe.close()
-                //       -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
-                //
-                // which means the execution of two inbound handler methods of the same handler overlap undesirably.
-                executor().execute(task);
-            } catch (RejectedExecutionException e) {
-                logger.warn("Can't invoke task later as EventLoop rejected it", e);
-            }
-        }
-
-        @Override
-        public void beginRead() {
-            if (!isActive()) {
-                return;
-            }
-            updateLocalWindowIfNeeded();
-
-            switch (readStatus) {
-                case IDLE:
-                    readStatus = ReadStatus.IN_PROGRESS;
-                    doBeginRead();
-                    break;
-                case IN_PROGRESS:
-                    readStatus = ReadStatus.REQUESTED;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        private Object pollQueuedMessage() {
-            return inboundBuffer == null ? null : inboundBuffer.poll();
-        }
-
-        void doBeginRead() {
-            // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
-            while (readStatus != ReadStatus.IDLE) {
-                Object message = pollQueuedMessage();
-                if (message == null) {
-                    if (readEOS) {
-                        unsafe.closeForcibly();
-                    }
-                    // We need to double check that there is nothing left to flush such as a
-                    // window update frame.
-                    flush();
-                    break;
-                }
-                final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-                allocHandle.reset(config());
-                boolean continueReading = false;
-                do {
-                    doRead0((Http2Frame) message, allocHandle);
-                } while ((readEOS || (continueReading = allocHandle.continueReading()))
-                        && (message = pollQueuedMessage()) != null);
-
-                if (continueReading && handler.isParentReadInProgress() && !readEOS) {
-                    // Currently the parent and child channel are on the same EventLoop thread. If the parent is
-                    // currently reading it is possible that more frames will be delivered to this child channel. In
-                    // the case that this child channel still wants to read we delay the channelReadComplete on this
-                    // child channel until the parent is done reading.
-                    maybeAddChannelToReadCompletePendingQueue();
-                } else {
-                    notifyReadComplete(allocHandle, true);
-                }
-            }
-        }
-
-        void readEOS() {
-            readEOS = true;
-        }
-
-        private void updateLocalWindowIfNeeded() {
-            if (flowControlledBytes != 0) {
-                int bytes = flowControlledBytes;
-                flowControlledBytes = 0;
-                Future<Void> future = handler.parentContext()
-                        .write(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
-                // window update frames are commonly swallowed by the Http2FrameCodec and the promise is synchronously
-                // completed but the flow controller _may_ have generated a wire level WINDOW_UPDATE. Therefore we need,
-                // to assume there was a write done that needs to be flushed or we risk flow control starvation.
-                writeDoneAndNoFlush = true;
-                // Add a listener which will notify and teardown the stream
-                // when a window update fails if needed or check the result of the future directly if it was completed
-                // already.
-                // See https://github.com/netty/netty/issues/9663
-                if (future.isDone()) {
-                    windowUpdateFrameWriteComplete(DefaultHttp2StreamChannel.this, future);
-                } else {
-                    future.addListener(DefaultHttp2StreamChannel.this,
-                            DefaultHttp2StreamChannel::windowUpdateFrameWriteComplete);
-                }
-            }
-        }
-
-        void notifyReadComplete(RecvBufferAllocator.Handle allocHandle, boolean forceReadComplete) {
-            if (!readCompletePending && !forceReadComplete) {
-                return;
-            }
-            // Set to false just in case we added the channel multiple times before.
-            readCompletePending = false;
-
-            if (readStatus == ReadStatus.REQUESTED) {
-                readStatus = ReadStatus.IN_PROGRESS;
-            } else {
-                readStatus = ReadStatus.IDLE;
-            }
-
-            allocHandle.readComplete();
-            pipeline().fireChannelReadComplete();
+        pipeline().fireChannelRegistered();
+        if (isActive()) {
+            pipeline().fireChannelActive();
             if (config().isAutoRead()) {
                 read();
             }
+        }
+    }
 
-            // Reading data may result in frames being written (e.g. WINDOW_UPDATE, RST, etc..). If the parent
-            // channel is not currently reading we need to force a flush at the child channel, because we cannot
-            // rely upon flush occurring in channelReadComplete on the parent channel.
+    private void bindTransport(SocketAddress localAddress, Promise<Void> promise) {
+        if (!promise.setUncancellable()) {
+            return;
+        }
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    private void disconnectTransport(Promise<Void> promise) {
+        closeTransport(promise);
+    }
+
+    private void closeTransport(final Promise<Void> promise) {
+        if (!promise.setUncancellable()) {
+            return;
+        }
+        if (closeInitiated) {
+            if (closePromise.isDone()) {
+                // Closed already.
+                promise.setSuccess(null);
+            } else  {
+                // This means close() was called before so we just register a listener and return
+                closeFuture().addListener(promise, (p, future) -> p.setSuccess(null));
+            }
+            return;
+        }
+        closeInitiated = true;
+        // Just set to false as removing from an underlying queue would even be more expensive.
+        readCompletePending = false;
+
+        final boolean wasActive = isActive();
+
+        // There is no need to update the local window as once the stream is closed all the pending bytes will be
+        // given back to the connection window by the controller itself.
+
+        // Only ever send a reset frame if the connection is still alive and if the stream was created before
+        // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
+        if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
+            Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
+            writeTransport(resetFrame, newPromise());
             flush();
-            if (readEOS) {
-                unsafe.closeForcibly();
-            }
         }
 
-        void doRead0(Http2Frame frame, RecvBufferAllocator.Handle allocHandle) {
-            if (isShutdown(ChannelShutdownDirection.Inbound)) {
-                // Let's drop data and header frames in the case of shutdown input. Other frames are still valid for
-                // HTTP2.
-                if (frame instanceof Http2DataFrame || frame instanceof Http2HeadersFrame) {
-                    Resource.dispose(frame);
-                    return;
+        if (inboundBuffer != null) {
+            for (;;) {
+                Object msg = inboundBuffer.poll();
+                if (msg == null) {
+                    break;
                 }
+                Resource.dispose(msg);
             }
-            final int bytes;
-            if (frame instanceof Http2DataFrame) {
-                bytes = ((Http2DataFrame) frame).initialFlowControlledBytes();
-
-                // It is important that we increment the flowControlledBytes before we call fireChannelRead(...)
-                // as it may cause a read() that will call updateLocalWindowIfNeeded() and we need to ensure
-                // in this case that we accounted for it.
-                //
-                // See https://github.com/netty/netty/issues/9663
-                flowControlledBytes += bytes;
-            } else {
-                bytes = MIN_HTTP2_FRAME_SIZE;
-            }
-            // Update before firing event through the pipeline to be consistent with other Channel implementation.
-            allocHandle.attemptedBytesRead(bytes);
-            allocHandle.lastBytesRead(bytes);
-            allocHandle.incMessagesRead(1);
-
-            boolean shutdownInput = isShutdownNeeded(frame);
-            pipeline().fireChannelRead(frame);
-            if (shutdownInput) {
-                shutdown(ChannelShutdownDirection.Inbound, newPromise());
-            }
+            inboundBuffer = null;
         }
 
-        private boolean isShutdownNeeded(Http2Frame frame) {
-            if (frame instanceof Http2HeadersFrame) {
-                return ((Http2HeadersFrame) frame).isEndStream();
+        // The promise should be notified before we call fireChannelInactive().
+        outputShutdown = true;
+        closePromise.setSuccess(null);
+        promise.setSuccess(null);
+
+        fireChannelInactiveAndDeregister(newPromise(), wasActive);
+    }
+
+    private void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise) {
+        if (!promise.setUncancellable()) {
+            return;
+        }
+        if (!isActive()) {
+            if (isOpen()) {
+                promise.setFailure(new NotYetConnectedException());
+            } else {
+                promise.setFailure(new ClosedChannelException());
             }
-            if (frame instanceof Http2DataFrame) {
-                return ((Http2DataFrame) frame).isEndStream();
-            }
+            return;
+        }
+        if (isShutdown(direction)) {
+            // Already shutdown so let's just make this a noop.
+            promise.setSuccess(null);
+            return;
+        }
+        boolean fireEvent = false;
+        switch (direction) {
+            case Outbound:
+                fireEvent = shutdownOutput(true, promise);
+                break;
+            case Inbound:
+                try {
+                    inputShutdown = true;
+                    promise.setSuccess(null);
+                    fireEvent = true;
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
+                }
+                break;
+            default:
+                // Should never happen
+                promise.setFailure(new IllegalStateException());
+                break;
+        }
+        if (fireEvent) {
+            pipeline().fireChannelShutdown(direction);
+        }
+    }
+
+    private boolean shutdownOutput(boolean writeFrame, Promise<Void> promise) {
+        if (!promise.setUncancellable()) {
             return false;
         }
-
-        @Override
-        public void write(Object msg, Promise<Void> promise) {
-            // After this point its not possible to cancel a write anymore.
-            if (!promise.setUncancellable()) {
-                Resource.dispose(msg);
-                return;
-            }
-
-            if (!isActive()) {
-                Resource.dispose(msg);
-                promise.setFailure(new ClosedChannelException());
-                return;
-            }
-
-            // Once the outbound side was closed we should not allow header / data frames
-            if (isShutdown(ChannelShutdownDirection.Outbound)
-                    && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
-                Resource.dispose(msg);
-                promise.setFailure(newOutputShutdownException(Http2ChannelUnsafe.class, "write(Object, Promise)"));
-                return;
-            }
-
-            try {
-                if (msg instanceof Http2StreamFrame) {
-                    Http2StreamFrame frame = validateStreamFrame((Http2StreamFrame) msg).stream(stream());
-                    boolean shutdownOutput = isShutdownNeeded(frame);
-                    writeHttp2StreamFrame(frame, promise);
-                    if (shutdownOutput) {
-                        if (shutdownOutput(false, newPromise())) {
-                            pipeline().fireChannelShutdown(ChannelShutdownDirection.Outbound);
-                        }
-                    }
-                } else {
-                    String msgStr = msg.toString();
-                    Resource.dispose(msg);
-                    promise.setFailure(new IllegalArgumentException(
-                            "Message must be an " + StringUtil.simpleClassName(Http2StreamFrame.class) +
-                                    ": " + msgStr));
-                }
-            } catch (Throwable t) {
-                promise.tryFailure(t);
-            }
-        }
-
-        private void writeHttp2StreamFrame(Http2StreamFrame frame, Promise<Void> promise) {
-            if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
-                Resource.dispose(frame);
-                promise.setFailure(
-                    new IllegalArgumentException("The first frame must be a headers frame. Was: "
-                        + frame.name()));
-                return;
-            }
-
-            final boolean firstWrite;
-            if (firstFrameWritten) {
-                firstWrite = false;
-            } else {
-                firstWrite = firstFrameWritten = true;
-            }
-
-            Future<Void> f = handler.parentContext().write(frame);
-            if (f.isDone()) {
-                if (firstWrite) {
-                    firstWriteComplete(f, promise);
-                } else {
-                    writeComplete(f, promise);
-                }
-            } else {
-                final long bytes = FlowControlledFrameSizeEstimator.HANDLE_INSTANCE.size(frame);
-                incrementPendingOutboundBytes(bytes, false);
-                f.addListener(future ->  {
-                    if (firstWrite) {
-                        firstWriteComplete(future, promise);
-                    } else {
-                        writeComplete(future, promise);
-                    }
-                    decrementPendingOutboundBytes(bytes, false);
-                });
-                writeDoneAndNoFlush = true;
-            }
-        }
-
-        private void firstWriteComplete(Future<?> future, Promise<Void> promise) {
-            Throwable cause = future.cause();
-            if (cause == null) {
-                promise.setSuccess(null);
-            } else {
-                // If the first write fails there is not much we can do, just close
-                closeForcibly();
-                promise.setFailure(wrapStreamClosedError(cause));
-            }
-        }
-
-        private void writeComplete(Future<?> future, Promise<Void> promise) {
-            Throwable cause = future.cause();
-            if (cause == null) {
-                promise.setSuccess(null);
-            } else {
-                Throwable error = wrapStreamClosedError(cause);
-                // To make it more consistent with AbstractChannel we handle all IOExceptions here.
-                if (error instanceof IOException) {
-                    if (config.isAutoClose()) {
-                        // Close channel if needed.
-                        closeForcibly();
-                    } else {
-                        shutdown(ChannelShutdownDirection.Outbound, newPromise());
-                    }
-                }
-                promise.setFailure(error);
-            }
-        }
-
-        private Throwable wrapStreamClosedError(Throwable cause) {
-            // If the error was caused by STREAM_CLOSED we should use a ClosedChannelException to better
-            // mimic other transports and make it easier to reason about what exceptions to expect.
-            if (cause instanceof Http2Exception && ((Http2Exception) cause).error() == Http2Error.STREAM_CLOSED) {
-                return new ClosedChannelException().initCause(cause);
-            }
-            return cause;
-        }
-
-        private Http2StreamFrame validateStreamFrame(Http2StreamFrame frame) {
-            if (frame.stream() != null && frame.stream() != stream) {
-                String msgString = frame.toString();
-                Resource.dispose(frame);
-                throw new IllegalArgumentException(
-                        "Stream " + frame.stream() + " must not be set on the frame: " + msgString);
-            }
-            return frame;
-        }
-
-        @Override
-        public void flush() {
-            // If we are currently in the parent channel's read loop we should just ignore the flush.
-            // We will ensure we trigger ctx.flush() after we processed all Channels later on and
-            // so aggregate the flushes. This is done as ctx.flush() is expensive when as it may trigger an
-            // write(...) or writev(...) operation on the socket.
-            if (!writeDoneAndNoFlush || handler.isParentReadInProgress()) {
-                // There is nothing to flush so this is a NOOP.
-                return;
-            }
-            // We need to set this to false before we call flush0(...) as FutureListener may produce more data
-            // that are explicit flushed.
-            writeDoneAndNoFlush = false;
-            handler.parentContext().flush();
-        }
-
-        @Override
-        public void sendOutboundEvent(Object event, Promise<Void> promise) {
-            Resource.dispose(event);
+        if (isShutdown(ChannelShutdownDirection.Outbound)) {
+            // Already shutdown so let's just make this a noop.
             promise.setSuccess(null);
+            return false;
         }
+        if (writeFrame) {
+            // Write a headers frame with endOfStream flag set
+            writeTransport(new DefaultHttp2HeadersFrame(EmptyHttp2Headers.INSTANCE, true), newPromise());
+        }
+        outputShutdown = true;
+        promise.setSuccess(null);
+        return true;
+    }
+
+    void closeForcibly() {
+        closeTransport(newPromise());
+    }
+
+    private void deregisterTransport(Promise<Void> promise) {
+        fireChannelInactiveAndDeregister(promise, false);
+    }
+
+    private void fireChannelInactiveAndDeregister(Promise<Void> promise,
+                                                  final boolean fireChannelInactive) {
+        if (!promise.setUncancellable()) {
+            return;
+        }
+
+        if (!registered) {
+            promise.setSuccess(null);
+            return;
+        }
+
+        // As a user may call deregister() from within any method while doing processing in the ChannelPipeline,
+        // we need to ensure we do the actual deregister operation later. This is necessary to preserve the
+        // behavior of the AbstractChannel, which always invokes channelUnregistered and channelInactive
+        // events 'later' to ensure the current events in the handler are completed before these events.
+        //
+        // See:
+        // https://github.com/netty/netty/issues/4435
+        invokeLater(()-> {
+            if (fireChannelInactive) {
+                pipeline.fireChannelInactive();
+            }
+            // The user can fire `deregister` events multiple times but we only want to fire the pipeline
+            // event if the channel was actually registered.
+            if (registered) {
+                registered = false;
+                pipeline.fireChannelUnregistered();
+            }
+            safeSetSuccess(promise);
+        });
+    }
+
+    private void safeSetSuccess(Promise<Void> promise) {
+        if (!promise.trySuccess(null)) {
+            logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+        }
+    }
+
+    private void invokeLater(Runnable task) {
+        try {
+            // This method is used by outbound operation implementations to trigger an inbound event later.
+            // They do not trigger an inbound event immediately because an outbound operation might have been
+            // triggered by another inbound event handler method.  If fired immediately, the call stack
+            // will look like this for example:
+            //
+            //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
+            //   -> handlerA.ctx.close()
+            //     -> channel.unsafe.close()
+            //       -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
+            //
+            // which means the execution of two inbound handler methods of the same handler overlap undesirably.
+            executor().execute(task);
+        } catch (RejectedExecutionException e) {
+            logger.warn("Can't invoke task later as EventLoop rejected it", e);
+        }
+    }
+
+    private void readTransport() {
+        if (!isActive()) {
+            return;
+        }
+        updateLocalWindowIfNeeded();
+
+        switch (readStatus) {
+            case IDLE:
+                readStatus = ReadStatus.IN_PROGRESS;
+                doBeginRead();
+                break;
+            case IN_PROGRESS:
+                readStatus = ReadStatus.REQUESTED;
+                break;
+            default:
+                break;
+        }
+    }
+
+    private Object pollQueuedMessage() {
+        return inboundBuffer == null ? null : inboundBuffer.poll();
+    }
+
+    void doBeginRead() {
+        // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
+        while (readStatus != ReadStatus.IDLE) {
+            Object message = pollQueuedMessage();
+            if (message == null) {
+                if (readEOS) {
+                    closeForcibly();
+                }
+                // We need to double check that there is nothing left to flush such as a
+                // window update frame.
+                flush();
+                break;
+            }
+            final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config());
+            boolean continueReading = false;
+            do {
+                doRead0((Http2Frame) message, allocHandle);
+            } while ((readEOS || (continueReading = allocHandle.continueReading()))
+                    && (message = pollQueuedMessage()) != null);
+
+            if (continueReading && handler.isParentReadInProgress() && !readEOS) {
+                // Currently the parent and child channel are on the same EventLoop thread. If the parent is
+                // currently reading it is possible that more frames will be delivered to this child channel. In
+                // the case that this child channel still wants to read we delay the channelReadComplete on this
+                // child channel until the parent is done reading.
+                maybeAddChannelToReadCompletePendingQueue();
+            } else {
+                notifyReadComplete(allocHandle, true);
+            }
+        }
+    }
+
+    void readEOS() {
+        readEOS = true;
+    }
+
+    private void updateLocalWindowIfNeeded() {
+        if (flowControlledBytes != 0) {
+            int bytes = flowControlledBytes;
+            flowControlledBytes = 0;
+            Future<Void> future = handler.parentContext()
+                    .write(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
+            // window update frames are commonly swallowed by the Http2FrameCodec and the promise is synchronously
+            // completed but the flow controller _may_ have generated a wire level WINDOW_UPDATE. Therefore we need,
+            // to assume there was a write done that needs to be flushed or we risk flow control starvation.
+            writeDoneAndNoFlush = true;
+            // Add a listener which will notify and teardown the stream
+            // when a window update fails if needed or check the result of the future directly if it was completed
+            // already.
+            // See https://github.com/netty/netty/issues/9663
+            if (future.isDone()) {
+                windowUpdateFrameWriteComplete(DefaultHttp2StreamChannel.this, future);
+            } else {
+                future.addListener(DefaultHttp2StreamChannel.this,
+                        DefaultHttp2StreamChannel::windowUpdateFrameWriteComplete);
+            }
+        }
+    }
+
+    void notifyReadComplete(RecvBufferAllocator.Handle allocHandle, boolean forceReadComplete) {
+        if (!readCompletePending && !forceReadComplete) {
+            return;
+        }
+        // Set to false just in case we added the channel multiple times before.
+        readCompletePending = false;
+
+        if (readStatus == ReadStatus.REQUESTED) {
+            readStatus = ReadStatus.IN_PROGRESS;
+        } else {
+            readStatus = ReadStatus.IDLE;
+        }
+
+        allocHandle.readComplete();
+        pipeline().fireChannelReadComplete();
+        if (config().isAutoRead()) {
+            read();
+        }
+
+        // Reading data may result in frames being written (e.g. WINDOW_UPDATE, RST, etc..). If the parent
+        // channel is not currently reading we need to force a flush at the child channel, because we cannot
+        // rely upon flush occurring in channelReadComplete on the parent channel.
+        flush();
+        if (readEOS) {
+            closeForcibly();
+        }
+    }
+
+    private void doRead0(Http2Frame frame, RecvBufferAllocator.Handle allocHandle) {
+        if (isShutdown(ChannelShutdownDirection.Inbound)) {
+            // Let's drop data and header frames in the case of shutdown input. Other frames are still valid for
+            // HTTP2.
+            if (frame instanceof Http2DataFrame || frame instanceof Http2HeadersFrame) {
+                Resource.dispose(frame);
+                return;
+            }
+        }
+        final int bytes;
+        if (frame instanceof Http2DataFrame) {
+            bytes = ((Http2DataFrame) frame).initialFlowControlledBytes();
+
+            // It is important that we increment the flowControlledBytes before we call fireChannelRead(...)
+            // as it may cause a read() that will call updateLocalWindowIfNeeded() and we need to ensure
+            // in this case that we accounted for it.
+            //
+            // See https://github.com/netty/netty/issues/9663
+            flowControlledBytes += bytes;
+        } else {
+            bytes = MIN_HTTP2_FRAME_SIZE;
+        }
+        // Update before firing event through the pipeline to be consistent with other Channel implementation.
+        allocHandle.attemptedBytesRead(bytes);
+        allocHandle.lastBytesRead(bytes);
+        allocHandle.incMessagesRead(1);
+
+        boolean shutdownInput = isShutdownNeeded(frame);
+        pipeline().fireChannelRead(frame);
+        if (shutdownInput) {
+            shutdownTransport(ChannelShutdownDirection.Inbound, newPromise());
+        }
+    }
+
+    private boolean isShutdownNeeded(Http2Frame frame) {
+        if (frame instanceof Http2HeadersFrame) {
+            return ((Http2HeadersFrame) frame).isEndStream();
+        }
+        if (frame instanceof Http2DataFrame) {
+            return ((Http2DataFrame) frame).isEndStream();
+        }
+        return false;
+    }
+
+    private void writeTransport(Object msg, Promise<Void> promise) {
+        // After this point it's not possible to cancel a write anymore.
+        if (!promise.setUncancellable()) {
+            Resource.dispose(msg);
+            return;
+        }
+
+        if (!isActive()) {
+            Resource.dispose(msg);
+            promise.setFailure(new ClosedChannelException());
+            return;
+        }
+
+        // Once the outbound side was closed we should not allow header / data frames
+        if (isShutdown(ChannelShutdownDirection.Outbound)
+                && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
+            Resource.dispose(msg);
+            promise.setFailure(newOutputShutdownException(
+                    DefaultHttp2StreamChannel.class, "writeTransport(Object, Promise)"));
+            return;
+        }
+
+        try {
+            if (msg instanceof Http2StreamFrame) {
+                Http2StreamFrame frame = validateStreamFrame((Http2StreamFrame) msg).stream(stream());
+                boolean shutdownOutput = isShutdownNeeded(frame);
+                writeHttp2StreamFrame(frame, promise);
+                if (shutdownOutput) {
+                    if (shutdownOutput(false, newPromise())) {
+                        pipeline().fireChannelShutdown(ChannelShutdownDirection.Outbound);
+                    }
+                }
+            } else {
+                String msgStr = msg.toString();
+                Resource.dispose(msg);
+                promise.setFailure(new IllegalArgumentException(
+                        "Message must be an " + StringUtil.simpleClassName(Http2StreamFrame.class) +
+                                ": " + msgStr));
+            }
+        } catch (Throwable t) {
+            promise.tryFailure(t);
+        }
+    }
+
+    private void writeHttp2StreamFrame(Http2StreamFrame frame, Promise<Void> promise) {
+        if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
+            Resource.dispose(frame);
+            promise.setFailure(
+                new IllegalArgumentException("The first frame must be a headers frame. Was: "
+                    + frame.name()));
+            return;
+        }
+
+        final boolean firstWrite;
+        if (firstFrameWritten) {
+            firstWrite = false;
+        } else {
+            firstWrite = firstFrameWritten = true;
+        }
+
+        Future<Void> f = handler.parentContext().write(frame);
+        if (f.isDone()) {
+            if (firstWrite) {
+                firstWriteComplete(f, promise);
+            } else {
+                writeComplete(f, promise);
+            }
+        } else {
+            final long bytes = FlowControlledFrameSizeEstimator.HANDLE_INSTANCE.size(frame);
+            incrementPendingOutboundBytes(bytes, false);
+            f.addListener(future ->  {
+                if (firstWrite) {
+                    firstWriteComplete(future, promise);
+                } else {
+                    writeComplete(future, promise);
+                }
+                decrementPendingOutboundBytes(bytes, false);
+            });
+            writeDoneAndNoFlush = true;
+        }
+    }
+
+    private void firstWriteComplete(Future<?> future, Promise<Void> promise) {
+        Throwable cause = future.cause();
+        if (cause == null) {
+            promise.setSuccess(null);
+        } else {
+            // If the first write fails there is not much we can do, just close
+            closeForcibly();
+            promise.setFailure(wrapStreamClosedError(cause));
+        }
+    }
+
+    private void writeComplete(Future<?> future, Promise<Void> promise) {
+        Throwable cause = future.cause();
+        if (cause == null) {
+            promise.setSuccess(null);
+        } else {
+            Throwable error = wrapStreamClosedError(cause);
+            // To make it more consistent with AbstractChannel we handle all IOExceptions here.
+            if (error instanceof IOException) {
+                if (config.isAutoClose()) {
+                    // Close channel if needed.
+                    closeForcibly();
+                } else {
+                    shutdownTransport(ChannelShutdownDirection.Outbound, newPromise());
+                }
+            }
+            promise.setFailure(error);
+        }
+    }
+
+    private Throwable wrapStreamClosedError(Throwable cause) {
+        // If the error was caused by STREAM_CLOSED we should use a ClosedChannelException to better
+        // mimic other transports and make it easier to reason about what exceptions to expect.
+        if (cause instanceof Http2Exception && ((Http2Exception) cause).error() == Http2Error.STREAM_CLOSED) {
+            return new ClosedChannelException().initCause(cause);
+        }
+        return cause;
+    }
+
+    private Http2StreamFrame validateStreamFrame(Http2StreamFrame frame) {
+        if (frame.stream() != null && frame.stream() != stream) {
+            String msgString = frame.toString();
+            Resource.dispose(frame);
+            throw new IllegalArgumentException(
+                    "Stream " + frame.stream() + " must not be set on the frame: " + msgString);
+        }
+        return frame;
+    }
+
+    private void flushTransport() {
+        // If we are currently in the parent channel's read loop we should just ignore the flush.
+        // We will ensure we trigger ctx.flush() after we processed all Channels later on and
+        // so aggregate the flushes. This is done as ctx.flush() is expensive when as it may trigger an
+        // write(...) or writev(...) operation on the socket.
+        if (!writeDoneAndNoFlush || handler.isParentReadInProgress()) {
+            // There is nothing to flush so this is a NOOP.
+            return;
+        }
+        // We need to set this to false before we call flush0(...) as FutureListener may produce more data
+        // that are explicit flushed.
+        writeDoneAndNoFlush = false;
+        handler.parentContext().flush();
+    }
+
+    private void sendOutboundEventTransport(Object event, Promise<Void> promise) {
+        Resource.dispose(event);
+        promise.setSuccess(null);
     }
 
     /**
@@ -1048,5 +1007,81 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
                 return this; // lgtm [java/non-sync-override]
             }
         }, clazz, method);
+    }
+
+    private static final class DefaultHttp2ChannelPipeline extends DefaultChannelPipeline {
+        DefaultHttp2ChannelPipeline(Channel channel) {
+            super(channel);
+        }
+
+        private DefaultHttp2StreamChannel defaultHttp2StreamChannel() {
+            return (DefaultHttp2StreamChannel) channel();
+        }
+
+        @Override
+        protected void incrementPendingOutboundBytes(long size) {
+            defaultHttp2StreamChannel().incrementPendingOutboundBytes(size, true);
+        }
+
+        @Override
+        protected void decrementPendingOutboundBytes(long size) {
+            defaultHttp2StreamChannel().decrementPendingOutboundBytes(size, true);
+        }
+
+        @Override
+        protected void registerTransport(Promise<Void> promise) {
+            defaultHttp2StreamChannel().registerTransport(promise);
+        }
+
+        @Override
+        protected void bindTransport(SocketAddress localAddress, Promise<Void> promise) {
+            defaultHttp2StreamChannel().bindTransport(localAddress, promise);
+        }
+
+        @Override
+        protected void connectTransport(
+                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            defaultHttp2StreamChannel().connectTransport(remoteAddress, localAddress, promise);
+        }
+
+        @Override
+        protected void disconnectTransport(Promise<Void> promise) {
+            defaultHttp2StreamChannel().disconnectTransport(promise);
+        }
+
+        @Override
+        protected void closeTransport(Promise<Void> promise) {
+            defaultHttp2StreamChannel().closeTransport(promise);
+        }
+
+        @Override
+        protected void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise) {
+            defaultHttp2StreamChannel().shutdownTransport(direction, promise);
+        }
+
+        @Override
+        protected void deregisterTransport(Promise<Void> promise) {
+            defaultHttp2StreamChannel().deregisterTransport(promise);
+        }
+
+        @Override
+        protected void readTransport() {
+            defaultHttp2StreamChannel().readTransport();
+        }
+
+        @Override
+        protected void writeTransport(Object msg, Promise<Void> promise) {
+            defaultHttp2StreamChannel().writeTransport(msg, promise);
+        }
+
+        @Override
+        protected void flushTransport() {
+            defaultHttp2StreamChannel().flushTransport();
+        }
+
+        @Override
+        protected void sendOutboundEventTransport(Object event, Promise<Void> promise) {
+            defaultHttp2StreamChannel().sendOutboundEventTransport(event, promise);
+        }
     }
 }

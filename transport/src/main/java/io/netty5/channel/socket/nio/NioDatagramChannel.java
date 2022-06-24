@@ -267,7 +267,7 @@ public final class NioDatagramChannel
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
-        RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
 
         return doReadBufferMessages(allocHandle, buf);
     }

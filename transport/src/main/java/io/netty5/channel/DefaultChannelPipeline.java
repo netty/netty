@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  * The default {@link ChannelPipeline} implementation.  It is usually created
  * by a {@link Channel} implementation when the {@link Channel} is created.
  */
-public class DefaultChannelPipeline implements ChannelPipeline {
+public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
     private static final String HEAD_NAME = generateName0(HeadHandler.class);
@@ -74,7 +74,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private volatile MessageSizeEstimator.Handle estimatorHandle;
 
-    public DefaultChannelPipeline(Channel channel) {
+    protected DefaultChannelPipeline(Channel channel) {
         this.channel = requireNonNull(channel, "channel");
         succeededFuture = channel.executor().newSucceededFuture(null);
 
@@ -1013,6 +1013,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // NOOP
     }
 
+    private static DefaultChannelPipeline defaultChannelPipeline(ChannelHandlerContext ctx) {
+        return (DefaultChannelPipeline) ctx.pipeline();
+    }
     // A special catch-all handler that handles both bytes and messages.
     private static final class TailHandler implements ChannelHandler {
 
@@ -1028,22 +1031,22 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundChannelActive();
+            defaultChannelPipeline(ctx).onUnhandledInboundChannelActive();
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundChannelInactive();
+            defaultChannelPipeline(ctx).onUnhandledInboundChannelInactive();
         }
 
         @Override
         public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundChannelShutdown(direction);
+            defaultChannelPipeline(ctx).onUnhandledInboundChannelShutdown(direction);
         }
 
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledChannelWritabilityChanged();
+            defaultChannelPipeline(ctx).onUnhandledChannelWritabilityChanged();
         }
 
         @Override
@@ -1053,17 +1056,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundException(cause);
+            defaultChannelPipeline(ctx).onUnhandledInboundException(cause);
         }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundMessage(ctx, msg);
+            defaultChannelPipeline(ctx).onUnhandledInboundMessage(ctx, msg);
         }
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundChannelReadComplete();
+            defaultChannelPipeline(ctx).onUnhandledInboundChannelReadComplete();
         }
     }
 
@@ -1073,7 +1076,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public Future<Void> bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().bind(localAddress, promise);
+            defaultChannelPipeline(ctx).bindTransport(localAddress, promise);
             return promise.asFuture();
         }
 
@@ -1082,67 +1085,134 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().connect(remoteAddress, localAddress, promise);
+            defaultChannelPipeline(ctx).connectTransport(remoteAddress, localAddress, promise);
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> disconnect(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().disconnect(promise);
+            defaultChannelPipeline(ctx).disconnectTransport(promise);
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> close(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().close(promise);
+            defaultChannelPipeline(ctx).closeTransport(promise);
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> shutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().shutdown(direction, promise);
+            defaultChannelPipeline(ctx).shutdownTransport(direction, promise);
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> register(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().register(promise);
+            defaultChannelPipeline(ctx).registerTransport(promise);
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> deregister(ChannelHandlerContext ctx) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().deregister(promise);
+            defaultChannelPipeline(ctx).deregisterTransport(promise);
             return promise.asFuture();
         }
 
         @Override
         public void read(ChannelHandlerContext ctx) {
-            ctx.channel().unsafe().beginRead();
+            defaultChannelPipeline(ctx).readTransport();
         }
 
         @Override
         public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().write(msg, promise);
+            defaultChannelPipeline(ctx).writeTransport(msg, promise);
             return promise.asFuture();
         }
 
         @Override
         public void flush(ChannelHandlerContext ctx) {
-            ctx.channel().unsafe().flush();
+            defaultChannelPipeline(ctx).flushTransport();
         }
 
         @Override
         public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
             Promise<Void> promise = ctx.newPromise();
-            ctx.channel().unsafe().sendOutboundEvent(event, promise);
+            defaultChannelPipeline(ctx).sendOutboundEventTransport(event, promise);
             return promise.asFuture();
         }
     }
+
+    /**
+     * Register the {@link Channel} of the {@link Promise} and notify
+     * the {@link Future} once the registration was complete.
+     */
+    protected abstract void registerTransport(Promise<Void> promise);
+
+    /**
+     * Bind the {@link SocketAddress} to the {@link Channel} of the {@link Promise} and notify
+     * it once its done.
+     */
+    protected abstract void bindTransport(SocketAddress localAddress, Promise<Void> promise);
+
+    /**
+     * Connect the {@link Channel} of the given {@link Future} with the given remote {@link SocketAddress}.
+     * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
+     * pass {@code null} to it.
+     *
+     * The {@link Promise} will get notified once the connect operation was complete.
+     */
+    protected abstract void connectTransport(
+            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
+
+    /**
+     * Disconnect the {@link Channel} of the {@link Future} and notify the {@link Promise} once the
+     * operation was complete.
+     */
+    protected abstract void disconnectTransport(Promise<Void> promise);
+
+    /**
+     * Close the {@link Channel} of the {@link Promise} and notify the {@link Promise} once the
+     * operation was complete.
+     */
+    protected abstract void closeTransport(Promise<Void> promise);
+
+    /**
+     * Shutdown the given direction of the {@link Channel} and notify the {@link Promise} once the
+     * operation was complete.
+     */
+    protected abstract void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise);
+
+    /**
+     * Deregister the {@link Channel} of the {@link Promise} from {@link EventLoop} and notify the
+     * {@link Promise} once the operation was complete.
+     */
+    protected abstract void deregisterTransport(Promise<Void> promise);
+
+    /**
+     * Schedules a read operation that fills the inbound buffer of the first {@link ChannelHandler} in the
+     * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
+     */
+    protected abstract void readTransport();
+
+    /**
+     * Schedules a write operation.
+     */
+    protected abstract void writeTransport(Object msg, Promise<Void> promise);
+
+    /**
+     * Flush out all write operations scheduled via {@link #writeTransport(Object, Promise)}.
+     */
+    protected abstract void flushTransport();
+
+    /**
+     * Send a custom outbound event.
+     */
+    protected abstract void sendOutboundEventTransport(Object event, Promise<Void> promise);
 }

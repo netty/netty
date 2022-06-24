@@ -310,7 +310,7 @@ public final class NioHandler implements IoHandler {
                 logger.warn("Failed to re-register a Channel to the new Selector.", e);
                 if (a instanceof AbstractNioChannel) {
                     AbstractNioChannel ch = (AbstractNioChannel) a;
-                    ch.unsafe().close(ch.newPromise());
+                    ch.closeTransportNow();
                 } else {
                     @SuppressWarnings("unchecked")
                     NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
@@ -550,11 +550,10 @@ public final class NioHandler implements IoHandler {
     }
 
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
-        final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
         if (!k.isValid()) {
 
             // close the channel if the key is not valid anymore
-            unsafe.close(ch.newPromise());
+            ch.closeTransportNow();
             return;
         }
 
@@ -569,22 +568,22 @@ public final class NioHandler implements IoHandler {
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
 
-                unsafe.finishConnect();
+                ch.finishConnect();
             }
 
             // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                 // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
-                ch.unsafe().forceFlush();
+                ch.forceFlush();
             }
 
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                unsafe.read();
+                ch.readNow();
             }
         } catch (CancelledKeyException ignored) {
-            unsafe.close(ch.newPromise());
+            ch.closeTransportNow();
         }
     }
 
@@ -632,7 +631,7 @@ public final class NioHandler implements IoHandler {
         }
 
         for (AbstractNioChannel ch: channels) {
-            ch.unsafe().close(ch.newPromise());
+            ch.closeTransportNow();
         }
     }
 

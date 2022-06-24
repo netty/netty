@@ -22,7 +22,6 @@ import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
-import io.netty5.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.util.IntSupplier;
@@ -226,23 +225,22 @@ public final class KQueueHandler implements IoHandler {
                 continue;
             }
 
-            AbstractKQueueUnsafe unsafe = (AbstractKQueueUnsafe) channel.unsafe();
             // First check for EPOLLOUT as we may need to fail the connect Promise before try
             // to read from the file descriptor.
             if (filter == Native.EVFILT_WRITE) {
-                unsafe.writeReady();
+                channel.writeReady();
             } else if (filter == Native.EVFILT_READ) {
                 // Check READ before EOF to ensure all data is read before shutting down the input.
-                unsafe.readReady(eventList.data(i));
+                channel.readReady(eventList.data(i));
             } else if (filter == Native.EVFILT_SOCK && (eventList.fflags(i) & Native.NOTE_RDHUP) != 0) {
-                unsafe.readEOF();
+                channel.readEOF();
             }
 
             // Check if EV_EOF was set, this will notify us for connection-reset in which case
             // we may close the channel directly or try to read more data depending on the state of the
             // Channel and also depending on the AbstractKQueueChannel subtype.
             if ((flags & Native.EV_EOF) != 0) {
-                unsafe.readEOF();
+                channel.readEOF();
             }
         }
     }
@@ -341,7 +339,7 @@ public final class KQueueHandler implements IoHandler {
         AbstractKQueueChannel[] localChannels = channels.values().toArray(new AbstractKQueueChannel[0]);
 
         for (AbstractKQueueChannel ch: localChannels) {
-            ch.unsafe().close(ch.newPromise());
+            ch.closeTransportNow();
         }
     }
 

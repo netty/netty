@@ -35,7 +35,7 @@ import java.util.Queue;
 /**
  * A {@link ServerChannel} for the local transport which allows in VM communication.
  */
-public class LocalServerChannel extends AbstractServerChannel {
+public class LocalServerChannel extends AbstractServerChannel implements LocalChannelUnsafe {
 
     private final ChannelConfig config =
             new DefaultChannelConfig(this, new ServerChannelRecvBufferAllocator()) { };
@@ -123,7 +123,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     private void readInbound() {
-        RecvBufferAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        RecvBufferAllocator.Handle handle = recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {
@@ -156,27 +156,20 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new DefaultServerUnsafe();
+    public void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        safeSetFailure(promise, new UnsupportedOperationException());
     }
 
-    private final class DefaultServerUnsafe extends AbstractUnsafe implements LocalChannelUnsafe {
-        @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            safeSetFailure(promise, new UnsupportedOperationException());
-        }
+    @Override
+    public void registerTransportNow() {
+    }
 
-        @Override
-        public void register0() {
-        }
+    @Override
+    public void deregisterTransportNow() {
+    }
 
-        @Override
-        public void deregister0() {
-        }
-
-        @Override
-        public Promise<Void> newPromise() {
-            return LocalServerChannel.this.newPromise();
-        }
+    @Override
+    public void closeTransportNow() {
+        closeTransport(newPromise());
     }
 }

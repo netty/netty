@@ -52,11 +52,6 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
     }
 
     @Override
-    protected AbstractKQueueUnsafe newUnsafe() {
-        return new KQueueDomainUnsafe();
-    }
-
-    @Override
     protected DomainSocketAddress localAddress0() {
         return local;
     }
@@ -125,66 +120,63 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
         return socket.getPeerCredentials();
     }
 
-    private final class KQueueDomainUnsafe extends KQueueStreamUnsafe {
-        @Override
-        void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
-            switch (config().getReadMode()) {
-                case BYTES:
-                    super.readReady(allocHandle);
-                    break;
-                case FILE_DESCRIPTORS:
-                    readReadyFd();
-                    break;
-                default:
-                    throw new Error();
-            }
+    void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
+        switch (config().getReadMode()) {
+            case BYTES:
+                super.readReady(allocHandle);
+                break;
+            case FILE_DESCRIPTORS:
+                readReadyFd();
+                break;
+            default:
+                throw new Error();
         }
+    }
 
-        private void readReadyFd() {
-            if (socket.isInputShutdown()) {
-                super.clearReadFilter0();
-                return;
-            }
-            final ChannelConfig config = config();
-            final KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
+    private void readReadyFd() {
+        if (socket.isInputShutdown()) {
+            super.clearReadFilter0();
+            return;
+        }
+        final ChannelConfig config = config();
+        final KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
-            readReadyBefore();
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
+        readReadyBefore();
 
-            try {
-                readLoop: do {
-                    // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                    // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
-                    // enabled.
-                    int recvFd = socket.recvFd();
-                    switch(recvFd) {
-                        case 0:
-                            allocHandle.lastBytesRead(0);
-                            break readLoop;
-                        case -1:
-                            allocHandle.lastBytesRead(-1);
-                            close(newPromise());
-                            return;
-                        default:
-                            allocHandle.lastBytesRead(1);
-                            allocHandle.incMessagesRead(1);
-                            readPending = false;
-                            pipeline.fireChannelRead(new FileDescriptor(recvFd));
-                            break;
-                    }
-                } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+        try {
+            readLoop: do {
+                // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
+                // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
+                // enabled.
+                int recvFd = socket.recvFd();
+                switch(recvFd) {
+                    case 0:
+                        allocHandle.lastBytesRead(0);
+                        break readLoop;
+                    case -1:
+                        allocHandle.lastBytesRead(-1);
+                        closeTransportNow();
+                        return;
+                    default:
+                        allocHandle.lastBytesRead(1);
+                        allocHandle.incMessagesRead(1);
+                        readPending = false;
+                        pipeline.fireChannelRead(new FileDescriptor(recvFd));
+                        break;
+                }
+            } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-            } catch (Throwable t) {
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-                pipeline.fireChannelExceptionCaught(t);
-            } finally {
-                readIfIsAutoRead();
-                readReadyFinally(config);
-            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+        } catch (Throwable t) {
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+            pipeline.fireChannelExceptionCaught(t);
+        } finally {
+            readIfIsAutoRead();
+            readReadyFinally(config);
         }
     }
 }

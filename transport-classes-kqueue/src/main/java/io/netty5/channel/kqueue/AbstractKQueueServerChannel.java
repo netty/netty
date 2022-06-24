@@ -36,6 +36,11 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private final EventLoopGroup childEventLoopGroup;
 
+    // Will hold the remote address after accept(...) was successful.
+    // We need 24 bytes for the address as maximum + 1 byte for storing the capacity.
+    // So use 26 bytes as it's a power of two.
+    private final byte[] acceptedAddress = new byte[26];
+
     AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
         this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
     }
@@ -58,11 +63,6 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
     @Override
     protected InetSocketAddress remoteAddress0() {
         return null;
-    }
-
-    @Override
-    protected AbstractKQueueUnsafe newUnsafe() {
-        return new KQueueServerSocketUnsafe();
     }
 
     @Override
@@ -92,55 +92,48 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
         return !isActive();
     }
 
-    final class KQueueServerSocketUnsafe extends AbstractKQueueUnsafe {
-        // Will hold the remote address after accept(...) was successful.
-        // We need 24 bytes for the address as maximum + 1 byte for storing the capacity.
-        // So use 26 bytes as it's a power of two.
-        private final byte[] acceptedAddress = new byte[26];
+    @Override
+    void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
+        assert executor().inEventLoop();
+        final ChannelConfig config = config();
+        if (shouldBreakReadReady(config)) {
+            clearReadFilter0();
+            return;
+        }
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
+        allocHandle.attemptedBytesRead(1);
+        readReadyBefore();
 
-        @Override
-        void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
-            assert executor().inEventLoop();
-            final ChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadFilter0();
-                return;
-            }
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
-            allocHandle.attemptedBytesRead(1);
-            readReadyBefore();
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    do {
-                        int acceptFd = socket.accept(acceptedAddress);
-                        if (acceptFd == -1) {
-                            // this means everything was handled for now
-                            allocHandle.lastBytesRead(-1);
-                            break;
-                        }
-                        allocHandle.lastBytesRead(1);
-                        allocHandle.incMessagesRead(1);
+                do {
+                    int acceptFd = socket.accept(acceptedAddress);
+                    if (acceptFd == -1) {
+                        // this means everything was handled for now
+                        allocHandle.lastBytesRead(-1);
+                        break;
+                    }
+                    allocHandle.lastBytesRead(1);
+                    allocHandle.incMessagesRead(1);
 
-                        readPending = false;
-                        pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
-                                                                 acceptedAddress[0]));
-                    } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
-                } catch (Throwable t) {
-                    exception = t;
-                }
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    pipeline.fireChannelExceptionCaught(exception);
-                }
-                readIfIsAutoRead();
-            } finally {
-                readReadyFinally(config);
+                    readPending = false;
+                    pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
+                                                             acceptedAddress[0]));
+                } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } catch (Throwable t) {
+                exception = t;
             }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireChannelExceptionCaught(exception);
+            }
+            readIfIsAutoRead();
+        } finally {
+            readReadyFinally(config);
         }
     }
 }

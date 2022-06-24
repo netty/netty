@@ -71,9 +71,6 @@ public class Http2ControlFrameLimitEncoderTest {
     private Channel channel;
 
     @Mock
-    private Channel.Unsafe unsafe;
-
-    @Mock
     private ChannelConfig config;
 
     @Mock
@@ -150,7 +147,6 @@ public class Http2ControlFrameLimitEncoderTest {
         when(config.getMessageSizeEstimator()).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
         ChannelMetadata metadata = new ChannelMetadata(false, 16);
         when(channel.metadata()).thenReturn(metadata);
-        when(channel.unsafe()).thenReturn(unsafe);
         handler.handlerAdded(ctx);
     }
 

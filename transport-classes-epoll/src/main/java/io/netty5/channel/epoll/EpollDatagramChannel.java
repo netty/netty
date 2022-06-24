@@ -279,11 +279,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollDatagramChannelUnsafe();
-    }
-
-    @Override
     protected void doShutdown(ChannelShutdownDirection direction) {
         switch (direction) {
             case Inbound:
@@ -489,81 +484,78 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         connected = false;
     }
 
-    final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {
-
-        @Override
-        void epollInReady() {
-            assert executor().inEventLoop();
-            EpollDatagramChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
-
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
-            epollInBefore();
-
-            try {
-                Throwable exception = doReadBuffer(allocHandle);
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    pipeline.fireChannelExceptionCaught(exception);
-                }
-                readIfIsAutoRead();
-            } finally {
-                epollInFinally(config);
-            }
+    @Override
+    void epollInReady() {
+        assert executor().inEventLoop();
+        EpollDatagramChannelConfig config = config();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
         }
+        final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
-        private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle) {
-            final BufferAllocator allocator = config().getBufferAllocator();
-            try {
-                boolean connected = isConnected();
-                do {
-                    final boolean read;
-                    int datagramSize = config().getMaxDatagramPayloadSize();
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
+        epollInBefore();
 
-                    Buffer buf = allocHandle.allocate(allocator);
-                    // Only try to use recvmmsg if its really supported by the running system.
-                    int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
-                            datagramSize == 0 ? 1 : buf.writableBytes() / datagramSize :
-                            0;
-                    try {
-                        if (numDatagram <= 1) {
-                            if (!connected || config().isUdpGro()) {
-                                read = recvmsg(allocHandle, cleanDatagramPacketArray(), buf);
-                            } else {
-                                read = connectedRead(allocHandle, buf, datagramSize);
-                            }
+        try {
+            Throwable exception = doReadBuffer(allocHandle);
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireChannelExceptionCaught(exception);
+            }
+            readIfIsAutoRead();
+        } finally {
+            epollInFinally(config);
+        }
+    }
+
+    private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle) {
+        final BufferAllocator allocator = config().getBufferAllocator();
+        try {
+            boolean connected = isConnected();
+            do {
+                final boolean read;
+                int datagramSize = config().getMaxDatagramPayloadSize();
+
+                Buffer buf = allocHandle.allocate(allocator);
+                // Only try to use recvmmsg if its really supported by the running system.
+                int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
+                        datagramSize == 0 ? 1 : buf.writableBytes() / datagramSize :
+                        0;
+                try {
+                    if (numDatagram <= 1) {
+                        if (!connected || config().isUdpGro()) {
+                            read = recvmsg(allocHandle, cleanDatagramPacketArray(), buf);
                         } else {
-                            // Try to use scattering reads via recvmmsg(...) syscall.
-                            read = scatteringRead(allocHandle, cleanDatagramPacketArray(),
-                                                  buf, datagramSize, numDatagram);
+                            read = connectedRead(allocHandle, buf, datagramSize);
                         }
-                    } catch (NativeIoException e) {
-                        if (connected) {
-                            throw translateForConnected(e);
-                        }
-                        throw e;
-                    }
-
-                    if (read) {
-                        readPending = false;
                     } else {
-                        break;
+                        // Try to use scattering reads via recvmmsg(...) syscall.
+                        read = scatteringRead(allocHandle, cleanDatagramPacketArray(),
+                                              buf, datagramSize, numDatagram);
                     }
-                // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-                // as we read anything).
-                } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
-            } catch (Throwable t) {
-                return t;
-            }
-            return null;
+                } catch (NativeIoException e) {
+                    if (connected) {
+                        throw translateForConnected(e);
+                    }
+                    throw e;
+                }
+
+                if (read) {
+                    readPending = false;
+                } else {
+                    break;
+                }
+            // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+            // as we read anything).
+            } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+        } catch (Throwable t) {
+            return t;
         }
+        return null;
     }
 
     private boolean connectedRead(EpollRecvBufferAllocatorHandle allocHandle, Buffer buf,

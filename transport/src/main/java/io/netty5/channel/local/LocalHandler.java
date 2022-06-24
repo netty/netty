@@ -42,9 +42,8 @@ public final class LocalHandler implements IoHandler {
     }
 
     private static LocalChannelUnsafe cast(Channel channel) {
-        Channel.Unsafe unsafe = channel.unsafe();
-        if (unsafe instanceof LocalChannelUnsafe) {
-            return (LocalChannelUnsafe) unsafe;
+        if (channel instanceof LocalChannelUnsafe) {
+            return (LocalChannelUnsafe) channel;
         }
         throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
     }
@@ -75,7 +74,7 @@ public final class LocalHandler implements IoHandler {
     @Override
     public void prepareToDestroy() {
         for (LocalChannelUnsafe unsafe : registeredChannels) {
-            unsafe.close(unsafe.newPromise());
+            unsafe.closeTransportNow();
         }
         registeredChannels.clear();
     }
@@ -88,7 +87,7 @@ public final class LocalHandler implements IoHandler {
     public void register(Channel channel) {
         LocalChannelUnsafe unsafe = cast(channel);
         if (registeredChannels.add(unsafe)) {
-            unsafe.register0();
+            unsafe.registerTransportNow();
         }
     }
 
@@ -96,7 +95,7 @@ public final class LocalHandler implements IoHandler {
     public void deregister(Channel channel) {
         LocalChannelUnsafe unsafe = cast(channel);
         if (registeredChannels.remove(unsafe)) {
-            unsafe.deregister0();
+            unsafe.deregisterTransportNow();
         }
     }
 }

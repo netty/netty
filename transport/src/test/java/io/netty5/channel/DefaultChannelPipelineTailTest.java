@@ -220,11 +220,6 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new MyUnsafe();
-        }
-
-        @Override
         protected SocketAddress localAddress0() {
             return null;
         }
@@ -306,26 +301,25 @@ public class DefaultChannelPipelineTailTest {
         protected void onUnhandledInboundWritabilityChanged() {
         }
 
-        private class MyUnsafe extends AbstractUnsafe {
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-                if (!ensureOpen(promise)) {
-                    return;
-                }
-
-                if (!active) {
-                    active = true;
-                    pipeline().fireChannelActive();
-                    readIfIsAutoRead();
-                }
-
-                promise.setSuccess(null);
+        @Override
+        protected void connectTransport(
+                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            if (!ensureOpen(promise)) {
+                return;
             }
+
+            if (!active) {
+                active = true;
+                pipeline().fireChannelActive();
+                readIfIsAutoRead();
+            }
+
+            promise.setSuccess(null);
         }
 
-        private class MyChannelPipeline extends DefaultChannelPipeline {
+        private class MyChannelPipeline extends DefaultAbstractChannelPipeline {
 
-            MyChannelPipeline(Channel channel) {
+            MyChannelPipeline(AbstractChannel channel) {
                 super(channel);
             }
 
