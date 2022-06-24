@@ -622,6 +622,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             writeFilter(true);
             return false;
         }
+
+        // Override so we can access it from sub-classes
+        @Override
+        protected ChannelOutboundBuffer outboundBuffer() {
+            return super.outboundBuffer();
+        }
     }
 
     @Override

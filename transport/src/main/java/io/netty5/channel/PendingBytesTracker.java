@@ -35,15 +35,15 @@ abstract class PendingBytesTracker implements MessageSizeEstimator.Handle {
     static PendingBytesTracker newTracker(Channel channel) {
         if (channel.pipeline() instanceof DefaultChannelPipeline) {
             return new DefaultChannelPipelinePendingBytesTracker((DefaultChannelPipeline) channel.pipeline());
-        } else {
-            ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-            MessageSizeEstimator.Handle handle = channel.config().getMessageSizeEstimator().newHandle();
-            // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
-            // if the channel was already closed when constructing the PendingBytesTracker.
-            // See https://github.com/netty/netty/issues/3967
-            return buffer == null ?
-                    new NoopPendingBytesTracker(handle) : new ChannelOutboundBufferPendingBytesTracker(buffer, handle);
         }
+        MessageSizeEstimator.Handle handle = channel.config().getMessageSizeEstimator().newHandle();
+        if (channel instanceof AbstractChannel) {
+            ChannelOutboundBuffer buffer = ((AbstractChannel) channel).outboundBuffer();
+            if (buffer != null) {
+                return new ChannelOutboundBufferPendingBytesTracker(buffer, handle);
+            }
+        }
+        return new NoopPendingBytesTracker(handle);
     }
 
     private static final class DefaultChannelPipelinePendingBytesTracker extends PendingBytesTracker {

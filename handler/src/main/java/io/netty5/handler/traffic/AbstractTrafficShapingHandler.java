@@ -588,11 +588,14 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
         ctx.fireChannelRegistered();
     }
 
+    // TODO: Fix me later!
     void setUserDefinedWritability(ChannelHandlerContext ctx, boolean writable) {
+        /**
         ChannelOutboundBuffer cob = ctx.channel().unsafe().outboundBuffer();
         if (cob != null) {
             cob.setUserDefinedWritability(userDefinedWritabilityIndex, writable);
         }
+         **/
     }
 
     /**

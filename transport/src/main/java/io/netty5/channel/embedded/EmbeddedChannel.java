@@ -905,11 +905,6 @@ public class EmbeddedChannel extends AbstractChannel {
                 EmbeddedUnsafe.this.sendOutboundEvent(event, promise);
                 mayRunPendingTasks();
             }
-
-            @Override
-            public ChannelOutboundBuffer outboundBuffer() {
-                return EmbeddedUnsafe.this.outboundBuffer();
-            }
         };
 
         @Override
@@ -918,7 +913,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
+    private final class EmbeddedChannelPipeline extends DefaultAbstractChannelPipeline {
         EmbeddedChannelPipeline(EmbeddedChannel channel) {
             super(channel);
         }

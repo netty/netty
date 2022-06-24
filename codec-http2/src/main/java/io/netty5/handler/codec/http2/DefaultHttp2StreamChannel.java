@@ -23,7 +23,6 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelMetadata;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.DefaultChannelPipeline;
@@ -1007,12 +1006,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         public void sendOutboundEvent(Object event, Promise<Void> promise) {
             Resource.dispose(event);
             promise.setSuccess(null);
-        }
-
-        @Override
-        public ChannelOutboundBuffer outboundBuffer() {
-            // Always return null as we not use the ChannelOutboundBuffer and not even support it.
-            return null;
         }
     }
 

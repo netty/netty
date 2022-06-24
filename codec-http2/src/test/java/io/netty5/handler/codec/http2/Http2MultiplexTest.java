@@ -86,7 +86,7 @@ public class Http2MultiplexTest {
 
     private static final int initialRemoteStreamWindow = 1024;
 
-    private Http2FrameCodec newCodec(TestChannelInitializer childChannelInitializer, Http2FrameWriter frameWriter) {
+    private Http2FrameCodec newCodec(Http2FrameWriter frameWriter) {
         return new Http2FrameCodecBuilder(true).frameWriter(frameWriter).build();
     }
 
@@ -101,12 +101,10 @@ public class Http2MultiplexTest {
         frameInboundWriter = new Http2FrameInboundWriter(parentChannel);
         parentChannel.connect(new InetSocketAddress(0));
         frameWriter = Http2TestUtil.mockedFrameWriter();
-        codec = newCodec(childChannelInitializer, frameWriter);
+        codec = newCodec(frameWriter);
         parentChannel.pipeline().addLast(codec);
         ChannelHandler multiplexer = newMultiplexer(childChannelInitializer);
-        if (multiplexer != null) {
-            parentChannel.pipeline().addLast(multiplexer);
-        }
+        parentChannel.pipeline().addLast(multiplexer);
 
         parentChannel.pipeline().fireChannelActive();
 
@@ -904,8 +902,8 @@ public class Http2MultiplexTest {
         // Add something to the ChannelOutboundBuffer of the parent to simulate queuing in the parents channel buffer
         // and verify that this only affect the writability of the parent channel while the child stays writable
         // until it used all of its credits.
-        parentChannel.unsafe().outboundBuffer().addMessage(
-                onHeapAllocator().allocate(800).fill((byte) '0'), 800, parentChannel.newPromise());
+        parentChannel.pipeline().firstContext().write(
+                onHeapAllocator().allocate(800).skipWritableBytes(800));
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());

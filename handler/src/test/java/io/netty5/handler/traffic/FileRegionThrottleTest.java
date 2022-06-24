@@ -50,6 +50,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled
 public class FileRegionThrottleTest {
     private static final byte[] BYTES = new byte[64 * 1024 * 4];
     private static final long WRITE_LIMIT = 64 * 1024;

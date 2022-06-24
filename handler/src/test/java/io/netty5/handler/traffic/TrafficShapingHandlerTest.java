@@ -33,6 +33,7 @@ import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.EventExecutorGroup;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -40,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+@Disabled
 public class TrafficShapingHandlerTest {
 
     private static final long READ_LIMIT_BYTES_PER_SECOND = 1;
