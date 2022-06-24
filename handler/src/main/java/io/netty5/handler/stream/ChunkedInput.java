@@ -20,18 +20,12 @@ import io.netty5.buffer.api.BufferAllocator;
 /**
  * A data stream of indefinite length which is consumed by {@link ChunkedWriteHandler}.
  */
-public interface ChunkedInput<B> {
-
+public interface ChunkedInput<B> extends AutoCloseable {
     /**
      * Return {@code true} if and only if there is no data left in the stream
      * and the stream has reached at its end.
      */
     boolean isEndOfInput() throws Exception;
-
-    /**
-     * Releases the resources associated with the input.
-     */
-    void close() throws Exception;
 
     /**
      * Fetches a chunked data from the stream. Once this method returns the last chunk

@@ -21,9 +21,9 @@ import io.netty5.channel.FileRegion;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 
 import static java.util.Objects.requireNonNull;
 
@@ -47,7 +47,7 @@ public class ChunkedNioFile implements ChunkedInput<Buffer> {
      * Creates a new instance that fetches data from the specified file.
      */
     public ChunkedNioFile(File in) throws IOException {
-        this(new RandomAccessFile(in, "r").getChannel());
+        this(FileChannel.open(in.toPath(), StandardOpenOption.READ));
     }
 
     /**
@@ -56,7 +56,7 @@ public class ChunkedNioFile implements ChunkedInput<Buffer> {
      * @param chunkSize the number of bytes to fetch on each {@link #readChunk(BufferAllocator)} call.
      */
     public ChunkedNioFile(File in, int chunkSize) throws IOException {
-        this(new RandomAccessFile(in, "r").getChannel(), chunkSize);
+        this(FileChannel.open(in.toPath(), StandardOpenOption.READ), chunkSize);
     }
 
     /**

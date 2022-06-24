@@ -22,6 +22,7 @@ import io.netty5.channel.FileRegion;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,11 +36,11 @@ import static java.util.Objects.requireNonNull;
 public class ChunkedFile implements ChunkedInput<Buffer> {
 
     private final RandomAccessFile file;
+    private final FileChannel channel;
     private final long startOffset;
     private final long endOffset;
     private final int chunkSize;
     private long offset;
-    private byte[] cachedArray;
 
     /**
      * Creates a new instance that fetches data from the specified file.
@@ -100,6 +101,7 @@ public class ChunkedFile implements ChunkedInput<Buffer> {
         }
 
         this.file = file;
+        channel = file.getChannel();
         this.offset = startOffset = offset;
         endOffset = offset + length;
         this.chunkSize = chunkSize;
@@ -133,9 +135,12 @@ public class ChunkedFile implements ChunkedInput<Buffer> {
         return !(offset < endOffset && file.getChannel().isOpen());
     }
 
+    @SuppressWarnings("EmptyTryBlock")
     @Override
     public void close() throws Exception {
-        file.close();
+        try (channel; file) {
+            // Using try-with-resources to correctly handle exceptions from close().
+        }
     }
 
     @Override
@@ -151,20 +156,9 @@ public class ChunkedFile implements ChunkedInput<Buffer> {
         Buffer buf = allocator.allocate(chunkSize);
         boolean release = true;
         try {
-            try (var iterator = buf.forEachWritable()) {
-                var component = iterator.first();
-                int size = Math.min(component.writableBytes(), chunkSize);
-                if (component.hasWritableArray()) {
-                    file.readFully(component.writableArray(), component.writableArrayOffset(), size);
-                    component.skipWritableBytes(size);
-                } else {
-                    if (cachedArray == null || cachedArray.length < size) {
-                        cachedArray = new byte[size];
-                    }
-                    file.readFully(cachedArray, 0, size);
-                    buf.writeBytes(cachedArray, 0, size);
-                }
-                this.offset = offset + size;
+            int bytes = buf.transferFrom(channel, offset, chunkSize);
+            if (bytes != -1) {
+                this.offset = offset + bytes;
             }
             release = false;
             return buf;

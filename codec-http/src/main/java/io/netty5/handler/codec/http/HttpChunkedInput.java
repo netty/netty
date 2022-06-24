@@ -15,7 +15,10 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.stream.ChunkedInput;
+import io.netty5.util.Resource;
 
 /**
  * A {@link ChunkedInput} that fetches data chunk by chunk for use with HTTP chunked transfers.
@@ -37,23 +40,19 @@ import io.netty5.handler.stream.ChunkedInput;
  * }
  * </pre>
  */
-public class HttpChunkedInput /*implements ChunkedInput<HttpContent> */ {
-    // TODO: Migrate ChunkedInput
-/*
+public class HttpChunkedInput implements ChunkedInput<HttpContent<?>> {
     private final ChunkedInput<Buffer> input;
-    private final LastHttpContent lastHttpContent;
+    private final LastHttpContent<?> lastHttpContent;
     private boolean sentLastChunk;
 
-    */
-/**
+    /**
      * Creates a new instance using the specified input. {@code lastHttpContent} will be written as the terminating
      * chunk.
      * @param input {@link ChunkedInput} containing data to write
      * @param lastHttpContent {@link LastHttpContent} that will be written as the terminating chunk. Use this for
      * training headers.
-     *//*
-
-    public HttpChunkedInput(ChunkedInput<Buffer> input, LastHttpContent lastHttpContent) {
+     */
+    public HttpChunkedInput(ChunkedInput<Buffer> input, LastHttpContent<?> lastHttpContent) {
         this.input = input;
         this.lastHttpContent = lastHttpContent;
     }
@@ -69,49 +68,17 @@ public class HttpChunkedInput /*implements ChunkedInput<HttpContent> */ {
     }
 
     @Override
-    public Send<ChunkedInput<HttpContent>> send() {
-        final Send<ChunkedInput<Buffer>> inputSend = input.send();
-        final Send<HttpContent> lhcSend = lastHttpContent.send();
-        return new Send<>() {
-            @Override
-            public ChunkedInput<HttpContent> receive() {
-                final HttpContent lhc = lhcSend.receive();
-                assert lhcSend.referentIsInstanceOf(lhc.getClass());
-                return new HttpChunkedInput(inputSend.receive(), (LastHttpContent) lhc);
+    public void close() throws Exception {
+        // Using try-with-resources to correctly handle exceptions from close().
+        try (input) {
+            if (!sentLastChunk && Resource.isAccessible(lastHttpContent, false)) {
+                Resource.dispose(lastHttpContent);
             }
-
-            @Override
-            public void close() {
-                try {
-                    inputSend.close();
-                } finally {
-                    lhcSend.close();
-                }
-            }
-
-            @Override
-            public boolean referentIsInstanceOf(Class<?> cls) {
-                return cls.isAssignableFrom(HttpChunkedInput.class);
-            }
-        };
-    }
-
-    @Override
-    public void close() {
-        try {
-            input.close();
-        } finally {
-            lastHttpContent.close();
         }
     }
 
     @Override
-    public boolean isAccessible() {
-        return input.isAccessible() && lastHttpContent.isAccessible();
-    }
-
-    @Override
-    public HttpContent readChunk(BufferAllocator allocator) throws Exception {
+    public HttpContent<?> readChunk(BufferAllocator allocator) throws Exception {
         if (input.isEndOfInput()) {
             if (sentLastChunk) {
                 return null;
@@ -138,5 +105,4 @@ public class HttpChunkedInput /*implements ChunkedInput<HttpContent> */ {
     public long progress() {
         return input.progress();
     }
-*/
 }
