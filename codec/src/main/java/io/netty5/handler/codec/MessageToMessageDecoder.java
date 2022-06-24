@@ -22,6 +22,8 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.TypeParameterMatcher;
 
+import static io.netty5.util.internal.SilentDispose.autoClosing;
+
 /**
  * {@link ChannelHandler} which decodes from one message to another message.
  *
@@ -125,10 +127,8 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter {
      * @throws Exception    is thrown if an error occurs
      */
     protected void decodeAndClose(ChannelHandlerContext ctx, I msg) throws Exception {
-        try {
+        try (AutoCloseable ignore = autoClosing(msg)) {
             decode(ctx, msg);
-        } finally {
-            Resource.dispose(msg);
         }
     }
 }

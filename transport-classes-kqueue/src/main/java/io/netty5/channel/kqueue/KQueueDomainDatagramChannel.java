@@ -18,7 +18,6 @@ package io.netty5.channel.kqueue;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
@@ -33,8 +32,11 @@ import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -44,7 +46,7 @@ import static io.netty5.util.CharsetUtil.UTF_8;
 
 @UnstableApi
 public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramChannel implements DomainDatagramChannel {
-
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDomainDatagramChannel.class);
     private static final String EXPECTED_TYPES =
             " (expected: " +
                     StringUtil.simpleClassName(DomainDatagramPacket.class) + ", " +
@@ -194,7 +196,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                         try {
                             return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(buf), domainRecipient);
                         } finally {
-                            Resource.dispose(e);
+                            SilentDispose.dispose(e, logger); // Don't fail here, because we allocated a buffer.
                         }
                     }
                     return e;

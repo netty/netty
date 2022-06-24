@@ -83,6 +83,31 @@ public final class SilentDispose {
         }
     }
 
+    /**
+     * Return an {@link AutoCloseable} for the given object, which can be used to dispose of it using a
+     * try-with-resources clause.
+     * <p>
+     * The benefit of this approach is that exceptions are correctly handled if both the try-body, and the resource
+     * disposal, throws.
+     * <p>
+     * This is not a silent operation, in that exceptions from resource disposal will propagate.
+     * However, the try-with-resources clause will guarantee that resource disposal exceptions won't shadow any
+     * exceptions from the try-body
+     *
+     * @param obj The object to dispose of.
+     * @return An {@link AutoCloseable} that will dispose of the given object when closed.
+     */
+    public static AutoCloseable autoClosing(Object obj) {
+        if (obj instanceof AutoCloseable) {
+            return (AutoCloseable) obj;
+        }
+        if (obj instanceof io.netty.util.ReferenceCounted) {
+            return () -> ((io.netty.util.ReferenceCounted) obj).release();
+        }
+        // It is safe to use null in try-with-resources. We can use that for uncloseable/unreleasable things.
+        return null;
+    }
+
     private SilentDispose() {
     }
 }

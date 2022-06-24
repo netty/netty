@@ -71,7 +71,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.BindException;
 import java.net.DatagramSocket;

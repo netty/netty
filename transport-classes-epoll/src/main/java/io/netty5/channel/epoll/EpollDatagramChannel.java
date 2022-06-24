@@ -37,7 +37,10 @@ import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.RecyclableArrayList;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -55,6 +58,7 @@ import static java.util.Objects.requireNonNull;
  * maximal performance.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -446,7 +450,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         try {
                             return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(buf), recipient);
                         } finally {
-                            Resource.dispose(e);
+                            SilentDispose.dispose(e, logger); // Don't fail here, because we allocated a buffer.
                         }
                     }
                     return e;

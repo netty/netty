@@ -28,6 +28,8 @@ import io.netty5.util.internal.TypeParameterMatcher;
 
 import java.util.List;
 
+import static io.netty5.util.internal.SilentDispose.autoClosing;
+
 /**
  * {@link ChannelHandler} which encodes from one message to another message
  *
@@ -162,10 +164,8 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
      * @throws Exception    is thrown if an error occurs.
      */
     protected void encodeAndClose(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
-        try {
+        try (AutoCloseable ignore = autoClosing(msg)) {
             encode(ctx, msg, out);
-        } finally {
-            Resource.dispose(msg);
         }
     }
 }

@@ -18,7 +18,6 @@ package io.netty5.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
 import java.util.Map;

@@ -53,6 +53,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -116,21 +117,17 @@ public class OcspTest {
         SslContext context = SslContextBuilder.forClient()
                 .sslProvider(sslProvider)
                 .build();
-        try {
+        try (AutoCloseable ignore1 = autoClosing(context)) {
             SslHandler sslHandler = context.newHandler(offHeapAllocator());
             final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
-            try {
+            try (AutoCloseable ignore2 = autoClosing(engine)) {
                 assertThrows(IllegalStateException.class, new Executable() {
                     @Override
                     public void execute() {
                         engine.getOcspResponse();
                     }
                 });
-            } finally {
-                engine.release();
             }
-        } finally {
-            Resource.dispose(context);
         }
     }
 
@@ -150,21 +147,17 @@ public class OcspTest {
             SslContext context = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                     .sslProvider(sslProvider)
                     .build();
-            try {
+            try (AutoCloseable ignore1 = autoClosing(context)) {
                 SslHandler sslHandler = context.newHandler(offHeapAllocator());
                 final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
-                try {
+                try (AutoCloseable ignore2 = autoClosing(engine)) {
                     assertThrows(IllegalStateException.class, new Executable() {
                         @Override
                         public void execute() {
                             engine.setOcspResponse(new byte[] { 1, 2, 3 });
                         }
                     });
-                } finally {
-                    engine.release();
                 }
-            } finally {
-                Resource.dispose(context);
             }
         } finally {
             ssc.delete();
@@ -364,14 +357,14 @@ public class OcspTest {
                     .enableOcsp(true)
                     .build();
 
-            try {
+            try (AutoCloseable ignore1 = autoClosing(serverSslContext)) {
                 SslContext clientSslContext = SslContextBuilder.forClient()
                         .sslProvider(sslProvider)
                         .enableOcsp(true)
                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                         .build();
 
-                try {
+                try (AutoCloseable ignore2 = autoClosing(clientSslContext)) {
                     EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
                     try {
                         LocalAddress address = new LocalAddress("handshake-" + Math.random());
@@ -386,11 +379,7 @@ public class OcspTest {
                     } finally {
                         group.shutdownGracefully(1L, 1L, TimeUnit.SECONDS);
                     }
-                } finally {
-                    Resource.dispose(clientSslContext);
                 }
-            } finally {
-                Resource.dispose(serverSslContext);
             }
         } finally {
             ssc.delete();

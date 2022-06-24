@@ -17,7 +17,9 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Resource;
+import io.netty5.util.internal.SilentDispose;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class DefaultDnsRecordDecoderTest {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultDnsRecordDecoderTest.class);
 
     @Test
     public void testDecodeName() {
@@ -104,7 +107,7 @@ public class DefaultDnsRecordDecoderTest {
             buffer.readerOffset(0).writerOffset(10);
             assertEquals(buffer, uncompressed);
         } finally {
-            Resource.dispose(uncompressed);
+            SilentDispose.dispose(uncompressed, logger);
         }
     }
 
@@ -124,7 +127,7 @@ public class DefaultDnsRecordDecoderTest {
             uncompressed = DnsCodecUtil.decompressDomainName(allocator, buffer);
             assertEquals(expected, uncompressed);
         } finally {
-            Resource.dispose(uncompressed);
+            SilentDispose.dispose(uncompressed, logger);
         }
     }
 
@@ -152,8 +155,8 @@ public class DefaultDnsRecordDecoderTest {
                         "The rdata of NS-type record should be decompressed in advance");
             assertEquals("netty.io.", DnsCodecUtil.decodeDomainName(nsRecord.content()));
         } finally {
-            Resource.dispose(cnameRecord);
-            Resource.dispose(nsRecord);
+            SilentDispose.dispose(cnameRecord, logger);
+            SilentDispose.dispose(nsRecord, logger);
         }
     }
 
@@ -214,9 +217,9 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals(uncompressedIndexedName, ptrRecord.name());
             assertEquals(uncompressedIndexedName, ptrRecord.hostname());
         } finally {
-            Resource.dispose(rawPlainRecord);
-            Resource.dispose(rawUncompressedRecord);
-            Resource.dispose(rawUncompressedIndexedRecord);
+            SilentDispose.dispose(rawPlainRecord, logger);
+            SilentDispose.dispose(rawUncompressedRecord, logger);
+            SilentDispose.dispose(rawUncompressedIndexedRecord, logger);
         }
     }
 

@@ -32,7 +32,6 @@ import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -65,6 +64,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -224,36 +224,71 @@ public class OpenSslPrivateKeyMethodTest {
                 new OpenSslPrivateKeyMethodAdapter(keyMethod, newThread)) : buildServerContext(keyMethod);
 
         final SslContext sslClientContext = buildClientContext();
-        try {
-            try {
-                final Promise<Object> serverPromise = GROUP.next().newPromise();
-                final Promise<Object> clientPromise = GROUP.next().newPromise();
+        try (AutoCloseable ignore1 = autoClosing(sslServerContext);
+             AutoCloseable ignore2 = autoClosing(sslClientContext)) {
+            final Promise<Object> serverPromise = GROUP.next().newPromise();
+            final Promise<Object> clientPromise = GROUP.next().newPromise();
 
-                ChannelHandler serverHandler = new ChannelInitializer<Channel>() {
+            ChannelHandler serverHandler = new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ChannelPipeline pipeline = ch.pipeline();
+                    pipeline.addLast(newSslHandler(
+                            sslServerContext, ch.bufferAllocator(), delegateExecutor(delegate)));
+
+                    pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
+                        @Override
+                        public void channelInactive(ChannelHandlerContext ctx) {
+                            serverPromise.cancel();
+                            ctx.fireChannelInactive();
+                        }
+
+                        @Override
+                        public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                            if (serverPromise.trySuccess(null)) {
+                                ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] {'P', 'O', 'N', 'G'}));
+                            }
+                            ctx.close();
+                        }
+
+                        @Override
+                        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            if (!serverPromise.tryFailure(cause)) {
+                                ctx.fireChannelExceptionCaught(cause);
+                            }
+                        }
+                    });
+                }
+            };
+
+            LocalAddress address = new LocalAddress("test-" + SslProvider.OPENSSL
+                                                    + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate);
+
+            Channel server = server(address, serverHandler);
+            try {
+                ChannelHandler clientHandler = new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(newSslHandler(
-                                sslServerContext, ch.bufferAllocator(), delegateExecutor(delegate)));
+                                sslClientContext, ch.bufferAllocator(), delegateExecutor(delegate)));
 
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) {
-                                serverPromise.cancel();
+                                clientPromise.cancel();
                                 ctx.fireChannelInactive();
                             }
 
                             @Override
                             public void messageReceived(ChannelHandlerContext ctx, Object msg) {
-                                if (serverPromise.trySuccess(null)) {
-                                    ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] {'P', 'O', 'N', 'G'}));
-                                }
+                                clientPromise.trySuccess(null);
                                 ctx.close();
                             }
 
                             @Override
                             public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                if (!serverPromise.tryFailure(cause)) {
+                                if (!clientPromise.tryFailure(cause)) {
                                     ctx.fireChannelExceptionCaught(cause);
                                 }
                             }
@@ -261,65 +296,25 @@ public class OpenSslPrivateKeyMethodTest {
                     }
                 };
 
-                LocalAddress address = new LocalAddress("test-" + SslProvider.OPENSSL
-                        + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate);
-
-                Channel server = server(address, serverHandler);
+                Channel client = client(server, clientHandler);
                 try {
-                    ChannelHandler clientHandler = new ChannelInitializer<Channel>() {
-                        @Override
-                        protected void initChannel(Channel ch) {
-                            ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(newSslHandler(
-                                    sslClientContext, ch.bufferAllocator(), delegateExecutor(delegate)));
+                    client.writeAndFlush(offHeapAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
+                          .sync();
 
-                            pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
-                                @Override
-                                public void channelInactive(ChannelHandlerContext ctx) {
-                                    clientPromise.cancel();
-                                    ctx.fireChannelInactive();
-                                }
+                    Future<Object> clientFuture = clientPromise.asFuture();
+                    Future<Object> serverFuture = serverPromise.asFuture();
+                    assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
+                    assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
 
-                                @Override
-                                public void messageReceived(ChannelHandlerContext ctx, Object msg) {
-                                    clientPromise.trySuccess(null);
-                                    ctx.close();
-                                }
-
-                                @Override
-                                public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                    if (!clientPromise.tryFailure(cause)) {
-                                        ctx.fireChannelExceptionCaught(cause);
-                                    }
-                                }
-                            });
-                        }
-                    };
-
-                    Channel client = client(server, clientHandler);
-                    try {
-                        client.writeAndFlush(offHeapAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
-                                .sync();
-
-                        Future<Object> clientFuture = clientPromise.asFuture();
-                        Future<Object> serverFuture = serverPromise.asFuture();
-                        assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
-                        assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
-
-                        clientFuture.sync();
-                        serverFuture.sync();
-                        assertTrue(signCalled.get());
-                    } finally {
-                        client.close().sync();
-                    }
+                    clientFuture.sync();
+                    serverFuture.sync();
+                    assertTrue(signCalled.get());
                 } finally {
-                    server.close().sync();
+                    client.close().sync();
                 }
             } finally {
-                Resource.dispose(sslClientContext);
+                server.close().sync();
             }
-        } finally {
-            Resource.dispose(sslServerContext);
         }
     }
 
@@ -358,30 +353,25 @@ public class OpenSslPrivateKeyMethodTest {
         SslHandler clientSslHandler = newSslHandler(
                 sslClientContext, offHeapAllocator(), delegateExecutor(delegate));
 
-        try {
-            try {
-                LocalAddress address = new LocalAddress("test-" + SslProvider.OPENSSL
-                        + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate);
+        try (AutoCloseable ignore1 = autoClosing(sslServerContext);
+             AutoCloseable ignore2 = autoClosing(sslClientContext)) {
+            LocalAddress address = new LocalAddress("test-" + SslProvider.OPENSSL
+                                                    + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate);
 
-                Channel server = server(address, serverSslHandler);
+            Channel server = server(address, serverSslHandler);
+            try {
+                Channel client = client(server, clientSslHandler);
                 try {
-                    Channel client = client(server, clientSslHandler);
-                    try {
-                        Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
-                        Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
-                        assertNotNull(clientCause);
-                        assertThat(serverCause, Matchers.instanceOf(SSLHandshakeException.class));
-                    } finally {
-                        client.close().sync();
-                    }
+                    Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
+                    Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
+                    assertNotNull(clientCause);
+                    assertThat(serverCause, Matchers.instanceOf(SSLHandshakeException.class));
                 } finally {
-                    server.close().sync();
+                    client.close().sync();
                 }
             } finally {
-                Resource.dispose(sslClientContext);
+                server.close().sync();
             }
-        } finally {
-            Resource.dispose(sslServerContext);
         }
     }
 

@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.PrivateKey;
 
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,13 +65,11 @@ public class PemEncodedTest {
                 .build();
         assertFalse(pemKey.isDestroyed());
         assertTrue(pemCert.isAccessible());
-        try {
+        try (AutoCloseable ignore = autoClosing(context)) {
             assertTrue(context instanceof ReferenceCountedOpenSslContext);
-        } finally {
-            Resource.dispose(context);
-            assertRelease(pemKey);
-            assertRelease(pemCert);
         }
+        assertRelease(pemKey);
+        assertRelease(pemCert);
     }
 
     @Test

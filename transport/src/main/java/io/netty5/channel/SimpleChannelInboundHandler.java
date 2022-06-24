@@ -100,10 +100,18 @@ public abstract class SimpleChannelInboundHandler<I> implements ChannelHandler {
                 release = false;
                 ctx.fireChannelRead(msg);
             }
-        } finally {
+        } catch (Throwable throwable) {
             if (autoRelease && release) {
-                Resource.dispose(msg);
+                try {
+                    Resource.dispose(msg);
+                } catch (Exception e) {
+                    throwable.addSuppressed(e);
+                }
             }
+            throw throwable;
+        }
+        if (autoRelease && release) {
+            Resource.dispose(msg);
         }
     }
 

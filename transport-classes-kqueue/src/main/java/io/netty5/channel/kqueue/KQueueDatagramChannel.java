@@ -29,12 +29,14 @@ import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.Resource;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -50,6 +52,7 @@ import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel implements DatagramChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDatagramChannel.class);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -320,7 +323,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                         try {
                             return new DefaultBufferAddressedEnvelope<>(newDirectBuffer(null, buf), inetRecipient);
                         } finally {
-                            Resource.dispose(e);
+                            SilentDispose.dispose(e, logger); // Don't fail here, because we allocated a buffer.
                         }
                     }
                     return e;

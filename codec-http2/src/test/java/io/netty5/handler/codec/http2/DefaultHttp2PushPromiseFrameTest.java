@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -38,6 +37,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultHttp2PushPromiseFrameTest {
@@ -185,8 +185,7 @@ public class DefaultHttp2PushPromiseFrameTest {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof Http2PushPromiseFrame) {
                 Http2PushPromiseFrame pushPromiseFrame = (Http2PushPromiseFrame) msg;
 
@@ -214,7 +213,7 @@ public class DefaultHttp2PushPromiseFrameTest {
             } else if (msg instanceof Http2DataFrame) {
                 Http2DataFrame dataFrame = (Http2DataFrame) msg;
 
-                try {
+                try (AutoCloseable ignore = autoClosing(dataFrame)) {
                     if (dataFrame.stream().id() == 3) {
                         assertEquals("Meow", dataFrame.content().toString(CharsetUtil.UTF_8));
                     } else if (dataFrame.stream().id() == 2) {
@@ -222,8 +221,6 @@ public class DefaultHttp2PushPromiseFrameTest {
                     } else {
                         ctx.writeAndFlush(new DefaultHttp2GoAwayFrame(Http2Error.REFUSED_STREAM));
                     }
-                } finally {
-                    Resource.dispose(dataFrame);
                 }
             }
         }

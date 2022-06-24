@@ -183,12 +183,12 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
         try {
             future = lookup(ctx, clientHello);
             if (future.isDone()) {
+                Resource.dispose(clientHello); // Future is completed. We can dispose it immediately.
                 onLookupComplete(ctx, future);
             } else {
                 suppressRead = true;
-                final Buffer finalClientHello = clientHello;
                 future.addListener(f -> {
-                    Resource.dispose(finalClientHello);
+                    Resource.dispose(clientHello); // Delay disposing until the future completes.
                     try {
                         suppressRead = false;
                         try {
@@ -207,14 +207,9 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBu
                         }
                     }
                 });
-
-                // Ownership was transferred to the FutureListener.
-                clientHello = null;
             }
         } catch (Throwable cause) {
             PlatformDependent.throwException(cause);
-        } finally {
-            Resource.dispose(clientHello);
         }
     }
 

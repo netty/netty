@@ -22,12 +22,12 @@ import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty5.util.internal.SilentDispose.autoClosing;
 
 /**
  * An abstract {@link ChannelHandler} that aggregates a series of message objects into a single aggregated message.
@@ -394,11 +394,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     private void invokeHandleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
         handlingOversizedMessage = true;
         currentMessage = null;
-        try {
+        try (AutoCloseable ignore = autoClosing(oversized) /* Release the message in case it is a full one. */) {
             handleOversizedMessage(ctx, oversized);
-        } finally {
-            // Release the message in case it is a full one.
-            Resource.dispose(oversized);
         }
     }
 

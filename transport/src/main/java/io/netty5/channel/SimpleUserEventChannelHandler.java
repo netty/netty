@@ -100,10 +100,18 @@ public abstract class SimpleUserEventChannelHandler<I> implements ChannelHandler
                 release = false;
                 ctx.fireChannelInboundEvent(evt);
             }
-        } finally {
+        } catch (Throwable throwable) {
             if (autoRelease && release) {
-                Resource.dispose(evt);
+                try {
+                    Resource.dispose(evt);
+                } catch (Exception e) {
+                    throwable.addSuppressed(e);
+                }
             }
+            throw throwable;
+        }
+        if (autoRelease && release) {
+            Resource.dispose(evt);
         }
     }
 

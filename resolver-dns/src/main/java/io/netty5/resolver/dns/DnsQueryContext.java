@@ -29,6 +29,7 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -160,9 +161,11 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         try {
             promise.tryFailure(cause);
             writePromise.setFailure(cause);
-        } finally {
-            Resource.dispose(query);
+        } catch (Throwable throwable) {
+            SilentDispose.dispose(query, logger);
+            throw throwable;
         }
+        Resource.dispose(query);
     }
 
     private void writeQuery(final DnsQuery query, final boolean flush, final Promise<Void> writePromise) {
