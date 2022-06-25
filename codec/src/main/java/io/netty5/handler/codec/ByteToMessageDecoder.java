@@ -41,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  * in the {@link ChannelPipeline}.
  *
  * <pre>
- *     public class SquareDecoder extends {@link ByteToMessageDecoderForBuffer} {
+ *     public class SquareDecoder extends {@link ByteToMessageDecoder} {
  *         {@code @Override}
  *         public void decode({@link ChannelHandlerContext} ctx, {@link Buffer} in)
  *                 throws {@link Exception} {
@@ -57,7 +57,7 @@ import static java.util.Objects.requireNonNull;
  * or {@link LineBasedFrameDecoder}.
  * <p>
  * If a custom frame decoder is required, then one needs to be careful when implementing
- * one with {@link ByteToMessageDecoderForBuffer}. Ensure there are enough bytes in the buffer for a
+ * one with {@link ByteToMessageDecoder}. Ensure there are enough bytes in the buffer for a
  * complete frame by checking {@link Buffer#readableBytes()}. If there are not enough bytes
  * for a complete frame, return without modifying the reader index to allow more bytes to arrive.
  * <p>
@@ -67,10 +67,10 @@ import static java.util.Objects.requireNonNull;
  * is not always the case. Use <tt>in.getInt(in.readerIndex())</tt> instead.
  * <h3>Pitfalls</h3>
  * <p>
- * Be aware that sub-classes of {@link ByteToMessageDecoderForBuffer} <strong>MUST NOT</strong>
+ * Be aware that sub-classes of {@link ByteToMessageDecoder} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  */
-public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapter { // TODO rename
+public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     /**
      * Cumulate {@link Buffer}s by merge them into one {@link Buffer}'s, using memory copies.
@@ -98,11 +98,11 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     private int numReads;
     private ByteToMessageDecoderContext context;
 
-    protected ByteToMessageDecoderForBuffer() {
+    protected ByteToMessageDecoder() {
         this(MERGE_CUMULATOR);
     }
 
-    protected ByteToMessageDecoderForBuffer(Cumulator cumulator) {
+    protected ByteToMessageDecoder(Cumulator cumulator) {
         this.cumulator = requireNonNull(cumulator, "cumulator");
         ensureNotSharable();
     }
@@ -176,7 +176,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     }
 
     /**
-     * Gets called after the {@link ByteToMessageDecoderForBuffer} was removed from the actual context and it doesn't
+     * Gets called after the {@link ByteToMessageDecoder} was removed from the actual context and it doesn't
      * handle events anymore.
      */
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception { }
@@ -304,7 +304,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
      * Called once data should be decoded from the given {@link Buffer}. This method will call
      * {@link #decode(ChannelHandlerContext, Buffer)} as long as decoding should take place.
      *
-     * @param ctx the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoderForBuffer} belongs to
+     * @param ctx the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in  the {@link Buffer} from which to read data
      */
     void callDecode(ByteToMessageDecoderContext ctx, Buffer in) {
@@ -353,7 +353,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
      * {@link Buffer} has nothing to read when return from this method or till nothing was read from the input
      * {@link Buffer}.
      *
-     * @param ctx the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoderForBuffer} belongs to
+     * @param ctx the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in  the {@link Buffer} from which to read data
      * @throws Exception is thrown if an error occurs
      */
@@ -364,7 +364,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
      * {@link Buffer} has nothing to read when return from this method or till nothing was read from the input
      * {@link Buffer}.
      *
-     * @param ctx the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoderForBuffer} belongs to
+     * @param ctx the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in the {@link Buffer} from which to read data
      * @throws Exception is thrown if an error occurs
      */

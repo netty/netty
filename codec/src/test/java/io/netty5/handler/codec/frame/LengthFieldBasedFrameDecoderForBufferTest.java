@@ -17,7 +17,7 @@ package io.netty5.handler.codec.frame;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.codec.LengthFieldBasedFrameDecoderForBuffer;
+import io.netty5.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
     @Test
     public void testFailSlowTooLongFrameRecovery() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(
-                new LengthFieldBasedFrameDecoderForBuffer(5, 0, 4, 0, 4, false));
+                new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4, false));
 
         for (int i = 0; i < 2; i++) {
             assertFalse(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 2 })));
@@ -50,7 +50,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
     @Test
     public void testFailFastTooLongFrameRecovery() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(
-                new LengthFieldBasedFrameDecoderForBuffer(5, 0, 4, 0, 4));
+                new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4));
 
         for (int i = 0; i < 2; i++) {
             assertThrows(TooLongFrameException.class, () -> {

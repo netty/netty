@@ -36,7 +36,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositive;
  * +-----+-----+-----+
  * </pre>
  */
-public class FixedLengthFrameDecoder extends ByteToMessageDecoderForBuffer {
+public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
 
     private final int frameLength;
 

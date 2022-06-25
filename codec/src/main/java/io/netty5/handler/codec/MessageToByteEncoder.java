@@ -32,7 +32,7 @@ import static java.util.Objects.requireNonNull;
  * <p>Example implementation which encodes {@link Integer}s to a {@link Buffer}.
  *
  * <pre>
- *     public class IntegerEncoder extends {@link MessageToByteEncoderForBuffer}&lt;{@link Integer}&gt; {
+ *     public class IntegerEncoder extends {@link MessageToByteEncoder}&lt;{@link Integer}&gt; {
  *         {@code @Override}
  *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} msg, {@link Buffer} out)
  *                 throws {@link Exception} {
@@ -41,15 +41,15 @@ import static java.util.Objects.requireNonNull;
  *     }
  * </pre>
  */
-public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAdapter { // TODO rename
+public abstract class MessageToByteEncoder<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
 
     /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      */
-    protected MessageToByteEncoderForBuffer() {
-        matcher = TypeParameterMatcher.find(this, MessageToByteEncoderForBuffer.class, "I");
+    protected MessageToByteEncoder() {
+        matcher = TypeParameterMatcher.find(this, MessageToByteEncoder.class, "I");
     }
 
     /**
@@ -57,7 +57,7 @@ public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAda
      *
      * @param outboundMessageType The type of messages to match.
      */
-    protected MessageToByteEncoderForBuffer(Class<? extends I> outboundMessageType) {
+    protected MessageToByteEncoder(Class<? extends I> outboundMessageType) {
         matcher = TypeParameterMatcher.get(requireNonNull(outboundMessageType, "outboundMessageType"));
     }
 
@@ -103,7 +103,7 @@ public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAda
     /**
      * Allocate a {@link Buffer} which will be used as argument of {@link #encode(ChannelHandlerContext, I, Buffer)}.
      *
-     * @param ctx the {@link ChannelHandlerContext} which this {@link MessageToByteEncoderForBuffer} belongs to
+     * @param ctx the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to
      * @param msg the message to be encoded
      */
     protected abstract Buffer allocateBuffer(ChannelHandlerContext ctx, I msg) throws Exception;
@@ -112,7 +112,7 @@ public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAda
      * Encode a message into a {@link Buffer}. This method will be called for each written message that can be handled
      * by this encoder.
      *
-     * @param ctx the {@link ChannelHandlerContext} which this {@link MessageToByteEncoderForBuffer} belongs to
+     * @param ctx the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to
      * @param msg the message to encode
      * @param out the {@link Buffer} into which the encoded message will be written
      * @throws Exception is thrown if an error occurs

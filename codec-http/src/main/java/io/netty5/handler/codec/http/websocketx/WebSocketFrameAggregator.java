@@ -18,7 +18,7 @@ package io.netty5.handler.codec.http.websocketx;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.MessageAggregatorNew;
+import io.netty5.handler.codec.MessageAggregator;
 import io.netty5.handler.codec.TooLongFrameException;
 
 /**
@@ -28,7 +28,7 @@ import io.netty5.handler.codec.TooLongFrameException;
  * just get forwarded to the next handler in the pipeline.
  */
 public class WebSocketFrameAggregator
-        extends MessageAggregatorNew<WebSocketFrame, WebSocketFrame, ContinuationWebSocketFrame, WebSocketFrame> {
+        extends MessageAggregator<WebSocketFrame, WebSocketFrame, ContinuationWebSocketFrame, WebSocketFrame> {
 
     /**
      * Creates a new instance

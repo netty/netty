@@ -17,15 +17,15 @@ package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 
 import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
- * {@link ByteToMessageDecoderForBuffer} that uses a {@link Decompressor} for decompressing incoming {@link Buffer}s.
+ * {@link ByteToMessageDecoder} that uses a {@link Decompressor} for decompressing incoming {@link Buffer}s.
  */
-public final class DecompressionHandler extends ByteToMessageDecoderForBuffer {
+public final class DecompressionHandler extends ByteToMessageDecoder {
 
     private final Supplier<? extends Decompressor> decompressorSupplier;
     private final boolean discardBytesAfterFinished;

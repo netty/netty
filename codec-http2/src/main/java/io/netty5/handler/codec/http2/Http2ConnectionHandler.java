@@ -18,7 +18,7 @@ import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
@@ -58,7 +58,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * {@link Http2LocalFlowController}
  */
 @UnstableApi
-public class Http2ConnectionHandler extends ByteToMessageDecoderForBuffer implements Http2LifecycleManager {
+public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
 

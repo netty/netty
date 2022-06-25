@@ -31,7 +31,7 @@ import static java.util.Objects.requireNonNull;
  * decode a binary message which has an integer header field that represents the
  * length of the message body or the whole message.
  * <p>
- * {@link LengthFieldBasedFrameDecoderForBuffer} has many configuration parameters so
+ * {@link LengthFieldBasedFrameDecoder} has many configuration parameters so
  * that it can decode any message with a length field, which is often seen in
  * proprietary client-server protocols. Here are some example that will give
  * you the basic idea on which option does what.
@@ -185,7 +185,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @see LengthFieldPrepender
  */
-public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderForBuffer { // TODO rename
+public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder { // TODO rename
 
     private final ByteOrder byteOrder;
     private final int maxFrameLength;
@@ -209,7 +209,7 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
      * @param lengthFieldOffset the offset of the length field
      * @param lengthFieldLength the length of the length field
      */
-    public LengthFieldBasedFrameDecoderForBuffer(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength) {
+    public LengthFieldBasedFrameDecoder(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength) {
         this(maxFrameLength, lengthFieldOffset, lengthFieldLength, 0, 0);
     }
 
@@ -224,7 +224,7 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
      * @param lengthAdjustment    the compensation value to add to the value of the length field
      * @param initialBytesToStrip the number of first bytes to strip out from the decoded frame
      */
-    public LengthFieldBasedFrameDecoderForBuffer(
+    public LengthFieldBasedFrameDecoder(
             int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip) {
         this(maxFrameLength,
@@ -249,7 +249,7 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
      *                            is thrown after the entire frame that exceeds <tt>maxFrameLength</tt>
      *                            has been read.
      */
-    public LengthFieldBasedFrameDecoderForBuffer(
+    public LengthFieldBasedFrameDecoder(
             int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
         this(ByteOrder.BIG_ENDIAN, maxFrameLength, lengthFieldOffset, lengthFieldLength,
@@ -274,7 +274,7 @@ public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderF
      *                            is thrown after the entire frame that exceeds <tt>maxFrameLength</tt>
      *                            has been read.
      */
-    public LengthFieldBasedFrameDecoderForBuffer(
+    public LengthFieldBasedFrameDecoder(
             ByteOrder byteOrder, int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
         requireNonNull(byteOrder, "byteOrder");

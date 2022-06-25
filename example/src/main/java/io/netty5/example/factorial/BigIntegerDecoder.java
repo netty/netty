@@ -17,7 +17,7 @@ package io.netty5.example.factorial;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.CorruptedFrameException;
 
 import java.math.BigInteger;
@@ -28,7 +28,7 @@ import java.math.BigInteger;
  * {@link BigInteger} instance.  For example, { 'F', 0, 0, 0, 1, 42 } will be
  * decoded into new BigInteger("42").
  */
-public class BigIntegerDecoder extends ByteToMessageDecoderForBuffer {
+public class BigIntegerDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, Buffer in) {

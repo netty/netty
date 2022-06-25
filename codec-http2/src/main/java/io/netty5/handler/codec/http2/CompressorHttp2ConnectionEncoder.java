@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.BrotliCompressor;
 import io.netty5.handler.codec.compression.BrotliOptions;
@@ -247,7 +247,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      *
      * @param ctx the context.
      * @param contentEncoding the value of the {@code content-encoding} header
-     * @return a new {@link ByteToMessageDecoderForBuffer} if the specified encoding is supported.
+     * @return a new {@link ByteToMessageDecoder} if the specified encoding is supported.
      * Otherwise {@code null}.
      * Alternatively, you can throw a {@link Http2Exception} to block unknown encoding.
      * @throws Http2Exception If the specified encoding is not supported and warrants an exception

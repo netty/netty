@@ -33,9 +33,9 @@ import io.netty5.util.internal.TypeParameterMatcher;
 public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher outboundMsgMatcher;
-    private final MessageToByteEncoderForBuffer<I> encoder;
+    private final MessageToByteEncoder<I> encoder;
 
-    private final ByteToMessageDecoderForBuffer decoder = new ByteToMessageDecoderForBuffer() {
+    private final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
         @Override
         public void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
             ByteToMessageCodec.this.decode(ctx, in);
@@ -134,17 +134,17 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
     }
 
     /**
-     * @see MessageToByteEncoderForBuffer#encode(ChannelHandlerContext, Object, Buffer)
+     * @see MessageToByteEncoder#encode(ChannelHandlerContext, Object, Buffer)
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, Buffer out) throws Exception;
 
     /**
-     * @see ByteToMessageDecoderForBuffer#decode(ChannelHandlerContext, Buffer)
+     * @see ByteToMessageDecoder#decode(ChannelHandlerContext, Buffer)
      */
     protected abstract void decode(ChannelHandlerContext ctx, Buffer in) throws Exception;
 
     /**
-     * @see ByteToMessageDecoderForBuffer#decodeLast(ChannelHandlerContext, Buffer)
+     * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, Buffer)
      */
     protected void decodeLast(ChannelHandlerContext ctx, Buffer in) throws Exception {
         if (in.readableBytes() > 0) {
@@ -154,7 +154,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
         }
     }
 
-    private final class Encoder extends MessageToByteEncoderForBuffer<I> {
+    private final class Encoder extends MessageToByteEncoder<I> {
         private final BufferAllocator allocator;
 
         Encoder(BufferAllocator allocator) {

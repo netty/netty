@@ -18,22 +18,22 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.util.concurrent.Future;
 
 import static java.util.Objects.requireNonNull;
 
 public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends EmbeddedChannelHandlerContext {
     private Buffer cumulation;
-    private final ByteToMessageDecoderForBuffer.Cumulator cumulator;
+    private final ByteToMessageDecoder.Cumulator cumulator;
 
     protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
-                                                             ByteToMessageDecoderForBuffer.Cumulator writeCumulator) {
+                                                             ByteToMessageDecoder.Cumulator writeCumulator) {
         this(alloc, handler, writeCumulator, new EmbeddedChannel());
     }
 
     protected EmbeddedChannelWriteAccumulatingHandlerContext(BufferAllocator alloc, ChannelHandler handler,
-                                                             ByteToMessageDecoderForBuffer.Cumulator writeCumulator,
+                                                             ByteToMessageDecoder.Cumulator writeCumulator,
                                                              EmbeddedChannel channel) {
         super(alloc, handler, channel);
         cumulator = requireNonNull(writeCumulator, "writeCumulator");

@@ -19,7 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
@@ -33,7 +33,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import java.io.File;
 
-import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.COMPOSITE_CUMULATOR;
+import static io.netty5.handler.codec.ByteToMessageDecoder.COMPOSITE_CUMULATOR;
 
 public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     private static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
@@ -164,7 +164,7 @@ public class AbstractSslHandlerBenchmark extends AbstractMicrobenchmark {
     private static final class SslThroughputBenchmarkHandlerContext extends
             EmbeddedChannelWriteAccumulatingHandlerContext {
         SslThroughputBenchmarkHandlerContext(BufferAllocator alloc, ChannelHandler handler,
-                                             ByteToMessageDecoderForBuffer.Cumulator writeCumulator) {
+                                             ByteToMessageDecoder.Cumulator writeCumulator) {
             super(alloc, handler, writeCumulator);
         }
 

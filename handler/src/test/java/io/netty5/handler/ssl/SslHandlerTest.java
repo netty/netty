@@ -36,7 +36,7 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
@@ -1392,7 +1392,7 @@ public class SslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
-                            ch.pipeline().addLast(new ByteToMessageDecoderForBuffer() {
+                            ch.pipeline().addLast(new ByteToMessageDecoder() {
 
                                 @Override
                                 protected void decode(ChannelHandlerContext ctx, Buffer in) {

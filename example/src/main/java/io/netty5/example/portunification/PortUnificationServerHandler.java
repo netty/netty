@@ -22,7 +22,7 @@ import io.netty5.example.factorial.BigIntegerDecoder;
 import io.netty5.example.factorial.FactorialServerHandler;
 import io.netty5.example.factorial.NumberEncoder;
 import io.netty5.example.http.snoop.HttpSnoopServerHandler;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.compression.ZlibCodecFactory;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.http.HttpContentCompressor;
@@ -35,7 +35,7 @@ import io.netty5.handler.ssl.SslHandler;
  * Manipulates the current pipeline dynamically to switch protocols or enable
  * SSL or GZIP.
  */
-public class PortUnificationServerHandler extends ByteToMessageDecoderForBuffer {
+public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
     private final SslContext sslCtx;
     private final boolean detectSsl;

@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class MessageAggregatorNewTest {
+public class MessageAggregatorTest {
     private static final class ReadCounter implements ChannelHandler {
         int value;
 
@@ -42,7 +42,7 @@ public class MessageAggregatorNewTest {
         }
     }
 
-    static class MockMessageAggregator extends MessageAggregatorNew<Buffer, Buffer, Buffer, CompositeBuffer> {
+    static class MockMessageAggregator extends MessageAggregator<Buffer, Buffer, Buffer, CompositeBuffer> {
 
         private final Buffer first;
         private final Buffer last;

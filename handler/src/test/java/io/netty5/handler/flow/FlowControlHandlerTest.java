@@ -18,7 +18,7 @@ package io.netty5.handler.flow;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -566,7 +566,7 @@ public class FlowControlHandlerTest {
      * This is a fictional message decoder. It decodes each {@code byte}
      * into three strings.
      */
-    private static final class OneByteToThreeStringsDecoder extends ByteToMessageDecoderForBuffer {
+    private static final class OneByteToThreeStringsDecoder extends ByteToMessageDecoder {
         @Override
         protected void decode(ChannelHandlerContext ctx, Buffer in) {
             for (int i = 0; i < in.readableBytes(); i++) {

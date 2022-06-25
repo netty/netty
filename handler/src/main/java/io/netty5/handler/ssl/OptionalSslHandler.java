@@ -19,7 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  * {@link OptionalSslHandler} is a utility decoder to support both SSL and non-SSL handlers
  * based on the first message received.
  */
-public class OptionalSslHandler extends ByteToMessageDecoderForBuffer {
+public class OptionalSslHandler extends ByteToMessageDecoder {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OptionalSslHandler.class);
 
     private final SslContext sslContext;

@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.BufferUtil.writeAscii;
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.MERGE_CUMULATOR;
+import static io.netty5.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;

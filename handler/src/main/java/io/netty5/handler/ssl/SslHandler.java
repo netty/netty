@@ -31,7 +31,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.unix.UnixChannel;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.util.concurrent.DefaultPromise;
@@ -158,7 +158,7 @@ import static java.util.Objects.requireNonNull;
  * For more details see
  * <a href="https://github.com/netty/netty/issues/832">#832</a> in our issue tracker.
  */
-public class SslHandler extends ByteToMessageDecoderForBuffer {
+public class SslHandler extends ByteToMessageDecoder {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslHandler.class);
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(

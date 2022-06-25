@@ -23,7 +23,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.DecoderResult;
-import io.netty5.handler.codec.MessageAggregatorNew;
+import io.netty5.handler.codec.MessageAggregator;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -90,7 +90,7 @@ import static java.util.Objects.requireNonNullElse;
  * @see HttpServerCodec
  */
 public class HttpObjectAggregator<C extends HttpContent<C>>
-        extends MessageAggregatorNew<HttpObject, HttpMessage, HttpContent<C>, FullHttpMessage<?>> {
+        extends MessageAggregator<HttpObject, HttpMessage, HttpContent<C>, FullHttpMessage<?>> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpObjectAggregator.class);
 
     private final boolean closeOnExpectationFailed;

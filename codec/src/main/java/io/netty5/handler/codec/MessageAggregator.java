@@ -43,8 +43,8 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * @param <C> the type of the content message
  * @param <A> the type of the aggregated message
  */
-public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A extends AutoCloseable>
-        extends MessageToMessageDecoder<I> { // TODO rename
+public abstract class MessageAggregator<I, S, C extends AutoCloseable, A extends AutoCloseable>
+        extends MessageToMessageDecoder<I> {
     private final int maxContentLength;
     private A currentMessage;
     private boolean handlingOversizedMessage;
@@ -62,12 +62,12 @@ public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A exte
      *        If the length of the aggregated content exceeds this value,
      *        {@link #handleOversizedMessage(ChannelHandlerContext, Object)} will be called.
      */
-    protected MessageAggregatorNew(int maxContentLength) {
+    protected MessageAggregator(int maxContentLength) {
         validateMaxContentLength(maxContentLength);
         this.maxContentLength = maxContentLength;
     }
 
-    protected MessageAggregatorNew(int maxContentLength, Class<? extends I> inboundMessageType) {
+    protected MessageAggregator(int maxContentLength, Class<? extends I> inboundMessageType) {
         super(inboundMessageType);
         validateMaxContentLength(maxContentLength);
         this.maxContentLength = maxContentLength;

@@ -22,7 +22,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer.Cumulator;
+import io.netty5.handler.codec.ByteToMessageDecoder.Cumulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -41,8 +41,8 @@ import static io.netty5.buffer.api.BufferAllocator.offHeapPooled;
 import static io.netty5.buffer.api.BufferAllocator.offHeapUnpooled;
 import static io.netty5.buffer.api.BufferAllocator.onHeapPooled;
 import static io.netty5.buffer.api.BufferAllocator.onHeapUnpooled;
-import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.COMPOSITE_CUMULATOR;
-import static io.netty5.handler.codec.ByteToMessageDecoderForBuffer.MERGE_CUMULATOR;
+import static io.netty5.handler.codec.ByteToMessageDecoder.COMPOSITE_CUMULATOR;
+import static io.netty5.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,7 +57,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ByteToMessageDecoderForBufferTest {
+public class ByteToMessageDecoderTest {
     private static final String PARAMETERIZED_NAME = "allocator = {0}, cumulator = {1}";
 
     private BufferAllocator allocator;
@@ -86,7 +86,7 @@ public class ByteToMessageDecoderForBufferTest {
     @MethodSource("allocators")
     public void removeSelf(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             private boolean removed;
 
             @Override
@@ -112,7 +112,7 @@ public class ByteToMessageDecoderForBufferTest {
     public void removeSelfThenWriteToBuffer(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
         try (Buffer buf = newBufferWithData(allocator, 4, 'a', 'b', 'c')) {
-            EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+            EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
                 private boolean removed;
 
                 @Override
@@ -163,7 +163,7 @@ public class ByteToMessageDecoderForBufferTest {
 
     private static EmbeddedChannel newInternalBufferTestChannel(
             Cumulator cumulator, Consumer<Buffer> readBeforeRemove) {
-        return new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        return new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) {
                 Buffer buffer = internalBuffer();
@@ -185,7 +185,7 @@ public class ByteToMessageDecoderForBufferTest {
     @MethodSource("allocators")
     public void handlerRemovedWillNotReleaseBufferIfDecodeInProgress(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) {
                 ctx.pipeline().remove(this);
@@ -214,7 +214,7 @@ public class ByteToMessageDecoderForBufferTest {
         this.allocator = allocator;
         final BlockingQueue<Integer> queue = new LinkedBlockingDeque<>();
         final Buffer buf = newBufferWithData(allocator, 'a', 'b');
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) {
                 int readable = in.readableBytes();
@@ -260,7 +260,7 @@ public class ByteToMessageDecoderForBufferTest {
     public void removeWhileInCallDecode(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
         final Object upgradeMessage = new Object();
-        final ByteToMessageDecoderForBuffer decoder = new ByteToMessageDecoderForBuffer(cumulator) {
+        final ByteToMessageDecoder decoder = new ByteToMessageDecoder(cumulator) {
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) {
                 assertEquals('a', in.readByte());
@@ -293,7 +293,7 @@ public class ByteToMessageDecoderForBufferTest {
     @MethodSource("allocators")
     public void decodeLastEmptyBuffer(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) {
                 int readable = in.readableBytes();
@@ -317,7 +317,7 @@ public class ByteToMessageDecoderForBufferTest {
     @MethodSource("allocators")
     public void decodeLastNonEmptyBuffer(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             private boolean decodeLast;
 
             @Override
@@ -359,7 +359,7 @@ public class ByteToMessageDecoderForBufferTest {
     @MethodSource("allocators")
     public void readOnlyBuffer(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) { }
         });
@@ -530,7 +530,7 @@ public class ByteToMessageDecoderForBufferTest {
     @MethodSource("allocators")
     public void testDisorder(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
-        ByteToMessageDecoderForBuffer decoder = new ByteToMessageDecoderForBuffer(cumulator) {
+        ByteToMessageDecoder decoder = new ByteToMessageDecoder(cumulator) {
             int count;
 
             //read 4 byte then remove this decoder
@@ -561,7 +561,7 @@ public class ByteToMessageDecoderForBufferTest {
     public void testDecodeLast(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
         final AtomicBoolean removeHandler = new AtomicBoolean();
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
 
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) {
@@ -594,7 +594,7 @@ public class ByteToMessageDecoderForBufferTest {
         AtomicInteger receiveCounter = new AtomicInteger();
         AtomicBoolean lastMessage = new AtomicBoolean();
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoderForBuffer(cumulator) {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder(cumulator) {
             @Override
             protected void decode(ChannelHandlerContext ctx, Buffer in) {
                 // Don't split off the input buffer like what would normally happen.
