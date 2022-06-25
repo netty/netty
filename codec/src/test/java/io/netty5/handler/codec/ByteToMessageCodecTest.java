@@ -15,13 +15,14 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,21 +44,21 @@ public class ByteToMessageCodecTest {
     public void testForwardPendingData() {
         ByteToMessageCodec<Integer> codec = new ByteToMessageCodec<Integer>() {
             @Override
-            protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception {
+            protected void encode(ChannelHandlerContext ctx, Integer msg, Buffer out) throws Exception {
                 out.writeInt(msg);
             }
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
                 if (in.readableBytes() >= 4) {
                     ctx.fireChannelRead(in.readInt());
                 }
             }
         };
 
-        ByteBuf buffer = Unpooled.buffer();
+        Buffer buffer = preferredAllocator().allocate(5);
         buffer.writeInt(1);
-        buffer.writeByte('0');
+        buffer.writeByte((byte) '0');
 
         EmbeddedChannel ch = new EmbeddedChannel(codec);
         assertTrue(ch.writeInbound(buffer));
@@ -65,9 +66,9 @@ public class ByteToMessageCodecTest {
         assertTrue(ch.finish());
         assertEquals(1, (Integer) ch.readInbound());
 
-        ByteBuf buf = ch.readInbound();
-        assertEquals(Unpooled.wrappedBuffer(new byte[]{'0'}), buf);
-        buf.release();
+        try (Buffer buf = ch.readInbound()) {
+            assertEquals(preferredAllocator().copyOf(new byte[] { '0' }), buf);
+        }
         assertNull(ch.readInbound());
         assertNull(ch.readOutbound());
     }
@@ -75,26 +76,26 @@ public class ByteToMessageCodecTest {
     @ChannelHandler.Sharable
     private static final class InvalidByteToMessageCodec extends ByteToMessageCodec<Integer> {
         InvalidByteToMessageCodec() {
-            super(true);
+            super((BufferAllocator) null);
         }
 
         @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
+        protected void encode(ChannelHandlerContext ctx, Integer msg, Buffer out) throws Exception { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception { }
     }
 
     @ChannelHandler.Sharable
     private static final class InvalidByteToMessageCodec2 extends ByteToMessageCodec<Integer> {
         InvalidByteToMessageCodec2() {
-            super(Integer.class, true);
+            super(Integer.class, null);
         }
 
         @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
+        protected void encode(ChannelHandlerContext ctx, Integer msg, Buffer out) throws Exception { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception { }
     }
 }

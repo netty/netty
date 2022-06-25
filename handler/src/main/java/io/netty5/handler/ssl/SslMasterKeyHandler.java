@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.ReflectionUtil;
@@ -189,8 +189,8 @@ public abstract class SslMasterKeyHandler implements ChannelHandler {
             }
             final byte[] sessionId = session.getId();
             wireshark_logger.warn("RSA Session-ID:{} Master-Key:{}",
-                    ByteBufUtil.hexDump(sessionId).toLowerCase(),
-                    ByteBufUtil.hexDump(masterKey.getEncoded()).toLowerCase());
+                                  BufferUtil.hexDump(sessionId).toLowerCase(),
+                                  BufferUtil.hexDump(masterKey.getEncoded()).toLowerCase());
         }
     }
 

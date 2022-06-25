@@ -15,19 +15,17 @@
  */
 package io.netty5.handler.codec.bytes;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty5.handler.codec.LengthFieldPrepender;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 
 import java.util.List;
 
 /**
- * Encodes the requested array of bytes into a {@link ByteBuf}.
+ * Encodes the requested array of bytes into a {@link Buffer}.
  * A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -42,7 +40,7 @@ import java.util.List;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("bytesEncoder", new {@link ByteArrayEncoder}());
  * </pre>
- * and then you can use an array of bytes instead of a {@link ByteBuf}
+ * and then you can use an array of bytes instead of a {@link Buffer}
  * as a message:
  * <pre>
  * void channelRead({@link ChannelHandlerContext} ctx, byte[] bytes) {
@@ -54,6 +52,6 @@ import java.util.List;
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
     @Override
     protected void encode(ChannelHandlerContext ctx, byte[] msg, List<Object> out) throws Exception {
-        out.add(Unpooled.wrappedBuffer(msg));
+        out.add(ctx.bufferAllocator().copyOf(msg));
     }
 }

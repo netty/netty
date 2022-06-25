@@ -32,7 +32,6 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty5.channel.ChannelFutureListeners.CLOSE_ON_FAILURE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuffer;
@@ -467,7 +466,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoderForBuffer implem
         // a GO_AWAY has been sent we send a empty buffer just so we can wait to close until all other data has been
         // flushed to the OS.
         // https://github.com/netty/netty/issues/5307
-        Future<Void> f = connection().goAwaySent() ? ctx.write(EMPTY_BUFFER) : goAway(ctx, null);
+        Future<Void> f = connection().goAwaySent() ? ctx.write(ctx.bufferAllocator().allocate(0)) : goAway(ctx, null);
         ctx.flush();
         Promise<Void> promise = ctx.newPromise();
         doGracefulShutdown(ctx, f, promise);

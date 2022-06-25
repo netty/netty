@@ -15,7 +15,6 @@
  */
 package io.netty5.example.proxy;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
@@ -98,7 +97,7 @@ public class HexDumpProxyFrontendHandler implements ChannelHandler {
      */
     static void closeOnFlush(Channel ch) {
         if (ch.isActive()) {
-            ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ch, ChannelFutureListeners.CLOSE);
+            ch.writeAndFlush(ch.bufferAllocator().allocate(0)).addListener(ch, ChannelFutureListeners.CLOSE);
         }
     }
 }

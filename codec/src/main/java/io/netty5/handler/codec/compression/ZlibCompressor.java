@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 
@@ -28,7 +27,7 @@ import static io.netty5.util.internal.ObjectUtil.checkInRange;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Compresses a {@link ByteBuf} using the deflate algorithm.
+ * Compresses a {@link Buffer} using the deflate algorithm.
  */
 public final class ZlibCompressor implements Compressor {
     private final ZlibWrapper wrapper;

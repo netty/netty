@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
@@ -633,13 +632,6 @@ public final class OpenSsl {
     @Deprecated
     public static boolean supportsHostnameValidation() {
         return isAvailable();
-    }
-
-    static long memoryAddress(ByteBuf buf) {
-        assert buf.isDirect();
-        return buf.hasMemoryAddress() ? buf.memoryAddress() :
-                // Use internalNioBuffer to reduce object creation.
-                Buffer.address(buf.internalNioBuffer(0, buf.readableBytes()));
     }
 
     private OpenSsl() { }

@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.base64;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
@@ -29,7 +28,7 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Encodes a {@link ByteBuf} into a Base64-encoded {@link ByteBuf}.
+ * Encodes a {@link Buffer} into a Base64-encoded {@link Buffer}.
  * A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;

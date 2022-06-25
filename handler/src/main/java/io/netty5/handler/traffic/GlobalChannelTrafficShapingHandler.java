@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.traffic;
 
-import io.netty.buffer.ByteBufConvertible;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.Attribute;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.EventExecutorGroup;
 import io.netty5.util.concurrent.Future;
@@ -499,8 +499,8 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 } else {
                     queuesSize.addAndGet(-perChannel.queueSize);
                     for (ToSend toSend : perChannel.messagesQueue) {
-                        if (toSend.toSend instanceof ByteBufConvertible) {
-                            ((ByteBufConvertible) toSend.toSend).asByteBuf().release();
+                        if (Resource.isAccessible(toSend.toSend, false)) {
+                            Resource.dispose(toSend.toSend);
                         }
                     }
                 }

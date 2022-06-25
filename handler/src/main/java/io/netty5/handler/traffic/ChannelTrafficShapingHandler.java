@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.traffic;
 
-import io.netty.buffer.ByteBufConvertible;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
@@ -150,8 +150,8 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                 }
             } else {
                 for (ToSend toSend : messagesQueue) {
-                    if (toSend.toSend instanceof ByteBufConvertible) {
-                        ((ByteBufConvertible) toSend.toSend).asByteBuf().release();
+                    if (Resource.isAccessible(toSend.toSend, false)) {
+                        Resource.dispose(toSend.toSend);
                     }
                 }
             }

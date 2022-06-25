@@ -15,14 +15,12 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 
 import static io.netty5.handler.codec.http.HttpConstants.SP;
 
 /**
- * Encodes an {@link HttpResponse} or an {@link HttpContent} into
- * a {@link ByteBuf}.
+ * Encodes an {@link HttpResponse} or an {@link HttpContent} into a {@link Buffer}.
  */
 public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
@@ -74,8 +72,8 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
 
             if (status.code() == HttpResponseStatus.SWITCHING_PROTOCOLS.code()) {
-                // We need special handling for WebSockets version 00 as it will include an body.
-                // Fortunally this version should not really be used in the wild very often.
+                // We need special handling for WebSockets version 00 as it will include a body.
+                // Fortunately, this version should not really be used in the wild very often.
                 // See https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00#section-1.2
                 return msg.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
             }

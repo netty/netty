@@ -14,10 +14,9 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.BufferOutputStream;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.DefaultChannelId;
 import org.junit.jupiter.api.Test;
@@ -25,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Http2StreamChannelIdTest {
@@ -33,20 +33,14 @@ public class Http2StreamChannelIdTest {
     public void testSerialization() throws Exception {
         ChannelId normalInstance = new Http2StreamChannelId(DefaultChannelId.newInstance(), 0);
 
-        ByteBuf buf = Unpooled.buffer();
-        ObjectOutputStream outStream = new ObjectOutputStream(new ByteBufOutputStream(buf));
-        try {
+        Buffer buf = preferredAllocator().allocate(256);
+        try (ObjectOutputStream outStream = new ObjectOutputStream(new BufferOutputStream(buf))) {
             outStream.writeObject(normalInstance);
-        } finally {
-            outStream.close();
         }
 
-        ObjectInputStream inStream = new ObjectInputStream(new ByteBufInputStream(buf, true));
         final ChannelId deserializedInstance;
-        try {
+        try (ObjectInputStream inStream = new ObjectInputStream(new BufferInputStream(buf.send()))) {
             deserializedInstance = (ChannelId) inStream.readObject();
-        } finally {
-            inStream.close();
         }
 
         assertEquals(normalInstance, deserializedInstance);

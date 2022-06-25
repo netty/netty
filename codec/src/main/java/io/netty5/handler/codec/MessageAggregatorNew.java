@@ -44,7 +44,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * @param <A> the type of the aggregated message
  */
 public abstract class MessageAggregatorNew<I, S, C extends AutoCloseable, A extends AutoCloseable>
-        extends MessageToMessageDecoder<I> {
+        extends MessageToMessageDecoder<I> { // TODO rename
     private final int maxContentLength;
     private A currentMessage;
     private boolean handlingOversizedMessage;

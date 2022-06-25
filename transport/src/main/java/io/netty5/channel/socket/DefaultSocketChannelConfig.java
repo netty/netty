@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
@@ -303,12 +302,6 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public SocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
         return this;
     }
 

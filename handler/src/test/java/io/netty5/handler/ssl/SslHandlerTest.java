@@ -529,8 +529,7 @@ public class SslHandlerTest {
                         if (cause instanceof CodecException) {
                             cause = cause.getCause();
                         }
-                        if (cause instanceof IllegalReferenceCountException ||
-                            cause instanceof io.netty.util.IllegalReferenceCountException) {
+                        if (cause instanceof IllegalReferenceCountException) {
                             promise.setFailure(cause);
                         }
                     }

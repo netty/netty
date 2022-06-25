@@ -16,10 +16,6 @@
 
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.BufferOutputStream;
 import io.netty5.buffer.api.Buffer;
@@ -58,32 +54,6 @@ public class DefaultChannelIdTest {
         String a = DefaultChannelId.newInstance().asLongText().substring(17, 21);
         String b = DefaultChannelId.newInstance().asLongText().substring(17, 21);
         assertThat(a).isEqualTo(b);
-    }
-
-    @Test
-    public void testSerializationByteBuf() throws Exception {
-        ChannelId a = DefaultChannelId.newInstance();
-        ChannelId b;
-
-        ByteBuf buf = Unpooled.buffer();
-        ObjectOutputStream out = new ObjectOutputStream(new ByteBufOutputStream(buf));
-        try {
-            out.writeObject(a);
-            out.flush();
-        } finally {
-            out.close();
-        }
-
-        ObjectInputStream in = new ObjectInputStream(new ByteBufInputStream(buf, true));
-        try {
-            b = (ChannelId) in.readObject();
-        } finally {
-            in.close();
-        }
-
-        assertThat(a).isEqualTo(b);
-        assertThat(a).isNotSameAs(b);
-        assertThat(a.asLongText()).isEqualTo(b.asLongText());
     }
 
     @Test

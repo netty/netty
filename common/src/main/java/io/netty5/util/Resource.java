@@ -109,8 +109,8 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
         if (obj instanceof Resource) {
             return ((Resource<?>) obj).isAccessible();
         }
-        if (obj instanceof io.netty.util.ReferenceCounted) {
-            return ((io.netty.util.ReferenceCounted) obj).refCnt() > 0;
+        if (obj instanceof ReferenceCounted) {
+            return ((ReferenceCounted) obj).refCnt() > 0;
         }
         return expectedDefault;
     }
@@ -128,8 +128,8 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
     static void touch(Object obj, Object hint) {
         if (obj instanceof Resource) {
             ((Resource<?>) obj).touch(hint);
-        } else if (obj instanceof io.netty.util.ReferenceCounted) {
-            ((io.netty.util.ReferenceCounted) obj).touch(hint);
+        } else if (obj instanceof ReferenceCounted) {
+            ((ReferenceCounted) obj).touch(hint);
         }
     }
 }

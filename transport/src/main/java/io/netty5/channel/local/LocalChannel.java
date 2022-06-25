@@ -17,6 +17,7 @@ package io.netty5.channel.local;
 
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
@@ -30,7 +31,6 @@ import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;

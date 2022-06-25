@@ -185,7 +185,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @see LengthFieldPrepender
  */
-public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderForBuffer {
+public class LengthFieldBasedFrameDecoderForBuffer extends ByteToMessageDecoderForBuffer { // TODO rename
 
     private final ByteOrder byteOrder;
     private final int maxFrameLength;

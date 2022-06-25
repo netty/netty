@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.handler.codec.MessageToMessageDecoder;

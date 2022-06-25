@@ -18,10 +18,7 @@ package io.netty5.handler.logging;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -40,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.util.internal.StringUtil.NEWLINE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -76,8 +74,6 @@ public class LoggingHandlerTest {
             oldAppenders.add(a);
             rootLogger.detachAppender(a);
         }
-
-        Unpooled.buffer();
     }
 
     @AfterAll
@@ -187,8 +183,8 @@ public class LoggingHandlerTest {
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+BIND: 0.0.0.0/0.0.0.0:80$")));
     }
 
+    @SuppressWarnings("StringOperationCanBeSimplified")
     @Test
-    @SuppressWarnings("RedundantStringConstructorCall")
     public void shouldLogChannelUserEvent() throws Exception {
         String userTriggered = "iAmCustom!";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
@@ -228,65 +224,49 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogByteBufDataRead() throws Exception {
-        ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", true)));
+    public void shouldLogBufferDataRead() throws Exception {
+        try (Buffer msg = preferredAllocator().copyOf("hello", CharsetUtil.UTF_8)) {
+            EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+            channel.writeInbound(msg.copy());
+            verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", true)));
 
-        ByteBuf handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
-        handledMsg.release();
-        assertThat(channel.readInbound(), is(nullValue()));
-    }
-
-    @Test
-    public void shouldLogByteBufDataReadWithSimpleFormat() throws Exception {
-        ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
-        channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));
-
-        ByteBuf handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
-        handledMsg.release();
-        assertThat(channel.readInbound(), is(nullValue()));
-    }
-
-    @Test
-    public void shouldLogEmptyByteBufDataRead() throws Exception {
-        ByteBuf msg = Unpooled.EMPTY_BUFFER;
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$", false)));
-
-        ByteBuf handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
-        assertThat(channel.readInbound(), is(nullValue()));
-    }
-
-    @Test
-    public void shouldLogByteBufHolderDataRead() throws Exception {
-        ByteBufHolder msg = new DefaultByteBufHolder(Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8)) {
-            @Override
-            public String toString() {
-                return "foobar";
+            try (Buffer handledMsg = channel.readInbound()) {
+                assertEquals(msg, handledMsg);
             }
-        };
+            assertThat(channel.readInbound(), is(nullValue()));
+        }
+    }
 
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: foobar, 5B$", true)));
+    @Test
+    public void shouldLogBufferDataReadWithSimpleFormat() throws Exception {
+        try (Buffer msg = preferredAllocator().copyOf("hello", CharsetUtil.UTF_8)) {
+            EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
+            channel.writeInbound(msg.copy());
+            verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));
 
-        ByteBufHolder handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
-        handledMsg.release();
-        assertThat(channel.readInbound(), is(nullValue()));
+            try (Buffer handledMsg = channel.readInbound()) {
+                assertEquals(msg, handledMsg);
+            }
+            assertThat(channel.readInbound(), is(nullValue()));
+        }
+    }
+
+    @Test
+    public void shouldLogEmptyBufferDataRead() throws Exception {
+        try (Buffer msg = preferredAllocator().allocate(0)) {
+            EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+            channel.writeInbound(msg.copy());
+            verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$", false)));
+
+            Buffer handledMsg = channel.readInbound();
+            assertEquals(msg, handledMsg);
+            assertThat(channel.readInbound(), is(nullValue()));
+        }
     }
 
     @Test
     public void shouldLogChannelReadComplete() throws Exception {
-        ByteBuf msg = Unpooled.EMPTY_BUFFER;
+        Buffer msg = preferredAllocator().allocate(0);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ COMPLETE$")));

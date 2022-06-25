@@ -15,9 +15,8 @@
 */
 package io.netty5.microbench.buffer;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
@@ -26,7 +25,7 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufBenchmark extends AbstractMicrobenchmark {
+public class BufferBenchmark extends AbstractMicrobenchmark {
     static {
         System.setProperty("io.netty5.buffer.checkAccessible", "false");
     }
@@ -37,25 +36,25 @@ public class ByteBufBenchmark extends AbstractMicrobenchmark {
 
     private ByteBuffer byteBuffer;
     private ByteBuffer directByteBuffer;
-    private ByteBuf buffer;
-    private ByteBuf directBuffer;
-    private ByteBuf directBufferPooled;
+    private Buffer buffer;
+    private Buffer directBuffer;
+    private Buffer directBufferPooled;
 
     @Setup
     public void setup() {
         System.setProperty("io.netty5.buffer.checkBounds", checkBounds);
         byteBuffer = ByteBuffer.allocate(8);
         directByteBuffer = ByteBuffer.allocateDirect(8);
-        buffer = Unpooled.buffer(8);
-        directBuffer = Unpooled.directBuffer(8);
-        directBufferPooled = PooledByteBufAllocator.DEFAULT.directBuffer(8);
+        buffer = BufferAllocator.onHeapUnpooled().allocate(8);
+        directBuffer = BufferAllocator.onHeapUnpooled().allocate(8);
+        directBufferPooled = BufferAllocator.onHeapPooled().allocate(8);
     }
 
     @TearDown
     public void tearDown() {
-        buffer.release();
-        directBuffer.release();
-        directBufferPooled.release();
+        buffer.close();
+        directBuffer.close();
+        directBufferPooled.close();
     }
 
     @Benchmark
@@ -69,17 +68,17 @@ public class ByteBufBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public ByteBuf setByteBufHeap() {
+    public Buffer setBufferHeap() {
         return buffer.setByte(0, BYTE);
     }
 
     @Benchmark
-    public ByteBuf setByteBufDirect() {
+    public Buffer setBufferDirect() {
         return directBuffer.setByte(0, BYTE);
     }
 
     @Benchmark
-    public ByteBuf setByteBufDirectPooled() {
+    public Buffer setBufferDirectPooled() {
         return directBufferPooled.setByte(0, BYTE);
     }
 }

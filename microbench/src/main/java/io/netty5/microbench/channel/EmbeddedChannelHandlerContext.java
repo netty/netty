@@ -14,7 +14,6 @@
  */
 package io.netty5.microbench.channel;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -36,23 +35,13 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     private static final String HANDLER_NAME = "microbench-delegator-ctx";
     private final EventLoop eventLoop;
     private final Channel channel;
-    private final ByteBufAllocator alloc;
     private final BufferAllocator bufferAllocator;
     private final ChannelHandler handler;
     private SocketAddress localAddress;
 
-    protected EmbeddedChannelHandlerContext(ByteBufAllocator alloc, ChannelHandler handler, EmbeddedChannel channel) {
-        this.alloc = requireNonNull(alloc, "alloc");
-        this.bufferAllocator = null;
-        this.channel = requireNonNull(channel, "channel");
-        this.handler = requireNonNull(handler, "handler");
-        eventLoop = requireNonNull(channel.executor(), "eventLoop");
-    }
-
     protected EmbeddedChannelHandlerContext(BufferAllocator bufferAllocator, ChannelHandler handler,
                                             EmbeddedChannel channel) {
         this.bufferAllocator = requireNonNull(bufferAllocator, "bufferAllocator");
-        this.alloc = null;
         this.channel = requireNonNull(channel, "channel");
         this.handler = requireNonNull(handler, "handler");
         eventLoop = requireNonNull(channel.executor(), "eventLoop");
@@ -258,11 +247,6 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     @Override
     public final ChannelPipeline pipeline() {
         return channel().pipeline();
-    }
-
-    @Override
-    public final ByteBufAllocator alloc() {
-        return alloc;
     }
 
     @Override

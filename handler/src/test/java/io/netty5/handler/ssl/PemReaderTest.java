@@ -15,11 +15,11 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.util.CharsetUtil;
 import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,7 +55,7 @@ class PemReaderTest {
                 "GMj/+O4jjvuZv5NQc57NpMIrE9fNINczLG1CPTgnhvqMP42W6ahBuexQUe4gP+jmB/BZmBYKoauU\n" +
                 "mPBKruq3mNuoXtbHufv5I7CFVXNgJ0/aT+lvEkQ4IlCIcJyvTgyUTOQVbqDp+SswymAIRowaRdxa\n" +
                 "7Ss=\n" +
-                "-----END CERTIFICATE-----\n").getBytes(CharsetUtil.US_ASCII);
+                "-----END CERTIFICATE-----\n").getBytes(StandardCharsets.US_ASCII);
         try (ByteArrayInputStream in = new ByteArrayInputStream(certs)) {
             Buffer[] bufs = PemReader.readCertificates(in);
             assertThat(bufs.length).isEqualTo(2);
@@ -81,7 +81,7 @@ class PemReaderTest {
                 "HP7QsD3L3LEqIqW/QtYEnAAngZofUiq0XELh4GB0L8DbcSJIxfZmYagFl7c2go9OZPD14mlaTnMV\n" +
                 "Pjd+OkwMif5T7v+r+KVSmDSMQwa+NfW+V6Xngg5/bN3kWHdw9qFQGANojl9wsRVN/B3pu3Cc2XFD\n" +
                 "MmQ=\n" +
-                "-----END PRIVATE KEY-----\n").getBytes(CharsetUtil.US_ASCII);
+                "-----END PRIVATE KEY-----\n").getBytes(StandardCharsets.US_ASCII);
         try (ByteArrayInputStream in = new ByteArrayInputStream(key);
              Buffer buf = PemReader.readPrivateKey(in)) {
             assertThat(buf.readableBytes()).isEqualTo(686);

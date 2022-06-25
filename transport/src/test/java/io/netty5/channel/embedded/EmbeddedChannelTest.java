@@ -15,8 +15,7 @@
  */
 package io.netty5.channel.embedded;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -27,6 +26,9 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.SilentDispose;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -39,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -47,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class EmbeddedChannelTest {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannelTest.class);
 
     @Test
     public void testParent() {
@@ -257,83 +261,71 @@ public class EmbeddedChannelTest {
 
     @Test
     public void testFinishAndReleaseAll() {
-        ByteBuf in = Unpooled.buffer();
-        ByteBuf out = Unpooled.buffer();
-        try {
-            EmbeddedChannel channel = new EmbeddedChannel();
-            assertTrue(channel.writeInbound(in));
-            assertEquals(1, in.refCnt());
+        Buffer in = preferredAllocator().allocate(0);
+        Buffer out = preferredAllocator().allocate(0);
+        EmbeddedChannel channel = new EmbeddedChannel();
+        assertTrue(channel.writeInbound(in));
+        assertTrue(in.isAccessible());
 
-            assertTrue(channel.writeOutbound(out));
-            assertEquals(1, out.refCnt());
+        assertTrue(channel.writeOutbound(out));
+        assertTrue(out.isAccessible());
 
-            assertTrue(channel.finishAndReleaseAll());
-            assertEquals(0, in.refCnt());
-            assertEquals(0, out.refCnt());
+        assertTrue(channel.finishAndReleaseAll());
+        assertFalse(in.isAccessible());
+        assertFalse(out.isAccessible());
 
-            assertNull(channel.readInbound());
-            assertNull(channel.readOutbound());
-        } finally {
-            release(in, out);
-        }
+        assertNull(channel.readInbound());
+        assertNull(channel.readOutbound());
     }
 
     @Test
     public void testReleaseInbound() {
-        ByteBuf in = Unpooled.buffer();
-        ByteBuf out = Unpooled.buffer();
-        try {
-            EmbeddedChannel channel = new EmbeddedChannel();
-            assertTrue(channel.writeInbound(in));
-            assertEquals(1, in.refCnt());
+        Buffer in = preferredAllocator().allocate(0);
+        Buffer out = preferredAllocator().allocate(0);
+        EmbeddedChannel channel = new EmbeddedChannel();
+        assertTrue(channel.writeInbound(in));
+        assertTrue(in.isAccessible());
 
-            assertTrue(channel.writeOutbound(out));
-            assertEquals(1, out.refCnt());
+        assertTrue(channel.writeOutbound(out));
+        assertTrue(out.isAccessible());
 
-            assertTrue(channel.releaseInbound());
-            assertEquals(0, in.refCnt());
-            assertEquals(1, out.refCnt());
+        assertTrue(channel.releaseInbound());
+        assertFalse(in.isAccessible());
+        assertTrue(out.isAccessible());
 
-            assertTrue(channel.finish());
-            assertNull(channel.readInbound());
+        assertTrue(channel.finish());
+        assertNull(channel.readInbound());
 
-            ByteBuf buffer = channel.readOutbound();
+        try (Buffer buffer = channel.readOutbound()) {
             assertSame(out, buffer);
-            buffer.release();
-
-            assertNull(channel.readOutbound());
-        } finally {
-            release(in, out);
         }
+
+        assertNull(channel.readOutbound());
     }
 
     @Test
     public void testReleaseOutbound() {
-        ByteBuf in = Unpooled.buffer();
-        ByteBuf out = Unpooled.buffer();
-        try {
-            EmbeddedChannel channel = new EmbeddedChannel();
-            assertTrue(channel.writeInbound(in));
-            assertEquals(1, in.refCnt());
+        Buffer in = preferredAllocator().allocate(0);
+        Buffer out = preferredAllocator().allocate(0);
+        EmbeddedChannel channel = new EmbeddedChannel();
+        assertTrue(channel.writeInbound(in));
+        assertTrue(in.isAccessible());
 
-            assertTrue(channel.writeOutbound(out));
-            assertEquals(1, out.refCnt());
+        assertTrue(channel.writeOutbound(out));
+        assertTrue(out.isAccessible());
 
-            assertTrue(channel.releaseOutbound());
-            assertEquals(1, in.refCnt());
-            assertEquals(0, out.refCnt());
+        assertTrue(channel.releaseOutbound());
+        assertTrue(in.isAccessible());
+        assertFalse(out.isAccessible());
 
-            assertTrue(channel.finish());
-            assertNull(channel.readOutbound());
+        assertTrue(channel.finish());
+        assertNull(channel.readOutbound());
 
-            ByteBuf buffer = channel.readInbound();
+        try (Buffer buffer = channel.readInbound()) {
             assertSame(in, buffer);
-            buffer.release();
-
-            assertNull(channel.readInbound());
-        } finally {
-            release(in, out);
         }
+
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -553,10 +545,10 @@ public class EmbeddedChannelTest {
         assertTrue(inactive.get());
     }
 
-    private static void release(ByteBuf... buffers) {
-        for (ByteBuf buffer : buffers) {
-            if (buffer.refCnt() > 0) {
-                buffer.release();
+    private static void release(Object... objs) {
+        for (Object obj : objs) {
+            if (Resource.isAccessible(obj, false)) {
+                SilentDispose.dispose(obj, logger);
             }
         }
     }

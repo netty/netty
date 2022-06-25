@@ -15,11 +15,16 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.util.Send;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -67,51 +72,58 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
     @Override   // test batched flow of data
     protected void testIdentity(final byte[] data, boolean heapBuffer) {
         initChannels();
-        final ByteBuf original = heapBuffer? Unpooled.wrappedBuffer(data) :
-                Unpooled.directBuffer(data.length).writeBytes(data);
-        final CompositeByteBuf compressed = Unpooled.compositeBuffer();
-        final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
+        final BufferAllocator allocator = heapBuffer? onHeapAllocator() : offHeapAllocator();
 
-        try {
+        try (Buffer original = allocator.copyOf(data)) {
             int written = 0, length = rand.nextInt(100);
             while (written + length < data.length) {
-                ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
+                Buffer in = allocator.allocate(length);
+                in.writeBytes(data, written, length);
                 encoder.writeOutbound(in);
                 written += length;
                 length = rand.nextInt(100);
             }
-            ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
+            int leftover = data.length - written;
+            Buffer in = allocator.allocate(leftover);
+            in.writeBytes(data, written, length);
             encoder.writeOutbound(in);
             encoder.finish();
 
-            ByteBuf msg;
+            List<Send<Buffer>> outbounds = new ArrayList<>();
+            Buffer msg;
             while ((msg = encoder.readOutbound()) != null) {
-                compressed.addComponent(true, msg);
+                outbounds.add(msg.send());
             }
-            assertThat(compressed, is(notNullValue()));
+            try (Buffer compressed = allocator.compose(outbounds)) {
+                assertThat(compressed, is(notNullValue()));
 
-            final byte[] compressedArray = new byte[compressed.readableBytes()];
-            compressed.readBytes(compressedArray);
-            written = 0;
-            length = rand.nextInt(100);
-            while (written + length < compressedArray.length) {
-                in = Unpooled.wrappedBuffer(compressedArray, written, length);
-                decoder.writeInbound(in);
-                written += length;
+                final byte[] compressedArray = new byte[compressed.readableBytes()];
+                compressed.readBytes(compressedArray, 0, compressedArray.length);
+                written = 0;
                 length = rand.nextInt(100);
-            }
-            in = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
-            decoder.writeInbound(in);
+                while (written + length < compressedArray.length) {
+                    in = allocator.allocate(length);
+                    in.writeBytes(compressedArray, written, length);
+                    decoder.writeInbound(in);
+                    written += length;
+                    length = rand.nextInt(100);
+                }
+                leftover = compressedArray.length - written;
+                in = allocator.allocate(leftover);
+                in.writeBytes(compressedArray, written, leftover);
+                decoder.writeInbound(in);
 
-            assertFalse(compressed.isReadable());
-            while ((msg = decoder.readInbound()) != null) {
-                decompressed.addComponent(true, msg);
+                assertFalse(compressed.readableBytes() > 0);
             }
-            assertEquals(original, decompressed);
+
+            List<Send<Buffer>> inbounds = new ArrayList<>();
+            while ((msg = decoder.readInbound()) != null) {
+                inbounds.add(msg.send());
+            }
+            try (Buffer decompressed = allocator.compose(inbounds)) {
+                assertEquals(original, decompressed);
+            }
         } finally {
-            compressed.release();
-            decompressed.release();
-            original.release();
             closeChannels();
         }
     }

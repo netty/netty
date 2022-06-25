@@ -56,11 +56,6 @@
       <artifactId>annotations</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>${groupId}</groupId>
-      <artifactId>netty-common</artifactId>
-      <version>4.1.75.Final</version>
-    </dependency>
 
     <!-- Logging frameworks - completely optional -->
     <dependency>

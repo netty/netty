@@ -15,10 +15,9 @@
  */
 package io.netty5.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -48,6 +47,7 @@ import java.nio.charset.Charset;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Disabled
@@ -102,7 +102,7 @@ public class FileRegionThrottleTest {
         Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch));
 
         long start = TrafficCounter.milliSecondFromNano();
-        cc.writeAndFlush(Unpooled.copiedBuffer("send-file\n", CharsetUtil.US_ASCII)).sync();
+        cc.writeAndFlush(preferredAllocator().copyOf("send-file\n", CharsetUtil.US_ASCII)).sync();
         latch.await();
         long timeTaken = TrafficCounter.milliSecondFromNano() - start;
         assertTrue(timeTaken > 3000, "Data streamed faster than expected");
@@ -124,13 +124,13 @@ public class FileRegionThrottleTest {
     private static final class MessageDecoder implements ChannelHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                String message = buf.toString(Charset.defaultCharset());
-                buf.release();
-                if ("send-file".equals(message)) {
-                    RandomAccessFile raf = new RandomAccessFile(tmp, "r");
-                    ctx.channel().writeAndFlush(new DefaultFileRegion(raf.getChannel(), 0, tmp.length()));
+            if (msg instanceof Buffer) {
+                try (Buffer buf = (Buffer) msg) {
+                    String message = buf.toString(Charset.defaultCharset());
+                    if ("send-file".equals(message)) {
+                        RandomAccessFile raf = new RandomAccessFile(tmp, "r");
+                        ctx.channel().writeAndFlush(new DefaultFileRegion(raf.getChannel(), 0, tmp.length()));
+                    }
                 }
             }
         }
@@ -146,10 +146,10 @@ public class FileRegionThrottleTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            if (msg instanceof ByteBuf) {
-                ByteBuf buf = (ByteBuf) msg;
-                bytesTransferred += buf.readableBytes();
-                buf.release();
+            if (msg instanceof Buffer) {
+                try (Buffer buf = (Buffer) msg) {
+                    bytesTransferred += buf.readableBytes();
+                }
                 if (bytesTransferred == tmp.length()) {
                     latch.countDown();
                 }

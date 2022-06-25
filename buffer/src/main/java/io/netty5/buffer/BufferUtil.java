@@ -15,12 +15,10 @@
  */
 package io.netty5.buffer;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.internal.Statics;
-import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
@@ -33,7 +31,6 @@ import java.nio.charset.StandardCharsets;
 import static io.netty5.util.internal.MathUtil.isOutOfBounds;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.StringUtil.NEWLINE;
-import static java.util.Objects.requireNonNull;
 
 /**
  * A collection of utility methods that is related with handling {@code ByteBuf},
@@ -156,43 +153,6 @@ public final class BufferUtil {
         byte[] bytes = PlatformDependent.allocateUninitializedArray(length);
         buf.copyInto(start, bytes, 0, length);
         return bytes;
-    }
-
-    /**
-     * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#setBytes(int, byte[], int, int)}.
-     * Unlike the {@link #copy(AsciiString, int, ByteBuf, int)} method,
-     * this method do not increase a {@code writerIndex} of {@code dst} buffer.
-     *
-     * @param src the source string to copy
-     * @param srcIdx the starting offset of characters to copy
-     * @param dst the destination buffer
-     * @param dstIdx the starting offset in the destination buffer
-     * @param length the number of characters to copy
-     */
-    public static void copy(AsciiString src, int srcIdx, ByteBuf dst, int dstIdx, int length) {
-        if (isOutOfBounds(srcIdx, length, src.length())) {
-            throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
-                                                + length + ") <= srcLen(" + src.length() + ')');
-        }
-
-        requireNonNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx + src.arrayOffset(), length);
-    }
-
-    /**
-     * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#writeBytes(byte[], int, int)}.
-     *
-     * @param src the source string to copy
-     * @param srcIdx the starting offset of characters to copy
-     * @param dst the destination buffer
-     * @param length the number of characters to copy
-     */
-    public static void copy(AsciiString src, int srcIdx, ByteBuf dst, int length) {
-        if (isOutOfBounds(srcIdx, length, src.length())) {
-            throw new IndexOutOfBoundsException("expected: " + "0 <= srcIdx(" + srcIdx + ") <= srcIdx + length("
-                            + length + ") <= srcLen(" + src.length() + ')');
-        }
-
-        requireNonNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
     }
 
     /**

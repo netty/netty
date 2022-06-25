@@ -15,7 +15,8 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
@@ -32,59 +33,57 @@ import io.netty5.util.internal.TypeParameterMatcher;
 public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
 
     private final TypeParameterMatcher outboundMsgMatcher;
-    private final MessageToByteEncoder<I> encoder;
+    private final MessageToByteEncoderForBuffer<I> encoder;
 
-    private final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
+    private final ByteToMessageDecoderForBuffer decoder = new ByteToMessageDecoderForBuffer() {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
             ByteToMessageCodec.this.decode(ctx, in);
         }
 
         @Override
-        protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        protected void decodeLast(ChannelHandlerContext ctx, Buffer in) throws Exception {
             ByteToMessageCodec.this.decodeLast(ctx, in);
         }
     };
 
     /**
-     * see {@link #ByteToMessageCodec(boolean)} with {@code true} as boolean parameter.
+     * see {@link #ByteToMessageCodec(BufferAllocator)} with {@code true} as boolean parameter.
      */
     protected ByteToMessageCodec() {
-        this(true);
+        this((BufferAllocator) null);
     }
 
     /**
-     * see {@link #ByteToMessageCodec(Class, boolean)} with {@code true} as boolean value.
+     * see {@link #ByteToMessageCodec(Class, BufferAllocator)} with {@code true} as boolean value.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType) {
-        this(outboundMessageType, true);
+        this(outboundMessageType, null);
     }
 
     /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      *
-     * @param preferDirect          {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
-     *                              the encoded messages. If {@code false} is used it will allocate a heap
-     *                              {@link ByteBuf}, which is backed by an byte array.
+     * @param allocator             The allocator to use for allocating buffers.
+     *                              If {@code null}, the channel context allocator will be used.
      */
-    protected ByteToMessageCodec(boolean preferDirect) {
+    protected ByteToMessageCodec(BufferAllocator allocator) {
         ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
-        encoder = new Encoder(preferDirect);
+        encoder = new Encoder(allocator);
     }
 
     /**
      * Create a new instance
      *
-     * @param outboundMessageType   The type of messages to match
-     * @param preferDirect          {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
-     *                              the encoded messages. If {@code false} is used it will allocate a heap
-     *                              {@link ByteBuf}, which is backed by an byte array.
+     * @param outboundMessageType   The type of messages to match.
+     * @param allocator             The allocator to use for allocating buffers.
+     *                              If {@code null}, the channel context allocator will be used.
      */
-    protected ByteToMessageCodec(Class<? extends I> outboundMessageType, boolean preferDirect) {
+    protected ByteToMessageCodec(Class<? extends I> outboundMessageType, BufferAllocator allocator) {
         ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
-        encoder = new Encoder(preferDirect);
+        encoder = new Encoder(allocator);
     }
 
     /**
@@ -135,29 +134,31 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
     }
 
     /**
-     * @see MessageToByteEncoder#encode(ChannelHandlerContext, Object, ByteBuf)
+     * @see MessageToByteEncoderForBuffer#encode(ChannelHandlerContext, Object, Buffer)
      */
-    protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, Buffer out) throws Exception;
 
     /**
-     * @see ByteToMessageDecoder#decode(ChannelHandlerContext, ByteBuf)
+     * @see ByteToMessageDecoderForBuffer#decode(ChannelHandlerContext, Buffer)
      */
-    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, Buffer in) throws Exception;
 
     /**
-     * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, ByteBuf)
+     * @see ByteToMessageDecoderForBuffer#decodeLast(ChannelHandlerContext, Buffer)
      */
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        if (in.isReadable()) {
+    protected void decodeLast(ChannelHandlerContext ctx, Buffer in) throws Exception {
+        if (in.readableBytes() > 0) {
             // Only call decode() if there is something left in the buffer to decode.
             // See https://github.com/netty/netty/issues/4386
             decode(ctx, in);
         }
     }
 
-    private final class Encoder extends MessageToByteEncoder<I> {
-        Encoder(boolean preferDirect) {
-            super(preferDirect);
+    private final class Encoder extends MessageToByteEncoderForBuffer<I> {
+        private final BufferAllocator allocator;
+
+        Encoder(BufferAllocator allocator) {
+            this.allocator = allocator;
         }
 
         @Override
@@ -166,7 +167,13 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
         }
 
         @Override
-        protected void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception {
+        protected Buffer allocateBuffer(ChannelHandlerContext ctx, I msg) throws Exception {
+            BufferAllocator alloc = allocator != null? allocator : ctx.bufferAllocator();
+            return alloc.allocate(256);
+        }
+
+        @Override
+        protected void encode(ChannelHandlerContext ctx, I msg, Buffer out) throws Exception {
             ByteToMessageCodec.this.encode(ctx, msg, out);
         }
     }

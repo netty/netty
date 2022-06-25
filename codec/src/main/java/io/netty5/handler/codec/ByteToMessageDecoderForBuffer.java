@@ -14,7 +14,6 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
@@ -71,7 +70,7 @@ import static java.util.Objects.requireNonNull;
  * Be aware that sub-classes of {@link ByteToMessageDecoderForBuffer} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  */
-public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapter {
+public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapter { // TODO rename
 
     /**
      * Cumulate {@link Buffer}s by merge them into one {@link Buffer}'s, using memory copies.
@@ -390,7 +389,7 @@ public abstract class ByteToMessageDecoderForBuffer extends ChannelHandlerAdapte
     }
 
     /**
-     * Cumulate {@link ByteBuf}s.
+     * Cumulate {@link Buffer}s.
      */
     public interface Cumulator {
         /**

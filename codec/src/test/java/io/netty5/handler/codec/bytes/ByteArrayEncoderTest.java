@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.bytes;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.AfterEach;
@@ -24,11 +24,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.sameInstance;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class ByteArrayEncoderTest {
 
@@ -41,7 +39,7 @@ public class ByteArrayEncoderTest {
 
     @AfterEach
     public void tearDown() {
-        assertThat(ch.finish(), is(false));
+        assertFalse(ch.finish());
     }
 
     @Test
@@ -49,21 +47,23 @@ public class ByteArrayEncoderTest {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         ch.writeOutbound(b);
-        ByteBuf encoded = ch.readOutbound();
-        assertThat(encoded, is(wrappedBuffer(b)));
-        encoded.release();
+        try (Buffer encoded = ch.readOutbound()) {
+            assertThat(encoded).isEqualTo(preferredAllocator().copyOf(b));
+        }
     }
 
     @Test
     public void testEncodeEmpty() {
         ch.writeOutbound(EmptyArrays.EMPTY_BYTES);
-        assertThat((ByteBuf) ch.readOutbound(), is(sameInstance(EMPTY_BUFFER)));
+        try (Buffer buf = ch.readOutbound()) {
+            assertThat(buf.readableBytes()).isZero();
+        }
     }
 
     @Test
     public void testEncodeOtherType() {
         String str = "Meep!";
         ch.writeOutbound(str);
-        assertThat(ch.readOutbound(), is((Object) str));
+        assertThat((String) ch.readOutbound()).isEqualTo(str);
     }
 }

@@ -15,15 +15,14 @@
  */
 package io.netty5.example.portunification;
 
-import io.netty.buffer.ByteBuf;
-import io.netty5.buffer.api.adaptor.ByteBufBuffer;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.example.factorial.BigIntegerDecoder;
 import io.netty5.example.factorial.FactorialServerHandler;
 import io.netty5.example.factorial.NumberEncoder;
 import io.netty5.example.http.snoop.HttpSnoopServerHandler;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.compression.ZlibCodecFactory;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.http.HttpContentCompressor;
@@ -36,7 +35,7 @@ import io.netty5.handler.ssl.SslHandler;
  * Manipulates the current pipeline dynamically to switch protocols or enable
  * SSL or GZIP.
  */
-public class PortUnificationServerHandler extends ByteToMessageDecoder {
+public class PortUnificationServerHandler extends ByteToMessageDecoderForBuffer {
 
     private final SslContext sslCtx;
     private final boolean detectSsl;
@@ -53,7 +52,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
         // Will use the first five bytes to detect a protocol.
         if (in.readableBytes() < 5) {
             return;
@@ -62,8 +61,8 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
         if (isSsl(in)) {
             enableSsl(ctx);
         } else {
-            final int magic1 = in.getUnsignedByte(in.readerIndex());
-            final int magic2 = in.getUnsignedByte(in.readerIndex() + 1);
+            final int magic1 = in.getUnsignedByte(in.readerOffset());
+            final int magic2 = in.getUnsignedByte(in.readerOffset() + 1);
             if (isGzip(magic1, magic2)) {
                 enableGzip(ctx);
             } else if (isHttp(magic1, magic2)) {
@@ -72,15 +71,15 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
                 switchToFactorial(ctx);
             } else {
                 // Unknown protocol; discard everything and close the connection.
-                in.clear();
+                in.resetOffsets();
                 ctx.close();
             }
         }
     }
 
-    private boolean isSsl(ByteBuf buf) {
+    private boolean isSsl(Buffer buf) {
         if (detectSsl) {
-            return SslHandler.isEncrypted(ByteBufBuffer.wrap(buf));
+            return SslHandler.isEncrypted(buf);
         }
         return false;
     }

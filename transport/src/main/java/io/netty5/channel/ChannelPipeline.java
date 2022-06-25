@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -182,7 +182,7 @@ import java.util.NoSuchElementException;
  * protocol and business logic:
  *
  * <ol>
- * <li>Protocol Decoder - translates binary data (e.g. {@link ByteBuf}) into a Java object.</li>
+ * <li>Protocol Decoder - translates binary data (e.g. {@link Buffer}) into a Java object.</li>
  * <li>Protocol Encoder - translates a Java object into binary data.</li>
  * <li>Business Logic Handler - performs the actual business logic (e.g. database access).</li>
  * </ol>

@@ -15,23 +15,28 @@
  */
 package io.netty5.handler.codec.string;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.util.CharsetUtil;
+import io.netty5.util.internal.SilentDispose;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
 /**
- * Apply a line separator to the requested {@link String} and encode it into a {@link ByteBuf}.
+ * Apply a line separator to the requested {@link String} and encode it into a {@link Buffer}.
  * A typical setup for a text-based line protocol in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -43,7 +48,7 @@ import static java.util.Objects.requireNonNull;
  * // Encoder
  * pipeline.addLast("lineEncoder", new {@link LineEncoder}(LineSeparator.UNIX, CharsetUtil.UTF_8));
  * </pre>
- * and then you can use a {@link String} instead of a {@link ByteBuf}
+ * and then you can use a {@link String} instead of a {@link Buffer}
  * as a message:
  * <pre>
  * void channelRead({@link ChannelHandlerContext} ctx, {@link String} msg) {
@@ -53,6 +58,7 @@ import static java.util.Objects.requireNonNull;
  */
 @Sharable
 public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LineEncoder.class);
 
     private final Charset charset;
     private final byte[] lineSeparator;
@@ -88,8 +94,32 @@ public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) throws Exception {
-        ByteBuf buffer = ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(msg), charset, lineSeparator.length);
-        buffer.writeBytes(lineSeparator);
-        out.add(buffer);
+        CharsetEncoder encoder = CharsetUtil.encoder(charset);
+        int size = (int) (msg.length() * encoder.maxBytesPerChar() + lineSeparator.length);
+        Buffer buf = ctx.bufferAllocator().allocate(size);
+        assert buf.countWritableComponents() == 1;
+        boolean release = true;
+        CharBuffer chars = CharBuffer.wrap(msg);
+        try (var iterator = buf.forEachWritable()) {
+            var component = requireNonNull(iterator.first(), "writable component");
+            ByteBuffer byteBuffer = component.writableBuffer();
+            int start = byteBuffer.position();
+            CoderResult result = encoder.encode(chars, byteBuffer, true);
+            if (!result.isUnderflow()) {
+                result.throwException();
+            }
+            encoder.flush(byteBuffer);
+            if (!result.isUnderflow()) {
+                result.throwException();
+            }
+            component.skipWritableBytes(byteBuffer.position() - start);
+            release = false;
+        } finally {
+            if (release) {
+                SilentDispose.dispose(buf, logger);
+            }
+        }
+        buf.writeBytes(lineSeparator);
+        out.add(buf);
     }
 }

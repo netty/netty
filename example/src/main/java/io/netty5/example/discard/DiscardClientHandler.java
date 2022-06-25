@@ -15,7 +15,7 @@
  */
 package io.netty5.example.discard;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -26,7 +26,7 @@ import io.netty5.util.concurrent.FutureContextListener;
  */
 public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
 
-    private ByteBuf content;
+    private Buffer content;
     private ChannelHandlerContext ctx;
 
     @Override
@@ -34,7 +34,11 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
         this.ctx = ctx;
 
         // Initialize the message.
-        content = ctx.alloc().directBuffer(DiscardClient.SIZE).writeZero(DiscardClient.SIZE);
+        content = ctx.bufferAllocator()
+                     .allocate(DiscardClient.SIZE)
+                     .writerOffset(DiscardClient.SIZE)
+                     .fill((byte) 0)
+                     .makeReadOnly();
 
         // Send the initial messages.
         generateTraffic();
@@ -42,7 +46,7 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        content.release();
+        content.close();
     }
 
     @Override
@@ -60,7 +64,7 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
     private void generateTraffic() {
         // Flush the outbound buffer to the socket.
         // Once flushed, generate the same amount of traffic again.
-        ctx.writeAndFlush(content.retainedDuplicate()).addListener(ctx.channel(), trafficGenerator);
+        ctx.writeAndFlush(content.copy(true)).addListener(ctx.channel(), trafficGenerator);
     }
 
     private final FutureContextListener<Channel, Void> trafficGenerator = (channel, future) -> {

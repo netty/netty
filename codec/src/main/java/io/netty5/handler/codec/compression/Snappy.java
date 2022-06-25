@@ -15,13 +15,12 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 
 /**
- * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
- * output {@link ByteBuf}.
+ * Uncompresses an input {@link Buffer} encoded with Snappy compression into an
+ * output {@link Buffer}.
  *
  * See <a href="https://github.com/google/snappy/blob/master/format_description.txt">snappy format</a>.
  */

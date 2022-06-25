@@ -16,7 +16,6 @@
 
 package io.netty5.handler.traffic;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
@@ -38,6 +37,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -105,8 +105,8 @@ public class TrafficShapingHandlerTest {
             ch = bootstrap.connect(svrAddr).get();
             Attribute<Runnable> attr = ch.attr(AbstractTrafficShapingHandler.REOPEN_TASK);
             assertNull(attr.get());
-            ch.writeAndFlush(Unpooled.wrappedBuffer("foo".getBytes(CharsetUtil.UTF_8)));
-            ch.writeAndFlush(Unpooled.wrappedBuffer("bar".getBytes(CharsetUtil.UTF_8))).await();
+            ch.writeAndFlush(preferredAllocator().copyOf("foo".getBytes(CharsetUtil.UTF_8)));
+            ch.writeAndFlush(preferredAllocator().copyOf("bar".getBytes(CharsetUtil.UTF_8))).await();
             assertNotNull(attr.get());
             final Channel clientChannel = ch;
             ch.executor().submit(() -> {

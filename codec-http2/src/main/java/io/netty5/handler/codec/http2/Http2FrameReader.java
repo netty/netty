@@ -15,7 +15,6 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.UnstableApi;
@@ -23,7 +22,7 @@ import io.netty5.util.internal.UnstableApi;
 import java.io.Closeable;
 
 /**
- * Reads HTTP/2 frames from an input {@link ByteBuf} and notifies the specified
+ * Reads HTTP/2 frames from an input {@link Buffer} and notifies the specified
  * {@link Http2FrameListener} when frames are complete.
  */
 @UnstableApi

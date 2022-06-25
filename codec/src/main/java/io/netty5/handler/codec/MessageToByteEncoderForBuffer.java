@@ -41,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  *     }
  * </pre>
  */
-public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAdapter {
+public abstract class MessageToByteEncoderForBuffer<I> extends ChannelHandlerAdapter { // TODO rename
 
     private final TypeParameterMatcher matcher;
 

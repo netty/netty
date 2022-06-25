@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.rtsp;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.handler.codec.http.HttpContent;
@@ -32,8 +31,7 @@ import static io.netty5.util.CharsetUtil.US_ASCII;
 import static io.netty5.util.CharsetUtil.UTF_8;
 
 /**
- * Encodes an RTSP message represented in {@link HttpMessage} or an {@link HttpContent} into
- * a {@link ByteBuf}.
+ * Encodes an RTSP message represented in {@link HttpMessage} or an {@link HttpContent} into a {@link Buffer}.
  */
 public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
     private static final short CRLF_SHORT = (CR << 8) | LF;

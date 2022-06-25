@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.DefaultAddressedEnvelope;
@@ -103,16 +103,16 @@ public class DatagramPacketEncoderTest {
     }
 
     private static void testSharable(boolean sharable) {
-        MessageToMessageEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> wrapped =
+        MessageToMessageEncoder<AddressedEnvelope<Buffer, InetSocketAddress>> wrapped =
                 new TestMessageToMessageEncoder(sharable);
 
-        DatagramPacketEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> encoder =
+        DatagramPacketEncoder<AddressedEnvelope<Buffer, InetSocketAddress>> encoder =
                 new DatagramPacketEncoder<>(wrapped);
         assertEquals(wrapped.isSharable(), encoder.isSharable());
     }
 
     private static final class TestMessageToMessageEncoder
-            extends MessageToMessageEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> {
+            extends MessageToMessageEncoder<AddressedEnvelope<Buffer, InetSocketAddress>> {
 
         private final boolean sharable;
 
@@ -122,7 +122,7 @@ public class DatagramPacketEncoderTest {
 
         @Override
         protected void encode(
-                ChannelHandlerContext ctx, AddressedEnvelope<ByteBuf,
+                ChannelHandlerContext ctx, AddressedEnvelope<Buffer,
                 InetSocketAddress> msg, List<Object> out) {
             // NOOP
         }

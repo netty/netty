@@ -15,8 +15,7 @@
  */
 package io.netty5.channel.group;
 
-import io.netty.buffer.ByteBufConvertible;
-import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelId;
@@ -230,10 +229,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
     // See https://github.com/netty/netty/issues/1461
     private static Object safeDuplicate(Object message) {
-        if (message instanceof ByteBufConvertible) {
-            return ((ByteBufConvertible) message).asByteBuf().retainedDuplicate();
-        } else if (message instanceof ByteBufHolder) {
-            return ((ByteBufHolder) message).retainedDuplicate();
+        if (message instanceof Buffer) {
+            return ((Buffer) message).copy();
         } else {
             return ReferenceCountUtil.retain(message);
         }

@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.internal;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -147,11 +146,6 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     @Override
     public ChannelPipeline pipeline() {
         return ctx.pipeline();
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        return ctx.alloc();
     }
 
     @Override

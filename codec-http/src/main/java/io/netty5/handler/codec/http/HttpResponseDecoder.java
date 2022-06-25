@@ -15,13 +15,11 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 
 /**
- * Decodes {@link ByteBuf}s into {@link HttpResponse}s and
- * {@link HttpContent}s.
+ * Decodes {@link io.netty5.buffer.api.Buffer}s into {@link HttpResponse}s and {@link HttpContent}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">

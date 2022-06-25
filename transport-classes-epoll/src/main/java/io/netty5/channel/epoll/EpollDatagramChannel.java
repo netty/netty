@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -646,8 +645,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         int messagesRead = packetList.size();
         handle.lastBytesRead(bytesRead);
         handle.incMessagesRead(messagesRead);
+        BufferAllocator allocator = pipeline.channel().bufferAllocator();
         for (int i = 0; i < messagesRead; i++) {
-            pipeline.fireChannelRead(packetList.set(i, Unpooled.EMPTY_BUFFER));
+            pipeline.fireChannelRead(packetList.set(i, allocator.allocate(0)));
         }
     }
 
