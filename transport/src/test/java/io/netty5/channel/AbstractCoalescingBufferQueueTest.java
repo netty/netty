@@ -50,7 +50,7 @@ public class AbstractCoalescingBufferQueueTest {
                 return ctx.newSucceededFuture();
             }
         }, new ChannelHandlerAdapter() { });
-        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {
+        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(128) {
             @Override
             protected Buffer compose(BufferAllocator alloc, Buffer cumulation, Buffer next) {
                 return composeIntoComposite(alloc, cumulation, next);

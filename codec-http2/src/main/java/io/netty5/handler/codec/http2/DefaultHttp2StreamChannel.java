@@ -351,24 +351,12 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     @Override
     public long bytesBeforeUnwritable() {
-        long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize;
+        long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize - pipeline.pendingOutboundBytes();
         // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check
         // writability. Note that totalPendingSize and isWritable() use different volatile variables that are not
         // synchronized together. totalPendingSize will be updated before isWritable().
         if (bytes > 0) {
             return isWritable() ? bytes : 0;
-        }
-        return 0;
-    }
-
-    @Override
-    public long bytesBeforeWritable() {
-        long bytes = totalPendingSize - config().getWriteBufferLowWaterMark();
-        // If bytes is negative we know we are writable, but if bytes is non-negative we have to check writability.
-        // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
-        // together. totalPendingSize will be updated before isWritable().
-        if (bytes > 0) {
-            return isWritable() ? 0 : bytes;
         }
         return 0;
     }
@@ -1019,13 +1007,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
 
         @Override
-        protected void incrementPendingOutboundBytes(long size) {
-            defaultHttp2StreamChannel().incrementPendingOutboundBytes(size, true);
-        }
-
-        @Override
-        protected void decrementPendingOutboundBytes(long size) {
-            defaultHttp2StreamChannel().decrementPendingOutboundBytes(size, true);
+        protected void pendingOutboundBytesUpdated(long pendingOutboundBytes) {
+            // TODO: Do we need to do anything special here ?
         }
 
         @Override

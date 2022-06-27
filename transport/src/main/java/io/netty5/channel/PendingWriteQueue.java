@@ -16,6 +16,7 @@
 package io.netty5.channel;
 
 import io.netty5.util.Resource;
+import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.PromiseCombiner;
@@ -25,12 +26,13 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Objects;
+import java.util.function.Function;
+
 import static java.util.Objects.requireNonNull;
 
 /**
- * A queue of write operations which are pending for later execution. It also updates the
- * {@linkplain Channel#isWritable() writability} of the associated {@link Channel}, so that
- * the pending write operations are also considered to determine the writability.
+ * A queue of write operations which are pending for later execution.
  */
 public final class PendingWriteQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PendingWriteQueue.class);
@@ -41,8 +43,8 @@ public final class PendingWriteQueue {
     private static final int PENDING_WRITE_OVERHEAD =
             SystemPropertyUtil.getInt("io.netty5.transport.pendingWriteSizeOverhead", 64);
 
-    private final ChannelHandlerContext ctx;
-    private final PendingBytesTracker tracker;
+    private final EventExecutor executor;
+    private final MessageSizeEstimator.Handle sizeEstimatorHandle;
 
     // head and tail pointers for the linked-list structure. If empty head and tail are null.
     private PendingWrite head;
@@ -50,16 +52,16 @@ public final class PendingWriteQueue {
     private int size;
     private long bytes;
 
-    public PendingWriteQueue(ChannelHandlerContext ctx) {
-        tracker = PendingBytesTracker.newTracker(ctx.channel());
-        this.ctx = ctx;
+    public PendingWriteQueue(EventExecutor executor, MessageSizeEstimator.Handle handle) {
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.sizeEstimatorHandle = Objects.requireNonNull(handle, "handle");
     }
 
     /**
      * Returns {@code true} if there are no pending write operations left in this queue.
      */
     public boolean isEmpty() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         return head == null;
     }
 
@@ -67,7 +69,7 @@ public final class PendingWriteQueue {
      * Returns the number of pending write operations.
      */
     public int size() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         return size;
     }
 
@@ -76,14 +78,14 @@ public final class PendingWriteQueue {
      * it should only be treated as a hint.
      */
     public long bytes() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         return bytes;
     }
 
     private int size(Object msg) {
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
-        int messageSize = tracker.size(msg);
+        int messageSize = sizeEstimatorHandle.size(msg);
         if (messageSize < 0) {
             // Size may be unknown so just use 0
             messageSize = 0;
@@ -95,7 +97,7 @@ public final class PendingWriteQueue {
      * Add the given {@code msg} and {@link Promise}.
      */
     public void add(Object msg, Promise<Void> promise) {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         requireNonNull(msg, "msg");
         requireNonNull(promise, "promise");
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
@@ -112,25 +114,24 @@ public final class PendingWriteQueue {
         }
         size ++;
         bytes += messageSize;
-        tracker.incrementPendingOutboundBytes(write.size);
     }
 
     /**
      * Remove all pending write operation and performs them via
-     * {@link ChannelHandlerContext#write(Object)}.
+     * {@link Function#apply(Object)}.
      *
-     * @return  {@link Future} if something was written and {@code null}
+     * @return  {@link Future} if something was transferred and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
      */
-    public Future<Void> removeAndWriteAll() {
-        assert ctx.executor().inEventLoop();
+    public Future<Void> removeAndTransferAll(Function<Object, Future<Void>> transferFunc) {
+        assert executor.inEventLoop();
 
         if (isEmpty()) {
             return null;
         }
 
-        Promise<Void> p = ctx.newPromise();
-        PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
+        Promise<Void> p = executor.newPromise();
+        PromiseCombiner combiner = new PromiseCombiner(executor);
         try {
             // It is possible for some of the written promises to trigger more writes. The new writes
             // will "revive" the queue, so we need to write them up until the queue is empty.
@@ -144,7 +145,7 @@ public final class PendingWriteQueue {
                     Object msg = write.msg;
                     Promise<Void> promise = write.promise;
                     recycle(write, false);
-                    ctx.write(msg).cascadeTo(promise);
+                    transferFunc.apply(msg).cascadeTo(promise);
                     write = next;
                 }
             }
@@ -161,7 +162,7 @@ public final class PendingWriteQueue {
      * via {@link Resource#dispose(Object)}.
      */
     public void removeAndFailAll(Throwable cause) {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         requireNonNull(cause, "cause");
         // It is possible for some of the failed promises to trigger more writes. The new writes
         // will "revive" the queue, so we need to clean them up until the queue is empty.
@@ -186,7 +187,7 @@ public final class PendingWriteQueue {
      * {@link Resource#dispose(Object)}.
      */
     public void removeAndFail(Throwable cause) {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         requireNonNull(cause, "cause");
         PendingWrite write = head;
 
@@ -205,13 +206,13 @@ public final class PendingWriteQueue {
 
     /**
      * Removes a pending write operation and performs it via
-     * {@link ChannelHandlerContext#write(Object)}.
+     * {@link Function#apply(Object)}.
      *
-     * @return  {@link Future} if something was written and {@code null}
+     * @return  {@link Future} if something was transfered and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
      */
-    public Future<Void> removeAndWrite() {
-        assert ctx.executor().inEventLoop();
+    public Future<Void> removeAndTransfer(Function<Object, Future<Void>> transferFunc) {
+        assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
@@ -220,19 +221,19 @@ public final class PendingWriteQueue {
         Promise<Void> promise = write.promise;
         recycle(write, true);
 
-        Future<Void> future = ctx.write(msg);
+        Future<Void> future = transferFunc.apply(msg);
         future.cascadeTo(promise);
         return future;
     }
 
     /**
-     * Removes a pending write operation and release it's message via {@link Resource#dispose(Object)}.
+     * Removes a pending write operation and release its message via {@link Resource#dispose(Object)}.
      *
      * @return  {@link Promise} of the pending write or {@code null} if the queue is empty.
      *
      */
     public Promise<Void> remove() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
@@ -247,7 +248,7 @@ public final class PendingWriteQueue {
      * Return the current message or {@code null} if empty.
      */
     public Object current() {
-        assert ctx.executor().inEventLoop();
+        assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
@@ -275,7 +276,6 @@ public final class PendingWriteQueue {
         }
 
         write.recycle();
-        tracker.decrementPendingOutboundBytes(writeSize);
     }
 
     private static void safeFail(Promise<Void> promise, Throwable cause) {

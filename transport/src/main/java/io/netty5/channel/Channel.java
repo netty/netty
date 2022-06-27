@@ -184,12 +184,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     long bytesBeforeUnwritable();
 
     /**
-     * Get how many bytes must be drained from underlying buffers until {@link #isWritable()} returns {@code true}.
-     * This quantity will always be non-negative. If {@link #isWritable()} is {@code true} then 0.
-     */
-    long bytesBeforeWritable();
-
-    /**
      * Return the assigned {@link ChannelPipeline}.
      */
     ChannelPipeline pipeline();

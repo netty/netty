@@ -84,20 +84,18 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
-                // Case 1:
-                "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
                 "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n",
+                "WRITABILITY: writable=false\n" +
+                        "WRITABILITY: writable=true\n" +
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n"
+        );
     }
 
     @Test
@@ -152,21 +150,18 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         clientChannel.close().sync();
 
-        assertLog(
-                // Case 1:
+        assertLog("WRITABILITY: writable=true\n" +
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n",
                 "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+                        "WRITABILITY: writable=true\n" +
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n"
+                );
     }
 
     /**
@@ -203,23 +198,19 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.write(createTestBuffer(2000)).sync();
         clientChannel.close().sync();
 
-        assertLog(
-                // Case 1:
+        assertLog("WRITABILITY: writable=true\n" +
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n",
                 "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n" +
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n"
+        );
     }
 
     /**
@@ -256,23 +247,19 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.write(createTestBuffer(2000)).sync();
         clientChannel.close().sync();
 
-        assertLog(
-                // Case 1:
+        assertLog("WRITABILITY: writable=true\n" +
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n",
                 "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n" +
+                        "WRITE\n" +
+                        "WRITABILITY: writable=false\n" +
+                        "FLUSH\n" +
+                        "WRITABILITY: writable=true\n"
+                );
     }
 
     @Test
@@ -316,8 +303,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.writeAndFlush(createTestBuffer(2000));
         clientChannel.close().sync();
 
-        assertLog(
-                "WRITE\n" +
+        assertLog("WRITE\n" +
                 "FLUSH\n" +
                 "WRITE\n" +
                 "FLUSH\n" +
@@ -373,8 +359,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.writeAndFlush(createTestBuffer(2000));
         clientChannel.close().sync();
 
-        assertLog(
-                "WRITE\n" +
+        assertLog("WRITE\n" +
                 "FLUSH\n" +
                 "WRITE\n" +
                 "FLUSH\n" +

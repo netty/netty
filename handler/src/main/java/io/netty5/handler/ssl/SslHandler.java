@@ -1776,7 +1776,7 @@ public class SslHandler extends ByteToMessageDecoder {
         this.ctx = ctx;
 
         Channel channel = ctx.channel();
-        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16);
+        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(16);
 
         setOpensslEngineSocketFd(channel);
         boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
@@ -2066,6 +2066,11 @@ public class SslHandler extends ByteToMessageDecoder {
         state &= ~bit;
     }
 
+    @Override
+    public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        return pendingUnencryptedWrites == null ? 0 : pendingUnencryptedWrites.readableBytes();
+    }
+
     /**
      * Each call to SSL_write will introduce about ~100 bytes of overhead. This coalescing queue attempts to increase
      * goodput by aggregating the plaintext in chunks of {@link #wrapDataSize}. If many small chunks are written
@@ -2073,8 +2078,8 @@ public class SslHandler extends ByteToMessageDecoder {
      */
     private final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
-        SslHandlerCoalescingBufferQueue(Channel channel, int initSize) {
-            super(channel, initSize);
+        SslHandlerCoalescingBufferQueue(int initSize) {
+            super(initSize);
         }
 
         @Override

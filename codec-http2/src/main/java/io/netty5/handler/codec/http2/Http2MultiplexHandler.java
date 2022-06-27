@@ -138,8 +138,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     @Override
     protected void handlerAdded0(ChannelHandlerContext ctx) {
-        if (ctx.executor() != ctx.channel().executor()) {
-            throw new IllegalStateException("EventExecutor must be EventLoop of Channel");
+        if (ctx.executor().inEventLoop() != ctx.channel().executor().inEventLoop()) {
+            throw new IllegalStateException("EventExecutor must be on the same thread as the EventLoop of the Channel");
         }
         this.ctx = ctx;
     }

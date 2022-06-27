@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.IntSupplier;
 import java.util.function.Predicate;
@@ -73,6 +75,11 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     private final List<DefaultChannelHandlerContext> handlers = new ArrayList<>(4);
 
     private volatile MessageSizeEstimator.Handle estimatorHandle;
+
+    private static final AtomicLongFieldUpdater<DefaultChannelPipeline> TOTAL_PENDING_OUTBOUND_BYTES_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(DefaultChannelPipeline.class, "pendingOutboundBytes");
+
+    private volatile long pendingOutboundBytes;
 
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = requireNonNull(channel, "channel");
@@ -998,24 +1005,51 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
-     * Called once the pending outbound bytes should be incremented.
-     * @param size the number of bytes to add.
+     * Called once the {@link #pendingOutboundBytes()} were changed.
+     *
+     * @param pendingOutboundBytes          the new {@link #pendingOutboundBytes()}.
      */
-    protected void incrementPendingOutboundBytes(long size) {
-       // NOOP
+    protected abstract void pendingOutboundBytesUpdated(long pendingOutboundBytes);
+
+    @Override
+    public final long pendingOutboundBytes() {
+        return TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.get(this);
     }
 
     /**
-     * Called once the pending outbound bytes should be decremented.
-     * @param size the number of bytes decremented.
+     * Increments the {@link #pendingOutboundBytes()} of the pipeline by the given delta.
+     *
+     * @param delta the number of bytes to add.
      */
-    protected void decrementPendingOutboundBytes(long size) {
-        // NOOP
+    final void incrementPendingOutboundBytes(long delta) {
+        assert delta > 0;
+        long pending = TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.addAndGet(this, delta);
+        if (pending < 0) {
+            closeTransport(newPromise());
+            throw new IllegalStateException("pendingOutboundBytes overflowed, force closed transport.");
+        }
+        pendingOutboundBytesUpdated(pending);
+    }
+
+    /**
+     * Decrements the {@link #pendingOutboundBytes()} of the pipeline by the given delta.
+     *
+     * @param delta the number of bytes to remove.
+     */
+    final void decrementPendingOutboundBytes(long delta) {
+        assert delta > 0;
+        long pending = TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.addAndGet(this, -delta);
+        if (pending < 0) {
+            closeTransport(newPromise());
+            throw new IllegalStateException("pendingOutboundBytes underflowed, force closed transport.");
+        }
+        pendingOutboundBytesUpdated(pending);
     }
 
     private static DefaultChannelPipeline defaultChannelPipeline(ChannelHandlerContext ctx) {
         return (DefaultChannelPipeline) ctx.pipeline();
     }
+
     // A special catch-all handler that handles both bytes and messages.
     private static final class TailHandler implements ChannelHandler {
 

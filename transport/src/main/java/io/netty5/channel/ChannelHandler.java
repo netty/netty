@@ -398,4 +398,17 @@ public interface ChannelHandler {
     default Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
         return ctx.sendOutboundEvent(event);
     }
+
+    /**
+     * The number of the outbound bytes that are buffered / queued in this {@link ChannelHandler}. This number will
+     * affect the writability of the {@link Channel} together the buffered / queued bytes in the {@link Channel} itself.
+     * By default this methods returns {@code 0}. If the {@link ChannelHandler} implementation buffers / queues
+     * outbound data this methods should be implemented to return the correct value.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the operation is made.
+     * @return                  the number of buffered / queued bytes.
+     */
+    default long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        return 0;
+    }
 }

@@ -56,7 +56,7 @@ public class CoalescingBufferQueueTest {
         mouseDone = false;
         mouseSuccess = false;
         channel = new EmbeddedChannel();
-        writeQueue = new CoalescingBufferQueue(channel, 16, true);
+        writeQueue = new CoalescingBufferQueue(channel, 16);
         catPromise = newPromise();
         mouseListener = future -> {
             mouseDone = true;
@@ -219,47 +219,6 @@ public class CoalescingBufferQueueTest {
         assertTrue(mouseSuccess);
         assertFalse(cat.isAccessible());
         assertFalse(mouse.isAccessible());
-    }
-
-    @Test
-    public void testWritabilityChanged() {
-        testWritabilityChanged0(false);
-    }
-
-    @Test
-    public void testWritabilityChangedFailAll() {
-        testWritabilityChanged0(true);
-    }
-
-    private void testWritabilityChanged0(boolean fail) {
-        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(3, 4));
-        assertTrue(channel.isWritable());
-        writeQueue.add(BufferAllocator.offHeapUnpooled().copyOf(new byte[] { 1, 2, 3 }));
-        assertTrue(channel.isWritable());
-        writeQueue.add(BufferAllocator.offHeapUnpooled().copyOf(new byte[] { 4, 5 }));
-        assertFalse(channel.isWritable());
-        assertEquals(5, writeQueue.readableBytes());
-
-        if (fail) {
-            writeQueue.releaseAndFailAll(new IllegalStateException());
-        } else {
-            Buffer buffer = writeQueue.removeFirst(channel.newPromise());
-            assertEquals(1, buffer.readByte());
-            assertEquals(2, buffer.readByte());
-            assertEquals(3, buffer.readByte());
-            assertEquals(0, buffer.readableBytes());
-            buffer.close();
-            assertTrue(channel.isWritable());
-
-            buffer = writeQueue.removeFirst(channel.newPromise());
-            assertEquals(4, buffer.readByte());
-            assertEquals(5, buffer.readByte());
-            assertEquals(0, buffer.readableBytes());
-            buffer.close();
-        }
-
-        assertTrue(channel.isWritable());
-        assertTrue(writeQueue.isEmpty());
     }
 
     private Promise<Void> newPromise() {
