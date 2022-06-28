@@ -85,7 +85,7 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
             }
             int leftover = data.length - written;
             Buffer in = allocator.allocate(leftover);
-            in.writeBytes(data, written, length);
+            in.writeBytes(data, written, leftover);
             encoder.writeOutbound(in);
             encoder.finish();
 
