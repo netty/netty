@@ -77,7 +77,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
         final Promise<U> earlyPromise = resolveMap.putIfAbsent(inetHost, promise);
         if (earlyPromise != null) {
             // Name resolution for the specified inetHost is in progress already.
-            Future<U> earlyFuture = promise.asFuture();
+            Future<U> earlyFuture = earlyPromise.asFuture();
             if (earlyFuture.isDone()) {
                 transferResult(earlyFuture, promise);
             } else {
