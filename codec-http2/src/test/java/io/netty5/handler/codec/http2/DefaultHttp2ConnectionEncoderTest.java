@@ -87,9 +87,6 @@ public class DefaultHttp2ConnectionEncoderTest {
     private Channel channel;
 
     @Mock
-    private Channel.Unsafe unsafe;
-
-    @Mock
     private ChannelPipeline pipeline;
 
     @Mock
@@ -119,7 +116,6 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(channel.isActive()).thenReturn(true);
         when(channel.pipeline()).thenReturn(pipeline);
         when(channel.metadata()).thenReturn(metadata);
-        when(channel.unsafe()).thenReturn(unsafe);
         ChannelConfig config = new DefaultChannelConfig(channel);
         when(channel.config()).thenReturn(config);
 

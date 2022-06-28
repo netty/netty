@@ -82,11 +82,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new DefaultServerUnsafe();
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
@@ -96,10 +91,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         throw new UnsupportedOperationException();
     }
 
-    private final class DefaultServerUnsafe extends AbstractUnsafe {
-        @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            safeSetFailure(promise, new UnsupportedOperationException());
-        }
+    @Override
+    public void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        safeSetFailure(promise, new UnsupportedOperationException());
     }
 }

@@ -131,7 +131,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (childChannel.isRegistered()) {
                 childChannel.close();
             } else {
-                childChannel.unsafe().closeForcibly();
+                ((DefaultHttp2StreamChannel) childChannel).closeForcibly();
             }
         }
     }
@@ -272,7 +272,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             try {
                 childChannel.pipeline().fireChannelExceptionCaught(cause.getCause());
             } finally {
-                childChannel.unsafe().closeForcibly();
+                childChannel.closeForcibly();
             }
             return;
         }

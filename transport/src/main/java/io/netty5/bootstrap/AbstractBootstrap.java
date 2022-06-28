@@ -283,7 +283,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
                 //  or return the future from register().
                 channel.register().addListener(f -> promise.setSuccess(channel));
             } else {
-                channel.unsafe().closeForcibly();
+                channel.close();
                 promise.setFailure(future.cause());
             }
         }));
@@ -295,11 +295,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         EventLoop loop = group.next();
         Channel channel = newChannel(loop);
 
-        init(channel).addListener(future -> {
-            if (future.isFailed()) {
-                channel.unsafe().closeForcibly();
-            }
-        });
+        init(channel).addListener(channel, ChannelFutureListeners.CLOSE_ON_FAILURE);
         return channel;
     }
 

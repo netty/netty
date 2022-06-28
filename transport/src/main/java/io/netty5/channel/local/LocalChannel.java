@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * A {@link Channel} for the local transport.
  */
-public class LocalChannel extends AbstractChannel {
+public class LocalChannel extends AbstractChannel implements LocalChannelUnsafe {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
@@ -127,11 +127,6 @@ public class LocalChannel extends AbstractChannel {
     @Override
     public boolean isActive() {
         return state == State.CONNECTED;
-    }
-
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new LocalUnsafe();
     }
 
     @Override
@@ -251,7 +246,7 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
-            unsafe().close(newPromise());
+            closeTransport(newPromise());
         } else {
             releaseInboundBuffers();
 
@@ -265,7 +260,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void readInbound() {
-        RecvBufferAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        RecvBufferAllocator.Handle handle = recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {
@@ -448,97 +443,95 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
-    private class LocalUnsafe extends AbstractUnsafe implements LocalChannelUnsafe {
+    @Override
+    protected void connectTransport(final SocketAddress remoteAddress,
+            SocketAddress localAddress, final Promise<Void> promise) {
+        if (!promise.setUncancellable() || !ensureOpen(promise)) {
+            return;
+        }
 
-        @Override
-        public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final Promise<Void> promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+        if (state == State.CONNECTED) {
+            Exception cause = new AlreadyConnectedException();
+            safeSetFailure(promise, cause);
+            pipeline().fireChannelExceptionCaught(cause);
+            return;
+        }
+
+        if (connectPromise != null) {
+            throw new ConnectionPendingException();
+        }
+
+        connectPromise = promise;
+
+        if (state != State.BOUND) {
+            // Not bound yet and no localAddress specified - get one.
+            if (localAddress == null) {
+                localAddress = new LocalAddress(LocalChannel.this);
+            }
+        }
+
+        if (localAddress != null) {
+            try {
+                doBind(localAddress);
+            } catch (Throwable t) {
+                safeSetFailure(promise, t);
+                closeTransport(newPromise());
                 return;
             }
+        }
 
-            if (state == State.CONNECTED) {
-                Exception cause = new AlreadyConnectedException();
-                safeSetFailure(promise, cause);
-                pipeline().fireChannelExceptionCaught(cause);
-                return;
-            }
+        Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
+        if (!(boundChannel instanceof LocalServerChannel)) {
+            Exception cause = new ConnectException("connection refused: " + remoteAddress);
+            safeSetFailure(promise, cause);
+            closeTransport(newPromise());
+            return;
+        }
 
-            if (connectPromise != null) {
-                throw new ConnectionPendingException();
-            }
+        LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
+        peer = serverChannel.serve(LocalChannel.this);
+    }
 
-            connectPromise = promise;
+    @Override
+    public void registerTransportNow() {
+        // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
+        // This is needed as a peer may not be null also if a LocalChannel was connected before and
+        // deregistered / registered later again.
+        //
+        // See https://github.com/netty/netty/issues/2400
+        if (peer != null && parent() != null) {
+            // Store the peer in a local variable as it may be set to null if doClose() is called.
+            // See https://github.com/netty/netty/issues/2144
+            final LocalChannel peer = LocalChannel.this.peer;
+            state = State.CONNECTED;
 
-            if (state != State.BOUND) {
-                // Not bound yet and no localAddress specified - get one.
-                if (localAddress == null) {
-                    localAddress = new LocalAddress(LocalChannel.this);
+            peer.remoteAddress = parent() == null ? null : parent().localAddress();
+            peer.state = State.CONNECTED;
+
+            // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
+            // This ensures that if both channels are on the same event loop, the peer's channelActive
+            // event is triggered *after* this channel's channelRegistered event, so that this channel's
+            // pipeline is fully initialized by ChannelInitializer before any channelRead events.
+            peer.executor().execute(() -> {
+                Promise<Void> promise = peer.connectPromise;
+
+                // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
+                // connectPromise may be set to null if doClose() was called in the meantime.
+                if (promise != null && promise.trySuccess(null)) {
+                    peer.pipeline().fireChannelActive();
+                    peer.readIfIsAutoRead();
                 }
-            }
-
-            if (localAddress != null) {
-                try {
-                    doBind(localAddress);
-                } catch (Throwable t) {
-                    safeSetFailure(promise, t);
-                    close(newPromise());
-                    return;
-                }
-            }
-
-            Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
-            if (!(boundChannel instanceof LocalServerChannel)) {
-                Exception cause = new ConnectException("connection refused: " + remoteAddress);
-                safeSetFailure(promise, cause);
-                close(newPromise());
-                return;
-            }
-
-            LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
-            peer = serverChannel.serve(LocalChannel.this);
+            });
         }
+    }
 
-        @Override
-        public void register0() {
-            // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
-            // This is needed as a peer may not be null also if a LocalChannel was connected before and
-            // deregistered / registered later again.
-            //
-            // See https://github.com/netty/netty/issues/2400
-            if (peer != null && parent() != null) {
-                // Store the peer in a local variable as it may be set to null if doClose() is called.
-                // See https://github.com/netty/netty/issues/2144
-                final LocalChannel peer = LocalChannel.this.peer;
-                state = State.CONNECTED;
+    @Override
+    public void deregisterTransportNow() {
+        // Noop
+    }
 
-                peer.remoteAddress = parent() == null ? null : parent().localAddress();
-                peer.state = State.CONNECTED;
-
-                // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
-                // This ensures that if both channels are on the same event loop, the peer's channelActive
-                // event is triggered *after* this channel's channelRegistered event, so that this channel's
-                // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-                peer.executor().execute(() -> {
-                    Promise<Void> promise = peer.connectPromise;
-
-                    // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
-                    // connectPromise may be set to null if doClose() was called in the meantime.
-                    if (promise != null && promise.trySuccess(null)) {
-                        peer.pipeline().fireChannelActive();
-                        peer.readIfIsAutoRead();
-                    }
-                });
-            }
-        }
-
-        @Override
-        public void deregister0() {
-        }
-
-        @Override
-        public Promise<Void> newPromise() {
-            return LocalChannel.this.newPromise();
-        }
+    @Override
+    public void closeTransportNow() {
+        closeTransport(newPromise());
     }
 }

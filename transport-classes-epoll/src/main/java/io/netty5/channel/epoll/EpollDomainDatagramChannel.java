@@ -309,11 +309,6 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
         return METADATA;
     }
 
-    @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollDomainDatagramChannelUnsafe();
-    }
-
     /**
      * Returns the unix credentials (uid, gid, pid) of the peer
      * <a href=https://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
@@ -332,96 +327,93 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
         return remote;
     }
 
-    final class EpollDomainDatagramChannelUnsafe extends AbstractEpollUnsafe {
-
-        @Override
-        void epollInReady() {
-            assert executor().inEventLoop();
-            final DomainDatagramChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
-
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
-            epollInBefore();
-
-            try {
-                Throwable exception = doReadBuffer(allocHandle, pipeline);
-
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    pipeline.fireChannelExceptionCaught(exception);
-                }
-                readIfIsAutoRead();
-            } finally {
-                epollInFinally(config);
-            }
+    @Override
+    void epollInReady() {
+        assert executor().inEventLoop();
+        final DomainDatagramChannelConfig config = config();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
         }
+        final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
-        private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle, ChannelPipeline pipeline) {
-            BufferAllocator allocator = config().getBufferAllocator();
-            if (!allocator.getAllocationType().isDirect()) {
-                allocator = DefaultBufferAllocators.offHeapAllocator();
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
+        epollInBefore();
+
+        try {
+            Throwable exception = doReadBuffer(allocHandle, pipeline);
+
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireChannelExceptionCaught(exception);
             }
-            Buffer buf = null;
-            try {
-                boolean connected = isConnected();
-                do {
-                    buf = allocHandle.allocate(allocator);
-                    allocHandle.attemptedBytesRead(buf.writableBytes());
+            readIfIsAutoRead();
+        } finally {
+            epollInFinally(config);
+        }
+    }
 
-                    final DomainDatagramPacket packet;
-                    if (connected) {
-                        doReadBytes(buf);
-                        if (allocHandle.lastBytesRead() <= 0) {
-                            // nothing was read, release the buffer.
-                            buf.close();
-                            break;
-                        }
-                        packet = new DomainDatagramPacket(buf, (DomainSocketAddress) localAddress(),
-                                                          (DomainSocketAddress) remoteAddress());
-                    } else {
-                        final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
-                        buf.forEachWritable(0, recvFrom);
-                        final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
+    private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle, ChannelPipeline pipeline) {
+        BufferAllocator allocator = config().getBufferAllocator();
+        if (!allocator.getAllocationType().isDirect()) {
+            allocator = DefaultBufferAllocators.offHeapAllocator();
+        }
+        Buffer buf = null;
+        try {
+            boolean connected = isConnected();
+            do {
+                buf = allocHandle.allocate(allocator);
+                allocHandle.attemptedBytesRead(buf.writableBytes());
 
-                        if (remoteAddress == null) {
-                            allocHandle.lastBytesRead(-1);
-                            buf.close();
-                            break;
-                        }
-                        DomainSocketAddress localAddress = remoteAddress.localAddress();
-                        if (localAddress == null) {
-                            localAddress = (DomainSocketAddress) localAddress();
-                        }
-                        allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                        buf.skipWritableBytes(allocHandle.lastBytesRead());
-
-                        packet = new DomainDatagramPacket(buf, localAddress, remoteAddress);
+                final DomainDatagramPacket packet;
+                if (connected) {
+                    doReadBytes(buf);
+                    if (allocHandle.lastBytesRead() <= 0) {
+                        // nothing was read, release the buffer.
+                        buf.close();
+                        break;
                     }
+                    packet = new DomainDatagramPacket(buf, (DomainSocketAddress) localAddress(),
+                                                      (DomainSocketAddress) remoteAddress());
+                } else {
+                    final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
+                    buf.forEachWritable(0, recvFrom);
+                    final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
 
-                    allocHandle.incMessagesRead(1);
+                    if (remoteAddress == null) {
+                        allocHandle.lastBytesRead(-1);
+                        buf.close();
+                        break;
+                    }
+                    DomainSocketAddress localAddress = remoteAddress.localAddress();
+                    if (localAddress == null) {
+                        localAddress = (DomainSocketAddress) localAddress();
+                    }
+                    allocHandle.lastBytesRead(remoteAddress.receivedAmount());
+                    buf.skipWritableBytes(allocHandle.lastBytesRead());
 
-                    readPending = false;
-                    pipeline.fireChannelRead(packet);
-
-                    buf = null;
-
-                    // We use the TRUE_SUPPLIER as it is also ok to read less than what we did try to read (as long
-                    // as we read anything).
-                } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
-            } catch (Throwable t) {
-                if (buf != null) {
-                    buf.close();
+                    packet = new DomainDatagramPacket(buf, localAddress, remoteAddress);
                 }
-                return t;
+
+                allocHandle.incMessagesRead(1);
+
+                readPending = false;
+                pipeline.fireChannelRead(packet);
+
+                buf = null;
+
+                // We use the TRUE_SUPPLIER as it is also ok to read less than what we did try to read (as long
+                // as we read anything).
+            } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+        } catch (Throwable t) {
+            if (buf != null) {
+                buf.close();
             }
-            return null;
+            return t;
         }
+        return null;
     }
 }

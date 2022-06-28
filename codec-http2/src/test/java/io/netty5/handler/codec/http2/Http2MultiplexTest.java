@@ -1003,18 +1003,6 @@ public class Http2MultiplexTest {
     }
 
     @Test
-    public void callUnsafeCloseMultipleTimes() throws Exception {
-        LastInboundHandler inboundHandler = new LastInboundHandler();
-        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        childChannel.unsafe().close(childChannel.newPromise());
-
-        Promise<Void> promise = childChannel.newPromise();
-        childChannel.unsafe().close(promise);
-        promise.asFuture().sync();
-        childChannel.closeFuture().sync();
-    }
-
-    @Test
     public void endOfStreamDoesNotDiscardData() throws Exception {
         AtomicInteger numReads = new AtomicInteger(1);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();

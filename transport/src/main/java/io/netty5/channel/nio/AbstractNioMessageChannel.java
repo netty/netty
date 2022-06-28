@@ -36,17 +36,13 @@ import java.util.List;
  */
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     boolean inputShutdown;
+    private final List<Object> readBuf = new ArrayList<>();
 
     /**
      * @see AbstractNioChannel#AbstractNioChannel(Channel, EventLoop, SelectableChannel, int)
      */
     protected AbstractNioMessageChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
         super(parent, eventLoop, ch, readInterestOp);
-    }
-
-    @Override
-    protected AbstractNioUnsafe newUnsafe() {
-        return new NioMessageUnsafe();
     }
 
     @Override
@@ -61,71 +57,66 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         return allocHandle.continueReading();
     }
 
-    private final class NioMessageUnsafe extends AbstractNioUnsafe {
+    @Override
+    protected final void readNow() {
+        assert executor().inEventLoop();
+        final ChannelConfig config = config();
+        final ChannelPipeline pipeline = pipeline();
+        final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
+        allocHandle.reset(config);
 
-        private final List<Object> readBuf = new ArrayList<>();
-
-        @Override
-        public void read() {
-            assert executor().inEventLoop();
-            final ChannelConfig config = config();
-            final ChannelPipeline pipeline = pipeline();
-            final RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
-            allocHandle.reset(config);
-
-            boolean closed = false;
-            Throwable exception = null;
+        boolean closed = false;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    do {
-                        int localRead = doReadMessages(readBuf);
-                        if (localRead == 0) {
-                            break;
-                        }
-                        if (localRead < 0) {
-                            closed = true;
-                            break;
-                        }
-
-                        allocHandle.incMessagesRead(localRead);
-                    } while (continueReading(allocHandle) && !isShutdown(ChannelShutdownDirection.Inbound));
-                } catch (Throwable t) {
-                    exception = t;
-                }
-
-                int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
-                    readPending = false;
-                    pipeline.fireChannelRead(readBuf.get(i));
-                }
-                readBuf.clear();
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    closed = closeOnReadError(exception);
-
-                    pipeline.fireChannelExceptionCaught(exception);
-                }
-
-                if (closed) {
-                    inputShutdown = true;
-                    if (isOpen()) {
-                        close(newPromise());
+                do {
+                    int localRead = doReadMessages(readBuf);
+                    if (localRead == 0) {
+                        break;
                     }
-                } else {
-                    readIfIsAutoRead();
+                    if (localRead < 0) {
+                        closed = true;
+                        break;
+                    }
+
+                    allocHandle.incMessagesRead(localRead);
+                } while (continueReading(allocHandle) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } catch (Throwable t) {
+                exception = t;
+            }
+
+            int size = readBuf.size();
+            for (int i = 0; i < size; i ++) {
+                readPending = false;
+                pipeline.fireChannelRead(readBuf.get(i));
+            }
+            readBuf.clear();
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                closed = closeOnReadError(exception);
+
+                pipeline.fireChannelExceptionCaught(exception);
+            }
+
+            if (closed) {
+                inputShutdown = true;
+                if (isOpen()) {
+                    closeTransport(newPromise());
                 }
-            } finally {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                if (!readPending && !config.isAutoRead()) {
-                    removeReadOp();
-                }
+            } else {
+                readIfIsAutoRead();
+            }
+        } finally {
+            // Check if there is a readPending which was not processed yet.
+            // This could be for two reasons:
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+            //
+            // See https://github.com/netty/netty/issues/2254
+            if (!readPending && !config.isAutoRead()) {
+                removeReadOp();
             }
         }
     }

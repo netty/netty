@@ -30,7 +30,6 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
@@ -763,16 +762,6 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new EmbeddedUnsafe();
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return ((EmbeddedUnsafe) super.unsafe()).wrapped;
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
             Object msg = in.current();
@@ -808,109 +797,17 @@ public class EmbeddedChannel extends AbstractChannel {
         inboundMessages().add(msg);
     }
 
-    private final class EmbeddedUnsafe extends AbstractUnsafe {
-
-        // Delegates to the EmbeddedUnsafe instance but ensures runPendingTasks() is called after each operation
-        // that may change the state of the Channel and may schedule tasks for later execution.
-        final Unsafe wrapped = new Unsafe() {
-            @Override
-            public RecvBufferAllocator.Handle recvBufAllocHandle() {
-                return EmbeddedUnsafe.this.recvBufAllocHandle();
-            }
-
-            @Override
-            public SocketAddress localAddress() {
-                return EmbeddedUnsafe.this.localAddress();
-            }
-
-            @Override
-            public SocketAddress remoteAddress() {
-                return EmbeddedUnsafe.this.remoteAddress();
-            }
-
-            private void mayRunPendingTasks() {
-                if (!((EmbeddedEventLoop) executor()).running) {
-                    runPendingTasks();
-                }
-            }
-
-            @Override
-            public void register(Promise<Void> promise) {
-                EmbeddedUnsafe.this.register(promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void bind(SocketAddress localAddress, Promise<Void> promise) {
-                EmbeddedUnsafe.this.bind(localAddress, promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-                EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void disconnect(Promise<Void> promise) {
-                EmbeddedUnsafe.this.disconnect(promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void close(Promise<Void> promise) {
-                EmbeddedUnsafe.this.close(promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void shutdown(ChannelShutdownDirection direction, Promise<Void> promise) {
-                EmbeddedUnsafe.this.shutdown(direction, promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void closeForcibly() {
-                EmbeddedUnsafe.this.closeForcibly();
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void deregister(Promise<Void> promise) {
-                EmbeddedUnsafe.this.deregister(promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void beginRead() {
-                EmbeddedUnsafe.this.beginRead();
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void write(Object msg, Promise<Void> promise) {
-                EmbeddedUnsafe.this.write(msg, promise);
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void flush() {
-                EmbeddedUnsafe.this.flush();
-                mayRunPendingTasks();
-            }
-
-            @Override
-            public void sendOutboundEvent(Object event, Promise<Void> promise) {
-                EmbeddedUnsafe.this.sendOutboundEvent(event, promise);
-                mayRunPendingTasks();
-            }
-        };
-
-        @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            safeSetSuccess(promise);
+    @Override
+    protected void runAfterTransportAction() {
+        super.runAfterTransportAction();
+        if (!((EmbeddedEventLoop) executor()).running) {
+            runPendingTasks();
         }
+    }
+
+    @Override
+    protected void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        safeSetSuccess(promise);
     }
 
     private final class EmbeddedChannelPipeline extends DefaultAbstractChannelPipeline {

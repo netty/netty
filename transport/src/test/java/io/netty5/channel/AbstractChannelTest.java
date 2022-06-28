@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -108,7 +109,7 @@ public class AbstractChannelTest {
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
-        channel.unsafe().deregister(channel.newPromise());
+        channel.deregister();
 
         registerChannel(channel);
 
@@ -146,15 +147,15 @@ public class AbstractChannelTest {
             private boolean active;
 
             @Override
-            protected AbstractUnsafe newUnsafe() {
-                return new AbstractUnsafe() {
-                    @Override
-                    public void connect(
-                            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-                        active = true;
-                        promise.setSuccess(null);
-                    }
-                };
+            public ByteBufAllocator alloc() {
+                return super.alloc();
+            }
+
+            @Override
+            protected void connectTransport(
+                    SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+                active = true;
+                promise.setSuccess(null);
             }
 
             @Override
@@ -233,13 +234,9 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new AbstractUnsafe() {
-                @Override
-                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-                    promise.setFailure(new UnsupportedOperationException());
-                }
-            };
+        protected void connectTransport(
+                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override

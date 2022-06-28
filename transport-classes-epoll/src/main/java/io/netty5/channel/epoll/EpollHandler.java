@@ -23,7 +23,6 @@ import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
 import io.netty5.channel.SingleThreadEventLoop;
-import io.netty5.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.util.IntSupplier;
@@ -372,7 +371,7 @@ public class EpollHandler implements IoHandler {
         AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
 
         for (AbstractEpollChannel ch: localChannels) {
-            ch.unsafe().close(ch.newPromise());
+            ch.closeTransportNow();
         }
     }
 
@@ -394,7 +393,6 @@ public class EpollHandler implements IoHandler {
                     // sure about it!
                     // Re-ordering can easily introduce bugs and bad side-effects, as we found out painfully in the
                     // past.
-                    AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) ch.unsafe();
 
                     // First check for EPOLLOUT as we may need to fail the connect Promise before try
                     // to read from the file descriptor.
@@ -406,7 +404,7 @@ public class EpollHandler implements IoHandler {
                     // See https://github.com/netty/netty/issues/3848
                     if ((ev & (Native.EPOLLERR | Native.EPOLLOUT)) != 0) {
                         // Force flush of data as the epoll is writable again
-                        unsafe.epollOutReady();
+                        ch.epollOutReady();
                     }
 
                     // Check EPOLLIN before EPOLLRDHUP to ensure all data is read before shutting down the input.
@@ -416,14 +414,14 @@ public class EpollHandler implements IoHandler {
                     // try to read from the underlying file descriptor and so notify the user about the error.
                     if ((ev & (Native.EPOLLERR | Native.EPOLLIN)) != 0) {
                         // The Channel is still open and there is something to read. Do it now.
-                        unsafe.epollInReady();
+                        ch.epollInReady();
                     }
 
                     // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
                     // we may close the channel directly or try to read more data depending on the state of the
                     // Channel and als depending on the AbstractEpollChannel subtype.
                     if ((ev & Native.EPOLLRDHUP) != 0) {
-                        unsafe.epollRdHupReady();
+                        ch.epollRdHupReady();
                     }
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.

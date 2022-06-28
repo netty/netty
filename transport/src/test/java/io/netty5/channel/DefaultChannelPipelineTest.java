@@ -222,7 +222,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRemoveIfExists() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(newLocalChannel());
+        DefaultChannelPipeline pipeline = (DefaultChannelPipeline) newLocalChannel().pipeline();
 
         ChannelHandler handler1 = newHandler();
         ChannelHandler handler2 = newHandler();
@@ -244,7 +244,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRemoveIfExistsDoesNotThrowException() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(newLocalChannel());
+        DefaultChannelPipeline pipeline = (DefaultChannelPipeline) newLocalChannel().pipeline();
 
         ChannelHandler handler1 = newHandler();
         ChannelHandler handler2 = newHandler();
@@ -261,7 +261,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRemoveThrowNoSuchElementException() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(newLocalChannel());
+        DefaultChannelPipeline pipeline = (DefaultChannelPipeline) newLocalChannel().pipeline();
 
         ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);

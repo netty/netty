@@ -226,7 +226,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected int doReadBytes(Buffer buffer) throws Exception {
-        final RecvBufferAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
         allocHandle.attemptedBytesRead(buffer.writableBytes());
         return buffer.transferFrom(javaChannel(), allocHandle.attemptedBytesRead());
     }
@@ -320,29 +320,22 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected AbstractNioUnsafe newUnsafe() {
-        return new NioSocketChannelUnsafe();
-    }
-
-    private final class NioSocketChannelUnsafe extends NioByteUnsafe {
-        @Override
-        protected Executor prepareToClose() {
-            try {
-                if (javaChannel().isOpen() && config().getSoLinger() > 0) {
-                    // We need to cancel this key of the channel so we may not end up in a eventloop spin
-                    // because we try to read or write until the actual close happens which may be later due
-                    // SO_LINGER handling.
-                    // See https://github.com/netty/netty/issues/4449
-                    doDeregister();
-                    return GlobalEventExecutor.INSTANCE;
-                }
-            } catch (Throwable ignore) {
-                // Ignore the error as the underlying channel may be closed in the meantime and so
-                // getSoLinger() may produce an exception. In this case we just return null.
+    protected Executor prepareToClose() {
+        try {
+            if (javaChannel().isOpen() && config().getSoLinger() > 0) {
+                // We need to cancel this key of the channel so we may not end up in a eventloop spin
+                // because we try to read or write until the actual close happens which may be later due
+                // SO_LINGER handling.
                 // See https://github.com/netty/netty/issues/4449
+                doDeregister();
+                return GlobalEventExecutor.INSTANCE;
             }
-            return null;
+        } catch (Throwable ignore) {
+            // Ignore the error as the underlying channel may be closed in the meantime and so
+            // getSoLinger() may produce an exception. In this case we just return null.
+            // See https://github.com/netty/netty/issues/4449
         }
+        return null;
     }
 
     private final class NioSocketChannelConfig extends DefaultSocketChannelConfig {

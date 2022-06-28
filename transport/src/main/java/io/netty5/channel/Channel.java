@@ -191,11 +191,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     long bytesBeforeWritable();
 
     /**
-     * Returns an <em>internal-use-only</em> object that provides unsafe operations.
-     */
-    Unsafe unsafe();
-
-    /**
      * Return the assigned {@link ChannelPipeline}.
      */
     ChannelPipeline pipeline();
@@ -281,110 +276,5 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     @Override
     default Future<Void> sendOutboundEvent(Object event) {
         return pipeline().sendOutboundEvent(event);
-    }
-
-    /**
-     * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
-     * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
-     * following methods:
-     * <ul>
-     *   <li>{@link #localAddress()}</li>
-     *   <li>{@link #remoteAddress()}</li>
-     *   <li>{@link #closeForcibly()}</li>
-     *   <li>{@link #register(Promise)}</li>
-     *   <li>{@link #deregister(Promise)}</li>
-     * </ul>
-     */
-    interface Unsafe {
-
-        /**
-         * Return the assigned {@link RecvBufferAllocator.Handle} which will be used to allocate {@link ByteBuf}'s when
-         * receiving data.
-         */
-        RecvBufferAllocator.Handle recvBufAllocHandle();
-
-        /**
-         * Return the {@link SocketAddress} to which is bound local or
-         * {@code null} if none.
-         */
-        SocketAddress localAddress();
-
-        /**
-         * Return the {@link SocketAddress} to which is bound remote or
-         * {@code null} if none is bound yet.
-         */
-        SocketAddress remoteAddress();
-
-        /**
-         * Register the {@link Channel} of the {@link Promise} and notify
-         * the {@link Future} once the registration was complete.
-         */
-        void register(Promise<Void> promise);
-
-        /**
-         * Bind the {@link SocketAddress} to the {@link Channel} of the {@link Promise} and notify
-         * it once its done.
-         */
-        void bind(SocketAddress localAddress, Promise<Void> promise);
-
-        /**
-         * Connect the {@link Channel} of the given {@link Future} with the given remote {@link SocketAddress}.
-         * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
-         * pass {@code null} to it.
-         *
-         * The {@link Promise} will get notified once the connect operation was complete.
-         */
-        void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
-
-        /**
-         * Disconnect the {@link Channel} of the {@link Future} and notify the {@link Promise} once the
-         * operation was complete.
-         */
-        void disconnect(Promise<Void> promise);
-
-        /**
-         * Close the {@link Channel} of the {@link Promise} and notify the {@link Promise} once the
-         * operation was complete.
-         */
-        void close(Promise<Void> promise);
-
-        /**
-         * Shutdown the given direction of the {@link Channel} and notify the {@link Promise} once the
-         * operation was complete.
-         */
-        void shutdown(ChannelShutdownDirection direction, Promise<Void> promise);
-
-        /**
-         * Closes the {@link Channel} immediately without firing any events.  Probably only useful
-         * when registration attempt failed.
-         */
-        void closeForcibly();
-
-        /**
-         * Deregister the {@link Channel} of the {@link Promise} from {@link EventLoop} and notify the
-         * {@link Promise} once the operation was complete.
-         */
-        void deregister(Promise<Void> promise);
-
-        /**
-         * Schedules a read operation that fills the inbound buffer of the first {@link ChannelHandler} in the
-         * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
-         */
-        void beginRead();
-
-        /**
-         * Schedules a write operation.
-         */
-        void write(Object msg, Promise<Void> promise);
-
-        /**
-         * Flush out all write operations scheduled via {@link #write(Object, Promise)}.
-         */
-        void flush();
-
-        /**
-         * Send a custom outbound event.
-         */
-        void sendOutboundEvent(Object event, Promise<Void> promise);
     }
 }
