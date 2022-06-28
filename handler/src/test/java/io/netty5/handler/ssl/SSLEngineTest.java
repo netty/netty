@@ -53,6 +53,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
@@ -3875,6 +3877,7 @@ public abstract class SSLEngineTest {
         fail("Array did not contain '" + expected + "':" + Arrays.toString(array));
     }
 
+    @ResourceLock(Resources.SYSTEM_PROPERTIES) // Block parallel test execution across subclasses.
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMasterKeyLogging(final SSLEngineTestParam param) throws Exception {
