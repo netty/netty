@@ -43,17 +43,18 @@ public class SimpleUserEventChannelHandlerTest {
 
     @Test
     public void testTypeMatch() {
-        try (FooEvent fooEvent = new FooEvent()) {
-            channel.pipeline().fireChannelInboundEvent(fooEvent);
-            assertEquals(1, fooEventCatcher.caughtEvents.size());
-            assertEquals(0, allEventCatcher.caughtEvents.size());
-            assertFalse(fooEvent.isAccessible());
-        }
+        // The fooEventCatcher will close the FooEvent.
+        FooEvent fooEvent = new FooEvent();
+        channel.pipeline().fireChannelInboundEvent(fooEvent);
+        assertEquals(1, fooEventCatcher.caughtEvents.size());
+        assertEquals(0, allEventCatcher.caughtEvents.size());
+        assertFalse(fooEvent.isAccessible());
         assertFalse(channel.finish());
     }
 
     @Test
     public void testTypeMismatch() {
+        // The allEventCatcher do not close events.
         try (BarEvent barEvent = new BarEvent()) {
             channel.pipeline().fireChannelInboundEvent(barEvent);
             assertEquals(0, fooEventCatcher.caughtEvents.size());

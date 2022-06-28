@@ -15,6 +15,8 @@
  */
 package io.netty5.channel.embedded;
 
+import io.netty5.buffer.api.internal.ResourceSupport;
+import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
@@ -769,10 +771,14 @@ public class EmbeddedChannel extends AbstractChannel {
                 break;
             }
 
-            if (msg instanceof Resource<?>) {
-                // Exfiltrate message for later inspection in tests.
+            if (msg instanceof ResourceSupport<?, ?>) {
+                // Prevent the close in ChannelOutboundBuffer.remove() from ending the lifecycle of this message.
+                // This allows tests to examine the message.
+                handleOutboundMessage(Statics.acquire((ResourceSupport<?, ?>) msg));
+            } else if (msg instanceof Resource<?>) {
                 // Resource life-cycle otherwise normally ends in ChannelOutboundBuffer.remove(), but using send()
                 // here allows the close() in remove() to become a no-op.
+                // Since message isn't a subclass of ResourceSupport, we can't rely on its internal reference counting.
                 handleOutboundMessage(((Resource<?>) msg).send().receive());
             } else {
                 handleOutboundMessage(ReferenceCountUtil.retain(msg));

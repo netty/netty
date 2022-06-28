@@ -18,6 +18,7 @@ package io.netty5.buffer.api.unsafe;
 import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
 import io.netty5.buffer.api.ComponentIterator;
@@ -110,7 +111,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     protected RuntimeException createResourceClosedException() {
-        return bufferIsClosed(this);
+        return Statics.bufferIsClosed(this);
     }
 
     @Override
@@ -166,7 +167,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     public Buffer fill(byte value) {
         checkSet(0, capacity());
         if (rsize == CLOSED_SIZE) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         try {
             PlatformDependent.setMemory(base, address, rsize, value);
@@ -275,7 +276,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     private void checkCopyIntoArgs(int srcPos, int length, int destPos, int destLength) {
         if (rsize == CLOSED_SIZE) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (srcPos < 0) {
             throw new IndexOutOfBoundsException("The srcPos cannot be negative: " + srcPos + '.');
@@ -297,7 +298,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
         if (!dest.isAccessible()) {
-            throw bufferIsClosed(dest);
+            throw Statics.bufferIsClosed(dest);
         }
         checkCopyIntoArgs(srcPos, length, destPos, dest.capacity());
         if (dest.readOnly()) {
@@ -325,7 +326,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public int transferTo(WritableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         length = Math.min(readableBytes(), length);
         if (length == 0) {
@@ -342,7 +343,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         checkPositiveOrZero(position, "position");
         checkPositiveOrZero(length, "length");
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (readOnly()) {
             throw bufferIsReadOnly(this);
@@ -362,7 +363,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public int transferFrom(ReadableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (readOnly()) {
             throw bufferIsReadOnly(this);
@@ -391,7 +392,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         // For the details of this algorithm, see Hacker's Delight, Chapter 6, Searching Words.
         // Richard Startin also describes this on his blog: https://richardstartin.github.io/posts/finding-bytes
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         try {
             int offset = roff;
@@ -459,7 +460,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public ByteCursor openCursor(int fromOffset, int length) {
         if (rsize == CLOSED_SIZE) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (fromOffset < 0) {
             throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
@@ -475,7 +476,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public ByteCursor openReverseCursor(int fromOffset, int length) {
         if (rsize == CLOSED_SIZE) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (fromOffset < 0) {
             throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
@@ -494,7 +495,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public Buffer ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException(
@@ -570,7 +571,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
                     "but the split offset was " + splitOffset + ", and capacity is " + capacity() + '.');
         }
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Cannot split a buffer that is not owned."));
@@ -599,7 +600,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public Buffer compact() {
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
@@ -739,7 +740,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     public <E extends Exception> int forEachReadable(int initialIndex, ReadableComponentProcessor<E> processor)
             throws E {
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         int readableBytes = readableBytes();
         if (readableBytes == 0) {
@@ -762,7 +763,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
             throws E {
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         int writableBytes = writableBytes();
         if (writableBytes == 0) {
@@ -1356,14 +1357,14 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     private RuntimeException readAccessCheckException(int index, int size) {
         if (rsize == CLOSED_SIZE) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         return outOfBounds(index, size);
     }
 
     private void handleWriteAccessBoundsFailure(int index, int size, boolean mayExpand) {
         if (rsize == CLOSED_SIZE) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         if (wsize != rsize) {
             throw bufferIsReadOnly(this);
@@ -1379,6 +1380,10 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
             return;
         }
         throw outOfBounds(index, size);
+    }
+
+    private BufferClosedException bufferIsClosed() {
+        return attachTrace(Statics.bufferIsClosed(this));
     }
 
     private IndexOutOfBoundsException outOfBounds(int index, int size) {

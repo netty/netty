@@ -18,6 +18,7 @@ package io.netty5.buffer.api.bytebuffer;
 import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
 import io.netty5.buffer.api.ComponentIterator;
@@ -55,7 +56,8 @@ import static io.netty5.buffer.api.internal.Statics.setMemory;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
-final class NioBuffer extends AdaptableBuffer<NioBuffer>
+final class
+NioBuffer extends AdaptableBuffer<NioBuffer>
         implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent, ComponentIterator.Next {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
@@ -95,7 +97,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     protected RuntimeException createResourceClosedException() {
-        return bufferIsClosed(this);
+        return Statics.bufferIsClosed(this);
     }
 
     @Override
@@ -155,7 +157,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         int capacity = capacity();
         checkSet(0, capacity);
         if (rmem == CLOSED_BUFFER) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         final ByteBuffer wmem = this.wmem;
         setMemory(wmem, capacity, value);
@@ -230,7 +232,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public void copyInto(int srcPos, ByteBuffer dest, int destPos, int length) {
         if (rmem == CLOSED_BUFFER) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (srcPos < 0) {
             throw new IndexOutOfBoundsException("The srcPos cannot be negative: " + srcPos + '.');
@@ -262,7 +264,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         if (dest.readOnly()) {
             throw bufferIsReadOnly(dest);
@@ -280,7 +282,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public int transferTo(WritableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         length = Math.min(readableBytes(), length);
         if (length == 0) {
@@ -297,7 +299,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         checkPositiveOrZero(position, "position");
         checkPositiveOrZero(length, "length");
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (readOnly()) {
             throw bufferIsReadOnly(this);
@@ -317,7 +319,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public int transferFrom(ReadableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (readOnly()) {
             throw bufferIsReadOnly(this);
@@ -339,7 +341,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         // For the details of this algorithm, see Hacker's Delight, Chapter 6, Searching Words.
         // Richard Startin also describes this on his blog: https://richardstartin.github.io/posts/finding-bytes
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         int offset = roff;
         final int length = woff - roff;
@@ -394,7 +396,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public ByteCursor openCursor(int fromOffset, int length) {
         if (rmem == CLOSED_BUFFER) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (fromOffset < 0) {
             throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
@@ -410,7 +412,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public ByteCursor openReverseCursor(int fromOffset, int length) {
         if (rmem == CLOSED_BUFFER) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (fromOffset < 0) {
             throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
@@ -429,7 +431,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public Buffer ensureWritable(int size, int minimumGrowth, boolean allowCompaction) {
         if (!isAccessible()) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException(
@@ -496,7 +498,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
                     "but the split offset was " + splitOffset + ", and capacity is " + capacity() + '.');
         }
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Cannot split a buffer that is not owned."));
@@ -524,7 +526,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public Buffer compact() {
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         if (!isOwned()) {
             throw attachTrace(new IllegalStateException("Buffer must be owned in order to compact."));
@@ -632,7 +634,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     public <E extends Exception> int forEachReadable(int initialIndex, ReadableComponentProcessor<E> processor)
             throws E {
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         int readableBytes = readableBytes();
         if (readableBytes == 0) {
@@ -655,7 +657,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
             throws E {
         if (!isAccessible()) {
-            throw attachTrace(bufferIsClosed(this));
+            throw bufferIsClosed();
         }
         int writableBytes = writableBytes();
         if (writableBytes == 0) {
@@ -1194,7 +1196,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     private RuntimeException checkWriteState(IndexOutOfBoundsException ioobe, int offset, int size) {
         if (rmem == CLOSED_BUFFER) {
-            return bufferIsClosed(this);
+            return bufferIsClosed();
         }
         if (wmem != rmem) {
             return bufferIsReadOnly(this);
@@ -1207,14 +1209,14 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     private RuntimeException readAccessCheckException(int index, int size) {
         if (rmem == CLOSED_BUFFER) {
-            return bufferIsClosed(this);
+            return bufferIsClosed();
         }
         return outOfBounds(index, size);
     }
 
     private void handleWriteAccessBoundsFailure(int index, int size, boolean mayExpand) {
         if (rmem == CLOSED_BUFFER) {
-            throw bufferIsClosed(this);
+            throw bufferIsClosed();
         }
         if (wmem != rmem) {
             throw bufferIsReadOnly(this);
@@ -1230,6 +1232,10 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             return;
         }
         throw outOfBounds(index, size);
+    }
+
+    private BufferClosedException bufferIsClosed() {
+        return attachTrace(Statics.bufferIsClosed(this));
     }
 
     private IndexOutOfBoundsException outOfBounds(int index, int size) {

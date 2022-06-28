@@ -312,6 +312,7 @@ public class EmbeddedChannelTest {
         assertTrue(in.isAccessible());
 
         assertTrue(channel.writeOutbound(out));
+        out.ensureWritable(1);
         assertTrue(out.isAccessible());
 
         assertTrue(channel.releaseOutbound());
