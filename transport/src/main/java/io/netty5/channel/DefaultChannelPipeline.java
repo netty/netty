@@ -810,13 +810,13 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelExceptionCaught(Throwable cause) {
-        head.invokeExceptionCaught(cause);
+        head.invokeChannelExceptionCaught(cause);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelInboundEvent(Object event) {
-        head.invokeCustomInboundEventTriggered(event);
+        head.invokeChannelInboundEvent(event);
         return this;
     }
 

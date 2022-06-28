@@ -169,7 +169,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelRegistered(this);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -197,7 +197,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelUnregistered(this);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -225,7 +225,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelActive(this);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -253,7 +253,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelInactive(this);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -281,7 +281,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelShutdown(this, direction);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -290,10 +290,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         requireNonNull(cause, "cause");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeExceptionCaught(cause);
+            findAndInvokeChannelExceptionCaught(cause);
         } else {
             try {
-                executor.execute(() -> findAndInvokeExceptionCaught(cause));
+                executor.execute(() -> findAndInvokeChannelExceptionCaught(cause));
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("Failed to submit an exceptionCaught() event.", t);
@@ -304,16 +304,16 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return this;
     }
 
-    private void findAndInvokeExceptionCaught(Throwable cause) {
+    private void findAndInvokeChannelExceptionCaught(Throwable cause) {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_EXCEPTION_CAUGHT);
         if (ctx == null) {
             notifyHandlerRemovedAlready(cause);
             return;
         }
-        ctx.invokeExceptionCaught(cause);
+        ctx.invokeChannelExceptionCaught(cause);
     }
 
-    void invokeExceptionCaught(final Throwable cause) {
+    void invokeChannelExceptionCaught(final Throwable cause) {
         try {
             handler().channelExceptionCaught(this, cause);
         } catch (Throwable error) {
@@ -337,28 +337,28 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         requireNonNull(event, "event");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            findAndInvokeCustomInboundEventTriggered(event);
+            findAndInvokeChannelInboundEvent(event);
         } else {
-            executor.execute(() -> findAndInvokeCustomInboundEventTriggered(event));
+            executor.execute(() -> findAndInvokeChannelInboundEvent(event));
         }
         return this;
     }
 
-    private void findAndInvokeCustomInboundEventTriggered(Object event) {
+    private void findAndInvokeChannelInboundEvent(Object event) {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_INBOUND_EVENT);
         if (ctx == null) {
             Resource.dispose(event);
             notifyHandlerRemovedAlready();
             return;
         }
-        ctx.invokeCustomInboundEventTriggered(event);
+        ctx.invokeChannelInboundEvent(event);
     }
 
-    void invokeCustomInboundEventTriggered(Object event) {
+    void invokeChannelInboundEvent(Object event) {
         try {
             handler().channelInboundEvent(this, event);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -394,7 +394,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelRead(this, m);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -423,7 +423,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelReadComplete(this);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -452,7 +452,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelWritabilityChanged(this);
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            invokeChannelExceptionCaught(t);
         }
     }
 
@@ -784,22 +784,22 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> sendOutboundEvent(Object event) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            return findAndInvokeTriggerCustomOutboundEvent(event);
+            return findAndInvokeSendOutboundEvent(event);
         }
         Promise<Void> promise  = newPromise();
-        safeExecute(executor, () -> findAndInvokeTriggerCustomOutboundEvent(event).cascadeTo(promise), promise, event);
+        safeExecute(executor, () -> findAndInvokeSendOutboundEvent(event).cascadeTo(promise), promise, event);
         return promise.asFuture();
     }
 
-    private Future<Void> findAndInvokeTriggerCustomOutboundEvent(Object event) {
+    private Future<Void> findAndInvokeSendOutboundEvent(Object event) {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_SEND_OUTBOUND_EVENT);
         if (ctx == null) {
             return failRemoved(this);
         }
-        return ctx.invokeTriggerCustomOutboundEvent(event);
+        return ctx.invokeSendOutboundEvent(event);
     }
 
-    private Future<Void> invokeTriggerCustomOutboundEvent(Object event) {
+    private Future<Void> invokeSendOutboundEvent(Object event) {
         try {
             return handler().sendOutboundEvent(this, event);
         } catch (Throwable t) {
