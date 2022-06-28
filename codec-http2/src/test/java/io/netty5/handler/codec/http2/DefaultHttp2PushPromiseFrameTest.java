@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty5.util.internal.SilentDispose.autoClosing;
@@ -165,14 +166,17 @@ public class DefaultHttp2PushPromiseFrameTest {
 
     private static final class ClientHandler extends Http2ChannelDuplexHandler {
 
+        private final CountDownLatch latch = new CountDownLatch(1);
         private volatile ChannelHandlerContext ctx;
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws InterruptedException {
             this.ctx = ctx;
+            latch.countDown();
         }
 
-        void write() {
+        void write() throws InterruptedException {
+            latch.await();
             Http2Headers http2Headers = new DefaultHttp2Headers();
             http2Headers.path("/")
                     .authority("localhost")
