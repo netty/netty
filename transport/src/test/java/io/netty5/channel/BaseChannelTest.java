@@ -15,8 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
@@ -58,12 +56,6 @@ class BaseChannelTest {
         cb.handler(loggingHandler);
 
         return cb;
-    }
-
-    static ByteBuf createTestBuf(int len) {
-        ByteBuf buf = Unpooled.buffer(len, len);
-        buf.setIndex(0, len);
-        return buf;
     }
 
     static Buffer createTestBuffer(int len) {

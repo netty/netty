@@ -15,9 +15,8 @@
  */
 package io.netty5.microbench.buffer;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
@@ -27,7 +26,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class ByteBufCopyBenchmark extends AbstractMicrobenchmark {
+public class BufferCopyBenchmark extends AbstractMicrobenchmark {
     static {
         System.setProperty("io.netty5.buffer.checkAccessible", "false");
     }
@@ -41,33 +40,33 @@ public class ByteBufCopyBenchmark extends AbstractMicrobenchmark {
     @Param({"false", "true" })
     private boolean readonlyByteBuffer;
     @Param({"true", "false" })
-    private boolean pooledByteBuf;
+    private boolean pooledbuffer;
     @Param({"true", "false" })
     private boolean alignedCopyByteBuffer;
     @Param({"true", "false" })
-    private boolean alignedCopyByteBuf;
+    private boolean alignedCopyBuffer;
     @Param({"true", "false" })
     private boolean nativeOrderByteBuffer;
 
     private ByteBuffer byteBuffer;
-    private ByteBuf buffer;
+    private Buffer buffer;
     private int index;
 
     @Setup
     public void setup() {
-        final int requiredByteBufSize = alignedCopyByteBuf ? size : size + 1;
+        final int requiredByteBufSize = alignedCopyBuffer ? size : size + 1;
         final int requiredByteBufferSize = alignedCopyByteBuffer ? size : size + 1;
         byteBuffer = directByteBuffer ?
                 ByteBuffer.allocateDirect(requiredByteBufferSize) :
                 ByteBuffer.allocate(requiredByteBufferSize);
-        if (pooledByteBuf) {
+        if (pooledbuffer) {
             buffer = directByteBuff ?
-                    PooledByteBufAllocator.DEFAULT.directBuffer(requiredByteBufSize, requiredByteBufSize) :
-                    PooledByteBufAllocator.DEFAULT.heapBuffer(requiredByteBufSize, requiredByteBufSize);
+                    BufferAllocator.offHeapPooled().allocate(requiredByteBufSize) :
+                    BufferAllocator.onHeapPooled().allocate(requiredByteBufSize);
         } else {
             buffer = directByteBuff ?
-                    Unpooled.directBuffer(requiredByteBufSize, requiredByteBufSize) :
-                    Unpooled.buffer(requiredByteBufSize, requiredByteBufSize);
+                    BufferAllocator.offHeapUnpooled().allocate(requiredByteBufSize) :
+                    BufferAllocator.onHeapUnpooled().allocate(requiredByteBufSize);
         }
         if (!alignedCopyByteBuffer) {
             byteBuffer.position(1);
@@ -85,18 +84,19 @@ public class ByteBufCopyBenchmark extends AbstractMicrobenchmark {
             byteBufferOrder = ByteOrder.nativeOrder();
         }
         byteBuffer.order(byteBufferOrder);
-        index = alignedCopyByteBuf ? 0 : 1;
+        index = alignedCopyBuffer ? 0 : 1;
     }
 
     @Benchmark
-    public ByteBuf setBytes() {
+    public Buffer setBytes() {
         byteBuffer.clear();
-        return buffer.setBytes(index, byteBuffer);
+        buffer.resetOffsets();
+        return buffer.writeBytes(byteBuffer);
     }
 
     @TearDown
     public void tearDown() {
-        buffer.release();
+        buffer.close();
     }
 
 }

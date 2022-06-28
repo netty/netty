@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.socket.SocketChannelConfig;
 
@@ -166,29 +165,13 @@ public interface ChannelConfig {
     ChannelConfig setWriteSpinCount(int writeSpinCount);
 
     /**
-     * Returns {@link ByteBufAllocator} which is used for the channel
-     * to allocate buffers.
-     * @deprecated use {@link #getBufferAllocator()}
-     */
-    @Deprecated(forRemoval = true)
-    ByteBufAllocator getAllocator();
-
-    /**
-     * Set the {@link ByteBufAllocator} which is used for the channel
-     * to allocate buffers.
-     * @deprecated use {@link #setBufferAllocator(BufferAllocator)}
-     */
-    @Deprecated(forRemoval = true)
-    ChannelConfig setAllocator(ByteBufAllocator allocator);
-
-    /**
      * Returns {@link BufferAllocator} which is used for the channel
      * to allocate buffers.
      */
     BufferAllocator getBufferAllocator();
 
     /**
-     * Set the {@link ByteBufAllocator} which is used for the channel
+     * Set the {@link BufferAllocator} which is used for the channel
      * to allocate buffers.
      */
     ChannelConfig setBufferAllocator(BufferAllocator allocator);

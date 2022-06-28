@@ -15,9 +15,7 @@
  */
 package io.netty5.channel;
 
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
@@ -30,8 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -96,7 +93,7 @@ public class PendingWriteQueueTest {
     @Test
     public void shouldFireChannelWritabilityChangedAfterRemoval() {
         final AtomicReference<PendingWriteQueue> queueRef = new AtomicReference<>();
-        final ByteBuf msg = Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII);
+        final Buffer msg = preferredAllocator().copyOf("test", CharsetUtil.US_ASCII);
 
         final EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
@@ -108,12 +105,12 @@ public class PendingWriteQueueTest {
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 final PendingWriteQueue queue = queueRef.get();
 
-                final ByteBuf msg = (ByteBuf) queue.current();
+                final Buffer msg = (Buffer) queue.current();
                 if (msg == null) {
                     return;
                 }
 
-                assertThat(msg.refCnt(), is(1));
+                assertTrue(msg.isAccessible());
 
                 // This call will trigger another channelWritabilityChanged() event because the number of
                 // pending bytes will go below the low watermark.
@@ -123,7 +120,7 @@ public class PendingWriteQueueTest {
                 // element twice, resulting in the double release.
                 queue.remove();
 
-                assertThat(msg.refCnt(), is(0));
+                assertFalse(msg.isAccessible());
             }
         });
 
@@ -139,34 +136,34 @@ public class PendingWriteQueueTest {
 
         channel.finish();
 
-        assertThat(msg.refCnt(), is(0));
+        assertFalse(msg.isAccessible());
     }
 
     private static void assertWrite(ChannelHandler handler, int count) throws Exception {
-        final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
-        final EmbeddedChannel channel = new EmbeddedChannel(handler);
-        channel.config().setWriteBufferLowWaterMark(1);
-        channel.config().setWriteBufferHighWaterMark(3);
+        try (Buffer buffer = preferredAllocator().copyOf("Test", CharsetUtil.US_ASCII)) {
+            final EmbeddedChannel channel = new EmbeddedChannel(handler);
+            channel.config().setWriteBufferLowWaterMark(1);
+            channel.config().setWriteBufferHighWaterMark(3);
 
-        ByteBuf[] buffers = new ByteBuf[count];
-        for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = buffer.retainedDuplicate();
-        }
-        assertTrue(channel.writeOutbound(buffers));
-        assertTrue(channel.finish());
-        channel.closeFuture().sync();
+            Buffer[] buffers = new Buffer[count];
+            for (int i = 0; i < buffers.length; i++) {
+                buffers[i] = buffer.copy();
+            }
+            assertTrue(channel.writeOutbound(buffers));
+            assertTrue(channel.finish());
+            channel.closeFuture().sync();
 
-        for (int i = 0; i < buffers.length; i++) {
-            assertBuffer(channel, buffer);
+            for (int i = 0; i < buffers.length; i++) {
+                assertBuffer(channel, buffer);
+            }
+            assertNull(channel.readOutbound());
         }
-        buffer.release();
-        assertNull(channel.readOutbound());
     }
 
-    private static void assertBuffer(EmbeddedChannel channel, ByteBuf buffer) {
-        ByteBuf written = channel.readOutbound();
-        assertEquals(buffer, written);
-        written.release();
+    private static void assertBuffer(EmbeddedChannel channel, Buffer buffer) {
+        try (Buffer written = channel.readOutbound()) {
+            assertEquals(buffer, written);
+        }
     }
 
     private static void assertQueueEmpty(PendingWriteQueue queue) {
@@ -179,23 +176,23 @@ public class PendingWriteQueueTest {
     }
 
     private static void assertWriteFails(ChannelHandler handler, int count) throws Exception {
-        final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
-        final EmbeddedChannel channel = new EmbeddedChannel(handler);
-        ByteBuf[] buffers = new ByteBuf[count];
-        for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = buffer.retainedDuplicate();
-        }
-        try {
-            assertFalse(channel.writeOutbound(buffers));
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof TestException);
-        }
-        assertFalse(channel.finish());
-        channel.closeFuture().sync();
+        try (Buffer buffer = preferredAllocator().copyOf("Test", CharsetUtil.US_ASCII)) {
+            final EmbeddedChannel channel = new EmbeddedChannel(handler);
+            Buffer[] buffers = new Buffer[count];
+            for (int i = 0; i < buffers.length; i++) {
+                buffers[i] = buffer.copy();
+            }
+            try {
+                assertFalse(channel.writeOutbound(buffers));
+                fail();
+            } catch (Exception e) {
+                assertTrue(e instanceof TestException);
+            }
+            assertFalse(channel.finish());
+            channel.closeFuture().sync();
 
-        buffer.release();
-        assertNull(channel.readOutbound());
+            assertNull(channel.readOutbound());
+        }
     }
 
     private static EmbeddedChannel newChannel() {

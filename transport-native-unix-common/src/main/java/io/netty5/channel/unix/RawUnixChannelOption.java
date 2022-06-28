@@ -15,8 +15,7 @@
  */
 package io.netty5.channel.unix;
 
-
-import io.netty.util.internal.ObjectUtil;
+import io.netty5.util.internal.ObjectUtil;
 
 import java.nio.ByteBuffer;
 

@@ -101,8 +101,8 @@ public final class SilentDispose {
         if (obj instanceof AutoCloseable) {
             return (AutoCloseable) obj;
         }
-        if (obj instanceof io.netty.util.ReferenceCounted) {
-            return () -> ((io.netty.util.ReferenceCounted) obj).release();
+        if (obj instanceof ReferenceCounted) {
+            return () -> ((ReferenceCounted) obj).release();
         }
         // It is safe to use null in try-with-resources. We can use that for uncloseable/unreleasable things.
         return null;

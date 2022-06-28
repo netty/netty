@@ -16,7 +16,7 @@
 
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.util.internal.MacAddressUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -167,7 +167,7 @@ public final class DefaultChannelId implements ChannelId {
     public String asShortText() {
         String shortValue = this.shortValue;
         if (shortValue == null) {
-            this.shortValue = shortValue = ByteBufUtil.hexDump(data, data.length - RANDOM_LEN, RANDOM_LEN);
+            this.shortValue = shortValue = BufferUtil.hexDump(data, data.length - RANDOM_LEN, RANDOM_LEN);
         }
         return shortValue;
     }
@@ -194,7 +194,7 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private int appendHexDumpField(StringBuilder buf, int i, int length) {
-        buf.append(ByteBufUtil.hexDump(data, i, length));
+        buf.append(BufferUtil.hexDump(data, i, length));
         buf.append('-');
         i += length;
         return i;

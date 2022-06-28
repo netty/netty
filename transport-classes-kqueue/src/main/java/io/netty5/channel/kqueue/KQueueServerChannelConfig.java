@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
@@ -186,12 +185,6 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
     @Override
     public KQueueServerChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
         return this;
     }
 

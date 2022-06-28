@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
@@ -89,12 +88,6 @@ public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig i
 
     boolean getActiveOnOpen() {
         return activeOnOpen;
-    }
-
-    @Override
-    public EpollDomainDatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
     }
 
     @Override

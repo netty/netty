@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
@@ -232,7 +231,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 handshaker.close(ctx, (CloseWebSocketFrame) frame).cascadeTo(promise);
             } else {
                 frame.close();
-                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ctx, ChannelFutureListeners.CLOSE);
+                ctx.writeAndFlush(ctx.bufferAllocator().allocate(0)).addListener(ctx, ChannelFutureListeners.CLOSE);
             }
             return;
         }

@@ -15,7 +15,7 @@
  */
 package io.netty5.example.factorial;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.CorruptedFrameException;
@@ -31,31 +31,31 @@ import java.math.BigInteger;
 public class BigIntegerDecoder extends ByteToMessageDecoder {
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) {
+    protected void decode(ChannelHandlerContext ctx, Buffer in) {
         // Wait until the length prefix is available.
         if (in.readableBytes() < 5) {
             return;
         }
 
-        int readerIndex = in.readerIndex();
+        int readerOffset = in.readerOffset();
 
         // Check the magic number.
         int magicNumber = in.readUnsignedByte();
         if (magicNumber != 'F') {
-            in.readerIndex(readerIndex);
+            in.readerOffset(readerOffset);
             throw new CorruptedFrameException("Invalid magic number: " + magicNumber);
         }
 
         // Wait until the whole data is available.
         int dataLength = in.readInt();
         if (in.readableBytes() < dataLength) {
-            in.readerIndex(readerIndex);
+            in.readerOffset(readerOffset);
             return;
         }
 
         // Convert the received data into a new BigInteger.
         byte[] decoded = new byte[dataLength];
-        in.readBytes(decoded);
+        in.readBytes(decoded, 0, dataLength);
 
         ctx.fireChannelRead(new BigInteger(decoded));
     }

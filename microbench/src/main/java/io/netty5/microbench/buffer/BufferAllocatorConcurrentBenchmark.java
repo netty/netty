@@ -15,8 +15,7 @@
  */
 package io.netty5.microbench.buffer;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
@@ -30,15 +29,15 @@ import org.openjdk.jmh.annotations.Warmup;
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @Threads(8)
-public class ByteBufAllocatorConcurrentBenchmark  extends AbstractMicrobenchmark {
+public class BufferAllocatorConcurrentBenchmark extends AbstractMicrobenchmark {
 
-    private static final ByteBufAllocator unpooledAllocator = new UnpooledByteBufAllocator(true, true);
+    private static final BufferAllocator unpooledAllocator = BufferAllocator.offHeapUnpooled();
 
     @Param({ "00064", "00256", "01024", "04096" })
     public int size;
 
     @Benchmark
-    public boolean allocateRelease() {
-        return unpooledAllocator.directBuffer(size).release();
+    public void allocateRelease() {
+        unpooledAllocator.allocate(size).close();
     }
 }

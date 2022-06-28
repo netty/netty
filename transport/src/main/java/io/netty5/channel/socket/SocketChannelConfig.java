@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MessageSizeEstimator;
@@ -151,9 +150,6 @@ public interface SocketChannelConfig extends ChannelConfig {
 
     @Override
     SocketChannelConfig setWriteSpinCount(int writeSpinCount);
-
-    @Override
-    SocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
     SocketChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);

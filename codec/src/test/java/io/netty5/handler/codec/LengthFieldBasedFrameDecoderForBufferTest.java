@@ -30,7 +30,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
 
     @Test
     public void testDiscardTooLongFrame1() {
-        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoderForBuffer(16, 0, 4));
+        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
         final Buffer buffer = prepareTestBuffer(channel.bufferAllocator());
 
         assertThrows(TooLongFrameException.class, () -> channel.writeInbound(buffer));
@@ -48,7 +48,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
 
     @Test
     public void testDiscardTooLongFrame2() {
-        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoderForBuffer(16, 0, 4));
+        final EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
         final Buffer buffer = prepareTestBuffer(channel.bufferAllocator());
 
         assertThrows(TooLongFrameException.class, () -> channel.writeInbound(buffer.readSplit(14)));

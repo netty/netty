@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MessageSizeEstimator;
@@ -39,9 +38,6 @@ import io.netty5.channel.WriteBufferWaterMark;
  * </table>
  */
 public interface DomainDatagramChannelConfig extends ChannelConfig {
-
-    @Override
-    DomainDatagramChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
     DomainDatagramChannelConfig setAutoClose(boolean autoClose);

@@ -56,7 +56,7 @@ import static java.util.Objects.requireNonNull;
  * +----------+
  * </pre>
  */
-public class DelimiterBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
+public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
 
     private final Buffer[] delimiters;
     private final int maxFrameLength;

@@ -15,8 +15,6 @@
  */
 package io.netty5.channel.socket.nio;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufConvertible;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
@@ -310,42 +308,24 @@ public final class NioDatagramChannel
             remoteAddress = null;
         }
 
-        if (data instanceof Buffer) {
-            Buffer buf = (Buffer) data;
-            final int length = buf.readableBytes();
-            if (length == 0) {
-                return true;
-            }
+        Buffer buf = (Buffer) data;
+        final int length = buf.readableBytes();
+        if (length == 0) {
+            return true;
+        }
 
-            int initialReadable = buf.readableBytes();
-            buf.forEachReadable(0, (index, component) -> {
-                final int writtenBytes;
-                if (remoteAddress != null) {
-                    writtenBytes = javaChannel().send(component.readableBuffer(), remoteAddress);
-                } else {
-                    writtenBytes = javaChannel().write(component.readableBuffer());
-                }
-                component.skipReadableBytes(writtenBytes);
-                return true;
-            });
-            return buf.readableBytes() < initialReadable;
-        } else {
-            ByteBuf buf = ((ByteBufConvertible) data).asByteBuf();
-            final int length = buf.readableBytes();
-            if (length == 0) {
-                return true;
-            }
-
-            final ByteBuffer nioData = buf.nioBufferCount() == 1 ? buf.internalNioBuffer(buf.readerIndex(), length)
-                    : buf.nioBuffer(buf.readerIndex(), length);
+        int initialReadable = buf.readableBytes();
+        buf.forEachReadable(0, (index, component) -> {
             final int writtenBytes;
             if (remoteAddress != null) {
-                writtenBytes = javaChannel().send(nioData, remoteAddress);
+                writtenBytes = javaChannel().send(component.readableBuffer(), remoteAddress);
             } else {
-                writtenBytes = javaChannel().write(nioData);
+                writtenBytes = javaChannel().write(component.readableBuffer());
             }
-            return writtenBytes > 0;
-        }
+            component.skipReadableBytes(writtenBytes);
+            return true;
+        });
+        return buf.readableBytes() < initialReadable;
     }
 
     @Override

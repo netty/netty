@@ -16,8 +16,7 @@
 
 package io.netty5.handler.ssl.util;
 
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.StringUtil;
@@ -172,12 +171,12 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             if (f.length != hashLength) {
                 throw new IllegalArgumentException(
                         String.format("malformed fingerprint (length is %d but expected %d): %s",
-                                      f.length, hashLength, ByteBufUtil.hexDump(Unpooled.wrappedBuffer(f))));
+                                      f.length, hashLength, BufferUtil.hexDump(f)));
             }
             list.add(f.clone());
         }
 
-        this.tlmd = new FastThreadLocal<>() {
+        tlmd = new FastThreadLocal<>() {
 
             @Override
             protected MessageDigest initialValue() {

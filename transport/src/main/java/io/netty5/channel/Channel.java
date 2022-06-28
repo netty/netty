@@ -15,8 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramPacket;
@@ -196,16 +195,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     ChannelPipeline pipeline();
 
     /**
-     * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
-     * @deprecated Use {@link #bufferAllocator()}
-     */
-    @Deprecated(forRemoval = true)
-    default ByteBufAllocator alloc() {
-        return config().getAllocator();
-    }
-
-    /**
-     * Return the assigned {@link BufferAllocator} which will be used to allocate {@link io.netty5.buffer.api.Buffer}s.
+     * Return the assigned {@link BufferAllocator} which will be used to allocate {@link Buffer}s.
      */
     default BufferAllocator bufferAllocator() {
         return config().getBufferAllocator();

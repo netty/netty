@@ -15,12 +15,10 @@
  */
 package io.netty5.handler.codec.base64;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty5.handler.codec.Delimiters;
 import io.netty5.handler.codec.MessageToMessageDecoder;
@@ -28,8 +26,8 @@ import io.netty5.handler.codec.MessageToMessageDecoder;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Decodes a Base64-encoded {@link ByteBuf} or US-ASCII {@link String}
- * into a {@link ByteBuf}.  Please note that this decoder must be used
+ * Decodes a Base64-encoded {@link Buffer} or US-ASCII {@link String}
+ * into a {@link Buffer}.  Please note that this decoder must be used
  * with a proper {@link ByteToMessageDecoder} such as {@link DelimiterBasedFrameDecoder}
  * if you are using a stream-based transport such as TCP/IP.  A typical decoder
  * setup for TCP/IP would be:

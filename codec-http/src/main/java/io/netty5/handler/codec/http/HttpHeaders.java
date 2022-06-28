@@ -15,13 +15,10 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty5.buffer.BufferUtil;
 import io.netty5.handler.codec.DateFormatter;
 import io.netty5.handler.codec.Headers;
 import io.netty5.handler.codec.HeadersUtils;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -493,7 +490,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @deprecated Use {@link HttpUtil#getContentLength(HttpMessage)} instead.
      *
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
+     * not retrieved from {@link HttpContent#payload()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -512,7 +509,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @deprecated Use {@link HttpUtil#getContentLength(HttpMessage, long)} instead.
      *
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
+     * not retrieved from {@link HttpContent#payload()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -689,15 +686,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     @Deprecated
     public static boolean equalsIgnoreCase(CharSequence name1, CharSequence name2) {
         return contentEqualsIgnoreCase(name1, name2);
-    }
-
-    @Deprecated
-    public static void encodeAscii(CharSequence seq, ByteBuf buf) {
-        if (seq instanceof AsciiString) {
-            BufferUtil.copy((AsciiString) seq, 0, buf, seq.length());
-        } else {
-            buf.writeCharSequence(seq, CharsetUtil.US_ASCII);
-        }
     }
 
     /**

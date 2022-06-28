@@ -31,7 +31,7 @@ import io.netty5.util.ByteProcessor;
  * <p>
  * For a more general delimiter-based decoder, see {@link DelimiterBasedFrameDecoder}.
  */
-public class LineBasedFrameDecoder extends ByteToMessageDecoderForBuffer {
+public class LineBasedFrameDecoder extends ByteToMessageDecoder {
 
     /** Maximum length of a frame we're willing to decode.  */
     private final int maxLength;

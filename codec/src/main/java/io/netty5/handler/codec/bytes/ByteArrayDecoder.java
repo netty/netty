@@ -15,16 +15,14 @@
  */
 package io.netty5.handler.codec.bytes;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty5.handler.codec.LengthFieldPrepender;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes a received {@link ByteBuf} into an array of bytes.
+ * Decodes a received {@link Buffer} into an array of bytes.
  * A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -39,7 +37,7 @@ import io.netty5.handler.codec.MessageToMessageDecoder;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("bytesEncoder", new {@link ByteArrayEncoder}());
  * </pre>
- * and then you can use an array of bytes instead of a {@link ByteBuf}
+ * and then you can use an array of bytes instead of a {@link Buffer}
  * as a message:
  * <pre>
  * void channelRead({@link ChannelHandlerContext} ctx, byte[] bytes) {
@@ -47,10 +45,12 @@ import io.netty5.handler.codec.MessageToMessageDecoder;
  * }
  * </pre>
  */
-public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
+public class ByteArrayDecoder extends MessageToMessageDecoder<Buffer> {
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Buffer msg) throws Exception {
          // copy the ByteBuf content to a byte array
-        ctx.fireChannelRead(ByteBufUtil.getBytes(msg));
+        byte[] array = new byte[msg.readableBytes()];
+        msg.readBytes(array, 0, array.length);
+        ctx.fireChannelRead(array);
     }
 }

@@ -15,8 +15,8 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferHolder;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SimpleUserEventChannelHandlerTest {
 
@@ -43,33 +43,53 @@ public class SimpleUserEventChannelHandlerTest {
 
     @Test
     public void testTypeMatch() {
+        // The fooEventCatcher will close the FooEvent.
         FooEvent fooEvent = new FooEvent();
         channel.pipeline().fireChannelInboundEvent(fooEvent);
         assertEquals(1, fooEventCatcher.caughtEvents.size());
         assertEquals(0, allEventCatcher.caughtEvents.size());
-        assertEquals(0, fooEvent.refCnt());
+        assertFalse(fooEvent.isAccessible());
         assertFalse(channel.finish());
     }
 
     @Test
     public void testTypeMismatch() {
-        BarEvent barEvent = new BarEvent();
-        channel.pipeline().fireChannelInboundEvent(barEvent);
-        assertEquals(0, fooEventCatcher.caughtEvents.size());
-        assertEquals(1, allEventCatcher.caughtEvents.size());
-        assertTrue(barEvent.release());
+        // The allEventCatcher do not close events.
+        try (BarEvent barEvent = new BarEvent()) {
+            channel.pipeline().fireChannelInboundEvent(barEvent);
+            assertEquals(0, fooEventCatcher.caughtEvents.size());
+            assertEquals(1, allEventCatcher.caughtEvents.size());
+        }
         assertFalse(channel.finish());
     }
 
-    static final class FooEvent extends DefaultByteBufHolder {
+    static final class FooEvent extends BufferHolder<FooEvent> {
         FooEvent() {
-            super(Unpooled.buffer());
+            super(preferredAllocator().allocate(256));
+        }
+
+        FooEvent(Buffer buf) {
+            super(buf);
+        }
+
+        @Override
+        protected FooEvent receive(Buffer buf) {
+            return new FooEvent(buf);
         }
     }
 
-    static final class BarEvent extends DefaultByteBufHolder {
+    static final class BarEvent extends BufferHolder<BarEvent> {
         BarEvent() {
-            super(Unpooled.buffer());
+            super(preferredAllocator().allocate(256));
+        }
+
+        BarEvent(Buffer buf) {
+            super(buf);
+        }
+
+        @Override
+        protected BarEvent receive(Buffer buf) {
+            return new BarEvent(buf);
         }
     }
 

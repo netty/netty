@@ -15,8 +15,7 @@
  */
 package io.netty5.example.echo;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 
@@ -27,20 +26,18 @@ import io.netty5.channel.ChannelHandlerContext;
  */
 public class EchoClientHandler implements ChannelHandler {
 
-    private final ByteBuf firstMessage;
-
     /**
      * Creates a client-side handler.
      */
     public EchoClientHandler() {
-        firstMessage = Unpooled.buffer(EchoClient.SIZE);
-        for (int i = 0; i < firstMessage.capacity(); i ++) {
-            firstMessage.writeByte((byte) i);
-        }
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
+        Buffer firstMessage = ctx.bufferAllocator().allocate(EchoClient.SIZE);
+        for (int i = 0; i < firstMessage.capacity(); i ++) {
+            firstMessage.writeByte((byte) i);
+        }
         ctx.writeAndFlush(firstMessage);
     }
 

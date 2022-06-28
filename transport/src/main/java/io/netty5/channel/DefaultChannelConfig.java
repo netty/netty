@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 
@@ -25,7 +24,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import static io.netty5.channel.ChannelOption.ALLOCATOR;
 import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty5.channel.ChannelOption.AUTO_READ;
@@ -59,7 +57,6 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     protected final Channel channel;
 
-    private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
     private volatile RecvBufferAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
@@ -89,7 +86,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR,
+                BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR,
                 WRITE_BUFFER_HIGH_WATER_MARK, WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK,
                 MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
     }
@@ -133,9 +130,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         }
         if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
-        }
-        if (option == ALLOCATOR) {
-            return (T) getAllocator();
         }
         if (option == BUFFER_ALLOCATOR) {
             return (T) getBufferAllocator();
@@ -182,8 +176,6 @@ public class DefaultChannelConfig implements ChannelConfig {
             setMaxMessagesPerRead((Integer) value);
         } else if (option == WRITE_SPIN_COUNT) {
             setWriteSpinCount((Integer) value);
-        } else if (option == ALLOCATOR) {
-            setAllocator((ByteBufAllocator) value);
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
         } else if (option == RCVBUF_ALLOCATOR) {
@@ -298,18 +290,6 @@ public class DefaultChannelConfig implements ChannelConfig {
             --writeSpinCount;
         }
         this.writeSpinCount = writeSpinCount;
-        return this;
-    }
-
-    @Override
-    public ByteBufAllocator getAllocator() {
-        return allocator;
-    }
-
-    @Override
-    public ChannelConfig setAllocator(ByteBufAllocator allocator) {
-        requireNonNull(allocator, "allocator");
-        this.allocator = allocator;
         return this;
     }
 

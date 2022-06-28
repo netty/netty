@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -145,11 +144,6 @@ public class AbstractChannelTest {
         final Channel channel = new TestChannel(eventLoop) {
             private boolean open = true;
             private boolean active;
-
-            @Override
-            public ByteBufAllocator alloc() {
-                return super.alloc();
-            }
 
             @Override
             protected void connectTransport(

@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -249,7 +248,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                 if (message == null) {
                     // If message is null write an empty ByteBuf.
                     // See https://github.com/netty/netty/issues/1671
-                    message = Unpooled.EMPTY_BUFFER;
+                    message = allocator.allocate(0);
                 }
 
                 if (endOfInput) {

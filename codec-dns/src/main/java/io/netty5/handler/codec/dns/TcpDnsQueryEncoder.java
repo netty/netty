@@ -18,12 +18,12 @@ package io.netty5.handler.codec.dns;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.MessageToByteEncoderForBuffer;
+import io.netty5.handler.codec.MessageToByteEncoder;
 import io.netty5.util.internal.UnstableApi;
 
 @ChannelHandler.Sharable
 @UnstableApi
-public final class TcpDnsQueryEncoder extends MessageToByteEncoderForBuffer<DnsQuery> {
+public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
 
     private final DnsQueryEncoder encoder;
 

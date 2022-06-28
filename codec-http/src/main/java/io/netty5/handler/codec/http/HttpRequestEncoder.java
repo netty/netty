@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.util.CharsetUtil;
 
@@ -24,8 +23,7 @@ import java.nio.charset.StandardCharsets;
 import static io.netty5.handler.codec.http.HttpConstants.SP;
 
 /**
- * Encodes an {@link HttpRequest} or an {@link HttpContent} into
- * a {@link ByteBuf}.
+ * Encodes an {@link HttpRequest} or an {@link HttpContent} into a {@link Buffer}.
  */
 public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';

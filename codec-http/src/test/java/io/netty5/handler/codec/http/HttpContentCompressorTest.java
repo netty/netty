@@ -27,9 +27,8 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static io.netty.buffer.ByteBufUtil.hexDump;
+import static io.netty5.buffer.BufferUtil.hexDump;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.intoByteBuf;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty5.util.CharsetUtil.US_ASCII;
@@ -98,19 +97,19 @@ public class HttpContentCompressorTest {
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("1f8b0800000000000000f248cdc901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("cad7512807000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("ca2fca4901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
+        assertThat(hexDump(chunk.payload()), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -141,22 +140,22 @@ public class HttpContentCompressorTest {
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
         assertNotNull(chunk);
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("1f8b0800000000000000f248cdc901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
         assertNotNull(chunk);
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("cad7512807000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
         assertNotNull(chunk);
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("ca2fca4901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
         assertNotNull(chunk);
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
+        assertThat(hexDump(chunk.payload()), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -186,19 +185,19 @@ public class HttpContentCompressorTest {
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("1f8b0800000000000000f248cdc901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("cad7512807000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("ca2fca4901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
+        assertThat(hexDump(chunk.payload()), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -292,19 +291,19 @@ public class HttpContentCompressorTest {
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b0800000000000000f248cdc901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("1f8b0800000000000000f248cdc901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("cad7512807000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("cad7512807000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("ca2fca4901000000ffff"));
+        assertThat(hexDump(chunk.payload()), is("ca2fca4901000000ffff"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("0300c2a99ae70c000000"));
+        assertThat(hexDump(chunk.payload()), is("0300c2a99ae70c000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -340,12 +339,12 @@ public class HttpContentCompressorTest {
 
         HttpContent<?> c = ch.readOutbound();
         observedLength += c.payload().readableBytes();
-        assertThat(hexDump(intoByteBuf(c.payload())), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
+        assertThat(hexDump(c.payload()), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
         c.close();
 
         c = ch.readOutbound();
         observedLength += c.payload().readableBytes();
-        assertThat(hexDump(intoByteBuf(c.payload())), is("0300c6865b260c000000"));
+        assertThat(hexDump(c.payload()), is("0300c6865b260c000000"));
         c.close();
 
         LastHttpContent<?> last = ch.readOutbound();
@@ -368,11 +367,11 @@ public class HttpContentCompressorTest {
 
         assertEncodedResponse(ch);
         HttpContent<?> c = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(c.payload())), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
+        assertThat(hexDump(c.payload()), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
         c.close();
 
         c = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(c.payload())), is("0300c6865b260c000000"));
+        assertThat(hexDump(c.payload()), is("0300c6865b260c000000"));
         c.close();
 
         LastHttpContent<?> last = ch.readOutbound();
@@ -396,7 +395,7 @@ public class HttpContentCompressorTest {
 
         ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
         HttpContent<?> chunk = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(chunk.payload())), is("1f8b080000000000000003000000000000000000"));
+        assertThat(hexDump(chunk.payload()), is("1f8b080000000000000003000000000000000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -638,11 +637,11 @@ public class HttpContentCompressorTest {
 
         assertEncodedResponse(ch);
         HttpContent<?> c = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(c.payload())), is("1f8b080000000000000072afca2c5008cfcc03000000ffff"));
+        assertThat(hexDump(c.payload()), is("1f8b080000000000000072afca2c5008cfcc03000000ffff"));
         c.close();
 
         c = ch.readOutbound();
-        assertThat(hexDump(intoByteBuf(c.payload())), is("03001f2ebf0f08000000"));
+        assertThat(hexDump(c.payload()), is("03001f2ebf0f08000000"));
         c.close();
 
         LastHttpContent<?> last = ch.readOutbound();

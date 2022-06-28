@@ -76,7 +76,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         // the flush() is invoked from a non-I/O thread while the other are from
         // an I/O thread.
 
-        Future<Void> future = clientChannel.write(createTestBuf(2000));
+        Future<Void> future = clientChannel.write(createTestBuffer(2000));
 
         clientChannel.flush();
         future.sync();
@@ -200,7 +200,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         assertTrue(clientChannel.isWritable());
 
-        clientChannel.write(createTestBuf(2000)).sync();
+        clientChannel.write(createTestBuffer(2000)).sync();
         clientChannel.close().sync();
 
         assertLog(
@@ -307,13 +307,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
             public void flush(ChannelHandlerContext ctx) {
                 if (flushCount < 5) {
                     flushCount++;
-                    ctx.channel().write(createTestBuf(2000));
+                    ctx.channel().write(createTestBuffer(2000));
                 }
                 ctx.flush();
             }
         });
 
-        clientChannel.writeAndFlush(createTestBuf(2000));
+        clientChannel.writeAndFlush(createTestBuffer(2000));
         clientChannel.close().sync();
 
         assertLog(
@@ -413,7 +413,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
         });
 
-        clientChannel.write(createTestBuf(2000)).sync();
+        clientChannel.write(createTestBuffer(2000)).sync();
         clientChannel.closeFuture().sync();
 
         assertLog("WRITE\nFLUSH\nCLOSE\n");
@@ -478,7 +478,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         });
 
         try {
-            clientChannel.writeAndFlush(createTestBuf(2000)).sync();
+            clientChannel.writeAndFlush(createTestBuffer(2000)).sync();
             fail();
         } catch (Throwable cce) {
             // FIXME:  shouldn't this contain the "intentional failure" exception?

@@ -17,13 +17,13 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.LengthFieldBasedFrameDecoderForBuffer;
+import io.netty5.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty5.util.internal.UnstableApi;
 
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
-public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoderForBuffer {
+public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoder {
     private final DnsRecordDecoder decoder;
 
     /**

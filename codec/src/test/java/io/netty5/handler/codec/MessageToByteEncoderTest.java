@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class MessageToByteEncoderForBufferTest {
+class MessageToByteEncoderTest {
 
     @Test
     void testAcceptOutboundMessage() throws Exception {
@@ -41,7 +41,7 @@ class MessageToByteEncoderForBufferTest {
 
     @Test
     void testEncoderException() {
-        EmbeddedChannel channel = new EmbeddedChannel(new MessageToByteEncoderForBuffer<String>() {
+        EmbeddedChannel channel = new EmbeddedChannel(new MessageToByteEncoder<String>() {
 
             @Override
             protected Buffer allocateBuffer(ChannelHandlerContext ctx, String msg) {
@@ -58,7 +58,7 @@ class MessageToByteEncoderForBufferTest {
 
     @Test
     void testException() {
-        EmbeddedChannel channel = new EmbeddedChannel(new MessageToByteEncoderForBuffer<String>() {
+        EmbeddedChannel channel = new EmbeddedChannel(new MessageToByteEncoder<String>() {
 
             @Override
             protected Buffer allocateBuffer(ChannelHandlerContext ctx, String msg) {
@@ -91,7 +91,7 @@ class MessageToByteEncoderForBufferTest {
         assertSame(msg, o);
     }
 
-    static final class TestEncoder extends MessageToByteEncoderForBuffer<String> {
+    static final class TestEncoder extends MessageToByteEncoder<String> {
 
         TestEncoder() {
             super();

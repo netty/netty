@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.ipfilter;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -112,14 +111,15 @@ public class IpSubnetFilterTest {
                 assertTrue(ctx.channel().isWritable());
                 assertEquals("192.168.57.1", remoteAddress.getHostName());
 
-                return ctx.writeAndFlush(Unpooled.wrappedBuffer(message));
+                return ctx.writeAndFlush(ctx.bufferAllocator().copyOf(message));
             }
         };
         EmbeddedChannel chDeny = newEmbeddedInetChannel("192.168.57.1", denyHandler);
-        ByteBuf out = chDeny.readOutbound();
-        assertEquals(7, out.readableBytes());
-        for (byte i = 1; i <= 7; i++) {
-            assertEquals(i, out.readByte());
+        try (Buffer out = chDeny.readOutbound()) {
+            assertEquals(7, out.readableBytes());
+            for (byte i = 1; i <= 7; i++) {
+                assertEquals(i, out.readByte());
+            }
         }
         assertFalse(chDeny.isActive());
         assertFalse(chDeny.isOpen());

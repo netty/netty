@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +28,7 @@ import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SslUtilsTest {
@@ -74,7 +73,7 @@ public class SslUtilsTest {
     }
 
     @Test
-    public void shouldGetPacketLengthOfGmsslProtocolFromByteBuf() {
+    public void shouldGetPacketLengthOfGmsslProtocolFromBuffer() {
         int bodyLength = 65;
         try (Buffer buf = offHeapAllocator().allocate(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH)
                               .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
@@ -88,14 +87,17 @@ public class SslUtilsTest {
     @Test
     public void shouldGetPacketLengthOfGmsslProtocolFromByteBuffer() {
         int bodyLength = 65;
-        ByteBuf buf = Unpooled.buffer()
-                              .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
-                              .writeShort(SslUtils.GMSSL_PROTOCOL_VERSION)
-                              .writeShort(bodyLength);
-
-        int packetLength = getEncryptedPacketLength(new ByteBuffer[] { buf.nioBuffer() }, 0);
-        assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
-        buf.release();
+        try (Buffer buf = offHeapAllocator().allocate(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH)
+                                            .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                                            .writeShort((short) SslUtils.GMSSL_PROTOCOL_VERSION)
+                                            .writeShort((short) bodyLength)) {
+            try (var iterable = buf.forEachReadable()) {
+                var component = iterable.first();
+                assertNotNull(component);
+                int packetLength = getEncryptedPacketLength(new ByteBuffer[]{ component.readableBuffer() }, 0);
+                assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
+            }
+        }
     }
 
     @Test

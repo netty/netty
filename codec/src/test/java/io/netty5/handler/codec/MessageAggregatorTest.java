@@ -1,36 +1,35 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2021 The Netty Project
  *
- * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at:
  *
- *   https://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package io.netty5.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 public class MessageAggregatorTest {
     private static final class ReadCounter implements ChannelHandler {
@@ -43,54 +42,109 @@ public class MessageAggregatorTest {
         }
     }
 
-    abstract static class MockMessageAggregator
-        extends MessageAggregator<ByteBufHolder, ByteBufHolder, ByteBufHolder, ByteBufHolder> {
+    static class MockMessageAggregator extends MessageAggregator<Buffer, Buffer, Buffer, CompositeBuffer> {
 
-        protected MockMessageAggregator() {
+        private final Buffer first;
+        private final Buffer last;
+
+        protected MockMessageAggregator(Buffer first, Buffer last) {
             super(1024);
+            this.first = first;
+            this.last = last;
         }
 
         @Override
-        protected ByteBufHolder beginAggregation(ByteBufHolder start, ByteBuf content) throws Exception {
-            return start.replace(content);
+        protected Buffer tryStartMessage(Object msg) {
+            return msg.equals(first) ? first : null;
+        }
+
+        @Override
+        protected Buffer tryContentMessage(Object msg) {
+            return msg instanceof Buffer ? (Buffer) msg : null;
+        }
+
+        @Override
+        protected boolean isLastContentMessage(Buffer msg) {
+            return msg.equals(last);
+        }
+
+        @Override
+        protected boolean isAggregated(Object msg) {
+            return msg instanceof CompositeBuffer;
+        }
+
+        @Override
+        protected int lengthForContent(Buffer msg) {
+            return msg.readableBytes();
+        }
+
+        @Override
+        protected int lengthForAggregation(CompositeBuffer msg) {
+            return msg.readableBytes();
+        }
+
+        @Override
+        protected boolean isContentLengthInvalid(Buffer start, int maxContentLength) {
+            return start.readableBytes() > maxContentLength;
+        }
+
+        @Override
+        protected Object newContinueResponse(Buffer start, int maxContentLength, ChannelPipeline pipeline) {
+            return null;
+        }
+
+        @Override
+        protected boolean closeAfterContinueResponse(Object msg) {
+            return true;
+        }
+
+        @Override
+        protected boolean ignoreContentAfterContinueResponse(Object msg) {
+            return true;
+        }
+
+        @Override
+        protected CompositeBuffer beginAggregation(BufferAllocator allocator, Buffer start) {
+            return allocator.compose(start.copy().send());
+        }
+
+        @Override
+        protected void aggregate(BufferAllocator allocator, CompositeBuffer aggregated, Buffer content) {
+            aggregated.extendWith(content.copy().send());
         }
     }
 
-    private static ByteBufHolder message(String string) {
-        return new DefaultByteBufHolder(
-            Unpooled.copiedBuffer(string, CharsetUtil.US_ASCII));
+    private static Buffer message(BufferAllocator allocator, String string) {
+        final byte[] bytes = string.getBytes(StandardCharsets.US_ASCII);
+        return allocator.allocate(bytes.length).writeBytes(bytes);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
-    public void testReadFlowManagement() throws Exception {
-        ReadCounter counter = new ReadCounter();
-        ByteBufHolder first = message("first");
-        ByteBufHolder chunk = message("chunk");
-        ByteBufHolder last = message("last");
+    public void testReadFlowManagement() {
+        try (BufferAllocator allocator = BufferAllocator.offHeapPooled();
+             Buffer first = message(allocator, "first");
+             Buffer chunk = message(allocator, "chunk");
+             Buffer last = message(allocator, "last")) {
+            ReadCounter counter = new ReadCounter();
+            MockMessageAggregator agg = new MockMessageAggregator(first.copy(), last.copy());
+            EmbeddedChannel embedded = new EmbeddedChannel(counter, agg);
+            embedded.config().setAutoRead(false);
 
-        MockMessageAggregator agg = spy(MockMessageAggregator.class);
-        when(agg.isStartMessage(first)).thenReturn(true);
-        when(agg.isContentMessage(chunk)).thenReturn(true);
-        when(agg.isContentMessage(last)).thenReturn(true);
-        when(agg.isLastContentMessage(last)).thenReturn(true);
+            assertFalse(embedded.writeInbound(first.copy()));
+            assertFalse(embedded.writeInbound(chunk.copy()));
+            assertTrue(embedded.writeInbound(last.copy()));
 
-        EmbeddedChannel embedded = new EmbeddedChannel(counter, agg);
-        embedded.config().setAutoRead(false);
+            assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
+            // 1 read issued from EmbeddedChannel constructor
 
-        assertFalse(embedded.writeInbound(first));
-        assertFalse(embedded.writeInbound(chunk));
-        assertTrue(embedded.writeInbound(last));
-
-        assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
-                                        // 1 read issued from EmbeddedChannel constructor
-
-        ByteBufHolder all = new DefaultByteBufHolder(Unpooled.wrappedBuffer(
-            first.content().retain(), chunk.content().retain(), last.content().retain()));
-        ByteBufHolder out = embedded.readInbound();
-
-        assertEquals(all, out);
-        assertTrue(all.release() && out.release());
-        assertFalse(embedded.finish());
+            try (CompositeBuffer all = allocator.compose(asList(first.copy().send(), chunk.copy().send(),
+                    last.copy().send()));
+                 CompositeBuffer out = embedded.readInbound()) {
+                assertEquals(all, out);
+                assertTrue(all.isAccessible());
+                assertTrue(out.isAccessible());
+            }
+            assertFalse(embedded.finish());
+        }
     }
 }

@@ -15,19 +15,18 @@
  */
 package io.netty5.channel.group;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ServerChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 /**
@@ -49,9 +48,9 @@ import java.util.Set;
  * recipients.add(channelA);
  * recipients.add(channelB);
  * ..
- * <strong>recipients.write({@link Unpooled}.copiedBuffer(
+ * <strong>recipients.write({@link DefaultBufferAllocators#preferredAllocator()}.copyOf(
  *         "Service will shut down for maintenance in 5 minutes.",
- *         {@link CharsetUtil}.UTF_8));</strong>
+ *         {@link StandardCharsets#UTF_8}));</strong>
  * </pre>
  *
  * <h3>Simplify shutdown process with {@link ChannelGroup}</h3>
@@ -109,11 +108,10 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Writes the specified {@code message} to all {@link Channel}s in this
-     * group. If the specified {@code message} is an instance of
-     * {@link ByteBuf}, it is automatically
-     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
-     * condition. The same is true for {@link ByteBufHolder}. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object)} is.
+     * group.
+     * If the specified {@code message} is an instance of {@link Buffer}, it is automatically
+     * {@linkplain Buffer#copy() copied} to avoid a race condition.
+     * Please note that this operation is asynchronous as {@link Channel#write(Object)} is.
      *
      * @return itself
      */
@@ -121,11 +119,10 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Writes the specified {@code message} to all {@link Channel}s in this
-     * group that are matched by the given {@link ChannelMatcher}. If the specified {@code message} is an instance of
-     * {@link ByteBuf}, it is automatically
-     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
-     * condition. The same is true for {@link ByteBufHolder}. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object)} is.
+     * group that are matched by the given {@link ChannelMatcher}.
+     * If the specified {@code message} is an instance of {@link Buffer}, it is automatically
+     * {@linkplain Buffer#copy() copied} to avoid a race condition.
+     * Please note that this operation is asynchronous as {@link Channel#write(Object)} is.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
@@ -134,11 +131,10 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Flush all {@link Channel}s in this
-     * group. If the specified {@code messages} are an instance of
-     * {@link ByteBuf}, it is automatically
-     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
-     * condition. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object)} is.
+     * group.
+     * If the specified {@code message} is an instance of {@link Buffer}, it is automatically
+     * {@linkplain Buffer#copy() copied} to avoid a race condition.
+     * Please note that this operation is asynchronous as {@link Channel#flush()} is.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
@@ -147,11 +143,9 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Flush all {@link Channel}s in this group that are matched by the given {@link ChannelMatcher}.
-     * If the specified {@code messages} are an instance of
-     * {@link ByteBuf}, it is automatically
-     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
-     * condition. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object)} is.
+     * If the specified {@code message} is an instance of {@link Buffer}, it is automatically
+     * {@linkplain Buffer#copy() copied} to avoid a race condition.
+     * Please note that this operation is asynchronous as {@link Channel#flush()} is.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels

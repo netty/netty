@@ -15,11 +15,10 @@
  */
 package io.netty5.handler.flow;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -34,7 +33,6 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.timeout.IdleStateEvent;
 import io.netty5.handler.timeout.IdleStateHandler;
 import org.junit.jupiter.api.AfterAll;
@@ -51,6 +49,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -481,9 +480,11 @@ public class FlowControlHandlerTest {
         channel.register();
 
         // Reset read timeout by some message
-        assertTrue(channel.writeInbound(Unpooled.EMPTY_BUFFER));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(0)));
         channel.flushInbound();
-        assertEquals(Unpooled.EMPTY_BUFFER, channel.readInbound());
+        try (Buffer inbound = channel.readInbound()) {
+            assertThat(inbound.readableBytes()).isZero();
+        }
 
         // Emulate 'no more messages in NIO channel' on the next read attempt.
         channel.flushInbound();
@@ -567,13 +568,13 @@ public class FlowControlHandlerTest {
      */
     private static final class OneByteToThreeStringsDecoder extends ByteToMessageDecoder {
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in) {
+        protected void decode(ChannelHandlerContext ctx, Buffer in) {
             for (int i = 0; i < in.readableBytes(); i++) {
                 ctx.fireChannelRead("1");
                 ctx.fireChannelRead("2");
                 ctx.fireChannelRead("3");
             }
-            in.readerIndex(in.readableBytes());
+            in.skipReadableBytes(in.readableBytes());
         }
     }
 }

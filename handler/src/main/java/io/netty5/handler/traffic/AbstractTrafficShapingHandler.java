@@ -15,9 +15,6 @@
  */
 package io.netty5.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufConvertible;
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -644,20 +641,15 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     /**
      * Calculate the size of the given {@link Object}.
      *
-     * This implementation supports {@link ByteBuf}, {@link ByteBufHolder} and {@link FileRegion}.
+     * This implementation supports {@link Buffer} and {@link FileRegion}.
      * Sub-classes may override this.
      * @param msg the msg for which the size should be calculated.
      * @return size the size of the msg or {@code -1} if unknown.
      */
     protected long calculateSize(Object msg) {
+        // TODO we should have a Sized interface to generalise all of this.
         if (msg instanceof Buffer) {
             return ((Buffer) msg).readableBytes();
-        }
-        if (msg instanceof ByteBufConvertible) {
-            return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
-        }
-        if (msg instanceof ByteBufHolder) {
-            return ((ByteBufHolder) msg).content().readableBytes();
         }
         if (msg instanceof FileRegion) {
             return ((FileRegion) msg).count();

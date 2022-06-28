@@ -53,11 +53,10 @@
 
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -67,7 +66,7 @@ import java.util.Objects;
 /**
  * Decodes a web socket frame from wire protocol version 13 format. V13 is essentially the same as V8.
  */
-public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer implements WebSocketFrameDecoder {
+public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements WebSocketFrameDecoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket13FrameDecoder.class);
     private static final byte OPCODE_CONT = 0x0;
@@ -429,7 +428,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoderForBuffer imple
         if (ctx.channel().isActive() && config.closeOnProtocolViolation()) {
             Object closeMessage;
             if (receivedClosingHandshake) {
-                closeMessage = Unpooled.EMPTY_BUFFER;
+                closeMessage = ctx.bufferAllocator().allocate(0);
             } else {
                 WebSocketCloseStatus closeStatus = ex.closeStatus();
                 String reasonText = ex.getMessage();

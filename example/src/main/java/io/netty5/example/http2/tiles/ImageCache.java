@@ -15,14 +15,13 @@
  */
 package io.netty5.example.http2.tiles;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty5.example.http2.Http2ExampleUtil.toByteBuf;
+import static io.netty5.example.http2.Http2ExampleUtil.toBuffer;
 
 /**
  * Caches the images to avoid reading them every time from the disk.
@@ -31,7 +30,7 @@ public final class ImageCache {
 
     public static ImageCache INSTANCE = new ImageCache();
 
-    private final Map<String, ByteBuf> imageBank = new HashMap<>(200);
+    private final Map<String, Buffer> imageBank = new HashMap<>(200);
 
     private ImageCache() {
         init();
@@ -41,8 +40,8 @@ public final class ImageCache {
         return "tile-" + y + "-" + x + ".jpeg";
     }
 
-    public ByteBuf image(int x, int y) {
-        return imageBank.get(name(x, y));
+    public Buffer image(int x, int y) {
+        return imageBank.get(name(x, y)).copy(true);
     }
 
     private void init() {
@@ -50,8 +49,7 @@ public final class ImageCache {
             for (int x = 0; x < 20; x++) {
                 try {
                     String name = name(x, y);
-                    ByteBuf fileBytes = unreleasableBuffer(toByteBuf(getClass()
-                            .getResourceAsStream(name)).asReadOnly());
+                    Buffer fileBytes = toBuffer(getClass().getResourceAsStream(name)).makeReadOnly();
                     imageBank.put(name, fileBytes);
                 } catch (IOException e) {
                     e.printStackTrace();

@@ -19,7 +19,7 @@ import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty5.util.internal.UnstableApi;
@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  * prior knowledge or not.
  */
 @UnstableApi
-public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecoderForBuffer {
+public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecoder {
     private final HttpServerCodec httpServerCodec;
     private final HttpServerUpgradeHandler<?> httpServerUpgradeHandler;
     private final ChannelHandler http2ServerHandler;

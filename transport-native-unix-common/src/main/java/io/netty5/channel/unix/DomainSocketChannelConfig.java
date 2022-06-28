@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.MessageSizeEstimator;
 import io.netty5.channel.RecvBufferAllocator;
@@ -37,9 +36,6 @@ public interface DomainSocketChannelConfig extends ChannelConfig {
 
     @Override
     DomainSocketChannelConfig setWriteSpinCount(int writeSpinCount);
-
-    @Override
-    DomainSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
     DomainSocketChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);

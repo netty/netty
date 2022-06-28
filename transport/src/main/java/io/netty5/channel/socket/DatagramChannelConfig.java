@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MessageSizeEstimator;
@@ -166,9 +165,6 @@ public interface DatagramChannelConfig extends ChannelConfig {
 
     @Override
     DatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
-
-    @Override
-    DatagramChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
     DatagramChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator);

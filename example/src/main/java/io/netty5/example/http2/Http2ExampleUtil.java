@@ -14,14 +14,14 @@
  */
 package io.netty5.example.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.QueryStringDecoder;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -59,13 +59,16 @@ public final class Http2ExampleUtil {
      * @return a byte array representation of the InputStream.
      * @throws IOException if an I/O exception of some sort happens while reading the InputStream.
      */
-    public static ByteBuf toByteBuf(InputStream input) throws IOException {
-        ByteBuf buf = Unpooled.buffer();
-        int n = 0;
-        do {
-            n = buf.writeBytes(input, BLOCK_SIZE);
-        } while (n > 0);
-        return buf;
+    public static Buffer toBuffer(InputStream input) throws IOException {
+        Buffer buf = preferredAllocator().allocate(BLOCK_SIZE);
+        byte[] array = new byte[BLOCK_SIZE];
+        for (;;) {
+            int n = input.read(array);
+            if (n < 0) {
+                return buf;
+            }
+            buf.writeBytes(array, 0, n);
+        }
     }
 
     /**

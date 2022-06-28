@@ -20,7 +20,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
@@ -30,7 +29,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 /**
  * {@link ByteToMessageDecoder} which allows to be notified once a full {@code ClientHello} was received.
  */
-public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoderForBuffer {
+public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslClientHelloHandler.class);

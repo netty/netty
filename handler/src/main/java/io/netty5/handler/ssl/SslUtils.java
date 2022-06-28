@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
@@ -337,7 +335,7 @@ final class SslUtils {
     // Reads a big-endian short integer from the buffer
     private static short shortBE(ByteBuffer buffer, int offset) {
         return buffer.order() == ByteOrder.BIG_ENDIAN ?
-                buffer.getShort(offset) : ByteBufUtil.swapShort(buffer.getShort(offset));
+                buffer.getShort(offset) : Short.reverseBytes(buffer.getShort(offset));
     }
 
     static int getEncryptedPacketLength(ByteBuffer[] buffers, int offset) {
@@ -423,32 +421,6 @@ final class SslUtils {
         if (notify) {
             ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(cause));
         }
-    }
-
-    /**
-     * Fills the {@link ByteBuf} with zero bytes.
-     */
-    static void zeroout(ByteBuf buffer) {
-        if (!buffer.isReadOnly()) {
-            buffer.setZero(0, buffer.capacity());
-        }
-    }
-
-    /**
-     * Fills the {@link Buffer} with zero bytes.
-     */
-    static void zeroout(Buffer buffer) {
-        if (!buffer.readOnly()) {
-            buffer.fill((byte) 0);
-        }
-    }
-
-    /**
-     * Fills the {@link ByteBuf} with zero bytes and releases it.
-     */
-    static void zerooutAndRelease(ByteBuf buffer) {
-        zeroout(buffer);
-        buffer.release();
     }
 
     /**

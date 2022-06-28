@@ -28,7 +28,7 @@ import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -87,7 +87,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 }).channel(NioServerSocketChannel.class).bind(0).get();
 
                 final CountDownLatch readLatch = new CountDownLatch(1);
-                bootstrap.handler(new ByteToMessageDecoderForBuffer() {
+                bootstrap.handler(new ByteToMessageDecoder() {
                     @Override
                     public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
                         assertFalse(ctx.channel().isActive());

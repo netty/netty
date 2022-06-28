@@ -15,16 +15,13 @@
  */
 package io.netty5.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufConvertible;
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default {@link MessageSizeEstimator} implementation which supports the estimation of the size of
- * {@link ByteBuf}, {@link ByteBufHolder} and {@link FileRegion}.
+ * {@link Buffer} and {@link FileRegion}.
  */
 public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
 
@@ -39,12 +36,6 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
         public int size(Object msg) {
             if (msg instanceof Buffer) {
                 return ((Buffer) msg).readableBytes();
-            }
-            if (msg instanceof ByteBufConvertible) {
-                return ((ByteBufConvertible) msg).asByteBuf().readableBytes();
-            }
-            if (msg instanceof ByteBufHolder) {
-                return ((ByteBufHolder) msg).content().readableBytes();
             }
             if (msg instanceof FileRegion) {
                 return 0;

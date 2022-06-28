@@ -15,7 +15,7 @@
  */
 package io.netty5.example.factorial;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.MessageToByteEncoder;
 
@@ -29,7 +29,12 @@ import java.math.BigInteger;
 public class NumberEncoder extends MessageToByteEncoder<Number> {
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Number msg, ByteBuf out) {
+    protected Buffer allocateBuffer(ChannelHandlerContext ctx, Number msg) throws Exception {
+        return ctx.bufferAllocator().allocate(16);
+    }
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, Number msg, Buffer out) {
         // Convert to a BigInteger first for easier implementation.
         BigInteger v;
         if (msg instanceof BigInteger) {

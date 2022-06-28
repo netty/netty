@@ -15,10 +15,6 @@
  */
 package io.netty5.channel.embedded;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.BufferOutputStream;
 import io.netty5.buffer.api.Buffer;
@@ -32,44 +28,14 @@ import java.io.ObjectOutputStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EmbeddedChannelIdTest {
-
-    @Test
-    public void testSerializationByteBuf() throws Exception {
-        // test that a deserialized instance works the same as a normal instance (issue #2869)
-        ChannelId normalInstance = EmbeddedChannelId.INSTANCE;
-
-        ByteBuf buf = Unpooled.buffer();
-        ObjectOutputStream outStream = new ObjectOutputStream(new ByteBufOutputStream(buf));
-        try {
-            outStream.writeObject(normalInstance);
-        } finally {
-            outStream.close();
-        }
-
-        ObjectInputStream inStream = new ObjectInputStream(new ByteBufInputStream(buf, true));
-        final ChannelId deserializedInstance;
-        try {
-            deserializedInstance = (ChannelId) inStream.readObject();
-        } finally {
-            inStream.close();
-        }
-
-        assertEquals(normalInstance, deserializedInstance);
-        assertEquals(normalInstance.hashCode(), deserializedInstance.hashCode());
-        assertEquals(0, normalInstance.compareTo(deserializedInstance));
-    }
-
     @Test
     public void testSerialization() throws Exception {
         // test that a deserialized instance works the same as a normal instance (issue #2869)
         ChannelId normalInstance = EmbeddedChannelId.INSTANCE;
 
         Buffer buf = BufferAllocator.onHeapUnpooled().allocate(1024);
-        ObjectOutputStream outStream = new ObjectOutputStream(new BufferOutputStream(buf));
-        try {
+        try (ObjectOutputStream outStream = new ObjectOutputStream(new BufferOutputStream(buf))) {
             outStream.writeObject(normalInstance);
-        } finally {
-            outStream.close();
         }
 
         ObjectInputStream inStream = new ObjectInputStream(new BufferInputStream(buf.send()));

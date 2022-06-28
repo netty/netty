@@ -22,8 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 
@@ -40,13 +39,13 @@ public class ByteArrayDecoderTest {
     public void testDecode() {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
-        ch.writeInbound(wrappedBuffer(b));
+        ch.writeInbound(preferredAllocator().copyOf(b));
         assertThat((byte[]) ch.readInbound(), is(b));
     }
 
     @Test
     public void testDecodeEmpty() {
-        ch.writeInbound(EMPTY_BUFFER);
+        ch.writeInbound(preferredAllocator().allocate(0));
         assertThat((byte[]) ch.readInbound(), is(EmptyArrays.EMPTY_BYTES));
     }
 

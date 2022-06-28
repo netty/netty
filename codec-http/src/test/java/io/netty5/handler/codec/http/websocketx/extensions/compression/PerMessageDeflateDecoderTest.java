@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderException;
@@ -26,6 +26,7 @@ import io.netty5.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
+import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
@@ -344,7 +345,7 @@ public class PerMessageDeflateDecoderTest {
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
 
-        Buffer originPayload = encoderChannel.bufferAllocator().copyOf(ByteBufUtil.decodeHexDump(hexDump));
+        Buffer originPayload = encoderChannel.bufferAllocator().copyOf(StringUtil.decodeHexDump(hexDump));
         assertTrue(encoderChannel.writeOutbound(originPayload.copy()));
 
         Buffer compressedPayload = encoderChannel.readOutbound();

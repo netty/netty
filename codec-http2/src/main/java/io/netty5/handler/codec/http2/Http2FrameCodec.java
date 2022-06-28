@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -134,7 +133,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  * <h3>Reference Counting</h3>
  * <p>
  * Some {@link Http2StreamFrame}s implement the {@link ReferenceCounted} interface, as they carry
- * reference counted objects (e.g. {@link ByteBuf}s). The frame codec will call {@link ReferenceCounted#retain()} before
+ * reference counted objects (e.g. {@link Buffer}s). The frame codec will call {@link ReferenceCounted#retain()} before
  * propagating a reference counted object through the pipeline, and thus an application handler needs to release such
  * an object after having consumed it. For more information on reference counting take a look at
  * https://netty.io/wiki/reference-counted-objects.html

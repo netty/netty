@@ -14,7 +14,6 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -54,11 +53,6 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
-    // We cannot remove this because it'll be breaking change
-    public static final int DEFAULT_COMPRESSION_LEVEL = 6;
-    public static final int DEFAULT_WINDOW_BITS = 15;
-    public static final int DEFAULT_MEM_LEVEL = 8;
-
     private int compressionLevel;
     private int windowBits;
     private int memLevel;
@@ -253,9 +247,10 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      *
      * @param ctx the context.
      * @param contentEncoding the value of the {@code content-encoding} header
-     * @return a new {@link ByteToMessageDecoder} if the specified encoding is supported. {@code null} otherwise
-     * (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
-     * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
+     * @return a new {@link ByteToMessageDecoder} if the specified encoding is supported.
+     * Otherwise {@code null}.
+     * Alternatively, you can throw a {@link Http2Exception} to block unknown encoding.
+     * @throws Http2Exception If the specified encoding is not supported and warrants an exception
      */
     protected Compressor newContentCompressor(ChannelHandlerContext ctx, CharSequence contentEncoding)
             throws Http2Exception {
@@ -367,25 +362,5 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     void cleanup(Http2Stream stream, Compressor compressor) {
         compressor.close();
         stream.removeProperty(propertyKey);
-    }
-
-    /**
-     * Read the next compressed {@link ByteBuf} from the {@link EmbeddedChannel} or {@code null} if one does not exist.
-     *
-     * @param compressor The channel to read from
-     * @return The next decoded {@link ByteBuf} from the {@link EmbeddedChannel} or {@code null} if one does not exist
-     */
-    private static ByteBuf nextReadableBuf(EmbeddedChannel compressor) {
-        for (;;) {
-            final ByteBuf buf = compressor.readOutbound();
-            if (buf == null) {
-                return null;
-            }
-            if (!buf.isReadable()) {
-                buf.release();
-                continue;
-            }
-            return buf;
-        }
     }
 }

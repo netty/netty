@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.string;
 
-import io.netty.buffer.ByteBufUtil;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
 
@@ -79,6 +79,6 @@ public final class LineSeparator {
      */
     @Override
     public String toString() {
-        return ByteBufUtil.hexDump(value.getBytes(CharsetUtil.UTF_8));
+        return BufferUtil.hexDump(value.getBytes(CharsetUtil.UTF_8));
     }
 }

@@ -16,7 +16,6 @@
 
 package io.netty5.example.http2.tiles;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -29,7 +28,6 @@ import io.netty5.handler.codec.http2.InboundHttp2ToHttpAdapter;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static io.netty5.example.http2.Http2ExampleUtil.firstValue;
 import static io.netty5.example.http2.Http2ExampleUtil.toInt;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
@@ -80,9 +78,8 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
 
     private void handleImage(String x, String y, ChannelHandlerContext ctx, String streamId, int latency,
             FullHttpRequest request) {
-        ByteBuf image = ImageCache.INSTANCE.image(parseInt(x), parseInt(y));
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK,
-                extractOrCopy(ctx.bufferAllocator(), image.duplicate()));
+        Buffer image = ImageCache.INSTANCE.image(parseInt(x), parseInt(y));
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, image);
         response.headers().set(CONTENT_TYPE, "image/jpeg");
         sendResponse(ctx, streamId, latency, response, request);
     }

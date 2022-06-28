@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MessageSizeEstimator;
@@ -107,12 +106,6 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
     @Override
     public KQueueDomainSocketChannelConfig setRecvBufferAllocator(RecvBufferAllocator allocator) {
         super.setRecvBufferAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueDomainSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
         return this;
     }
 

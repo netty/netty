@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
@@ -35,40 +34,40 @@ import static io.netty5.handler.codec.http.HttpConstants.LF;
 @Measurement(iterations = 3)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class WriteBytesVsShortOrMediumBenchmark extends AbstractMicrobenchmark {
-    private static final int CRLF_SHORT = (CR << 8) + LF;
+    private static final short CRLF_SHORT = (CR << 8) + LF;
     private static final byte[] CRLF = { CR, LF };
     private static final int ZERO_CRLF_MEDIUM = ('0' << 16) + (CR << 8) + LF;
     private static final byte[] ZERO_CRLF = { '0', CR, LF };
 
-    private final ByteBuf buf = Unpooled.directBuffer(16);
+    private final Buffer buf = BufferAllocator.offHeapUnpooled().allocate(16);
 
     @Benchmark
-    public ByteBuf shortInt() {
-        return ByteBufUtil.writeShortBE(buf, CRLF_SHORT).writerIndex(0);
+    public Buffer shortInt() {
+        return buf.writeShort(CRLF_SHORT).writerOffset(0);
     }
 
     @Benchmark
-    public ByteBuf mediumInt() {
-        return ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM).writerIndex(0);
+    public Buffer mediumInt() {
+        return buf.writeMedium(ZERO_CRLF_MEDIUM).writerOffset(0);
     }
 
     @Benchmark
-    public ByteBuf byteArray2() {
-        return buf.writeBytes(CRLF).writerIndex(0);
+    public Buffer byteArray2() {
+        return buf.writeBytes(CRLF).writerOffset(0);
     }
 
     @Benchmark
-    public ByteBuf byteArray3() {
-        return buf.writeBytes(ZERO_CRLF).writerIndex(0);
+    public Buffer byteArray3() {
+        return buf.writeBytes(ZERO_CRLF).writerOffset(0);
     }
 
     @Benchmark
-    public ByteBuf chainedBytes2() {
-        return buf.writeByte(CR).writeByte(LF).writerIndex(0);
+    public Buffer chainedBytes2() {
+        return buf.writeByte(CR).writeByte(LF).writerOffset(0);
     }
 
     @Benchmark
-    public ByteBuf chainedBytes3() {
-        return buf.writeByte('0').writeByte(CR).writeByte(LF).writerIndex(0);
+    public Buffer chainedBytes3() {
+        return buf.writeByte((byte) '0').writeByte(CR).writeByte(LF).writerOffset(0);
     }
 }
