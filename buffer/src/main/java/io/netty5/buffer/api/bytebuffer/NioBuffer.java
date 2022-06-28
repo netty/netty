@@ -56,8 +56,7 @@ import static io.netty5.buffer.api.internal.Statics.setMemory;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
-final class
-NioBuffer extends AdaptableBuffer<NioBuffer>
+final class NioBuffer extends AdaptableBuffer<NioBuffer>
         implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent, ComponentIterator.Next {
     private static final ByteBuffer CLOSED_BUFFER = ByteBuffer.allocate(0);
 
