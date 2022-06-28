@@ -353,6 +353,16 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
     }
 
+    @Override
+    public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
+        assert ctx == outboundCtx.delegatingCtx();
+        if (!outboundCtx.removed) {
+            return outboundHandler.sendOutboundEvent(outboundCtx, event);
+        } else {
+            return outboundCtx.sendOutboundEvent(event);
+        }
+    }
+
     private static final class CombinedChannelHandlerContext extends DelegatingChannelHandlerContext {
 
         private final ChannelHandler handler;

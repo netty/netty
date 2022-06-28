@@ -47,8 +47,8 @@ public class CombinedChannelDuplexHandlerTest {
         INACTIVE,
         CHANNEL_READ,
         CHANNEL_READ_COMPLETE,
-        EXCEPTION_CAUGHT,
-        USER_EVENT_TRIGGERED,
+        CHANNEL_EXCEPTION_CAUGHT,
+        CHANNEL_INBOUND_EVENT,
         CHANNEL_WRITABILITY_CHANGED,
         HANDLER_ADDED,
         HANDLER_REMOVED,
@@ -60,7 +60,8 @@ public class CombinedChannelDuplexHandlerTest {
         REGISTER,
         DEREGISTER,
         CLOSE,
-        DISCONNECT
+        DISCONNECT,
+        SEND_OUTBOUND_EVENT
     }
 
     @Test
@@ -212,6 +213,7 @@ public class CombinedChannelDuplexHandlerTest {
         channel.pipeline().write(MSG).sync();
         channel.pipeline().flush();
         channel.pipeline().read();
+        channel.pipeline().sendOutboundEvent(USER_EVENT);
         channel.pipeline().disconnect().sync();
         channel.pipeline().close().sync();
         channel.pipeline().deregister().sync();
@@ -223,6 +225,7 @@ public class CombinedChannelDuplexHandlerTest {
         assertEquals(Event.WRITE, outboundHandler.pollEvent());
         assertEquals(Event.FLUSH, outboundHandler.pollEvent());
         assertEquals(Event.READ, outboundHandler.pollEvent());
+        assertEquals(Event.SEND_OUTBOUND_EVENT, outboundHandler.pollEvent());
         assertEquals(Event.CLOSE, outboundHandler.pollEvent());
         assertEquals(Event.CLOSE, outboundHandler.pollEvent());
         assertEquals(Event.DEREGISTER, outboundHandler.pollEvent());
@@ -245,8 +248,8 @@ public class CombinedChannelDuplexHandlerTest {
         assertEquals(Event.ACTIVE, handler.pollEvent());
         assertEquals(Event.CHANNEL_READ, handler.pollEvent());
         assertEquals(Event.CHANNEL_READ_COMPLETE, handler.pollEvent());
-        assertEquals(Event.EXCEPTION_CAUGHT, handler.pollEvent());
-        assertEquals(Event.USER_EVENT_TRIGGERED, handler.pollEvent());
+        assertEquals(Event.CHANNEL_EXCEPTION_CAUGHT, handler.pollEvent());
+        assertEquals(Event.CHANNEL_INBOUND_EVENT, handler.pollEvent());
         assertEquals(Event.CHANNEL_WRITABILITY_CHANGED, handler.pollEvent());
         assertEquals(Event.INACTIVE, handler.pollEvent());
         assertEquals(Event.UNREGISTERED, handler.pollEvent());
@@ -308,7 +311,7 @@ public class CombinedChannelDuplexHandlerTest {
 
         @Override
         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-            queue.add(Event.USER_EVENT_TRIGGERED);
+            queue.add(Event.CHANNEL_INBOUND_EVENT);
         }
 
         @Override
@@ -318,7 +321,7 @@ public class CombinedChannelDuplexHandlerTest {
 
         @Override
         public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            queue.add(Event.EXCEPTION_CAUGHT);
+            queue.add(Event.CHANNEL_EXCEPTION_CAUGHT);
         }
 
         Event pollEvent() {
@@ -404,6 +407,17 @@ public class CombinedChannelDuplexHandlerTest {
         @Override
         public void flush(ChannelHandlerContext ctx) {
             queue.add(Event.FLUSH);
+        }
+
+        @Override
+        public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
+            try {
+                assertSame(USER_EVENT, event);
+                queue.add(Event.SEND_OUTBOUND_EVENT);
+                return ctx.newSucceededFuture();
+            } catch (AssertionError e) {
+                return ctx.newFailedFuture(e);
+            }
         }
 
         Event pollEvent() {
