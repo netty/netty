@@ -141,7 +141,7 @@ import java.net.SocketAddress;
  * add it to one or more {@link ChannelPipeline}s multiple times without
  * a race condition.
  * <p>
- * If this method is not implemented and return {@code true}, you have to create a new handler
+ * If this method is not implemented and return {@code false}, you have to create a new handler
  * instance every time you add it to a pipeline because it has unshared state
  * such as member variables.
  *
