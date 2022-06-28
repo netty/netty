@@ -15,7 +15,6 @@
  */
 package io.netty5.example.uptime;
 
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.handler.timeout.IdleState;
@@ -27,7 +26,6 @@ import java.util.concurrent.TimeUnit;
  * Keep reconnecting to the server while printing out the current uptime and
  * connection attempt getStatus.
  */
-@Sharable
 public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
 
     long startTime = -1;

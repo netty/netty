@@ -17,7 +17,6 @@ package io.netty5.example.http2.helloworld.multiplex.server;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty5.handler.codec.http2.DefaultHttp2Headers;
@@ -36,10 +35,14 @@ import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
  * <p>This example is making use of the "multiplexing" http2 API, where streams are mapped to child
  * Channels. This API is very experimental and incomplete.
  */
-@Sharable
 public class HelloWorldHttp2Handler implements ChannelHandler {
 
     static final byte[] RESPONSE_BYTES = "Hello World".getBytes(StandardCharsets.UTF_8);
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

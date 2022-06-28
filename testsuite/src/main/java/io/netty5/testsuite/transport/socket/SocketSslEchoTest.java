@@ -22,7 +22,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
@@ -453,7 +452,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 serverSslHandler.engine().getSession().getCipherSuite());
     }
 
-    @Sharable
     private abstract class EchoHandler extends SimpleChannelInboundHandler<Buffer> {
 
         protected final AtomicInteger recvCounter;
@@ -467,6 +465,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             this.recvCounter = recvCounter;
             this.negoCounter = negoCounter;
             this.exception = exception;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

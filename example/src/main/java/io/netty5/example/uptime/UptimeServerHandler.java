@@ -15,12 +15,15 @@
  */
 package io.netty5.example.uptime;
 
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 
-@Sharable
 public class UptimeServerHandler extends SimpleChannelInboundHandler<Object> {
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         // discard

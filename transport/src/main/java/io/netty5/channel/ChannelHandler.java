@@ -20,12 +20,6 @@ import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Future;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.net.SocketAddress;
 
 /**
@@ -97,11 +91,14 @@ import java.net.SocketAddress;
  *     // your methods here
  * }
  *
- * {@code @Sharable}
  * public class DataServerHandler extends {@link SimpleChannelInboundHandler}&lt;Message&gt; {
  *     private final {@link AttributeKey}&lt;{@link Boolean}&gt; auth =
  *           {@link AttributeKey#valueOf(String) AttributeKey.valueOf("auth")};
  *
+ *     {@code @Override}
+ *     public boolean isSharable() {
+ *         return true;
+ *     }
  *     {@code @Override}
  *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
  *         {@link Attribute}&lt;{@link Boolean}&gt; attr = ctx.attr(auth);
@@ -134,22 +131,19 @@ import java.net.SocketAddress;
  * </pre>
  *
  *
- * <h4>The {@code @Sharable} annotation</h4>
+ * <h4>The {@link #isSharable()} method</h4>
  * <p>
  * In the example above which used an {@link AttributeKey},
- * you might have noticed the {@code @Sharable} annotation.
+ * you might have noticed the {@link #isSharable()} method is override to return {@code true}.
  * <p>
- * If a {@link ChannelHandler} is annotated with the {@code @Sharable}
- * annotation, it means you can create an instance of the handler just once and
+ * If the {@link ChannelHandler#isSharable()} is returning{@code true},
+ * it means you can create an instance of the handler just once and
  * add it to one or more {@link ChannelPipeline}s multiple times without
  * a race condition.
  * <p>
- * If this annotation is not specified, you have to create a new handler
+ * If this method is not implemented and return {@code true}, you have to create a new handler
  * instance every time you add it to a pipeline because it has unshared state
  * such as member variables.
- * <p>
- * This annotation is provided for documentation purpose, just like
- * <a href="http://www.javaconcurrencyinpractice.com/annotations/doc/">the JCIP annotations</a>.
  *
  * <h3>Additional resources worth reading</h3>
  * <p>
@@ -176,23 +170,14 @@ public interface ChannelHandler {
     }
 
     /**
-     * Indicates that the same instance of the annotated {@link ChannelHandler}
-     * can be added to one or more {@link ChannelPipeline}s multiple times
-     * without a race condition.
-     * <p>
-     * If this annotation is not specified, you have to create a new handler
+     * Return {@code true} if the implementation is sharable and so can be added
+     * to different {@link ChannelPipeline}s. By default, this returns {@code false}.
+     * If this method returns {@code false}, you have to create a new handler
      * instance every time you add it to a pipeline because it has unshared
      * state such as member variables.
-     * <p>
-     * This annotation is provided for documentation purpose, just like
-     * <a href="http://www.javaconcurrencyinpractice.com/annotations/doc/">the JCIP annotations</a>.
      */
-    @Inherited
-    @Documented
-    @Target({ElementType.TYPE, ElementType.TYPE_USE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Sharable {
-        // no value
+    default boolean isSharable() {
+        return false;
     }
 
     /**

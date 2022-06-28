@@ -21,7 +21,6 @@ import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -164,7 +163,6 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         return idSet;
     }
 
-    @Sharable
     private static class ReadAndDiscardHandler extends SimpleChannelInboundHandler<Buffer> {
         final AtomicReference<Throwable> exception = new AtomicReference<>();
         private final boolean server;
@@ -173,6 +171,11 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         ReadAndDiscardHandler(boolean server, boolean autoRead) {
             this.server = server;
             this.autoRead = autoRead;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

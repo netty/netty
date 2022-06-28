@@ -20,7 +20,6 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -220,7 +219,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         serverSslHandler = null;
     }
 
-    @Sharable
     private static final class TestHandler extends SimpleChannelInboundHandler<Buffer> {
 
         private final AtomicReference<Throwable> exception;
@@ -228,6 +226,11 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
         TestHandler(AtomicReference<Throwable> exception) {
             this.exception = exception;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.base64;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
@@ -41,7 +40,6 @@ import static java.util.Objects.requireNonNull;
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
  */
-@Sharable
 public class Base64Encoder extends MessageToMessageEncoder<Buffer> {
 
     private final boolean breakLines;
@@ -60,6 +58,11 @@ public class Base64Encoder extends MessageToMessageEncoder<Buffer> {
 
         this.breakLines = breakLines;
         this.dialect = dialect;
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

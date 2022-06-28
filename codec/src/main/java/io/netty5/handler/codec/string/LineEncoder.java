@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.string;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
@@ -56,7 +55,6 @@ import static java.util.Objects.requireNonNull;
  * }
  * </pre>
  */
-@Sharable
 public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LineEncoder.class);
 
@@ -90,6 +88,11 @@ public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
     public LineEncoder(LineSeparator lineSeparator, Charset charset) {
         this.charset = requireNonNull(charset, "charset");
         this.lineSeparator = requireNonNull(lineSeparator, "lineSeparator").value().getBytes(charset);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

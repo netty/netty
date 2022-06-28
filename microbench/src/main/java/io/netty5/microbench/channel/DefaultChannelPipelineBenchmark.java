@@ -36,11 +36,19 @@ import org.openjdk.jmh.infra.Blackhole;
 @State(Scope.Benchmark)
 public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
 
-    @ChannelHandler.Sharable
-    private static final ChannelHandler NOOP_HANDLER = new ChannelHandler() { };
+    private static final ChannelHandler NOOP_HANDLER = new ChannelHandler() {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    };
 
-    @ChannelHandler.Sharable
     private static final ChannelHandler CONSUMING_HANDLER = new ChannelHandler() {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
             // NOOP

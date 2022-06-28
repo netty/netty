@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.MessageToMessageDecoder;
@@ -27,7 +26,6 @@ import static java.util.Objects.requireNonNull;
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsQuery}.
  */
 @UnstableApi
-@ChannelHandler.Sharable
 public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     private final DnsRecordDecoder recordDecoder;
@@ -44,6 +42,11 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
      */
     public DatagramDnsQueryDecoder(DnsRecordDecoder recordDecoder) {
         this.recordDecoder = requireNonNull(recordDecoder, "recordDecoder");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

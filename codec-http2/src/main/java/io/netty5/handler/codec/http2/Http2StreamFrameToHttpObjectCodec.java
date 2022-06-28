@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.MessageToMessageCodec;
@@ -49,14 +48,13 @@ import java.util.List;
 /**
  * This handler converts from {@link Http2StreamFrame} to {@link HttpObject},
  * and back. It can be used as an adapter in conjunction with {@link
- * Http2MultiplexCodec} to make http/2 connections backward-compatible with
+ * Http2MultiplexHandler} to make http/2 connections backward-compatible with
  * {@link ChannelHandler}s expecting {@link HttpObject}
  *
  * For simplicity, it converts to chunked encoding unless the entire stream
  * is a single header.
  */
 @UnstableApi
-@Sharable
 public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Http2StreamFrame, HttpObject> {
 
     private static final AttributeKey<HttpScheme> SCHEME_ATTR_KEY =
@@ -73,6 +71,11 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
     public Http2StreamFrameToHttpObjectCodec(final boolean isServer) {
         this(isServer, true);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

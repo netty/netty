@@ -93,13 +93,17 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         }
     }
 
-    @ChannelHandler.Sharable
     private static final class AcceptedChannelCounter implements ChannelHandler {
 
         final CountDownLatch latch;
 
         AcceptedChannelCounter(int nChannels) {
             latch = new CountDownLatch(nChannels);
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

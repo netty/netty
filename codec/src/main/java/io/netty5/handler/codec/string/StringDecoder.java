@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.string;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
@@ -51,7 +50,6 @@ import static java.util.Objects.requireNonNull;
  * }
  * </pre>
  */
-@Sharable
 public class StringDecoder extends MessageToMessageDecoder<Buffer> {
 
     // TODO Use CharsetDecoder instead.
@@ -70,6 +68,11 @@ public class StringDecoder extends MessageToMessageDecoder<Buffer> {
     public StringDecoder(Charset charset) {
         requireNonNull(charset, "charset");
         this.charset = charset;
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

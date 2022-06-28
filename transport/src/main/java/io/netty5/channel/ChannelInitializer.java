@@ -17,7 +17,6 @@ package io.netty5.channel;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -42,14 +41,18 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
  * bootstrap.childHandler(new MyChannelInitializer());
  * ...
  * </pre>
- * Be aware that this class is marked as {@link Sharable} and so the implementation must be safe to be re-used.
+ * Be aware that this class is marked as {@link #isSharable()} and so the implementation must be safe to be re-used.
  *
  * @param <C>   A sub-type of {@link Channel}
  */
-@Sharable
 public abstract class ChannelInitializer<C extends Channel> implements ChannelHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     /**
      * This method will be called once the {@link Channel} was registered. After the method returns this instance

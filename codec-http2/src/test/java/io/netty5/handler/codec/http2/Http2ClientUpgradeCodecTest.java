@@ -82,6 +82,10 @@ public class Http2ClientUpgradeCodecTest {
         assertTrue(channel.finishAndReleaseAll());
     }
 
-    @ChannelHandler.Sharable
-    private static final class HttpInboundHandler implements ChannelHandler { }
+    private static final class HttpInboundHandler implements ChannelHandler {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    }
 }

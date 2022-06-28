@@ -18,7 +18,6 @@ package io.netty5.handler.logging;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.logging.InternalLogLevel;
@@ -34,7 +33,6 @@ import static java.util.Objects.requireNonNull;
  * A {@link ChannelHandler} that logs all events using a logging framework.
  * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for ByteBufs.
  */
-@Sharable
 @SuppressWarnings("StringBufferReplaceableByString")
 public class LoggingHandler implements ChannelHandler {
 
@@ -155,6 +153,11 @@ public class LoggingHandler implements ChannelHandler {
         this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = InternalLoggerFactory.getInstance(name);
         internalLevel = level.toInternalLevel();
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     /**
