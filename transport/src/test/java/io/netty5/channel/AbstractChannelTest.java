@@ -198,7 +198,7 @@ public class AbstractChannelTest {
         channel.register().sync(); // Cause any exceptions to be thrown
     }
 
-    private static class TestChannel extends AbstractChannel {
+    private static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
         private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
 
         private final ChannelConfig config = new DefaultChannelConfig(this);

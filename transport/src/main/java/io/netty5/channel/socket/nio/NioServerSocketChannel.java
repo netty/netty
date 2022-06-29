@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.socket.nio;
 
+import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
@@ -48,7 +49,7 @@ import static java.util.Objects.requireNonNull;
  * A {@link io.netty5.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
  */
-public class NioServerSocketChannel extends AbstractNioMessageChannel
+public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, InetSocketAddress, InetSocketAddress>
                              implements io.netty5.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -110,11 +111,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -132,18 +128,13 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return null;
-    }
-
-    @Override
     protected ServerSocketChannel javaChannel() {
         return (ServerSocketChannel) super.javaChannel();
     }
 
     @Override
-    protected SocketAddress localAddress0() {
-        return SocketUtils.localSocketAddress(javaChannel().socket());
+    protected InetSocketAddress localAddress0() {
+        return (InetSocketAddress) SocketUtils.localSocketAddress(javaChannel().socket());
     }
 
     @Override
@@ -201,7 +192,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
+    protected InetSocketAddress remoteAddress0() {
         return null;
     }
 

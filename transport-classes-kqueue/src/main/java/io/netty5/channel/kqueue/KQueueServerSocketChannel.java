@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
@@ -28,7 +29,8 @@ import static io.netty5.channel.kqueue.BsdSocket.newSocketStream;
 import static io.netty5.channel.unix.NativeInetAddress.address;
 
 @UnstableApi
-public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel implements ServerSocketChannel {
+public final class KQueueServerSocketChannel extends
+        AbstractKQueueServerChannel<UnixChannel, InetSocketAddress, InetSocketAddress> implements ServerSocketChannel {
     private final KQueueServerSocketChannelConfig config;
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
@@ -60,16 +62,6 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
             socket.setTcpFastOpen(true);
         }
         active = true;
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
     }
 
     @Override

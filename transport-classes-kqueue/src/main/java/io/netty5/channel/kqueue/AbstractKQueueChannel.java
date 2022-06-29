@@ -21,7 +21,6 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
@@ -46,7 +45,8 @@ import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
+abstract class AbstractKQueueChannel<P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractChannel<P, L, R> implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final Runnable readReadyRunnable = new Runnable() {
@@ -73,33 +73,35 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     boolean inputClosedSeenErrorOnRead;
 
     protected volatile boolean active;
-    private volatile SocketAddress local;
-    private volatile SocketAddress remote;
+    private volatile L local;
+    private volatile R remote;
 
     boolean readPending;
     boolean maybeMoreDataToRead;
     private KQueueRecvBufferAllocatorHandle allocHandle;
 
-    AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
+    @SuppressWarnings("unchecked")
+    AbstractKQueueChannel(P parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
         super(parent, eventLoop);
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
-            local = fd.localAddress();
-            remote = fd.remoteAddress();
+            local = (L) fd.localAddress();
+            remote = (R) fd.remoteAddress();
         }
     }
 
-    AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
+    @SuppressWarnings("unchecked")
+    AbstractKQueueChannel(P parent, EventLoop eventLoop, BsdSocket fd, R remote) {
         super(parent, eventLoop);
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
-        local = fd.localAddress();
+        local = (L) fd.localAddress();
     }
 
     static boolean isSoErrorZero(BsdSocket fd) {
@@ -144,9 +146,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         doClose();
     }
 
-    void resetCachedAddresses() {
-        local = socket.localAddress();
-        remote = socket.remoteAddress();
+    @SuppressWarnings("unchecked")
+    final void resetCachedAddresses() {
+        local = (L) socket.localAddress();
+        remote = (R) socket.remoteAddress();
     }
 
     @Override
@@ -598,11 +601,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
+    @SuppressWarnings("unchecked")
     private boolean doFinishConnect() throws Exception {
         if (socket.finishConnect()) {
             writeFilter(false);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remote = (R) computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
             }
             requestedRemoteAddress = null;
             return true;
@@ -611,18 +615,20 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void doBind(SocketAddress local) throws Exception {
         if (local instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) local);
         }
         socket.bind(local);
-        this.local = socket.localAddress();
+        this.local = (L) socket.localAddress();
     }
 
     /**
      * Connect to the remote peer
      */
+    @SuppressWarnings("unchecked")
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) localAddress);
@@ -648,12 +654,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         boolean connected = doConnect0(remoteAddress, localAddress);
         if (connected) {
             remote = remoteSocketAddr == null?
-                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+                    (R) remoteAddress : (R) computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.
         //
         // See https://github.com/netty/netty/issues/3463
-        local = socket.localAddress();
+        local = (L) socket.localAddress();
         return connected;
     }
 
@@ -674,12 +680,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected SocketAddress localAddress0() {
+    protected L localAddress0() {
         return local;
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
+    protected R remoteAddress0() {
         return remote;
     }
 

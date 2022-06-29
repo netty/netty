@@ -21,6 +21,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.ServerDomainSocketChannel;
 import io.netty5.channel.unix.Socket;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -29,7 +30,8 @@ import java.net.SocketAddress;
 
 import static io.netty5.channel.epoll.LinuxSocket.newSocketDomain;
 
-public final class EpollServerDomainSocketChannel extends AbstractEpollServerChannel
+public final class EpollServerDomainSocketChannel
+        extends AbstractEpollServerChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
         implements ServerDomainSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             EpollServerDomainSocketChannel.class);
@@ -45,17 +47,8 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
         super(eventLoop, childEventLoopGroup, fd);
     }
 
-    EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
-        super(eventLoop, childEventLoopGroup, fd);
-    }
-
-    EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
-                                   LinuxSocket fd, boolean active) {
-        super(eventLoop, childEventLoopGroup, fd, active);
-    }
-
     @Override
-    protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) throws Exception {
+    protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) {
         return new EpollDomainSocketChannel(this, childEventLoopGroup().next(), new Socket(fd));
     }
 
@@ -92,15 +85,5 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
     @Override
     public EpollServerChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public DomainSocketAddress remoteAddress() {
-        return (DomainSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public DomainSocketAddress localAddress() {
-        return (DomainSocketAddress) super.localAddress();
     }
 }

@@ -24,6 +24,7 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
@@ -31,7 +32,9 @@ import java.net.SocketAddress;
 
 import static java.util.Objects.requireNonNull;
 
-public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
+public abstract class AbstractEpollServerChannel
+        <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractEpollChannel<P, L, R> implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
@@ -40,7 +43,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     // So use 26 bytes as it's a power of two.
     private final byte[] acceptedAddress = new byte[26];
 
-    protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         this(eventLoop, childEventLoopGroup, new LinuxSocket(fd), false);
     }
 
@@ -55,41 +58,44 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     @Override
-    public EventLoopGroup childEventLoopGroup() {
+    public final EventLoopGroup childEventLoopGroup() {
         return childEventLoopGroup;
     }
 
     @Override
-    public ChannelMetadata metadata() {
+    public final ChannelMetadata metadata() {
         return METADATA;
     }
 
     @Override
-    protected InetSocketAddress remoteAddress0() {
+    protected final R remoteAddress0() {
         return null;
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    public abstract EpollServerChannelConfig config();
+
+    @Override
+    protected final void doWrite(ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected Object filterOutboundMessage(Object msg) throws Exception {
+    protected final Object filterOutboundMessage(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
     @Override
-    protected void connectTransport(
+    protected final void connectTransport(
             SocketAddress socketAddress, SocketAddress socketAddress2, Promise<Void> channelPromise) {
         // Connect not supported by ServerChannel implementations
         channelPromise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    void epollInReady() {
+    final void epollInReady() {
         assert executor().inEventLoop();
         final ChannelConfig config = config();
         if (shouldBreakEpollInReady(config)) {
@@ -137,17 +143,17 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownDirection direction) {
+    protected final void doShutdown(ChannelShutdownDirection direction) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public boolean isShutdown(ChannelShutdownDirection direction) {
+    public final boolean isShutdown(ChannelShutdownDirection direction) {
         return !isActive();
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected final boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
         throw new UnsupportedOperationException();
     }
 }

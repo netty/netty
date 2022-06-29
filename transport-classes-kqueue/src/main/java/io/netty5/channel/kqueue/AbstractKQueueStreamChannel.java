@@ -18,8 +18,8 @@ package io.netty5.channel.kqueue;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.Resource;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
@@ -45,7 +45,9 @@ import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WR
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 
 @UnstableApi
-public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel {
+public abstract class AbstractKQueueStreamChannel
+        <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractKQueueChannel<P, L, R> {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
@@ -56,11 +58,11 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     // meantime.
     private final Runnable flushTask = this::flush0;
 
-    AbstractKQueueStreamChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
+    AbstractKQueueStreamChannel(P parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
         super(parent, eventLoop, fd, active);
     }
 
-    AbstractKQueueStreamChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
+    AbstractKQueueStreamChannel(P parent, EventLoop eventLoop, BsdSocket fd, R remote) {
         super(parent, eventLoop, fd, remote);
     }
 

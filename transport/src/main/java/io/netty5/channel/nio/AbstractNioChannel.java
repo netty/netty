@@ -40,7 +40,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
  */
-public abstract class AbstractNioChannel extends AbstractChannel {
+public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractChannel<P, L, R> {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
@@ -67,7 +68,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param ch             the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp the ops to set to receive data from the {@link SelectableChannel}
      */
-    protected AbstractNioChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
+    protected AbstractNioChannel(P parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
         super(parent, eventLoop);
         this.ch = ch;
         this.readInterestOp = readInterestOp;

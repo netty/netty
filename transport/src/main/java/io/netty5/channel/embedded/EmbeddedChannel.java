@@ -52,7 +52,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Base class for {@link Channel} implementations that are used in an embedded fashion.
  */
-public class EmbeddedChannel extends AbstractChannel {
+public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
 
     private static final SocketAddress LOCAL_ADDRESS = new EmbeddedSocketAddress();
     private static final SocketAddress REMOTE_ADDRESS = new EmbeddedSocketAddress();

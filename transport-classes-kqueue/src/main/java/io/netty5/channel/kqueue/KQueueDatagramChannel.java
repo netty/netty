@@ -28,6 +28,7 @@ import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IovArray;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
@@ -51,7 +52,9 @@ import static io.netty5.channel.kqueue.BsdSocket.newSocketDgram;
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
-public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel implements DatagramChannel {
+public final class KQueueDatagramChannel
+        extends AbstractKQueueDatagramChannel<UnixChannel, InetSocketAddress, InetSocketAddress>
+        implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDatagramChannel.class);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -79,16 +82,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
         super(null, eventLoop, socket, active);
         config = new KQueueDatagramChannelConfig(this);
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
     }
 
     @Override

@@ -24,15 +24,17 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.internal.UnstableApi;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
-public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel implements ServerChannel {
+public abstract class AbstractKQueueServerChannel
+        <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractKQueueChannel<P, L, R> implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private final EventLoopGroup childEventLoopGroup;
 
@@ -61,7 +63,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
     }
 
     @Override
-    protected InetSocketAddress remoteAddress0() {
+    protected R remoteAddress0() {
         return null;
     }
 

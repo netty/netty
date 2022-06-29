@@ -33,7 +33,8 @@ import static java.util.Objects.requireNonNull;
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
  */
-public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
+public abstract class AbstractServerChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractChannel<P, L, R> implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
@@ -47,42 +48,37 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public EventLoopGroup childEventLoopGroup() {
+    public final EventLoopGroup childEventLoopGroup() {
         return childEventLoopGroup;
     }
 
     @Override
-    public ChannelMetadata metadata() {
+    public final ChannelMetadata metadata() {
         return METADATA;
     }
 
     @Override
-    public SocketAddress remoteAddress() {
+    protected final R remoteAddress0() {
         return null;
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
-        return null;
-    }
-
-    @Override
-    protected void doDisconnect() {
+    protected final void doDisconnect() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+    protected final void doShutdown(ChannelShutdownDirection direction) throws Exception {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public boolean isShutdown(ChannelShutdownDirection direction) {
+    public final boolean isShutdown(ChannelShutdownDirection direction) {
         return !isActive();
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected final void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
 
@@ -92,7 +88,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+    public final void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         safeSetFailure(promise, new UnsupportedOperationException());
     }
 }

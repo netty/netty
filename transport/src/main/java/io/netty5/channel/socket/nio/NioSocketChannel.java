@@ -27,7 +27,6 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioByteChannel;
 import io.netty5.channel.socket.DefaultSocketChannelConfig;
 import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannelConfig;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.internal.SocketUtils;
@@ -49,7 +48,9 @@ import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WR
 /**
  * {@link io.netty5.channel.socket.SocketChannel} which uses NIO selector based implementation.
  */
-public class NioSocketChannel extends AbstractNioByteChannel implements io.netty5.channel.socket.SocketChannel {
+public class NioSocketChannel
+        extends AbstractNioByteChannel<NioServerSocketChannel, InetSocketAddress, InetSocketAddress>
+        implements io.netty5.channel.socket.SocketChannel {
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
@@ -101,14 +102,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * @param eventLoop the {@link EventLoop} to use for IO.
      * @param socket    the {@link SocketChannel} which will be used
      */
-    public NioSocketChannel(Channel parent, EventLoop eventLoop, SocketChannel socket) {
+    public NioSocketChannel(NioServerSocketChannel parent, EventLoop eventLoop, SocketChannel socket) {
         super(parent, eventLoop, socket);
         config = new NioSocketChannelConfig(this, socket.socket());
-    }
-
-    @Override
-    public ServerSocketChannel parent() {
-        return (ServerSocketChannel) super.parent();
     }
 
     @Override
@@ -143,16 +139,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
     protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
         switch (direction) {
             case Inbound:
@@ -167,13 +153,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected SocketAddress localAddress0() {
-        return javaChannel().socket().getLocalSocketAddress();
+    protected InetSocketAddress localAddress0() {
+        return (InetSocketAddress) javaChannel().socket().getLocalSocketAddress();
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
-        return javaChannel().socket().getRemoteSocketAddress();
+    protected InetSocketAddress remoteAddress0() {
+        return (InetSocketAddress) javaChannel().socket().getRemoteSocketAddress();
     }
 
     @Override

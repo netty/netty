@@ -18,6 +18,7 @@ package io.netty5.channel.epoll;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelMetadata;
@@ -56,7 +57,8 @@ import static java.util.Objects.requireNonNull;
  * {@link DatagramChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
  * maximal performance.
  */
-public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
+public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel, InetSocketAddress, InetSocketAddress>
+        implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final String EXPECTED_TYPES =
@@ -110,16 +112,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
         super(null, eventLoop, fd, active);
         config = new EpollDatagramChannelConfig(this);
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
     }
 
     @Override
