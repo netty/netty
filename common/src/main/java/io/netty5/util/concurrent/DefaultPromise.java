@@ -150,11 +150,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V> {
 
     @Override
     public boolean setUncancellable() {
-        if (RESULT_UPDATER.compareAndSet(this, null, UNCANCELLABLE)) {
-            return true;
-        }
-        Object result = this.result;
-        return !isDone0(result) || !isCancelled0(result);
+        return RESULT_UPDATER.compareAndSet(this, null, UNCANCELLABLE);
     }
 
     @Override

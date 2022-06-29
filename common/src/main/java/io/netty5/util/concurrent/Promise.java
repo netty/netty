@@ -52,8 +52,8 @@ public interface Promise<V> extends AsynchronousResult<V> {
     /**
      * Make this promise impossible to cancel.
      *
-     * @return {@code true} if and only if successfully marked this promise as uncancellable, or it is already done
-     * without being cancelled. Otherwise {@code false} if this promise has been cancelled already.
+     * @return {@code true} if and only if successfully marked this promise as uncancellable.
+     * Otherwise {@code false} if this promise has been cancelled already, or has completed.
      */
     boolean setUncancellable();
 

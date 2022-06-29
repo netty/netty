@@ -200,6 +200,23 @@ public class DefaultPromiseTest {
     }
 
     @Test
+    public void donePromiseCannotBeMadeUncancellable() {
+        DefaultPromise<Void> promise;
+
+        promise = new DefaultPromise<>(INSTANCE);
+        promise.setSuccess(null);
+        assertFalse(promise.setUncancellable());
+
+        promise = new DefaultPromise<>(INSTANCE);
+        promise.setFailure(new RuntimeException());
+        assertFalse(promise.setUncancellable());
+
+        promise = new DefaultPromise<>(INSTANCE);
+        promise.cancel();
+        assertFalse(promise.setUncancellable());
+    }
+
+    @Test
     public void testStackOverflowWithImmediateEventExecutorA() throws Exception {
         testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), INSTANCE, true);
         testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), INSTANCE, false);
