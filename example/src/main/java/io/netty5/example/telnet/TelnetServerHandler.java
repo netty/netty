@@ -16,7 +16,6 @@
 package io.netty5.example.telnet;
 
 import io.netty5.channel.ChannelFutureListeners;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.util.concurrent.Future;
@@ -27,8 +26,12 @@ import java.util.Date;
 /**
  * Handles a server-side channel.
  */
-@Sharable
 public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {

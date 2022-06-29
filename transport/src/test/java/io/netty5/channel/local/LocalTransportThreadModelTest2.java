@@ -19,7 +19,6 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.util.Resource;
@@ -95,7 +94,6 @@ public class LocalTransportThreadModelTest2 {
         localChannel.closeFuture().await();
     }
 
-    @Sharable
     static class LocalHandler implements ChannelHandler {
         private final String name;
 
@@ -105,6 +103,11 @@ public class LocalTransportThreadModelTest2 {
 
         LocalHandler(String name) {
             this.name = name;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

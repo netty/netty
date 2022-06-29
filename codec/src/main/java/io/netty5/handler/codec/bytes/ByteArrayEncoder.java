@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.bytes;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.LengthFieldPrepender;
@@ -48,8 +47,13 @@ import java.util.List;
  * }
  * </pre>
  */
-@Sharable
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, byte[] msg, List<Object> out) throws Exception {
         out.add(ctx.bufferAllocator().copyOf(msg));

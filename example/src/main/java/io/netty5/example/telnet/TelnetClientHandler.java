@@ -15,15 +15,18 @@
  */
 package io.netty5.example.telnet;
 
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 
 /**
  * Handles a client-side channel.
  */
-@Sharable
 public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {

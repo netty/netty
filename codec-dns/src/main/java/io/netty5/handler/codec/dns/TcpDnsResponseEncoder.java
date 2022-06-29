@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.util.internal.UnstableApi;
@@ -26,7 +25,6 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 @UnstableApi
-@ChannelHandler.Sharable
 public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
     private final DnsRecordEncoder encoder;
 
@@ -42,6 +40,11 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
      */
     public TcpDnsResponseEncoder(DnsRecordEncoder encoder) {
         this.encoder = requireNonNull(encoder, "encoder");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

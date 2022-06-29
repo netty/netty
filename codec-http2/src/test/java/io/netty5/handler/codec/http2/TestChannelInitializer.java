@@ -20,7 +20,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.UncheckedBooleanSupplier;
@@ -30,10 +29,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Channel initializer useful in tests.
  */
-@Sharable
 public class TestChannelInitializer extends ChannelInitializer<Channel> {
     ChannelHandler handler;
     AtomicInteger maxReads;
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     public void initChannel(Channel channel) {

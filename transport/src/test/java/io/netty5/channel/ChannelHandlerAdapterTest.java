@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty5.channel.ChannelHandler.Sharable;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,19 +22,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChannelHandlerAdapterTest {
 
-    @Sharable
     private static final class SharableChannelHandlerAdapter extends ChannelHandlerAdapter {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
     }
 
     @Test
     public void testSharable() {
         ChannelHandlerAdapter handler = new SharableChannelHandlerAdapter();
-        assertTrue(handler.isSharable());
-    }
-
-    @Test
-    public void testInnerClassSharable() {
-        ChannelHandlerAdapter handler = new @Sharable ChannelHandlerAdapter() { };
         assertTrue(handler.isSharable());
     }
 

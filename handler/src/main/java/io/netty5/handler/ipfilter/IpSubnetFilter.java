@@ -16,7 +16,6 @@
 package io.netty5.handler.ipfilter;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 
 import java.net.Inet4Address;
@@ -52,7 +51,6 @@ import static java.util.Objects.requireNonNull;
  * </p>
  *
  */
-@Sharable
 public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
     private final boolean acceptIfNotFound;
@@ -163,6 +161,11 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
 
         this.ipv4Rules = sortAndFilter(unsortedIPv4Rules);
         this.ipv6Rules = sortAndFilter(unsortedIPv6Rules);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

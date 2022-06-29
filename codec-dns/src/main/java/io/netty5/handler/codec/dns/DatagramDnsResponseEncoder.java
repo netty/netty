@@ -17,7 +17,6 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
-import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.MessageToMessageEncoder;
@@ -33,7 +32,6 @@ import static java.util.Objects.requireNonNull;
  * {@link DatagramPacket}.
  */
 @UnstableApi
-@ChannelHandler.Sharable
 public class DatagramDnsResponseEncoder
     extends MessageToMessageEncoder<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
 
@@ -51,6 +49,11 @@ public class DatagramDnsResponseEncoder
      */
     public DatagramDnsResponseEncoder(DnsRecordEncoder recordEncoder) {
         this.recordEncoder = requireNonNull(recordEncoder, "recordEncoder");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

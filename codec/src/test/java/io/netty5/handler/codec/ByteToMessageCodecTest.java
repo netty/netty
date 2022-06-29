@@ -16,8 +16,6 @@
 package io.netty5.handler.codec;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
@@ -25,20 +23,9 @@ import org.junit.jupiter.api.Test;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ByteToMessageCodecTest {
-
-    @Test
-    public void testSharable() {
-        assertThrows(IllegalStateException.class, InvalidByteToMessageCodec::new);
-    }
-
-    @Test
-    public void testSharable2() {
-        assertThrows(IllegalStateException.class, InvalidByteToMessageCodec2::new);
-    }
 
     @Test
     public void testForwardPendingData() {
@@ -71,31 +58,5 @@ public class ByteToMessageCodecTest {
         }
         assertNull(ch.readInbound());
         assertNull(ch.readOutbound());
-    }
-
-    @ChannelHandler.Sharable
-    private static final class InvalidByteToMessageCodec extends ByteToMessageCodec<Integer> {
-        InvalidByteToMessageCodec() {
-            super((BufferAllocator) null);
-        }
-
-        @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, Buffer out) throws Exception { }
-
-        @Override
-        protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception { }
-    }
-
-    @ChannelHandler.Sharable
-    private static final class InvalidByteToMessageCodec2 extends ByteToMessageCodec<Integer> {
-        InvalidByteToMessageCodec2() {
-            super(Integer.class, null);
-        }
-
-        @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, Buffer out) throws Exception { }
-
-        @Override
-        protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception { }
     }
 }

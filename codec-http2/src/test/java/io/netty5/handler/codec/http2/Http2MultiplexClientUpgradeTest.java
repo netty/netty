@@ -28,8 +28,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Http2MultiplexClientUpgradeTest {
 
-    @ChannelHandler.Sharable
     static final class NoopHandler implements ChannelHandler {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.channel().close();

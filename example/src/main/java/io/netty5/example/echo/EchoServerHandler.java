@@ -16,14 +16,17 @@
 package io.netty5.example.echo;
 
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 
 /**
  * Handler implementation for the echo server.
  */
-@Sharable
 public class EchoServerHandler implements ChannelHandler {
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {

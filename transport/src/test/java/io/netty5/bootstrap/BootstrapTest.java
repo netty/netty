@@ -20,7 +20,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
@@ -419,8 +418,12 @@ public class BootstrapTest {
         }
     }
 
-    @Sharable
-    private static final class DummyHandler implements ChannelHandler { }
+    private static final class DummyHandler implements ChannelHandler {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    }
 
     private static final class TestAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
 

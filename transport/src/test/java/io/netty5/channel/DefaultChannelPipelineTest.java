@@ -18,7 +18,6 @@ package io.netty5.channel;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerMask.Skip;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.local.LocalAddress;
@@ -1704,12 +1703,16 @@ public class DefaultChannelPipelineTest {
         return new TestHandler(latch);
     }
 
-    @Sharable
     private static class TestHandler implements ChannelHandler {
         private final CountDownLatch latch;
 
         TestHandler(CountDownLatch latch) {
             this.latch = latch;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

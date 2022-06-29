@@ -17,7 +17,6 @@ package io.netty5.handler.codec;
 
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 
 import java.nio.ByteOrder;
@@ -52,7 +51,6 @@ import static java.util.Objects.requireNonNull;
  * +--------+----------------+
  * </pre>
  */
-@Sharable
 public class LengthFieldPrepender extends MessageToMessageEncoder<Buffer> {
 
     private final ByteOrder byteOrder;
@@ -131,6 +129,11 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<Buffer> {
         this.lengthFieldLength = lengthFieldLength;
         this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

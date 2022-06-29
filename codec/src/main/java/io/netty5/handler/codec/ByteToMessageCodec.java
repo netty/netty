@@ -68,7 +68,6 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
      *                              If {@code null}, the channel context allocator will be used.
      */
     protected ByteToMessageCodec(BufferAllocator allocator) {
-        ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
         encoder = new Encoder(allocator);
     }
@@ -81,9 +80,14 @@ public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter {
      *                              If {@code null}, the channel context allocator will be used.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType, BufferAllocator allocator) {
-        ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
         encoder = new Encoder(allocator);
+    }
+
+    @Override
+    public final boolean isSharable() {
+        // Can't be sharable as we keep state.
+        return false;
     }
 
     /**

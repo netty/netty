@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.CorruptedFrameException;
@@ -28,7 +27,6 @@ import java.net.InetSocketAddress;
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsResponse}.
  */
 @UnstableApi
-@ChannelHandler.Sharable
 public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     private final DnsResponseDecoder<InetSocketAddress> responseDecoder;
@@ -51,6 +49,11 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
                 return new DatagramDnsResponse(sender, recipient, id, opCode, responseCode);
             }
         };
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

@@ -223,12 +223,16 @@ public class EpollReuseAddrTest {
         return false;
     }
 
-    @ChannelHandler.Sharable
     private static class ServerSocketTestHandler implements ChannelHandler {
         private final AtomicBoolean accepted;
 
         ServerSocketTestHandler(AtomicBoolean accepted) {
             this.accepted = accepted;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override
@@ -238,12 +242,16 @@ public class EpollReuseAddrTest {
         }
     }
 
-    @ChannelHandler.Sharable
     private static class DatagramSocketTestHandler implements ChannelHandler {
         private final AtomicBoolean received;
 
         DatagramSocketTestHandler(AtomicBoolean received) {
             this.received = received;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override
@@ -253,6 +261,10 @@ public class EpollReuseAddrTest {
         }
     }
 
-    @ChannelHandler.Sharable
-    private static final class DummyHandler implements ChannelHandler { }
+    private static final class DummyHandler implements ChannelHandler {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    }
 }

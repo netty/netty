@@ -43,15 +43,19 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
      * {@link ChannelPipeline}.
      */
     protected CombinedChannelDuplexHandler() {
-        ensureNotSharable();
     }
 
     /**
      * Creates a new instance that combines the specified two handlers into one.
      */
     public CombinedChannelDuplexHandler(I inboundHandler, O outboundHandler) {
-        ensureNotSharable();
         init(inboundHandler, outboundHandler);
+    }
+
+    @Override
+    public final boolean isSharable() {
+        // Can't be sharable as we keep state.
+        return false;
     }
 
     /**

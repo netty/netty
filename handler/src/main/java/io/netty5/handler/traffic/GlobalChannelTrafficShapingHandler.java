@@ -17,7 +17,6 @@ package io.netty5.handler.traffic;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.Attribute;
 import io.netty5.util.Resource;
@@ -88,7 +87,6 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * Be sure to call {@link #release()} once this handler is not needed anymore to release all internal resources.
  * This will not shutdown the {@link EventExecutor} as it may be shared, so you need to do this by your own.
  */
-@Sharable
 public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(GlobalChannelTrafficShapingHandler.class);
@@ -264,6 +262,11 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      */
     public GlobalChannelTrafficShapingHandler(EventExecutorGroup executor) {
         createGlobalTrafficCounter(executor);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     /**

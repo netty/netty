@@ -16,7 +16,6 @@
 package io.netty5.handler.address;
 
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandler.Sharable;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.AddressResolverGroup;
@@ -32,13 +31,17 @@ import java.util.Objects;
  * {@link #connect(ChannelHandlerContext, SocketAddress, SocketAddress)} if it is not already resolved
  * and the {@link AddressResolver} supports the type of {@link SocketAddress}.
  */
-@Sharable
 public class ResolveAddressHandler implements ChannelHandler {
 
     private final AddressResolverGroup<? extends SocketAddress> resolverGroup;
 
     public ResolveAddressHandler(AddressResolverGroup<? extends SocketAddress> resolverGroup) {
         this.resolverGroup = Objects.requireNonNull(resolverGroup, "resolverGroup");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override
