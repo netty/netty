@@ -187,7 +187,7 @@ public class HttpConversionUtilTest {
         assertEquals("/path/to/something", out.path());
         assertEquals("http", out.scheme());
         assertEquals("example.com", out.authority());
-        assertEquals(HttpMethod.GET..asciiName(), out.method());
+        assertEquals(HttpMethod.GET.asciiName(), out.method());
     }
 
     @Test
@@ -205,7 +205,7 @@ public class HttpConversionUtilTest {
         assertEquals("//path/to/something", out.path());
         assertEquals("http", out.scheme());
         assertEquals("example.com", out.authority());
-        assertEquals(HttpMethod.GET..asciiName(), out.method());
+        assertEquals(HttpMethod.GET.asciiName(), out.method());
     }
 
     @Test
