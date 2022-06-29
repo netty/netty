@@ -38,6 +38,7 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
@@ -88,6 +89,7 @@ import static org.mockito.Mockito.verify;
 /**
  * Tests the full HTTP/2 framing stack including the connection and preface handlers.
  */
+@Disabled
 public class Http2ConnectionRoundtripTest {
 
     private static final long DEFAULT_AWAIT_TIMEOUT_SECONDS = 15;
