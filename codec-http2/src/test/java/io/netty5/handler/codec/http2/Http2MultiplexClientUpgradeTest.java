@@ -17,8 +17,11 @@ package io.netty5.handler.codec.http2;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import org.checkerframework.checker.units.qual.C;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -88,19 +91,23 @@ public class Http2MultiplexClientUpgradeTest {
     }
 
     @Test
-    public void clientUpgradeWithoutUpgradeHandlerThrowsHttp2Exception() throws Http2Exception {
+    @Timeout(2)
+    public void clientUpgradeWithoutUpgradeHandlerThrowsHttp2Exception() throws Http2Exception, InterruptedException {
         final Http2FrameCodec codec = newCodec();
-        final EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(null));
-
-        assertThrows(Http2Exception.class, new Executable() {
+        CountDownLatch latch = new CountDownLatch(1);
+        final EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(null), new ChannelHandler() {
             @Override
-            public void execute() throws Http2Exception {
-                try {
-                    codec.onHttpClientUpgrade();
-                } finally {
-                    ch.finishAndReleaseAll();
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause)  {
+                if (cause instanceof Http2Exception) {
+                    latch.countDown();
                 }
             }
         });
+        ch.executor().submit(() -> {
+            codec.onHttpClientUpgrade();
+            return null;
+        }).sync();
+        latch.await();
+        ch.finishAndReleaseAll();
     }
 }
