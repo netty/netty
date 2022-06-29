@@ -172,6 +172,40 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertEquals(1, out.size());
         assertSame("world", out.get("hello"));
+    }  
+
+    @Test
+    public void handlesRequest() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path/to/something", validateHeaders);
+        HttpHeaders inHeaders = msg.headers();
+        inHeaders.add(CONNECTION, "foo,  bar");
+        inHeaders.add("foo", "baz");
+        inHeaders.add("bar", "qux");
+        inHeaders.add("hello", "world");
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+        assertEquals("/path/to/something", out.path());
+        assertEquals("http", out.scheme());
+        assertEquals("example.com", out.authority());
+        assertEquals(HttpMethod.GET..asciiName(), out.method());
+    }
+
+    @Test
+    public void handlesRequestWithDoubleSlashPath() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "//path/to/something", validateHeaders);
+        HttpHeaders inHeaders = msg.headers();
+        inHeaders.add(CONNECTION, "foo,  bar");
+        inHeaders.add(HOST, "example.com");
+        inHeaders.add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        inHeaders.add("foo", "baz");
+        inHeaders.add("bar", "qux");
+        inHeaders.add("hello", "world");
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+        assertEquals("//path/to/something", out.path());
+        assertEquals("http", out.scheme());
+        assertEquals("example.com", out.authority());
+        assertEquals(HttpMethod.GET..asciiName(), out.method());
     }
 
     @Test
