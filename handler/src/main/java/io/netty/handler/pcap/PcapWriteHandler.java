@@ -103,6 +103,11 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     private int receiveSegmentNumber = 1;
 
     /**
+     * Type of the channel this handler is registered on
+     */
+    private ChannelType channelType;
+
+    /**
      * Address of the initiator of the connection
      */
     private InetSocketAddress initiatiorAddr;
@@ -118,6 +123,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      * Set to {@code true} if {@link #close()} is called and we should stop writing Pcap.
      */
     private boolean isClosed;
+
+    private boolean initialized = false;
 
     /**
      * Create new {@link PcapWriteHandler} Instance.
@@ -153,8 +160,42 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         this.writePcapGlobalHeader = writePcapGlobalHeader;
     }
 
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    /**
+     * Force this handler to write data as if they were TCP packets, with the given connection metadata. If this method
+     * isn't called, we determine the metadata from the channel.
+     *
+     * @param serverAddress The address of the TCP server (handler)
+     * @param clientAddress The address of the TCP client (initiator)
+     * @param localIsServer Whether the handler is part of the server channel
+     */
+    public void forceTcpChannel(InetSocketAddress serverAddress, InetSocketAddress clientAddress, boolean localIsServer) {
+        channelType = ChannelType.TCP;
+        handlerAddr = serverAddress;
+        initiatiorAddr = clientAddress;
+        isServerPipeline = localIsServer;
+    }
+
+
+    /**
+     * Force this handler to write data as if they were UDP packets, with the given connection metadata. If this method
+     * isn't called, we determine the metadata from the channel.
+     * <br>
+     * Note that even if this method is called, the address information on {@link DatagramPacket} takes precedence if
+     * it is present.
+     *
+     * @param localAddress  The address of the UDP local
+     * @param remoteAddress The address of the UDP remote
+     */
+    public void forceUdpChannel(InetSocketAddress localAddress, InetSocketAddress remoteAddress) {
+        channelType = ChannelType.UDP;
+        handlerAddr = remoteAddress;
+        initiatiorAddr = localAddress;
+    }
+
+    private void initializeIfNecessary(ChannelHandlerContext ctx) {
+        if (initialized) {
+            return;
+        }
 
         ByteBufAllocator byteBufAllocator = ctx.alloc();
 
@@ -177,20 +218,37 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             this.pCapWriter = new PcapWriter(this.outputStream);
         }
 
-        // If Channel belongs to `SocketChannel` then we're handling TCP.
-        if (ctx.channel() instanceof SocketChannel) {
+        if (channelType == null) {
+            // infer channel type
+            if (ctx.channel() instanceof SocketChannel) {
+                channelType = ChannelType.TCP;
 
-            // Capture correct `localAddress` and `remoteAddress`
-            if (ctx.channel().parent() instanceof ServerSocketChannel) {
-                isServerPipeline = true;
-                initiatiorAddr = (InetSocketAddress) ctx.channel().remoteAddress();
-                handlerAddr = (InetSocketAddress) ctx.channel().localAddress();
-            } else {
-                isServerPipeline = false;
-                initiatiorAddr = (InetSocketAddress) ctx.channel().localAddress();
-                handlerAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+                // If Channel belongs to `SocketChannel` then we're handling TCP.
+                // Capture correct `localAddress` and `remoteAddress`
+                if (ctx.channel().parent() instanceof ServerSocketChannel) {
+                    isServerPipeline = true;
+                    initiatiorAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+                    handlerAddr = (InetSocketAddress) ctx.channel().localAddress();
+                } else {
+                    isServerPipeline = false;
+                    initiatiorAddr = (InetSocketAddress) ctx.channel().localAddress();
+                    handlerAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+                }
+            } else if (ctx.channel() instanceof DatagramChannel) {
+                channelType = ChannelType.UDP;
+
+                DatagramChannel datagramChannel = (DatagramChannel) ctx.channel();
+
+                // If `DatagramChannel` is connected then we can get
+                // `localAddress` and `remoteAddress` from Channel.
+                if (datagramChannel.isConnected()) {
+                    initiatiorAddr = (InetSocketAddress) ctx.channel().localAddress();
+                    handlerAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+                }
             }
+        }
 
+        if (channelType == ChannelType.TCP) {
             logger.debug("Initiating Fake TCP 3-Way Handshake");
 
             ByteBuf tcpBuf = byteBufAllocator.buffer();
@@ -215,29 +273,28 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             }
 
             logger.debug("Finished Fake TCP 3-Way Handshake");
-        } else if (ctx.channel() instanceof DatagramChannel) {
-            DatagramChannel datagramChannel = (DatagramChannel) ctx.channel();
-
-            // If `DatagramChannel` is connected then we can get
-            // `localAddress` and `remoteAddress` from Channel.
-            if (datagramChannel.isConnected()) {
-                initiatiorAddr = (InetSocketAddress) ctx.channel().localAddress();
-                handlerAddr = (InetSocketAddress) ctx.channel().remoteAddress();
-            }
         }
 
+        initialized = true;
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        initializeIfNecessary(ctx);
         super.channelActive(ctx);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (!isClosed) {
-            if (ctx.channel() instanceof SocketChannel) {
+            initializeIfNecessary(ctx);
+
+            if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, false);
-            } else if (ctx.channel() instanceof DatagramChannel) {
+            } else if (channelType == ChannelType.UDP) {
                 handleUDP(ctx, msg);
             } else {
-                logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+                logDiscard();
             }
         }
         super.channelRead(ctx, msg);
@@ -246,15 +303,23 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (!isClosed) {
-            if (ctx.channel() instanceof SocketChannel) {
+            initializeIfNecessary(ctx);
+
+            if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, true);
-            } else if (ctx.channel() instanceof DatagramChannel) {
+            } else if (channelType == ChannelType.UDP) {
                 handleUDP(ctx, msg);
             } else {
-                logger.debug("Discarding Pcap Write for Unknown Channel Type: {}", ctx.channel());
+                logDiscard();
             }
         }
         super.write(ctx, msg, promise);
+    }
+
+    private void logDiscard() {
+        logger.warn("Discarding pcap write because channel type is unknown. The channel this handler is registered " +
+                "on is not a SocketChannel or DatagramChannel, so the inference does not work. Please call " +
+                "forceTcpChannel or forceUdpChannel before registering the handler.");
     }
 
     /**
@@ -405,7 +470,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *
      * @param ctx {@link ChannelHandlerContext} for {@code localAddress} / {@code remoteAddress},
      *            {@link ByteBuf} allocation and {@code fireExceptionCaught}
-     * @param msg {@link DatagramPacket} or {@link DatagramChannel}
+     * @param msg {@link DatagramPacket} or {@link ByteBuf}
      */
     private void handleUDP(ChannelHandlerContext ctx, Object msg) {
         ByteBuf udpBuf = ctx.alloc().buffer();
@@ -434,7 +499,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
                 UDPPacket.writePacket(udpBuf, datagramPacket.content(), srcAddr.getPort(), dstAddr.getPort());
                 completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
-            } else if (msg instanceof ByteBuf && ((DatagramChannel) ctx.channel()).isConnected()) {
+            } else if (msg instanceof ByteBuf && (!(ctx.channel() instanceof DatagramChannel) || ((DatagramChannel) ctx.channel()).isConnected())) {
 
                 // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
                 if (((ByteBuf) msg).readableBytes() == 0 && !captureZeroByte) {
@@ -508,7 +573,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
 
         // If `isTCP` is true, then we'll simulate a `FIN` flow.
-        if (ctx.channel() instanceof SocketChannel) {
+        if (channelType == ChannelType.TCP) {
             logger.debug("Starting Fake TCP FIN+ACK Flow to close connection");
 
             ByteBufAllocator byteBufAllocator = ctx.alloc();
@@ -543,7 +608,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 
-        if (ctx.channel() instanceof SocketChannel) {
+        if (channelType == ChannelType.TCP) {
             ByteBuf tcpBuf = ctx.alloc().buffer();
 
             try {
@@ -578,5 +643,9 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             pCapWriter.close();
             logger.debug("PcapWriterHandler is now closed");
         }
+    }
+
+    private enum ChannelType {
+        TCP, UDP
     }
 }
