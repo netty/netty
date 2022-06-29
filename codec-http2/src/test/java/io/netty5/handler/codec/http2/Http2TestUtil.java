@@ -59,14 +59,11 @@ public final class Http2TestUtil {
     /**
      * Runs the given operation within the event loop thread of the given {@link Channel}.
      */
-    static void runInChannel(Channel channel, final Http2Runnable runnable) {
-        channel.executor().execute(() -> {
-            try {
-                runnable.run();
-            } catch (Http2Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+    static void runInChannel(Channel channel, final Http2Runnable runnable) throws InterruptedException {
+        channel.executor().submit(() -> {
+            runnable.run();
+            return null;
+        }).sync();
     }
 
     /**
