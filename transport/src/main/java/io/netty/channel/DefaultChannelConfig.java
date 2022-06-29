@@ -336,10 +336,14 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setAutoRead(boolean autoRead) {
+        // 原子更新，并且获得 old 的值
         boolean oldAutoRead = AUTOREAD_UPDATER.getAndSet(this, autoRead ? 1 : 0) == 1;
+        // 设置开启并且之前是未开启状态。表示恢复重启开启接受新的客户端连接。
         if (autoRead && !oldAutoRead) {
+            // 对于 NIOSocketChannel 来说，此时就是重新注册 accept 感兴趣事件。
             channel.read();
         } else if (!autoRead && oldAutoRead) {
+            // 设置为关闭并且之前是开启状态。关闭接受新的客户端连接。
             autoReadCleared();
         }
         return this;

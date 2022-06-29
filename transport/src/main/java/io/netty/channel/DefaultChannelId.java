@@ -207,6 +207,7 @@ public final class DefaultChannelId implements ChannelId {
 
     @Override
     public String asShortText() {
+        // 仅使用最后 4 字节的随机数字，生成字符串。所以不能保证全局唯一。
         String shortValue = this.shortValue;
         if (shortValue == null) {
             this.shortValue = shortValue = ByteBufUtil.hexDump(data, data.length - RANDOM_LEN, RANDOM_LEN);

@@ -64,6 +64,11 @@ public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
+    /**
+     * 线程对应的 ByteBuffer 数组缓存
+     *
+     * 每次调用 {@link #nioBuffers(int, long)} 会重新生成
+     */
     private static final FastThreadLocal<ByteBuffer[]> NIO_BUFFERS = new FastThreadLocal<ByteBuffer[]>() {
         @Override
         protected ByteBuffer[] initialValue() throws Exception {
@@ -76,31 +81,53 @@ public final class ChannelOutboundBuffer {
     // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
     //
     // The Entry that is the first in the linked-list structure that was flushed
+    // 第一个( 开始 ) flush Entry
     private Entry flushedEntry;
     // The Entry which is the first unflushed in the linked-list structure
+    // 第一个未 flush Entry
     private Entry unflushedEntry;
     // The Entry which represents the tail of the buffer
     private Entry tailEntry;
+
     // The number of flushed entries that are not written yet
+    // 已 flush 但未写入对端的 Entry 数量
     private int flushed;
 
+    /**
+     * {@link #NIO_BUFFERS} 数组大小
+     */
     private int nioBufferCount;
+    /**
+     * {@link #NIO_BUFFERS} 字节数
+     */
     private long nioBufferSize;
 
+    /**
+     * 正在通知 flush 失败中
+     */
     private boolean inFail;
 
     private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER =
             AtomicLongFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
 
+    /**
+     * 总共等待 flush 到对端的内存大小，通过 {@link Entry#pendingSize} 来合计
+     */
     @SuppressWarnings("UnusedDeclaration")
     private volatile long totalPendingSize;
 
     private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> UNWRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "unwritable");
 
+    /**
+     * 是否不可写
+     */
     @SuppressWarnings("UnusedDeclaration")
     private volatile int unwritable;
 
+    /**
+     * 触发 Channel 可写的改变的任务
+     */
     private volatile Runnable fireChannelWritabilityChangedTask;
 
     ChannelOutboundBuffer(AbstractChannel channel) {
@@ -112,6 +139,7 @@ public final class ChannelOutboundBuffer {
      * the message was written.
      */
     public void addMessage(Object msg, int size, ChannelPromise promise) {
+        // 构建单向链表
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
             flushedEntry = null;
@@ -146,6 +174,7 @@ public final class ChannelOutboundBuffer {
             }
             do {
                 flushed ++;
+                // 设置为不可取消
                 if (!entry.promise.setUncancellable()) {
                     // Was cancelled so make sure we free up memory and notify about the freed bytes
                     int pending = entry.cancel();
@@ -172,8 +201,10 @@ public final class ChannelOutboundBuffer {
             return;
         }
 
+        // 增加 size
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
         if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
+            // 超过阈值，设置为不可写入
             setUnwritable(invokeLater);
         }
     }
@@ -798,6 +829,7 @@ public final class ChannelOutboundBuffer {
     }
 
     static final class Entry {
+        // 回收使用当前 Entry 对象
         private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new ObjectCreator<Entry>() {
             @Override
             public Entry newObject(Handle<Entry> handle) {
@@ -811,10 +843,21 @@ public final class ChannelOutboundBuffer {
         ByteBuffer[] bufs;
         ByteBuffer buf;
         ChannelPromise promise;
+
         long progress;
         long total;
+        /**
+         * 每个 Entry 预计占用的内存大小，计算方式为消息( {@link #msg} )的字节数 + Entry 对象自身占用内存的大小。
+         */
         int pendingSize;
+        /**
+         * 当 = 1 时，使用 {@link #buf}
+         * 当 > 1 时，使用 {@link #bufs}
+         */
         int count = -1;
+        /**
+         * 是否取消写入对端
+         */
         boolean cancelled;
 
         private Entry(Handle<Entry> handle) {
@@ -832,6 +875,7 @@ public final class ChannelOutboundBuffer {
 
         int cancel() {
             if (!cancelled) {
+                // 标记 cancel
                 cancelled = true;
                 int pSize = pendingSize;
 

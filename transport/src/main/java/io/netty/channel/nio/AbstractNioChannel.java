@@ -186,6 +186,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private void clearReadPending0() {
         readPending = false;
+        // 移除感兴趣的读事件。对于NioServerSocketChannel 来说，此时就是 accept 事件。
+        // 对于 NioSocketChannel 来说，此时就是 read事件。
         ((AbstractNioUnsafe) unsafe()).removeReadOp();
     }
 
@@ -376,6 +378,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             SelectionKey selectionKey = selectionKey();
+            // 写就绪
             return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
         }
     }

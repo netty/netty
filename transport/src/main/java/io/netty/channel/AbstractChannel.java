@@ -893,9 +893,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            // 内存队列为空，一般是channel已关闭，所以通知 promise 异常结果
             if (outboundBuffer == null) {
                 try {
                     // release message now to prevent resource-leak
+                    // 释放消息( 对象 )相关的资源
                     ReferenceCountUtil.release(msg);
                 } finally {
                     // If the outboundBuffer is null we know the channel was closed and so
@@ -910,7 +912,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             int size;
             try {
+                // 过滤写入的消息( 数据 )
                 msg = filterOutboundMessage(msg);
+                // 计算消息的长度
                 size = pipeline.estimatorHandle().size(msg);
                 if (size < 0) {
                     size = 0;
@@ -924,6 +928,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // 写入消息( 数据 )到内存队列。通过单向链表记录。
             outboundBuffer.addMessage(msg, size, promise);
         }
 
@@ -931,12 +936,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public final void flush() {
             assertEventLoop();
 
+            // 内存队列为 null ，一般是 Channel 已经关闭，所以直接返回。
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 return;
             }
 
+            // 标记内存队列开始 flush
             outboundBuffer.addFlush();
+            // 执行 flush
             flush0();
         }
 
@@ -955,6 +963,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             inFlush0 = true;
 
             // Mark all pending write requests as failure if the channel is inactive.
+            // 若未激活，通知 flush 失败
             if (!isActive()) {
                 try {
                     // Check if we need to generate the exception at all.
@@ -973,6 +982,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
+                // 执行真正的写入到对端
                 doWrite(outboundBuffer);
             } catch (Throwable t) {
                 handleWriteError(t);
