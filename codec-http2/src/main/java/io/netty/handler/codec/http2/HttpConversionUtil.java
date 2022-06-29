@@ -49,8 +49,6 @@ import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
 import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
-import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
-import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
@@ -435,16 +433,19 @@ public final class HttpConversionUtil {
         final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            URI requestTargetUri = URI.create(request.uri());
-            out.path(toHttp2Path(requestTargetUri));
-            out.method(request.method().asciiName());
-            setHttp2Scheme(inHeaders, requestTargetUri, out);
-
-            if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
+            if (request.uri().startsWith("/") || "*".equals(request.uri())) {
+                // Origin or asterisk form
+                out.path(request.uri());
+                setHttp2Scheme(inHeaders, out);
+            } else {
+                URI requestTargetUri = URI.create(request.uri());
+                out.path(toHttp2Path(requestTargetUri));
                 // Attempt to take from HOST header before taking from the request-line
                 String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                setHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
+                setHttp2Authority(isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host, out);
+                setHttp2Scheme(inHeaders, requestTargetUri, out);
             }
+            out.method(request.method().asciiName());
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
             out.status(response.status().codeAsText());
