@@ -20,6 +20,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.ServerDomainSocketChannel;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -30,8 +31,9 @@ import java.net.SocketAddress;
 import static io.netty5.channel.kqueue.BsdSocket.newSocketDomain;
 
 @UnstableApi
-public final class KQueueServerDomainSocketChannel extends AbstractKQueueServerChannel
-                                                  implements ServerDomainSocketChannel {
+public final class KQueueServerDomainSocketChannel
+        extends AbstractKQueueServerChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
+        implements ServerDomainSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             KQueueServerDomainSocketChannel.class);
 
@@ -89,15 +91,5 @@ public final class KQueueServerDomainSocketChannel extends AbstractKQueueServerC
     @Override
     public KQueueServerChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public DomainSocketAddress remoteAddress() {
-        return (DomainSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public DomainSocketAddress localAddress() {
-        return (DomainSocketAddress) super.localAddress();
     }
 }

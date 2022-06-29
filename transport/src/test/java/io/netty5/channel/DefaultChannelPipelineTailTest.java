@@ -180,7 +180,7 @@ public class DefaultChannelPipelineTailTest {
         }
     }
 
-    private abstract static class MyChannel extends AbstractChannel {
+    private abstract static class MyChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
         private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
         private final ChannelConfig config = new DefaultChannelConfig(this);

@@ -26,7 +26,6 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.ServerChannelRecvBufferAllocator;
-import io.netty5.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -35,7 +34,8 @@ import java.util.Queue;
 /**
  * A {@link ServerChannel} for the local transport which allows in VM communication.
  */
-public class LocalServerChannel extends AbstractServerChannel implements LocalChannelUnsafe {
+public class LocalServerChannel extends AbstractServerChannel<LocalChannel, LocalAddress, LocalAddress>
+        implements LocalChannelUnsafe {
 
     private final ChannelConfig config =
             new DefaultChannelConfig(this, new ServerChannelRecvBufferAllocator()) { };
@@ -55,16 +55,6 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
     }
 
     @Override
-    public LocalAddress localAddress() {
-        return (LocalAddress) super.localAddress();
-    }
-
-    @Override
-    public LocalAddress remoteAddress() {
-        return (LocalAddress) super.remoteAddress();
-    }
-
-    @Override
     public boolean isOpen() {
         return state < 2;
     }
@@ -75,7 +65,7 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
     }
 
     @Override
-    protected SocketAddress localAddress0() {
+    protected LocalAddress localAddress0() {
         return localAddress;
     }
 
@@ -153,11 +143,6 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
 
             readInbound();
         }
-    }
-
-    @Override
-    public void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        safeSetFailure(promise, new UnsupportedOperationException());
     }
 
     @Override

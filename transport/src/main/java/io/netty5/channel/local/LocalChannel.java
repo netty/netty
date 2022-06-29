@@ -50,7 +50,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * A {@link Channel} for the local transport.
  */
-public class LocalChannel extends AbstractChannel implements LocalChannelUnsafe {
+public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddress, LocalAddress>
+        implements LocalChannelUnsafe {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
@@ -105,21 +106,6 @@ public class LocalChannel extends AbstractChannel implements LocalChannelUnsafe 
     }
 
     @Override
-    public LocalServerChannel parent() {
-        return (LocalServerChannel) super.parent();
-    }
-
-    @Override
-    public LocalAddress localAddress() {
-        return (LocalAddress) super.localAddress();
-    }
-
-    @Override
-    public LocalAddress remoteAddress() {
-        return (LocalAddress) super.remoteAddress();
-    }
-
-    @Override
     public boolean isOpen() {
         return state != State.CLOSED;
     }
@@ -130,12 +116,12 @@ public class LocalChannel extends AbstractChannel implements LocalChannelUnsafe 
     }
 
     @Override
-    protected SocketAddress localAddress0() {
+    protected LocalAddress localAddress0() {
         return localAddress;
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
+    protected LocalAddress remoteAddress0() {
         return remoteAddress;
     }
 

@@ -223,7 +223,7 @@ public class ChannelOutboundBufferTest {
         }
     }
 
-    private static final class TestChannel extends AbstractChannel {
+    private static final class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
         private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
         private final ChannelConfig config = new DefaultChannelConfig(this);
 

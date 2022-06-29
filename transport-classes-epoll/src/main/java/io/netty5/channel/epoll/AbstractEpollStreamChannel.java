@@ -18,6 +18,7 @@ package io.netty5.channel.epoll;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -44,7 +45,9 @@ import java.util.concurrent.Executor;
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 
-public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
+public abstract class AbstractEpollStreamChannel
+        <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractEpollChannel<P, L, R> {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
@@ -55,7 +58,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
     private WritableByteChannel byteChannel;
 
-    protected AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, int fd) {
+    protected AbstractEpollStreamChannel(P parent, EventLoop eventLoop, int fd) {
         this(parent, eventLoop, new LinuxSocket(fd));
     }
 
@@ -67,13 +70,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         this(eventLoop, fd, isSoErrorZero(fd));
     }
 
-    AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd) {
+    AbstractEpollStreamChannel(P parent, EventLoop eventLoop, LinuxSocket fd) {
         super(parent, eventLoop, fd, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
-    AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, SocketAddress remote) {
+    AbstractEpollStreamChannel(P parent, EventLoop eventLoop, LinuxSocket fd, R remote) {
         super(parent, eventLoop, fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
@@ -89,7 +92,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     public abstract EpollChannelConfig config();
 
     @Override
-    public ChannelMetadata metadata() {
+    public final ChannelMetadata metadata() {
         return METADATA;
     }
 
@@ -277,7 +280,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected final void doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = config().getWriteSpinCount();
         do {
             final int msgCount = in.size();
@@ -387,7 +390,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+    protected final void doShutdown(ChannelShutdownDirection direction) throws Exception {
         switch (direction) {
             case Outbound:
                 socket.shutdown(false, true);
@@ -406,7 +409,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     @Override
-    public boolean isShutdown(ChannelShutdownDirection direction) {
+    public final boolean isShutdown(ChannelShutdownDirection direction) {
         if (!isActive()) {
             return true;
         }

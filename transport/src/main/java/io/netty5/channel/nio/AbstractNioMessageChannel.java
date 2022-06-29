@@ -26,6 +26,7 @@ import io.netty5.channel.ServerChannel;
 
 import java.io.IOException;
 import java.net.PortUnreachableException;
+import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
@@ -34,14 +35,15 @@ import java.util.List;
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
-public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
+public abstract class AbstractNioMessageChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractNioChannel<P, L, R> {
     boolean inputShutdown;
     private final List<Object> readBuf = new ArrayList<>();
 
     /**
      * @see AbstractNioChannel#AbstractNioChannel(Channel, EventLoop, SelectableChannel, int)
      */
-    protected AbstractNioMessageChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
+    protected AbstractNioMessageChannel(P parent, EventLoop eventLoop, SelectableChannel ch, int readInterestOp) {
         super(parent, eventLoop, ch, readInterestOp);
     }
 

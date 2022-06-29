@@ -25,6 +25,8 @@ import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.DomainSocketChannel;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.PeerCredentials;
+import io.netty5.channel.unix.Unix;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -33,7 +35,9 @@ import java.net.SocketAddress;
 import static io.netty5.channel.kqueue.BsdSocket.newSocketDomain;
 
 @UnstableApi
-public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel implements DomainSocketChannel {
+public final class KQueueDomainSocketChannel
+        extends AbstractKQueueStreamChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
+        implements DomainSocketChannel {
     private final KQueueDomainSocketChannelConfig config = new KQueueDomainSocketChannelConfig(this);
 
     private volatile DomainSocketAddress local;
@@ -47,7 +51,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
         this(null, eventLoop, new BsdSocket(fd));
     }
 
-    KQueueDomainSocketChannel(Channel parent, EventLoop eventLoop, BsdSocket fd) {
+    KQueueDomainSocketChannel(UnixChannel parent, EventLoop eventLoop, BsdSocket fd) {
         super(parent, eventLoop, fd, true);
     }
 
@@ -80,16 +84,6 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
             return true;
         }
         return false;
-    }
-
-    @Override
-    public DomainSocketAddress remoteAddress() {
-        return (DomainSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public DomainSocketAddress localAddress() {
-        return (DomainSocketAddress) super.localAddress();
     }
 
     @Override

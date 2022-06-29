@@ -67,7 +67,8 @@ import static java.util.Objects.requireNonNull;
  * @see DatagramPacket
  */
 public final class NioDatagramChannel
-        extends AbstractNioMessageChannel implements io.netty5.channel.socket.DatagramChannel {
+        extends AbstractNioMessageChannel<Channel, InetSocketAddress, InetSocketAddress>
+        implements io.netty5.channel.socket.DatagramChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
@@ -211,13 +212,13 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected SocketAddress localAddress0() {
-        return javaChannel().socket().getLocalSocketAddress();
+    protected InetSocketAddress localAddress0() {
+        return (InetSocketAddress) javaChannel().socket().getLocalSocketAddress();
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
-        return javaChannel().socket().getRemoteSocketAddress();
+    protected InetSocketAddress remoteAddress0() {
+        return (InetSocketAddress) javaChannel().socket().getRemoteSocketAddress();
     }
 
     @Override
@@ -378,16 +379,6 @@ public final class NioDatagramChannel
         //
         // See https://github.com/netty/netty/issues/2665
         return true;
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

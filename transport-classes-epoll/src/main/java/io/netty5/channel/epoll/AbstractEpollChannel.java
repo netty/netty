@@ -50,7 +50,8 @@ import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
+abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractChannel<P, L, R> implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     final LinuxSocket socket;
     /**
@@ -59,11 +60,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      */
     private Promise<Void> connectPromise;
     private Future<?> connectTimeoutFuture;
-    private SocketAddress requestedRemoteAddress;
+    private R requestedRemoteAddress;
     protected EpollRegistration registration;
 
-    private volatile SocketAddress local;
-    private volatile SocketAddress remote;
+    private volatile L local;
+    private volatile R remote;
 
     protected int flags = Native.EPOLLET;
     boolean inputClosedSeenErrorOnRead;
@@ -86,26 +87,28 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         this(null, eventLoop, fd, false);
     }
 
-    AbstractEpollChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, boolean active) {
+    @SuppressWarnings("unchecked")
+    AbstractEpollChannel(P parent, EventLoop eventLoop, LinuxSocket fd, boolean active) {
         super(parent, eventLoop);
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
-            local = fd.localAddress();
-            remote = fd.remoteAddress();
+            local = (L) fd.localAddress();
+            remote = (R) fd.remoteAddress();
         }
     }
 
-    AbstractEpollChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, SocketAddress remote) {
+    @SuppressWarnings("unchecked")
+    AbstractEpollChannel(P parent, EventLoop eventLoop, LinuxSocket fd, R remote) {
         super(parent, eventLoop);
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
-        this.remote = remote;
-        local = fd.localAddress();
+        this.remote = (R) remote;
+        local = (L) fd.localAddress();
     }
 
     static boolean isSoErrorZero(Socket fd) {
@@ -200,9 +203,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
     }
 
+    @SuppressWarnings("unchecked")
     void resetCachedAddresses() {
-        local = socket.localAddress();
-        remote = socket.remoteAddress();
+        local = (L) socket.localAddress();
+        remote = (R) socket.remoteAddress();
     }
 
     @Override
@@ -517,6 +521,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void connectTransport(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
         if (!promise.setUncancellable() || !ensureOpen(promise)) {
@@ -533,7 +538,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 fulfillConnectPromise(promise, wasActive);
             } else {
                 connectPromise = promise;
-                requestedRemoteAddress = remoteAddress;
+                requestedRemoteAddress = (R) remoteAddress;
 
                 // Schedule connect timeout.
                 int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -633,11 +638,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     /**
      * Finish the connect
      */
+    @SuppressWarnings("unchecked")
     private boolean doFinishConnect() throws Exception {
         if (socket.finishConnect()) {
             clearFlag(Native.EPOLLOUT);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remote = (R) computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
             }
             requestedRemoteAddress = null;
 
@@ -648,17 +654,19 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void doBind(SocketAddress local) throws Exception {
         if (local instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) local);
         }
         socket.bind(local);
-        this.local = socket.localAddress();
+        this.local = (L) socket.localAddress();
     }
 
     /**
      * Connect to the remote peer
      */
+    @SuppressWarnings("unchecked")
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) localAddress);
@@ -684,12 +692,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         boolean connected = doConnect0(remoteAddress);
         if (connected) {
             remote = remoteSocketAddr == null ?
-                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+                    (R) remoteAddress : (R) computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.
         //
         // See https://github.com/netty/netty/issues/3463
-        local = socket.localAddress();
+        local = (L) socket.localAddress();
         return connected;
     }
 
@@ -710,12 +718,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected SocketAddress localAddress0() {
+    protected L localAddress0() {
         return local;
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
+    protected R remoteAddress0() {
         return remote;
     }
 

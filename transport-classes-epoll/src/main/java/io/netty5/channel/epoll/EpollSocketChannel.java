@@ -16,12 +16,10 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 
@@ -41,7 +39,9 @@ import static io.netty5.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
  * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
  * maximal performance.
  */
-public final class EpollSocketChannel extends AbstractEpollStreamChannel implements SocketChannel {
+public final class EpollSocketChannel
+        extends AbstractEpollStreamChannel<EpollServerSocketChannel, InetSocketAddress, InetSocketAddress>
+        implements SocketChannel {
 
     private final EpollSocketChannelConfig config;
 
@@ -61,17 +61,13 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         config = new EpollSocketChannelConfig(this);
     }
 
-    EpollSocketChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(eventLoop, fd, active);
-        config = new EpollSocketChannelConfig(this);
-    }
-
-    EpollSocketChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, InetSocketAddress remoteAddress) {
+    EpollSocketChannel(EpollServerSocketChannel parent, EventLoop eventLoop,
+                       LinuxSocket fd, InetSocketAddress remoteAddress) {
         super(parent, eventLoop, fd, remoteAddress);
         config = new EpollSocketChannelConfig(this);
 
-        if (parent instanceof EpollServerSocketChannel) {
-            tcpMd5SigAddresses = ((EpollServerSocketChannel) parent).tcpMd5SigAddresses();
+        if (parent != null) {
+            tcpMd5SigAddresses = parent.tcpMd5SigAddresses();
         }
     }
 
@@ -97,23 +93,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public EpollSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public ServerSocketChannel parent() {
-        return (ServerSocketChannel) super.parent();
     }
 
     @Override

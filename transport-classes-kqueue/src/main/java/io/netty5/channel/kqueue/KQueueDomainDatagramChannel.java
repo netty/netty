@@ -30,6 +30,7 @@ import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.RecvFromAddressDomainSocket;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.internal.SilentDispose;
@@ -45,7 +46,9 @@ import static io.netty5.channel.kqueue.BsdSocket.newSocketDomainDgram;
 import static io.netty5.util.CharsetUtil.UTF_8;
 
 @UnstableApi
-public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramChannel implements DomainDatagramChannel {
+public final class KQueueDomainDatagramChannel
+        extends AbstractKQueueDatagramChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
+        implements DomainDatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDomainDatagramChannel.class);
     private static final String EXPECTED_TYPES =
             " (expected: " +
@@ -219,11 +222,6 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
     }
 
     @Override
-    public DomainSocketAddress localAddress() {
-        return (DomainSocketAddress) super.localAddress();
-    }
-
-    @Override
     protected DomainSocketAddress localAddress0() {
         return local;
     }
@@ -234,11 +232,6 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
      */
     public PeerCredentials peerCredentials() throws IOException {
         return socket.getPeerCredentials();
-    }
-
-    @Override
-    public DomainSocketAddress remoteAddress() {
-        return (DomainSocketAddress) super.remoteAddress();
     }
 
     @Override

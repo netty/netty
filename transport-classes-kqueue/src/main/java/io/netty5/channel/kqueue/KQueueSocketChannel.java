@@ -16,11 +16,9 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.util.concurrent.GlobalEventExecutor;
@@ -31,7 +29,9 @@ import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
 @UnstableApi
-public final class KQueueSocketChannel extends AbstractKQueueStreamChannel implements SocketChannel {
+public final class KQueueSocketChannel
+        extends AbstractKQueueStreamChannel<KQueueServerSocketChannel, InetSocketAddress, InetSocketAddress>
+        implements SocketChannel {
     private final KQueueSocketChannelConfig config;
 
     public KQueueSocketChannel(EventLoop eventLoop) {
@@ -48,29 +48,15 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
         config = new KQueueSocketChannelConfig(this);
     }
 
-    KQueueSocketChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, InetSocketAddress remoteAddress) {
+    KQueueSocketChannel(KQueueServerSocketChannel parent, EventLoop eventLoop,
+                        BsdSocket fd, InetSocketAddress remoteAddress) {
         super(parent, eventLoop, fd, remoteAddress);
         config = new KQueueSocketChannelConfig(this);
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public KQueueSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public ServerSocketChannel parent() {
-        return (ServerSocketChannel) super.parent();
     }
 
     @Override

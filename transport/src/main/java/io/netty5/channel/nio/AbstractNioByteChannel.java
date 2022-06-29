@@ -32,6 +32,7 @@ import io.netty5.channel.socket.SocketChannelConfig;
 import io.netty5.util.internal.StringUtil;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
@@ -40,17 +41,16 @@ import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
-public abstract class AbstractNioByteChannel extends AbstractNioChannel {
+public abstract class AbstractNioByteChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractNioChannel<P, L, R> {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
 
-    private final Runnable flushTask = () -> {
-        // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-        // meantime.
-        flush0();
-    };
+    // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+    // meantime.
+    private final Runnable flushTask = this::flush0;
     private boolean inputClosedSeenErrorOnRead;
 
     /**
@@ -60,7 +60,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @param eventLoop         the {@link EventLoop} to use for IO.
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
-    protected AbstractNioByteChannel(Channel parent, EventLoop eventLoop, SelectableChannel ch) {
+    protected AbstractNioByteChannel(P parent, EventLoop eventLoop, SelectableChannel ch) {
         super(parent, eventLoop, ch, SelectionKey.OP_READ);
     }
 

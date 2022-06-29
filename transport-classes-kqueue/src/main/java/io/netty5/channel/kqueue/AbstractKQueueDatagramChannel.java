@@ -20,15 +20,19 @@ import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.unix.Unix;
+import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 
-abstract class AbstractKQueueDatagramChannel extends AbstractKQueueChannel {
+abstract class AbstractKQueueDatagramChannel<P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
+        extends AbstractKQueueChannel<P, L, R> {
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
-    AbstractKQueueDatagramChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
+    AbstractKQueueDatagramChannel(P parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
         super(parent, eventLoop, fd, active);
     }
 

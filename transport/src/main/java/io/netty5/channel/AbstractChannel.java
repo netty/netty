@@ -42,17 +42,18 @@ import static java.util.Objects.requireNonNull;
 /**
  * A skeletal {@link Channel} implementation.
  */
-public abstract class AbstractChannel extends DefaultAttributeMap implements Channel {
+public abstract class AbstractChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
+        extends DefaultAttributeMap implements Channel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
-    private final Channel parent;
+    private final P parent;
     private final ChannelId id;
     private final ChannelPipeline pipeline;
     private final ClosePromise closePromise;
 
-    private volatile SocketAddress localAddress;
-    private volatile SocketAddress remoteAddress;
+    private volatile L localAddress;
+    private volatile R remoteAddress;
     private final EventLoop eventLoop;
     private volatile boolean registered;
     private boolean closeInitiated;
@@ -77,7 +78,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, EventLoop eventLoop) {
+    protected AbstractChannel(P parent, EventLoop eventLoop) {
         this(parent, eventLoop, DefaultChannelId.newInstance());
     }
 
@@ -87,7 +88,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, EventLoop eventLoop, ChannelId id) {
+    protected AbstractChannel(P parent, EventLoop eventLoop, ChannelId id) {
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
         closePromise = new ClosePromise(eventLoop);
@@ -96,7 +97,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         pipeline = newChannelPipeline();
     }
 
-    private EventLoop validateEventLoop(EventLoop eventLoop) {
+    private static EventLoop validateEventLoop(EventLoop eventLoop) {
         return requireNonNull(eventLoop, "eventLoop");
     }
 
@@ -125,7 +126,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public Channel parent() {
+    public final P parent() {
         return parent;
     }
 
@@ -140,8 +141,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public SocketAddress localAddress() {
-        SocketAddress localAddress = this.localAddress;
+    public final L localAddress() {
+        L localAddress = this.localAddress;
         if (localAddress == null) {
             try {
                 this.localAddress = localAddress = localAddress0();
@@ -155,17 +156,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return localAddress;
     }
 
-    /**
-     * @deprecated no use-case for this.
-     */
-    @Deprecated
-    protected void invalidateLocalAddress() {
-        localAddress = null;
-    }
-
     @Override
-    public SocketAddress remoteAddress() {
-        SocketAddress remoteAddress = this.remoteAddress;
+    public final R remoteAddress() {
+        R remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
             try {
                 this.remoteAddress = remoteAddress = remoteAddress0();
@@ -179,21 +172,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return remoteAddress;
     }
 
-    /**
-     * @deprecated no use-case for this.
-     */
-    @Deprecated
-    protected void invalidateRemoteAddress() {
-        remoteAddress = null;
-    }
-
     @Override
-    public boolean isRegistered() {
+    public final boolean isRegistered() {
         return registered;
     }
 
     @Override
-    public Future<Void> closeFuture() {
+    public final Future<Void> closeFuture() {
         return closePromise;
     }
 
@@ -635,7 +620,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         });
     }
 
-    private  void readTransport() {
+    private void readTransport() {
         assertEventLoop();
 
         if (!isActive()) {
@@ -758,7 +743,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected final void handleWriteError(Throwable t) {
         if (t instanceof IOException && config().isAutoClose()) {
-            /**
+            /*
              * Just call {@link #close(Promise, Throwable, boolean)} here which will take care of
              * failing all flushed messages and also ensure the actual close of the underlying transport
              * will happen before the promises are notified.
@@ -850,7 +835,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * Appends the remote address to the message of the exceptions caused by connection attempt failure.
      */
-    protected final Throwable annotateConnectException(Throwable cause, SocketAddress remoteAddress) {
+    protected static Throwable annotateConnectException(Throwable cause, SocketAddress remoteAddress) {
         if (cause instanceof ConnectException) {
             return new AnnotatedConnectException((ConnectException) cause, remoteAddress);
         }
@@ -881,12 +866,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * Returns the {@link SocketAddress} which is bound locally.
      */
-    protected abstract SocketAddress localAddress0();
+    protected abstract L localAddress0();
 
     /**
      * Return the {@link SocketAddress} which the {@link Channel} is connected to.
      */
-    protected abstract SocketAddress remoteAddress0();
+    protected abstract R remoteAddress0();
 
     /**
      * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
@@ -944,11 +929,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return msg;
     }
 
-    protected void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
+    protected static void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
         DefaultFileRegion.validate(region, position);
     }
 
-    static final class ClosePromise extends DefaultPromise<Void> {
+    private static final class ClosePromise extends DefaultPromise<Void> {
 
         ClosePromise(EventExecutor eventExecutor) {
             super(eventExecutor);
@@ -979,8 +964,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return false;
         }
 
-        boolean setClosed() {
-            return super.trySuccess(null);
+        void setClosed() {
+            super.trySuccess(null);
         }
     }
 

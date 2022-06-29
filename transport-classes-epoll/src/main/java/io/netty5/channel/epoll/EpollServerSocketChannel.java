@@ -20,6 +20,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -37,7 +38,9 @@ import static io.netty5.channel.unix.NativeInetAddress.address;
  * {@link ServerSocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
  * maximal performance.
  */
-public final class EpollServerSocketChannel extends AbstractEpollServerChannel implements ServerSocketChannel {
+public final class EpollServerSocketChannel
+        extends AbstractEpollServerChannel<UnixChannel, InetSocketAddress, InetSocketAddress>
+        implements ServerSocketChannel {
 
     private final EpollServerSocketChannelConfig config;
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
@@ -55,16 +58,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd));
-    }
-
-    EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
-        super(eventLoop, childEventLoopGroup, fd);
-        config = new EpollServerSocketChannelConfig(this);
-    }
-
-    EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd, boolean active) {
-        super(eventLoop, childEventLoopGroup, fd, active);
+        super(eventLoop, childEventLoopGroup, new LinuxSocket(fd));
         config = new EpollServerSocketChannelConfig(this);
     }
 
@@ -77,16 +71,6 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         }
         socket.listen(config.getBacklog());
         active = true;
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
     }
 
     @Override
