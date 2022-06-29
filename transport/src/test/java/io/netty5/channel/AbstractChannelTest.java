@@ -43,7 +43,6 @@ public class AbstractChannelTest {
         EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
         when(eventLoop.newPromise()).thenReturn(INSTANCE.newPromise());
 
         TestChannel channel = new TestChannel(eventLoop);
@@ -78,7 +77,6 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
         when(eventLoop.newPromise()).thenAnswer(inv -> INSTANCE.newPromise());
 
         doAnswer(invocationOnMock -> {
@@ -134,7 +132,6 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
         when(eventLoop.newPromise()).thenAnswer(inv -> INSTANCE.newPromise());
         doAnswer(invocationOnMock -> {
             ((Runnable) invocationOnMock.getArgument(0)).run();

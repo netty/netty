@@ -28,6 +28,7 @@ import io.netty5.channel.nio.AbstractNioByteChannel;
 import io.netty5.channel.socket.DefaultSocketChannelConfig;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannelConfig;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.internal.SocketUtils;
 
@@ -306,15 +307,14 @@ public class NioSocketChannel
     }
 
     @Override
-    protected Executor prepareToClose() {
+    protected Future<Executor> prepareToClose() {
         try {
             if (javaChannel().isOpen() && config().getSoLinger() > 0) {
                 // We need to cancel this key of the channel so we may not end up in a eventloop spin
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.
                 // See https://github.com/netty/netty/issues/4449
-                doDeregister();
-                return GlobalEventExecutor.INSTANCE;
+                return executor().deregisterForIO(this).map(v -> GlobalEventExecutor.INSTANCE);
             }
         } catch (Throwable ignore) {
             // Ignore the error as the underlying channel may be closed in the meantime and so

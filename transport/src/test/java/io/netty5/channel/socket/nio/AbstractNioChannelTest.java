@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.socket.nio;
 
+import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
@@ -113,11 +114,6 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             }
 
             @Override
-            public Unsafe unsafe() {
-                return eventLoop.unsafe();
-            }
-
-            @Override
             public boolean inEventLoop(Thread thread) {
                 return eventLoop.inEventLoop(thread);
             }
@@ -177,6 +173,16 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             public Future<Void> scheduleWithFixedDelay(
                     Runnable task, long initialDelay, long delay, TimeUnit unit) {
                 return eventLoop.scheduleWithFixedDelay(task, initialDelay, delay, unit);
+            }
+
+            @Override
+            public Future<Void> registerForIO(Channel channel) {
+                return eventLoop.registerForIO(channel);
+            }
+
+            @Override
+            public Future<Void> deregisterForIO(Channel channel) {
+                return eventLoop.deregisterForIO(channel);
             }
         }
 

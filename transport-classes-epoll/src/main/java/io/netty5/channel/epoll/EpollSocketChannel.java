@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 
 import java.io.IOException;
@@ -121,7 +122,7 @@ public final class EpollSocketChannel
     }
 
     @Override
-    protected Executor prepareToClose() {
+    protected Future<Executor> prepareToClose() {
         try {
             // Check isOpen() first as otherwise it will throw a RuntimeException
             // when call getSoLinger() as the fd is not valid anymore.
@@ -130,8 +131,7 @@ public final class EpollSocketChannel
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.
                 // See https://github.com/netty/netty/issues/4449
-                doDeregister();
-                return GlobalEventExecutor.INSTANCE;
+                executor().deregisterForIO(this).map(v -> GlobalEventExecutor.INSTANCE);
             }
         } catch (Throwable ignore) {
             // Ignore the error as the underlying channel may be closed in the meantime and so

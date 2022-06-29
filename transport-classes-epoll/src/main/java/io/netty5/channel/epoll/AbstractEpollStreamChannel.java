@@ -423,12 +423,6 @@ public abstract class AbstractEpollStreamChannel
         }
     }
 
-    // Overridden here just to be able to access this method from AbstractEpollStreamChannel
-    @Override
-    protected Executor prepareToClose() {
-        return super.prepareToClose();
-    }
-
     private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
             EpollRecvBufferAllocatorHandle allocHandle) {
         if (buffer.readableBytes() > 0) {

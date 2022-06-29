@@ -20,7 +20,7 @@ package io.netty5.channel;
  * All operations except {@link #wakeup(boolean)} <strong>MUST</strong> be executed
  * on the {@link EventLoop} thread and should never be called from the user-directly.
  */
-public interface IoHandler extends EventLoop.Unsafe {
+public interface IoHandler {
     /**
      * Run the IO handled by this {@link IoHandler}. The {@link IoExecutionContext} should be used
      * to ensure we not execute too long and so block the processing of other task that are
@@ -47,4 +47,20 @@ public interface IoHandler extends EventLoop.Unsafe {
      * Destroy the {@link IoHandler} and free all its resources.
      */
     void destroy();
+
+    /**
+     * Register a {@link Channel} for IO.
+     *
+     * @param channel       the {@link Channel} to register..
+     * @throws Exception    thrown if an error happens during registration.
+     */
+    void register(Channel channel) throws Exception;
+
+    /**
+     * Deregister a {@link Channel} for IO.
+     *
+     * @param channel       the {@link Channel} to deregister..
+     * @throws Exception    thrown if an error happens during deregistration.
+     */
+    void deregister(Channel channel) throws Exception;
 }

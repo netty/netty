@@ -19,7 +19,6 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -276,7 +275,7 @@ public class LocalChannelTest {
                     @Override
                     protected void run() {
                         do {
-                            runIo();
+                            runIO();
                             Runnable task = pollTask();
                             if (task != null) {
                                 /* Only slow down the anonymous class in LocalChannel#doRegister() */
