@@ -217,7 +217,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty5_transport_native_kqueue_aarch_64.jnilib; osname=MacOSX; processor=aarch_64</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty5_transport_native_kqueue_aarch_64.jnilib; osname=MacOSX; processor=aarch64</Bundle-NativeCode>
                       <Fragment-Host>io.netty5.transport-classes-kqueue</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
