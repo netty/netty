@@ -124,7 +124,10 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      */
     private boolean isClosed;
 
-    private boolean initialized = false;
+    /**
+     * Whether this handler is initialized (headers written, channel type inferred)
+     */
+    private boolean initialized;
 
     /**
      * Create new {@link PcapWriteHandler} Instance.
@@ -168,13 +171,15 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      * @param clientAddress The address of the TCP client (initiator)
      * @param localIsServer Whether the handler is part of the server channel
      */
-    public void forceTcpChannel(InetSocketAddress serverAddress, InetSocketAddress clientAddress, boolean localIsServer) {
+    public void forceTcpChannel(
+            InetSocketAddress serverAddress,
+            InetSocketAddress clientAddress,
+            boolean localIsServer) {
         channelType = ChannelType.TCP;
         handlerAddr = serverAddress;
         initiatiorAddr = clientAddress;
         isServerPipeline = localIsServer;
     }
-
 
     /**
      * Force this handler to write data as if they were UDP packets, with the given connection metadata. If this method
@@ -499,7 +504,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
                 UDPPacket.writePacket(udpBuf, datagramPacket.content(), srcAddr.getPort(), dstAddr.getPort());
                 completeUDPWrite(srcAddr, dstAddr, udpBuf, ctx.alloc(), ctx);
-            } else if (msg instanceof ByteBuf && (!(ctx.channel() instanceof DatagramChannel) || ((DatagramChannel) ctx.channel()).isConnected())) {
+            } else if (msg instanceof ByteBuf &&
+                    (!(ctx.channel() instanceof DatagramChannel) || ((DatagramChannel) ctx.channel()).isConnected())) {
 
                 // If bytes are 0 and `captureZeroByte` is false, we won't capture this.
                 if (((ByteBuf) msg).readableBytes() == 0 && !captureZeroByte) {
