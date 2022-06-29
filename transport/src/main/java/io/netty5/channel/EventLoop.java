@@ -15,14 +15,14 @@
  */
 package io.netty5.channel;
 
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.OrderedEventExecutor;
 
 /**
  * Will handle all the I/O operations for a {@link Channel} once registered.
- *
+ *<p>
  * One {@link EventLoop} instance will usually handle more than one {@link Channel} but this may depend on
  * implementation details and internals.
- *
  */
 public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
 
@@ -32,23 +32,18 @@ public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
     }
 
     /**
-     * Returns an <em>internal-use-only</em> object that provides unsafe operations.
+     * Register the {@link Channel} to the {@link EventLoop} for I/O processing.
+     *
+     * @param channel   the {@link Channel} to register.
+     * @return          the {@link Future} that is notified once the operations completes.
      */
-    Unsafe unsafe();
+    Future<Void> registerForIO(Channel channel);
 
     /**
-     * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
-     * are only provided to implement the actual transport, and must be invoked from the {@link EventLoop} itself.
+     * Deregister the {@link Channel} from the {@link EventLoop} for I/O processing.
+     *
+     * @param channel   the {@link Channel} to deregister.
+     * @return          the {@link Future} that is notified once the operations completes.
      */
-    interface Unsafe {
-        /**
-         * Register the {@link Channel} to the {@link EventLoop}.
-         */
-        void register(Channel channel) throws Exception;
-
-        /**
-         * Deregister the {@link Channel} from the {@link EventLoop}.
-         */
-        void deregister(Channel channel) throws Exception;
-    }
+    Future<Void> deregisterForIO(Channel channel);
 }

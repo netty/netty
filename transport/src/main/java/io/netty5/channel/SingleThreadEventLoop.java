@@ -15,6 +15,8 @@
  */
 package io.netty5.channel;
 
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.RejectedExecutionHandler;
 import io.netty5.util.concurrent.RejectedExecutionHandlers;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
@@ -58,18 +60,6 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
         public long deadlineNanos() {
             assert inEventLoop();
             return SingleThreadEventLoop.this.deadlineNanos();
-        }
-    };
-
-    private final Unsafe unsafe = new Unsafe() {
-        @Override
-        public void register(Channel channel) throws Exception {
-            SingleThreadEventLoop.this.register(channel);
-        }
-
-        @Override
-        public void deregister(Channel channel) throws Exception {
-            SingleThreadEventLoop.this.deregister(channel);
         }
     };
 
@@ -177,18 +167,13 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
      */
     interface NonWakeupRunnable extends Runnable { }
 
-    @Override
-    public final Unsafe unsafe() {
-        return unsafe;
-    }
-
     // Methods that a user can override to easily add instrumentation and other things.
 
     @Override
     protected void run() {
         assert inEventLoop();
         do {
-            runIo();
+            runIO();
             if (isShuttingDown()) {
                 ioHandler.prepareToDestroy();
             }
@@ -202,27 +187,63 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
      *
      * This method must be called from the {@link EventLoop} thread.
      */
-    protected int runIo() {
+    protected int runIO() {
         assert inEventLoop();
         return ioHandler.run(context);
     }
 
-    /**
-     * Called once a {@link Channel} should be registered on this {@link SingleThreadEventLoop}.
-     *
-     * This method must be called from the {@link EventLoop} thread.
-     */
-    protected void register(Channel channel) throws Exception {
-        assert inEventLoop();
-        ioHandler.register(channel);
+    @Override
+    public final Future<Void> registerForIO(Channel channel) {
+        Promise<Void> promise = newPromise();
+        if (inEventLoop()) {
+            registerForIO0(channel, promise);
+        } else {
+            execute(() -> registerForIO0(channel, promise));
+        }
+        return promise.asFuture();
     }
 
-    /**
-     * Called once a {@link Channel} should be deregistered from this {@link SingleThreadEventLoop}.
-     */
-    protected void deregister(Channel channel) throws Exception {
-        assert inEventLoop();
-        ioHandler.deregister(channel);
+    private void registerForIO0(Channel channel, Promise<Void> promise) {
+        try {
+            if (channel.isRegistered()) {
+                throw new IllegalStateException("Channel already registered");
+            }
+            if (!channel.executor().inEventLoop()) {
+                throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
+            }
+            ioHandler.register(channel);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
+    }
+
+    @Override
+    public final Future<Void> deregisterForIO(Channel channel) {
+       Promise<Void> promise = newPromise();
+       if (inEventLoop()) {
+           deregisterForIO(channel, promise);
+       } else {
+           execute(() -> deregisterForIO(channel, promise));
+       }
+       return promise.asFuture();
+    }
+
+    private void deregisterForIO(Channel channel, Promise<Void> promise) {
+        try {
+            if (!channel.isRegistered()) {
+                throw new IllegalStateException("Channel not registered");
+            }
+            if (!channel.executor().inEventLoop()) {
+                throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
+            }
+            ioHandler.deregister(channel);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override

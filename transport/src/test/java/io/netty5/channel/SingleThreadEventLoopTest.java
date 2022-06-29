@@ -472,8 +472,13 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Unsafe unsafe() {
-            return null;
+        public Future<Void> registerForIO(Channel channel) {
+            return newSucceededFuture(null);
+        }
+
+        @Override
+        public Future<Void> deregisterForIO(Channel channel) {
+            return newSucceededFuture(null);
         }
     }
 
@@ -513,18 +518,13 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Unsafe unsafe() {
-            return new Unsafe() {
-                @Override
-                public void register(Channel channel)  {
-                    // NOOP
-                }
+        public Future<Void> registerForIO(Channel channel) {
+            return newSucceededFuture(null);
+        }
 
-                @Override
-                public void deregister(Channel channel) {
-                    // NOOP
-                }
-            };
+        @Override
+        public Future<Void> deregisterForIO(Channel channel) {
+            return newSucceededFuture(null);
         }
     }
 }

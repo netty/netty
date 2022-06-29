@@ -403,12 +403,6 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         }
     }
 
-    // Overridden here just to be able to access this method from AbstractKQueueStreamChannel
-    @Override
-    protected Executor prepareToClose() {
-        return super.prepareToClose();
-    }
-
     @Override
     void readReady(final KQueueRecvBufferAllocatorHandle allocHandle) {
         final ChannelConfig config = config();

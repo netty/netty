@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Objects.requireNonNull;
 
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
-    /**
+    /*
      * When time is not {@link #timeFrozen frozen}, the base time to subtract from {@link System#nanoTime()}. When time
      * is frozen, this variable is unused.
      *
@@ -55,27 +56,62 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
     }
 
-    private final Unsafe unsafe = new Unsafe() {
-        @Override
-        public void register(Channel channel) {
-            assert inEventLoop();
-            cast(channel).setActive();
-        }
-
-        @Override
-        public void deregister(Channel channel) {
-            assert inEventLoop();
-        }
-    };
-
-    @Override
-    public Unsafe unsafe() {
-        return unsafe;
-    }
-
     @Override
     public EventLoop next() {
         return (EventLoop) super.next();
+    }
+
+    @Override
+    public Future<Void> registerForIO(Channel channel) {
+        Promise<Void> promise = newPromise();
+        if (inEventLoop()) {
+            registerForIO0(channel, promise);
+        } else {
+            execute(() -> registerForIO0(channel, promise));
+        }
+        return promise.asFuture();
+    }
+
+    private void registerForIO0(Channel channel, Promise<Void> promise) {
+        assert inEventLoop();
+        try {
+            if (channel.isRegistered()) {
+                throw new IllegalStateException("Channel already registered");
+            }
+            if (!channel.executor().inEventLoop()) {
+                throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
+            }
+            cast(channel).setActive();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
+    }
+    @Override
+    public Future<Void> deregisterForIO(Channel channel) {
+        Promise<Void> promise = newPromise();
+        if (inEventLoop()) {
+            deregisterForIO0(channel, promise);
+        } else {
+            execute(() -> deregisterForIO0(channel, promise));
+        }
+        return promise.asFuture();
+    }
+
+    private void deregisterForIO0(Channel channel, Promise<Void> promise) {
+        try {
+            if (!channel.isRegistered()) {
+                throw new IllegalStateException("Channel not registered");
+            }
+            if (!channel.executor().inEventLoop()) {
+                throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
+            }
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
