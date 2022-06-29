@@ -170,8 +170,8 @@ public interface ChannelHandler {
     }
 
     /**
-     * Return {@code true} if the implementation is sharable and so can be added
-     * to different {@link ChannelPipeline}s. By default, this returns {@code false}.
+     * Returns {@code true} if this handler is sharable and thus can be added
+     * to more than one {@link ChannelPipeline}. By default, this method returns {@code false}.
      * If this method returns {@code false}, you have to create a new handler
      * instance every time you add it to a pipeline because it has unshared
      * state such as member variables.
