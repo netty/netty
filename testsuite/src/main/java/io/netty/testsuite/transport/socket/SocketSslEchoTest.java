@@ -351,7 +351,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             if (serverException.get() != null) {
                 break;
             }
-            if (serverException.get() != null) {
+            if (clientException.get() != null) {
                 break;
             }
 
