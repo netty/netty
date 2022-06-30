@@ -611,7 +611,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * This includes normal tasks, and scheduled tasks where the deadline has expired. If this method returns
      * {@code false}, a call to {@link #runPendingTasks()} would do nothing.
      *
-     * @return Whether
+     * @return {@code true} if there are any pending tasks, {@code false} otherwise.
      */
     public boolean hasPendingTasks() {
         return embeddedEventLoop().hasPendingNormalTasks() ||
