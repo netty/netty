@@ -108,10 +108,10 @@ public class PcapWriteHandlerTest {
 
         // we fake a client
         EmbeddedChannel embeddedChannel = new EmbeddedChannel();
-        PcapWriteHandler pcapWriteHandler = new PcapWriteHandler(new ByteBufOutputStream(byteBuf));
-        pcapWriteHandler.forceUdpChannel(clientAddr, serverAddr);
         embeddedChannel.pipeline()
-                .addLast(pcapWriteHandler);
+                .addLast(PcapWriteHandler.builder()
+                        .forceUdpChannel(clientAddr, serverAddr)
+                        .build(new ByteBufOutputStream(byteBuf)));
 
         embeddedChannel.writeOutbound(Unpooled.wrappedBuffer("Meow".getBytes()));
         assertEquals(Unpooled.wrappedBuffer("Meow".getBytes()), embeddedChannel.readOutbound());
@@ -270,9 +270,9 @@ public class PcapWriteHandlerTest {
         InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
         EmbeddedChannel embeddedChannel = new EmbeddedChannel();
-        PcapWriteHandler pcapWriteHandler = new PcapWriteHandler(new ByteBufOutputStream(byteBuf));
-        pcapWriteHandler.forceTcpChannel(serverAddr, clientAddr, true);
-        embeddedChannel.pipeline().addLast(pcapWriteHandler);
+        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                .forceTcpChannel(serverAddr, clientAddr, true)
+                .build(new ByteBufOutputStream(byteBuf)));
 
         byte[] payload = "Meow".getBytes();
         embeddedChannel.writeInbound(Unpooled.wrappedBuffer(payload));

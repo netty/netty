@@ -163,38 +163,18 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         this.writePcapGlobalHeader = writePcapGlobalHeader;
     }
 
-    /**
-     * Force this handler to write data as if they were TCP packets, with the given connection metadata. If this method
-     * isn't called, we determine the metadata from the channel.
-     *
-     * @param serverAddress The address of the TCP server (handler)
-     * @param clientAddress The address of the TCP client (initiator)
-     * @param localIsServer Whether the handler is part of the server channel
-     */
-    public void forceTcpChannel(
-            InetSocketAddress serverAddress,
-            InetSocketAddress clientAddress,
-            boolean localIsServer) {
-        channelType = ChannelType.TCP;
-        handlerAddr = serverAddress;
-        initiatiorAddr = clientAddress;
-        isServerPipeline = localIsServer;
+    private PcapWriteHandler(Builder builder, OutputStream outputStream) {
+        this.outputStream = outputStream;
+        this.captureZeroByte = builder.captureZeroByte;
+        this.writePcapGlobalHeader = builder.writePcapGlobalHeader;
+        this.channelType = builder.channelType;
+        this.handlerAddr = builder.handlerAddr;
+        this.initiatiorAddr = builder.initiatiorAddr;
+        this.isServerPipeline = builder.isServerPipeline;
     }
 
-    /**
-     * Force this handler to write data as if they were UDP packets, with the given connection metadata. If this method
-     * isn't called, we determine the metadata from the channel.
-     * <br>
-     * Note that even if this method is called, the address information on {@link DatagramPacket} takes precedence if
-     * it is present.
-     *
-     * @param localAddress  The address of the UDP local
-     * @param remoteAddress The address of the UDP remote
-     */
-    public void forceUdpChannel(InetSocketAddress localAddress, InetSocketAddress remoteAddress) {
-        channelType = ChannelType.UDP;
-        handlerAddr = remoteAddress;
-        initiatiorAddr = localAddress;
+    public static Builder builder() {
+        return new Builder();
     }
 
     private void initializeIfNecessary(ChannelHandlerContext ctx) {
@@ -653,5 +633,95 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
     private enum ChannelType {
         TCP, UDP
+    }
+
+    /**
+     * Builder for {@link PcapWriteHandler}.
+     */
+    public static final class Builder {
+        boolean captureZeroByte;
+        boolean writePcapGlobalHeader = true;
+
+        ChannelType channelType;
+        InetSocketAddress initiatiorAddr;
+        InetSocketAddress handlerAddr;
+        boolean isServerPipeline;
+
+        Builder() {
+        }
+
+        /**
+         * Set to {@code true} to enable capturing packets with empty (0 bytes) payload. Otherwise, if set to
+         * {@code false}, empty packets will be filtered out.
+         *
+         * @param captureZeroByte Whether to filter out empty packets.
+         * @return this builder
+         */
+        public Builder captureZeroByte(boolean captureZeroByte) {
+            this.captureZeroByte = captureZeroByte;
+            return this;
+        }
+
+        /**
+         * Set to {@code true} to write Pcap Global Header on initialization. Otherwise, if set to {@code false}, Pcap
+         * Global Header will not be written on initialization. This could when writing Pcap data on a existing file
+         * where Pcap Global Header is already present.
+         *
+         * @param writePcapGlobalHeader Whether to write the pcap global header.
+         * @return this builder
+         */
+        public Builder writePcapGlobalHeader(boolean writePcapGlobalHeader) {
+            this.writePcapGlobalHeader = writePcapGlobalHeader;
+            return this;
+        }
+
+        /**
+         * Force this handler to write data as if they were TCP packets, with the given connection metadata. If this
+         * method isn't called, we determine the metadata from the channel.
+         *
+         * @param serverAddress The address of the TCP server (handler)
+         * @param clientAddress The address of the TCP client (initiator)
+         * @param localIsServer Whether the handler is part of the server channel
+         * @return this builder
+         */
+        public Builder forceTcpChannel(
+                InetSocketAddress serverAddress,
+                InetSocketAddress clientAddress,
+                boolean localIsServer) {
+            channelType = ChannelType.TCP;
+            handlerAddr = ObjectUtil.checkNotNull(serverAddress, "serverAddress");
+            initiatiorAddr = ObjectUtil.checkNotNull(clientAddress, "clientAddress");
+            isServerPipeline = localIsServer;
+            return this;
+        }
+
+        /**
+         * Force this handler to write data as if they were UDP packets, with the given connection metadata. If this
+         * method isn't called, we determine the metadata from the channel.
+         * <br>
+         * Note that even if this method is called, the address information on {@link DatagramPacket} takes precedence
+         * if it is present.
+         *
+         * @param localAddress  The address of the UDP local
+         * @param remoteAddress The address of the UDP remote
+         * @return this builder
+         */
+        public Builder forceUdpChannel(InetSocketAddress localAddress, InetSocketAddress remoteAddress) {
+            channelType = ChannelType.UDP;
+            handlerAddr = ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+            initiatiorAddr = ObjectUtil.checkNotNull(localAddress, "localAddress");
+            return this;
+        }
+
+        /**
+         * Build the {@link PcapWriteHandler}.
+         *
+         * @param outputStream The output stream to write the pcap data to.
+         * @return The handler.
+         */
+        public PcapWriteHandler build(OutputStream outputStream) {
+            ObjectUtil.checkNotNull(outputStream, "outputStream");
+            return new PcapWriteHandler(this, outputStream);
+        }
     }
 }
