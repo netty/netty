@@ -126,7 +126,7 @@ public class SniClientTest {
             throws Throwable {
         final String sniHost = "sni.netty.io";
         SelfSignedCertificate cert = new SelfSignedCertificate();
-        LocalAddress address = new LocalAddress("test");
+        LocalAddress address = new LocalAddress("SniClientTest");
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         SslContext sslServerContext = null;
         SslContext sslClientContext = null;
@@ -397,7 +397,7 @@ public class SniClientTest {
     @MethodSource("parameters")
     public void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
         String sniHostName = "sni.netty.io";
-        LocalAddress address = new LocalAddress("test");
+        LocalAddress address = new LocalAddress("SniClientTest");
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContext sslServerContext = null;
