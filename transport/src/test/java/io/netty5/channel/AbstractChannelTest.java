@@ -192,6 +192,8 @@ public class AbstractChannelTest {
     }
 
     private static void registerChannel(Channel channel) throws Exception {
+        when(channel.executor().registerForIO(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
+        when(channel.executor().deregisterForIO(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
         channel.register().sync(); // Cause any exceptions to be thrown
     }
 
