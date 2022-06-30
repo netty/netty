@@ -80,7 +80,7 @@ public abstract class RenegotiateTest {
                                             final SslHandler handler = ctx.pipeline().get(SslHandler.class);
 
                                             renegotiate = true;
-                                            handler.renegotiate().addListener((FutureListener<Channel>) future -> {
+                                            handler.renegotiate().addListener(future -> {
                                                 if (future.isFailed()) {
                                                     error.compareAndSet(null, future.cause());
                                                     ctx.close();
@@ -98,7 +98,7 @@ public abstract class RenegotiateTest {
                             });
                         }
                     });
-            Channel channel = sb.bind(new LocalAddress("test")).get();
+            Channel channel = sb.bind(new LocalAddress("RenegotiateTest")).get();
 
             final SslContext clientContext = SslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
