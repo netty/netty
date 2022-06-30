@@ -639,15 +639,15 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      * Builder for {@link PcapWriteHandler}.
      */
     public static final class Builder {
-        boolean captureZeroByte;
-        boolean writePcapGlobalHeader = true;
+        private boolean captureZeroByte;
+        private boolean writePcapGlobalHeader = true;
 
-        ChannelType channelType;
-        InetSocketAddress initiatiorAddr;
-        InetSocketAddress handlerAddr;
-        boolean isServerPipeline;
+        private ChannelType channelType;
+        private InetSocketAddress initiatiorAddr;
+        private InetSocketAddress handlerAddr;
+        private boolean isServerPipeline;
 
-        Builder() {
+        private Builder() {
         }
 
         /**
