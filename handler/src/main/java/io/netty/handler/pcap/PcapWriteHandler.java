@@ -138,7 +138,9 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *                     OutputStream.
      * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
      *                              {@link NullPointerException}
+     * @deprecated Use {@link #builder() builder} instead.
      */
+    @Deprecated
     public PcapWriteHandler(OutputStream outputStream) {
         this(outputStream, false, true);
     }
@@ -156,7 +158,9 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *                              Pcap Global Header is already present.
      * @throws NullPointerException If {@link OutputStream} is {@code null} then we'll throw an
      *                              {@link NullPointerException}
+     * @deprecated Use {@link #builder() builder} instead.
      */
+    @Deprecated
     public PcapWriteHandler(OutputStream outputStream, boolean captureZeroByte, boolean writePcapGlobalHeader) {
         this.outputStream = ObjectUtil.checkNotNull(outputStream, "OutputStream");
         this.captureZeroByte = captureZeroByte;

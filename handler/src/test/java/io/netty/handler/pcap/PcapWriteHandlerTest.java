@@ -82,7 +82,7 @@ public class PcapWriteHandlerTest {
         Bootstrap client = new Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioDatagramChannel.class)
-                .handler(new PcapWriteHandler(new ByteBufOutputStream(byteBuf)));
+                .handler(PcapWriteHandler.builder().build(new ByteBufOutputStream(byteBuf)));
 
         ChannelFuture channelFutureClient =
                 client.connect(channelFutureServer.channel().localAddress(), cltReqAddr).sync();
@@ -191,7 +191,7 @@ public class PcapWriteHandlerTest {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
-                        p.addLast(new PcapWriteHandler(new ByteBufOutputStream(byteBuf)));
+                        p.addLast(PcapWriteHandler.builder().build(new ByteBufOutputStream(byteBuf)));
                         p.addLast(new ChannelInboundHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
