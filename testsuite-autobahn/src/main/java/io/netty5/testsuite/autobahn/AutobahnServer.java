@@ -46,7 +46,7 @@ public class AutobahnServer {
              .childOption(ChannelOption.BUFFER_ALLOCATOR, DefaultBufferAllocators.preferredAllocator())
              .childHandler(new AutobahnServerInitializer());
 
-            Channel channel = b.bind(port).asJdkFuture().get();
+            Channel channel = b.bind(port).asStage().get();
             System.out.println("Web Socket Server started at port " + port);
             channel.closeFuture().sync();
         } finally {

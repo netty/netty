@@ -248,7 +248,7 @@ public class CipherSuiteCanaryTest {
                 .group(GROUP)
                 .childHandler(handler);
 
-        return bootstrap.bind(address).asJdkFuture().get();
+        return bootstrap.bind(address).asStage().get();
     }
 
     private static Channel client(Channel server, ChannelHandler handler) throws Exception {
@@ -259,7 +259,7 @@ public class CipherSuiteCanaryTest {
                 .group(GROUP)
                 .handler(handler);
 
-        return bootstrap.connect(remoteAddress).asJdkFuture().get();
+        return bootstrap.connect(remoteAddress).asStage().get();
     }
 
     private static List<Object[]> expand(String rfcCipherName) {

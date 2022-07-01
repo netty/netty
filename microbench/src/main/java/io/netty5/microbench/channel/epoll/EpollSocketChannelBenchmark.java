@@ -55,64 +55,62 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             throw new AssertionError();
         }, 5, TimeUnit.MINUTES);
         serverChan = new ServerBootstrap()
-            .channel(EpollServerSocketChannel.class)
-            .group(group)
-            .childHandler(new ChannelInitializer<>() {
-                @Override
-                protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelHandler() {
-                        @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            if (msg instanceof Buffer) {
-                                ctx.writeAndFlush(msg);
-                            } else {
-                                throw new AssertionError();
-                            }
-                        }
-                    });
-                }
-            })
-            .bind(0)
-            .asJdkFuture().get();
-    chan = new Bootstrap()
-        .channel(EpollSocketChannel.class)
-        .handler(new ChannelInitializer<>() {
-            @Override
-            protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new ChannelHandler() {
-
-                    private Promise<Void> lastWritePromise;
-
+                .channel(EpollServerSocketChannel.class)
+                .group(group)
+                .childHandler(new ChannelInitializer<>() {
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (msg instanceof Buffer) {
-                            try (Buffer buf = (Buffer) msg) {
-                                if (buf.readableBytes() == 1) {
-                                    lastWritePromise.trySuccess(null);
-                                    lastWritePromise = null;
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(new ChannelHandler() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                if (msg instanceof Buffer) {
+                                    ctx.writeAndFlush(msg);
                                 } else {
                                     throw new AssertionError();
                                 }
                             }
-                        } else {
-                            throw new AssertionError();
-                        }
+                        });
                     }
-
+                })
+                .bind(0).asStage().get();
+        chan = new Bootstrap()
+                .channel(EpollSocketChannel.class)
+                .handler(new ChannelInitializer<>() {
                     @Override
-                    public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                        if (lastWritePromise != null) {
-                            throw new IllegalStateException();
-                        }
-                        lastWritePromise = ctx.newPromise();
-                        return ctx.write(msg);
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(new ChannelHandler() {
+
+                            private Promise<Void> lastWritePromise;
+
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                if (msg instanceof Buffer) {
+                                    try (Buffer buf = (Buffer) msg) {
+                                        if (buf.readableBytes() == 1) {
+                                            lastWritePromise.trySuccess(null);
+                                            lastWritePromise = null;
+                                        } else {
+                                            throw new AssertionError();
+                                        }
+                                    }
+                                } else {
+                                    throw new AssertionError();
+                                }
+                            }
+
+                            @Override
+                            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+                                if (lastWritePromise != null) {
+                                    throw new IllegalStateException();
+                                }
+                                lastWritePromise = ctx.newPromise();
+                                return ctx.write(msg);
+                            }
+                        });
                     }
-                });
-            }
-        })
-        .group(group)
-        .connect(serverChan.localAddress())
-        .asJdkFuture().get();
+                })
+                .group(group)
+                .connect(serverChan.localAddress()).asStage().get();
 
         abyte = chan.bufferAllocator().allocate(1);
         abyte.writeByte((byte) 'a').makeReadOnly();
@@ -134,12 +132,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public Object executeSingle() throws Exception {
-        return chan.executor().submit(runnable).asJdkFuture().get();
+        return chan.executor().submit(runnable).asStage().get();
     }
 
     @Benchmark
     @GroupThreads(3)
     public Object executeMulti() throws Exception {
-        return chan.executor().submit(runnable).asJdkFuture().get();
+        return chan.executor().submit(runnable).asStage().get();
     }
 }

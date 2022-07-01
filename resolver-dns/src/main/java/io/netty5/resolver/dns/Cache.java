@@ -132,11 +132,6 @@ abstract class Cache<E> {
         }
 
         @Override
-        public java.util.concurrent.Future<Object> asJdkFuture() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public <R> Future<R> map(Function<Object, R> mapper) {
             throw new UnsupportedOperationException();
         }

@@ -91,7 +91,7 @@ public final class DnsClient {
                     });
                  }
              });
-            final Channel ch = b.bind(0).asJdkFuture().get();
+            final Channel ch = b.bind(0).asStage().get();
             DnsQuery query = new DatagramDnsQuery(null, addr, 1).setRecord(
                     DnsSection.QUESTION,
                     new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));

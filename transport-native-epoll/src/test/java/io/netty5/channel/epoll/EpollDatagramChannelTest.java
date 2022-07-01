@@ -85,7 +85,7 @@ public class EpollDatagramChannelTest {
                     .localAddress(localAddressBeforeBind)
                     .handler(handler);
 
-            Channel channel = bootstrap.bind().asJdkFuture().get();
+            Channel channel = bootstrap.bind().asStage().get();
 
             assertNull(handler.localAddress);
 

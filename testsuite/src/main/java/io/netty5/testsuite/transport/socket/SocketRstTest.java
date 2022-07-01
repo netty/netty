@@ -79,8 +79,8 @@ public class SocketRstTest extends AbstractSocketTest {
                 });
             }
         });
-        Channel sc = sb.bind().asJdkFuture().get();
-        Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
+        Channel sc = sb.bind().asStage().get();
+        Channel cc = cb.connect(sc.localAddress()).asStage().get();
 
         // Wait for the server to get setup.
         latch.await();
@@ -133,7 +133,7 @@ public class SocketRstTest extends AbstractSocketTest {
                 });
             }
         });
-        Channel sc = sb.bind().asJdkFuture().get();
+        Channel sc = sb.bind().asStage().get();
         cb.connect(sc.localAddress()).sync();
 
         // Wait for the server to get setup.

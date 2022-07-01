@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -25,7 +24,6 @@ import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.DomainSocketChannel;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.PeerCredentials;
-import io.netty5.channel.unix.Unix;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.internal.UnstableApi;
 

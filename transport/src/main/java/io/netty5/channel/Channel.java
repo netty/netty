@@ -24,7 +24,6 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.AttributeMap;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;

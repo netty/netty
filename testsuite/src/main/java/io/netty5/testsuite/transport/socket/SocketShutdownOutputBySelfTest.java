@@ -63,7 +63,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         SocketChannel ch = null;
         try {
             ss.bind(newSocketAddress());
-            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).asJdkFuture().get();
+            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).asStage().get();
             assertTrue(ch.isActive());
             assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
@@ -111,7 +111,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         Socket s = null;
         try {
             ss.bind(newSocketAddress());
-            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).asJdkFuture().get();
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).asStage().get();
             assertTrue(ch.isActive());
             s = ss.accept();
 
@@ -151,7 +151,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         try {
             ss.bind(newSocketAddress());
             cb.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(2, 4));
-            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).asJdkFuture().get();
+            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).asStage().get();
             assertTrue(ch.isActive());
             assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
@@ -228,7 +228,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         try {
             ss.bind(newSocketAddress());
             client = cb.option(ChannelOption.SO_LINGER, 1).handler(new ChannelHandler() { })
-                    .connect(ss.getLocalSocketAddress()).asJdkFuture().get();
+                       .connect(ss.getLocalSocketAddress()).asStage().get();
             s = ss.accept();
 
             client.shutdown(ChannelShutdownDirection.Outbound).sync();

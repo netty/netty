@@ -23,8 +23,6 @@ import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
 
-import java.util.function.Supplier;
-
 import static io.netty5.handler.codec.http2.Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DATA_FRAME_HEADER_LENGTH;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;

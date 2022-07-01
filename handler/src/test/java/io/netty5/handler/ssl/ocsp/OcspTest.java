@@ -394,7 +394,7 @@ public class OcspTest {
                 .group(group)
                 .childHandler(newServerHandler(context, response, handler));
 
-        return bootstrap.bind(address).asJdkFuture().get();
+        return bootstrap.bind(address).asStage().get();
     }
 
     private static Channel newClient(EventLoopGroup group, SocketAddress address,
@@ -405,7 +405,7 @@ public class OcspTest {
                 .group(group)
                 .handler(newClientHandler(context, callback, handler));
 
-        return bootstrap.connect(address).asJdkFuture().get();
+        return bootstrap.connect(address).asStage().get();
     }
 
     private static ChannelHandler newServerHandler(final SslContext context,

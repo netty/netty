@@ -21,7 +21,6 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;

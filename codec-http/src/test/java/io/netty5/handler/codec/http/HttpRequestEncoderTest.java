@@ -132,7 +132,7 @@ public class HttpRequestEncoderTest {
         Buffer buf = preferredAllocator().allocate(10);
         buf.close();
         ExecutionException e = assertThrows(ExecutionException.class,
-                                            () -> channel.writeAndFlush(buf).asJdkFuture().get());
+                                            () -> channel.writeAndFlush(buf).asStage().get());
         assertThat(e.getCause()).hasCauseInstanceOf(BufferClosedException.class);
 
         channel.finishAndReleaseAll();
@@ -143,7 +143,7 @@ public class HttpRequestEncoderTest {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         Buffer buf = preferredAllocator().allocate(0);
-        channel.writeAndFlush(buf).asJdkFuture().get();
+        channel.writeAndFlush(buf).asStage().get();
         channel.finishAndReleaseAll();
         assertFalse(buf.isAccessible());
     }

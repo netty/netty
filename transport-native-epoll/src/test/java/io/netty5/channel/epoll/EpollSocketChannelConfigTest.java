@@ -63,9 +63,9 @@ public class EpollSocketChannelConfigTest {
     public void setup() throws Exception {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
-                .channel(EpollSocketChannel.class)
-                .handler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).asJdkFuture().get();
+                                           .channel(EpollSocketChannel.class)
+                                           .handler(new ChannelHandler() { })
+                                           .bind(new InetSocketAddress(0)).asStage().get();
     }
 
     @AfterEach

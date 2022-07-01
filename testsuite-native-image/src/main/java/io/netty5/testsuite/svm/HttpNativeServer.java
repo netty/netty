@@ -51,7 +51,7 @@ public final class HttpNativeServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new HttpNativeServerInitializer());
 
-            Channel channel = b.bind(0).asJdkFuture().get();
+            Channel channel = b.bind(0).asStage().get();
             System.err.println("Server started, will shutdown now.");
             channel.close().sync();
             serverStartSucess = true;

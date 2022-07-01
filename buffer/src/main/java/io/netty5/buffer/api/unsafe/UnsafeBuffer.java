@@ -49,7 +49,6 @@ import java.nio.channels.WritableByteChannel;
 
 import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.api.internal.Statics.bbslice;
-import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
 import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
 import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
 import static io.netty5.buffer.api.internal.Statics.checkLength;

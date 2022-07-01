@@ -20,9 +20,7 @@ import io.netty5.util.internal.DefaultPriorityQueue;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.requireNonNull;
@@ -230,11 +228,6 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     @Override
     public FutureCompletionStage<V> asStage() {
         return future.asStage();
-    }
-
-    @Override
-    public java.util.concurrent.Future<V> asJdkFuture() {
-        return future.asJdkFuture();
     }
 
     @Override

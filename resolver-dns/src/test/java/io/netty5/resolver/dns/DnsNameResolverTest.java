@@ -1930,7 +1930,7 @@ public class DnsNameResolverTest {
                 .build();
 
         try {
-            final List<InetAddress> addresses = resolver.resolveAll(unresolved).sync().asJdkFuture().get();
+            final List<InetAddress> addresses = resolver.resolveAll(unresolved).sync().asStage().get();
             assertThat(addresses, hasSize(greaterThan(0)));
             for (InetAddress address : addresses) {
                 assertThat(address.getHostName(), startsWith(unresolved));
@@ -3431,7 +3431,7 @@ public class DnsNameResolverTest {
     }
 
     private static void assertNotEmptyAndRelease(Future<List<DnsRecord>> recordsFuture) throws Exception {
-        List<DnsRecord> records = recordsFuture.asJdkFuture().get();
+        List<DnsRecord> records = recordsFuture.asStage().get();
         assertFalse(records.isEmpty());
         for (DnsRecord record : records) {
             Resource.dispose(record);

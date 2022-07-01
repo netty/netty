@@ -94,7 +94,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 }
             });
 
-            SocketAddress address = sb.bind(0).asJdkFuture().get().localAddress();
+            SocketAddress address = sb.bind(0).asStage().get().localAddress();
 
             Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
 
@@ -145,7 +145,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                 }
             });
 
-            SocketAddress address = sb.bind(0).asJdkFuture().get().localAddress();
+            SocketAddress address = sb.bind(0).asStage().get().localAddress();
 
             Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
 
@@ -206,12 +206,12 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                  }
              });
 
-            sc = b.bind(0).asJdkFuture().get();
+            sc = b.bind(0).asStage().get();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(NioSocketChannel.class);
             bootstrap.handler(new ChannelHandler() { });
-            cc = bootstrap.connect(sc.localAddress()).asJdkFuture().get();
+            cc = bootstrap.connect(sc.localAddress()).asStage().get();
             cc.writeAndFlush(onHeapAllocator().copyOf(bytes)).sync();
             latch.await();
         } finally {
@@ -237,7 +237,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             sb.group(group).channel(NioSocketChannel.class);
             sb.handler(new ChannelHandler() { });
 
-            SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress()).asJdkFuture().get();
+            SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress()).asStage().get();
 
             accepted = socket.accept();
             channel.shutdown(ChannelShutdownDirection.Outbound).sync();

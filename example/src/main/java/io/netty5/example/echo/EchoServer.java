@@ -72,7 +72,7 @@ public final class EchoServer {
              });
 
             // Start the server.
-            Channel channel = b.bind(PORT).asJdkFuture().get();
+            Channel channel = b.bind(PORT).asStage().get();
 
             // Wait until the server socket is closed.
             channel.closeFuture().sync();

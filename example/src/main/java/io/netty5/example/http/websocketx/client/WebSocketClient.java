@@ -119,7 +119,7 @@ public final class WebSocketClient {
                  }
              });
 
-            Channel ch = b.connect(uri.getHost(), port).asJdkFuture().get();
+            Channel ch = b.connect(uri.getHost(), port).asStage().get();
             handler.handshakeFuture().sync();
 
             BufferedReader console = new BufferedReader(new InputStreamReader(System.in));

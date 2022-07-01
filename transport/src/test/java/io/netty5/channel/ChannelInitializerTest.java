@@ -130,7 +130,7 @@ public class ChannelInitializerTest {
             }
         }).localAddress(LocalAddress.ANY);
 
-        Channel channel = client.bind().asJdkFuture().get();
+        Channel channel = client.bind().asStage().get();
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
@@ -167,7 +167,7 @@ public class ChannelInitializerTest {
             }
         }).localAddress(LocalAddress.ANY);
 
-        Channel channel = client.bind().asJdkFuture().get();
+        Channel channel = client.bind().asStage().get();
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
@@ -239,8 +239,8 @@ public class ChannelInitializerTest {
         Channel clientChannel = null, serverChannel = null;
         try {
             server.childHandler(init);
-            serverChannel = server.bind().asJdkFuture().get();
-            clientChannel = client.connect(SERVER_ADDRESS).asJdkFuture().get();
+            serverChannel = server.bind().asStage().get();
+            clientChannel = client.connect(SERVER_ADDRESS).asStage().get();
             assertEquals(1, testHandler.channelRegisteredCount.get());
         } finally {
             closeChannel(clientChannel);

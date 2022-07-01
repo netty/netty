@@ -54,8 +54,8 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         sb.childHandler(serverHandler);
         cb.handler(clientHandler);
 
-        Channel sc = sb.bind().asJdkFuture().get();
-        Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
+        Channel sc = sb.bind().asStage().get();
+        Channel cc = cb.connect(sc.localAddress()).asStage().get();
 
         // Ensure the server socket accepted the client connection *and* initialized pipeline successfully.
         serverHandler.awaitPipelineInit();

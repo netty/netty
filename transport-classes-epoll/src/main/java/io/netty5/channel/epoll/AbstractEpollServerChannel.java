@@ -27,7 +27,6 @@ import io.netty5.channel.ServerChannel;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.concurrent.Promise;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import static java.util.Objects.requireNonNull;

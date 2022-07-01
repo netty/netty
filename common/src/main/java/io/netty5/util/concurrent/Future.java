@@ -17,9 +17,7 @@ package io.netty5.util.concurrent;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 /**
@@ -207,13 +205,11 @@ public interface Future<V> extends AsynchronousResult<V> {
     /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all
      * updates as well.
+     * <p>
+     * The returned {@link FutureCompletionStage} also implements the JDK {@link java.util.concurrent.Future},
+     * and has blocking methods not found on the Netty {@code Future} interface, for awaiting the completion.
      */
     FutureCompletionStage<V> asStage();
-
-    /**
-     * Returns a {@link java.util.concurrent.Future JDK Future that reflects the state of this {@link Future}.
-     */
-    java.util.concurrent.Future<V> asJdkFuture();
 
     /**
      * Creates a <strong>new</strong> {@link Future} that will complete with the result of this {@link Future} mapped

@@ -49,7 +49,7 @@ public final class QuoteOfTheMomentClient {
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentClientHandler());
 
-            Channel ch = b.bind(0).asJdkFuture().get();
+            Channel ch = b.bind(0).asStage().get();
 
             // Broadcast the QOTM request to port 8080.
             Buffer message = DefaultBufferAllocators.preferredAllocator().copyOf("QOTM?", UTF_8);

@@ -625,7 +625,7 @@ public class Http2ConnectionRoundtripTest {
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                promise.asFuture().asJdkFuture().get();
+                promise.asFuture().asStage().get();
             }
         });
         assertThat(e).hasCauseInstanceOf(BufferClosedException.class);
@@ -678,7 +678,7 @@ public class Http2ConnectionRoundtripTest {
         ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                dataPromise.asFuture().asJdkFuture().get();
+                dataPromise.asFuture().asStage().get();
             }
         });
         assertThat(e).hasCauseInstanceOf(IllegalStateException.class);
@@ -1090,9 +1090,9 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress(getClass())).asJdkFuture().get();
+        serverChannel = sb.bind(new LocalAddress(getClass())).asStage().get();
 
-        clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
+        clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
         assertTrue(prefaceWrittenLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
         http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
         assertTrue(serverInitLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));

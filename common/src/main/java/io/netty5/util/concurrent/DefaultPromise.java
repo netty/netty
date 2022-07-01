@@ -617,11 +617,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
         return this;
     }
 
-    @Override
-    public java.util.concurrent.Future<V> asJdkFuture() {
-        return this;
-    }
-
     // <editor-fold defaultstate="collapsed" desc="CompletionStage and JDK Future implementation.">
     private enum Marker {
         EMPTY,

@@ -15,12 +15,10 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.unix.Unix;
 import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;

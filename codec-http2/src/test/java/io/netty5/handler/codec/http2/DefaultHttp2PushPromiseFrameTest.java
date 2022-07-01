@@ -69,7 +69,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        Channel channel = serverBootstrap.bind(0).asJdkFuture().get();
+        Channel channel = serverBootstrap.bind(0).asStage().get();
 
         final Bootstrap bootstrap = new Bootstrap()
                 .group(eventLoopGroup)

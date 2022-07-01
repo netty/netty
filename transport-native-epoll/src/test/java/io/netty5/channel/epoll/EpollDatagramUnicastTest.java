@@ -107,7 +107,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 }
             });
 
-            cc = cb.bind(newSocketAddress()).asJdkFuture().get();
+            cc = cb.bind(newSocketAddress()).asStage().get();
             if (!(cc instanceof EpollDatagramChannel)) {
                 // Only supported for the native epoll transport.
                 return;
@@ -149,7 +149,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                     } while (!errorRef.compareAndSet(null, cause));
                     super.channelExceptionCaught(ctx, cause);
                 }
-            }).bind(newSocketAddress()).asJdkFuture().get();
+            }).bind(newSocketAddress()).asStage().get();
 
             if (gro && !(sc instanceof EpollDatagramChannel)) {
                 // Only supported for the native epoll transport.

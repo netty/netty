@@ -40,9 +40,9 @@ public class KQueueServerSocketChannelConfigTest {
         group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (KQueueServerSocketChannel) bootstrap.group(group)
-                .channel(KQueueServerSocketChannel.class)
-                .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).asJdkFuture().get();
+                                                  .channel(KQueueServerSocketChannel.class)
+                                                  .childHandler(new ChannelHandler() { })
+                                                  .bind(new InetSocketAddress(0)).asStage().get();
     }
 
     @AfterAll

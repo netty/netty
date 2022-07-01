@@ -20,7 +20,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.FileRegion;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;

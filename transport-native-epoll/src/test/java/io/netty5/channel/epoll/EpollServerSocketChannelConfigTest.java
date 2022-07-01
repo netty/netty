@@ -41,9 +41,9 @@ public class EpollServerSocketChannelConfigTest {
         group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (EpollServerSocketChannel) bootstrap.group(group)
-                .channel(EpollServerSocketChannel.class)
-                .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).asJdkFuture().get();
+                                                 .channel(EpollServerSocketChannel.class)
+                                                 .childHandler(new ChannelHandler() { })
+                                                 .bind(new InetSocketAddress(0)).asStage().get();
     }
 
     @AfterAll

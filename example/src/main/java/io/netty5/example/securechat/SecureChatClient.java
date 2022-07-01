@@ -51,7 +51,7 @@ public final class SecureChatClient {
              .handler(new SecureChatClientInitializer(sslCtx));
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).asJdkFuture().get();
+            Channel ch = b.connect(HOST, PORT).asStage().get();
 
             // Read commands from the stdin.
             Future<Void> lastWriteFuture = null;

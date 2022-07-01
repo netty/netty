@@ -387,10 +387,10 @@ public class DataCompressionHttp2Test {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        clientChannel = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port)).asJdkFuture().get();
+        clientChannel = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port)).asStage().get();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }

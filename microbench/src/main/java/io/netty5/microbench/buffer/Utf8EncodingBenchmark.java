@@ -20,7 +20,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.AsciiString;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.internal.EmptyArrays;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.CompilerControl.Mode;

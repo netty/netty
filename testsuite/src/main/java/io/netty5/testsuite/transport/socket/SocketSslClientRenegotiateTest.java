@@ -176,7 +176,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                 }
             });
 
-            Channel sc = sb.bind().asJdkFuture().get();
+            Channel sc = sb.bind().asStage().get();
             cb.connect(sc.localAddress()).sync();
 
             Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();

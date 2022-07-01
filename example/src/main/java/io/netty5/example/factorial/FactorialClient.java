@@ -54,7 +54,7 @@ public final class FactorialClient {
              .handler(new FactorialClientInitializer(sslCtx));
 
             // Make a new connection.
-            Channel channel = b.connect(HOST, PORT).asJdkFuture().get();
+            Channel channel = b.connect(HOST, PORT).asStage().get();
 
             // Get the handler instance to retrieve the answer.
             FactorialClientHandler handler = (FactorialClientHandler) channel.pipeline().last();

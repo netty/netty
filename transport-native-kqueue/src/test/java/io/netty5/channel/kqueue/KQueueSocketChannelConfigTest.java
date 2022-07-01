@@ -58,9 +58,9 @@ public class KQueueSocketChannelConfigTest {
     public void setUp() throws Exception {
         Bootstrap bootstrap = new Bootstrap();
         ch = (KQueueSocketChannel) bootstrap.group(group)
-                .channel(KQueueSocketChannel.class)
-                .handler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).asJdkFuture().get();
+                                            .channel(KQueueSocketChannel.class)
+                                            .handler(new ChannelHandler() { })
+                                            .bind(new InetSocketAddress(0)).asStage().get();
     }
 
     @AfterEach

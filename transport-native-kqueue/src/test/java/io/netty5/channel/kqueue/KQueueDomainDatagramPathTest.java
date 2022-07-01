@@ -38,7 +38,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
         run(testInfo, bootstrap -> {
             try {
                 bootstrap.handler(new ChannelHandlerAdapter() { })
-                         .connect(KQueueSocketTestPermutation.newSocketAddress()).asJdkFuture().get();
+                         .connect(KQueueSocketTestPermutation.newSocketAddress()).asStage().get();
                 fail("Expected FileNotFoundException");
             } catch (Exception e) {
                 assertTrue(e.getCause() instanceof FileNotFoundException);
@@ -51,7 +51,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
         run(testInfo, bootstrap -> {
             try {
                 Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
-                                      .bind(KQueueSocketTestPermutation.newSocketAddress()).asJdkFuture().get();
+                                      .bind(KQueueSocketTestPermutation.newSocketAddress()).asStage().get();
                 ch.writeAndFlush(new DomainDatagramPacket(
                         ch.bufferAllocator().copyOf("test", US_ASCII),
                         KQueueSocketTestPermutation.newSocketAddress())).sync();

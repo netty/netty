@@ -149,8 +149,8 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                 }
             });
 
-            Channel sc = sb.bind().asJdkFuture().get();
-            Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
+            Channel sc = sb.bind().asStage().get();
+            Channel cc = cb.connect(sc.localAddress()).asStage().get();
 
             ch.latch.await();
 

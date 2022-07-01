@@ -102,7 +102,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
                 sch.pipeline().addLast(sh);
             }
         });
-        final Channel sc = sb.bind().asJdkFuture().get();
+        final Channel sc = sb.bind().asStage().get();
 
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -121,14 +121,14 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         try {
             SSLSessionContext clientSessionCtx = clientCtx.sessionContext();
             Buffer msg = DefaultBufferAllocators.preferredAllocator().copyOf(new byte[] { 0xa, 0xb, 0xc, 0xd });
-            Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
+            Channel cc = cb.connect(sc.localAddress()).asStage().get();
             cc.writeAndFlush(msg).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             Set<String> sessions = sessionIdSet(clientSessionCtx.getIds());
 
             msg = DefaultBufferAllocators.preferredAllocator().copyOf(new byte[] { 0xa, 0xb, 0xc, 0xd });
-            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
+            cc = cb.connect(sc.localAddress()).asStage().get();
             cc.writeAndFlush(msg).sync();
             cc.closeFuture().sync();
             assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");

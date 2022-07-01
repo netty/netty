@@ -67,7 +67,7 @@ public final class DiscardServer {
              });
 
             // Bind and start to accept incoming connections.
-            Channel channel = b.bind(PORT).asJdkFuture().get();
+            Channel channel = b.bind(PORT).asStage().get();
 
             // Wait until the server socket is closed.
             // In this example, this does not happen, but you can do that to gracefully

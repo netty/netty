@@ -73,14 +73,14 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cb.option(ChannelOption.IP_MULTICAST_IF, iface);
         cb.option(ChannelOption.SO_REUSEADDR, true);
 
-        DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).asJdkFuture().get();
+        DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).asStage().get();
         assertEquals(iface, sc.config().getNetworkInterface());
         assertInterfaceAddress(iface, sc.config().getInterface());
 
         InetSocketAddress addr = sc.localAddress();
         cb.localAddress(addr.getPort());
 
-        DatagramChannel cc = (DatagramChannel) cb.bind().asJdkFuture().get();
+        DatagramChannel cc = (DatagramChannel) cb.bind().asStage().get();
         assertEquals(iface, cc.config().getNetworkInterface());
         assertInterfaceAddress(iface, cc.config().getInterface());
 
