@@ -94,6 +94,9 @@ public class InboundHttp2ToHttpAdapterTest {
     private CountDownLatch clientLatch;
     private CountDownLatch serverLatch2;
     private CountDownLatch clientLatch2;
+
+    private CountDownLatch clientHandlersAddedLatch;
+
     private CountDownLatch settingsLatch;
     private int maxContentLength;
     private HttpResponseDelegator serverDelegator;
@@ -576,6 +579,7 @@ public class InboundHttp2ToHttpAdapterTest {
         serverLatch2 = new CountDownLatch(serverLatchCount2);
         clientLatch2 = new CountDownLatch(clientLatchCount2);
         settingsLatch = new CountDownLatch(settingsLatchCount);
+        clientHandlersAddedLatch = new CountDownLatch(1);
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -648,6 +652,12 @@ public class InboundHttp2ToHttpAdapterTest {
                         }
                     }
                 });
+                p.addLast(new ChannelHandler() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        clientHandlersAddedLatch.countDown();
+                    }
+                });
             }
         });
 
@@ -656,6 +666,8 @@ public class InboundHttp2ToHttpAdapterTest {
         clientChannel = cb.connect(serverChannel.localAddress()).get();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
+        // Block until we are sure the handlers are added
+        assertTrue(clientHandlersAddedLatch.await(5, SECONDS));
     }
 
     private void cleanupCapturedRequests() {
