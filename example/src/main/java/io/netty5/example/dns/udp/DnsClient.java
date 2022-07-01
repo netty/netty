@@ -96,7 +96,7 @@ public final class DnsClient {
                     DnsSection.QUESTION,
                     new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
             ch.writeAndFlush(query).sync();
-            boolean success = ch.closeFuture().await(10, TimeUnit.SECONDS);
+            boolean success = ch.closeFuture().asStage().await(10, TimeUnit.SECONDS);
             if (!success) {
                 System.err.println("dns query timeout!");
                 ch.close().sync();

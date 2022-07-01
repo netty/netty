@@ -196,11 +196,6 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     }
 
     @Override
-    public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-        return future.await(timeout, unit);
-    }
-
-    @Override
     public V getNow() {
         return promise.getNow();
     }

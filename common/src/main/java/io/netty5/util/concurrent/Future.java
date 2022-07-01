@@ -86,7 +86,7 @@ import java.util.function.Function;
  * {@code @Override}
  * public void channelRead({@link io.netty5.channel.ChannelHandlerContext} ctx, Object msg) {
  *     {@link Future} future = ctx.channel().close();
- *     future.await();
+ *     future.asStage().await();
  *     // Perform post-closure operation
  *     // ...
  * }
@@ -110,7 +110,7 @@ import java.util.function.Function;
  *
  * <h3>Do not confuse I/O timeout and await timeout</h3>
  * <p>
- * The timeout value you specify with {@link #await(long, TimeUnit)} are not related with
+ * The timeout value you specify with {@link FutureCompletionStage#await(long, TimeUnit)} is not related to the
  * I/O timeout at all.
  * If an I/O operation times out, the future will be marked as 'completed with failure,' as depicted in the
  * diagram above.  For example, connect timeout should be configured via a transport-specific option:
@@ -118,7 +118,7 @@ import java.util.function.Function;
  * // BAD - NEVER DO THIS
  * {@link io.netty5.bootstrap.Bootstrap} b = ...;
  * {@link Future} f = b.connect(...);
- * f.await(10, TimeUnit.SECONDS);
+ * f.asStage().await(10, TimeUnit.SECONDS);
  * if (f.isCancelled()) {
  *     // Connection attempt cancelled by user
  * } else if (!f.isSuccess()) {
@@ -134,7 +134,7 @@ import java.util.function.Function;
  * // Configure the connect timeout option.
  * <b>b.option({@link io.netty5.channel.ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link Future} f = b.connect(...);
- * f.await();
+ * f.asStage().await();
  *
  * // Now we are sure the future is completed.
  * assert f.isDone();
@@ -185,14 +185,6 @@ public interface Future<V> extends AsynchronousResult<V> {
      * @throws InterruptedException if the current thread was interrupted
      */
     Future<V> await() throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed within the specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within the specified time limit
-     * @throws InterruptedException if the current thread was interrupted
-     */
-    boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all

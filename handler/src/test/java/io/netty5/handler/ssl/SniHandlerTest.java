@@ -566,7 +566,7 @@ public class SniHandlerTest {
 
                     // The client disconnects
                     cc.close().sync();
-                    if (!releasePromise.asFuture().await(10L, TimeUnit.SECONDS)) {
+                    if (!releasePromise.asFuture().asStage().await(10L, TimeUnit.SECONDS)) {
                         throw new IllegalStateException("It doesn't seem #replaceHandler() got called.");
                     }
 

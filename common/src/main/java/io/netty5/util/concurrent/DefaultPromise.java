@@ -36,7 +36,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DefaultPromise<V> implements Promise<V>, Future<V>,
                                           FutureCompletionStage<V>, java.util.concurrent.Future<V> {

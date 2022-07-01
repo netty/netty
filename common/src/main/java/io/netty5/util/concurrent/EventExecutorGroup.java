@@ -76,7 +76,7 @@ public interface EventExecutorGroup extends Iterable<EventExecutor>, Executor {
      * executor group to terminate.
      */
     default boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        return terminationFuture().await(timeout, unit);
+        return terminationFuture().asStage().await(timeout, unit);
     }
 
     /**

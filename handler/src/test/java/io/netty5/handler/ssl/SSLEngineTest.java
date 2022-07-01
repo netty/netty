@@ -1204,7 +1204,7 @@ public abstract class SSLEngineTest {
         List<Buffer> dataCapture = null;
         try {
             Future<Void> writeAndFlush = sendChannel.writeAndFlush(message.copy());
-            assertTrue(writeAndFlush.await(10, TimeUnit.SECONDS));
+            assertTrue(writeAndFlush.asStage().await(10, TimeUnit.SECONDS));
             if (!writeAndFlush.isSuccess()) {
                 throw new Exception("Write and flush failed", writeAndFlush.cause());
             }
@@ -3955,7 +3955,7 @@ public abstract class SSLEngineTest {
             out.flush();
 
             Future<SecretKey> future = promise.asFuture();
-            assertTrue(future.await(10, TimeUnit.SECONDS));
+            assertTrue(future.asStage().await(10, TimeUnit.SECONDS));
             SecretKey key = future.asStage().get();
             assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
         } finally {

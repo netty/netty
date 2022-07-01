@@ -331,8 +331,8 @@ public class OpenSslCertificateCompressionTest {
 
             Channel clientChannel = bootstrap.connect(serverChannel.localAddress()).sync().getNow();
 
-            assertTrue(clientPromise.asFuture().await(5L, TimeUnit.SECONDS), "client timeout");
-            assertTrue(serverPromise.asFuture().await(5L, TimeUnit.SECONDS), "server timeout");
+            assertTrue(clientPromise.asFuture().asStage().await(5L, TimeUnit.SECONDS), "client timeout");
+            assertTrue(serverPromise.asFuture().asStage().await(5L, TimeUnit.SECONDS), "server timeout");
             clientPromise.asFuture().sync();
             serverPromise.asFuture().sync();
             clientChannel.close().sync();

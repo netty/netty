@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -41,6 +42,14 @@ import java.util.function.Function;
  * @param <V> the value type.
  */
 public interface FutureCompletionStage<V> extends CompletionStage<V>, java.util.concurrent.Future<V> {
+
+    /**
+     * Waits for this future to be completed within the specified time limit.
+     *
+     * @return {@code true} if and only if the future was completed within the specified time limit
+     * @throws InterruptedException if the current thread was interrupted
+     */
+    boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
      * Returns the underlying {@link Future} of this {@link FutureCompletionStage}.

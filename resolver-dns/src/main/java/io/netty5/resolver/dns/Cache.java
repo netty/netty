@@ -97,11 +97,6 @@ abstract class Cache<E> {
         }
 
         @Override
-        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-            return true;
-        }
-
-        @Override
         public Object getNow() {
             return null;
         }

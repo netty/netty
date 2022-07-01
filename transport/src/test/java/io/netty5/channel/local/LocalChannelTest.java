@@ -318,7 +318,7 @@ public class LocalChannelTest {
                         }
                     });
             Future<Channel> future = bootstrap.connect(sc.localAddress());
-            assertTrue(future.await(2000, TimeUnit.MILLISECONDS), "Connection should finish, not time out");
+            assertTrue(future.asStage().await(2000, TimeUnit.MILLISECONDS), "Connection should finish, not time out");
             cc = future.await().isSuccess() ? future.asStage().get() : null;
         } finally {
             closeChannel(cc);

@@ -51,7 +51,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
     @Test
     public void shutdownGracefullyZeroQuietBeforeStart() throws Exception {
         EventLoopGroup group =  new MultithreadEventLoopGroup(newIoHandlerFactory());
-        assertTrue(group.shutdownGracefully(0L, 2L, TimeUnit.SECONDS).await(200, TimeUnit.MILLISECONDS));
+        assertTrue(group.shutdownGracefully(0L, 2L, TimeUnit.SECONDS).asStage().await(200, TimeUnit.MILLISECONDS));
     }
 
     // Copied from AbstractEventLoopTest
@@ -79,7 +79,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
     @Test
     public void shutdownGracefullyBeforeStart() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
-        assertTrue(group.shutdownGracefully(200L, 1000L, TimeUnit.MILLISECONDS).await(500, TimeUnit.MILLISECONDS));
+        assertTrue(group.shutdownGracefully(200L, 1000L, TimeUnit.MILLISECONDS).asStage()
+                        .await(500, TimeUnit.MILLISECONDS));
     }
 
     @Test

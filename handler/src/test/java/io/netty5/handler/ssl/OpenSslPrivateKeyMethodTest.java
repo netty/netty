@@ -305,8 +305,8 @@ public class OpenSslPrivateKeyMethodTest {
 
                     Future<Object> clientFuture = clientPromise.asFuture();
                     Future<Object> serverFuture = serverPromise.asFuture();
-                    assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
-                    assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
+                    assertTrue(clientFuture.asStage().await(5L, TimeUnit.SECONDS), "client timeout");
+                    assertTrue(serverFuture.asStage().await(5L, TimeUnit.SECONDS), "server timeout");
 
                     clientFuture.sync();
                     serverFuture.sync();

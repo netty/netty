@@ -366,7 +366,7 @@ public class DefaultPromiseTest {
             for (final Map.Entry<Thread, DefaultPromise<Void>> promise : promises.entrySet()) {
                 promise.getKey().start();
                 final long start = System.nanoTime();
-                promise.getValue().await(wait, TimeUnit.NANOSECONDS);
+                promise.getValue().asStage().await(wait, TimeUnit.NANOSECONDS);
                 assertThat(System.nanoTime() - start).isLessThan(wait);
             }
         } finally {
