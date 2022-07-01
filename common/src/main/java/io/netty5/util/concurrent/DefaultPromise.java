@@ -56,10 +56,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
     private volatile Object result;
     private final EventExecutor executor;
 
-    // It is fine to not make this volatile as even if we override the value in there it does not matter as
-    // DefaultFutureCompletionStage has no state itself and is just a wrapper around this DefaultPromise instance.
-//    private DefaultFutureCompletionStage<V> stage;
-
     /**
      * One or more listeners. Can be a {@link FutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
@@ -88,7 +84,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
      */
     protected DefaultPromise(EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
-//        stage = new DefaultFutureCompletionStage<>(this);
     }
 
     /**
@@ -122,13 +117,11 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
     private DefaultPromise(EventExecutor executor, Object result) {
         this.executor = requireNonNull(executor, "executor");
         this.result = result == null? SUCCESS : result;
-//        stage = new DefaultFutureCompletionStage<>(this);
     }
 
     private DefaultPromise(Throwable cause, EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
         result = new CauseHolder(requireNonNull(cause, "cause"));
-//        stage = new DefaultFutureCompletionStage<>(this);
     }
 
     @Override
