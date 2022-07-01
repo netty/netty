@@ -93,6 +93,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         }
     };
 
+    /**
+     * Override for {@link #isServer(ChannelHandlerContext)}, if {@code null}, it's inferred from the channel.
+     */
+    private final Boolean isServer;
+
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
     private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
@@ -111,7 +116,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
      *
      * @param inboundStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of
      *                             the {@link Channel}s created for new inbound streams.
+     * @deprecated Use {@link #forClient(ChannelHandler, ChannelHandler)} (with the second parameter as {@code null})
+     * or {@link #forServer(ChannelHandler)} instead.
      */
+    @Deprecated
     public Http2MultiplexHandler(ChannelHandler inboundStreamHandler) {
         this(inboundStreamHandler, null);
     }
@@ -123,10 +131,45 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
      *                             the {@link Channel}s created for new inbound streams.
      * @param upgradeStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of the
      *                             upgraded {@link Channel}.
+     * @deprecated Use {@link #forClient(ChannelHandler, ChannelHandler)} instead.
      */
+    @Deprecated
     public Http2MultiplexHandler(ChannelHandler inboundStreamHandler, ChannelHandler upgradeStreamHandler) {
+        this(null, inboundStreamHandler, upgradeStreamHandler);
+    }
+
+    private Http2MultiplexHandler(Boolean isServer,
+                                  ChannelHandler inboundStreamHandler,
+                                  ChannelHandler upgradeStreamHandler) {
+        this.isServer = isServer;
         this.inboundStreamHandler = ObjectUtil.checkNotNull(inboundStreamHandler, "inboundStreamHandler");
         this.upgradeStreamHandler = upgradeStreamHandler;
+    }
+
+    /**
+     * Creates a new instance for the HTTP 2 client.
+     *
+     * @param inboundStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of
+     *                             the {@link Channel}s created for new streams.
+     * @param upgradeStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of the
+     *                             upgraded {@link Channel}, in the case of h2c upgrade. If there is no upgrade, this
+     *                             parameter can be {@code null}.
+     * @return The handler.
+     */
+    public static Http2MultiplexHandler forClient(ChannelHandler inboundStreamHandler,
+                                                  ChannelHandler upgradeStreamHandler) {
+        return new Http2MultiplexHandler(false, inboundStreamHandler, upgradeStreamHandler);
+    }
+
+    /**
+     * Creates a new instance for the HTTP 2 server.
+     *
+     * @param inboundStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of
+     *                             the {@link Channel}s created for new inbound streams.
+     * @return The handler.
+     */
+    public static Http2MultiplexHandler forServer(ChannelHandler inboundStreamHandler) {
+        return new Http2MultiplexHandler(true, inboundStreamHandler, null);
     }
 
     static void registerDone(ChannelFuture future) {
@@ -292,8 +335,12 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         ctx.fireExceptionCaught(cause);
     }
 
-    private static boolean isServer(ChannelHandlerContext ctx) {
-        return ctx.channel().parent() instanceof ServerChannel;
+    private boolean isServer(ChannelHandlerContext ctx) {
+        if (isServer == null) {
+            return ctx.channel().parent() instanceof ServerChannel;
+        } else {
+            return isServer;
+        }
     }
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
