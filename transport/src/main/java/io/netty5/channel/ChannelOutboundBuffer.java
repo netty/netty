@@ -140,14 +140,29 @@ public final class ChannelOutboundBuffer {
                 // there is no flushedEntry yet, so start with the entry
                 flushedEntry = entry;
             }
+
+            Entry prev = null;
             do {
-                flushed ++;
                 if (!entry.promise.setUncancellable()) {
-                    // Was cancelled so make sure we free up memory and notify about the freed bytes
+                    // Was cancelled so make sure we free up memory, unlink and notify about the freed bytes
                     int pending = entry.cancel();
+                    if (prev == null) {
+                        // It's the first entry, drop it
+                        flushedEntry = entry.next;
+                    } else {
+                        // Remove te entry from the linked list.
+                        prev.next = entry.next;
+                    }
+                    Entry next = entry.next;
+                    entry.recycle();
+                    entry = next;
+
                     decrementPendingOutboundBytes(pending, false, true);
+                } else {
+                    flushed ++;
+                    prev = entry;
+                    entry = entry.next;
                 }
-                entry = entry.next;
             } while (entry != null);
 
             // All flushed so reset unflushedEntry
