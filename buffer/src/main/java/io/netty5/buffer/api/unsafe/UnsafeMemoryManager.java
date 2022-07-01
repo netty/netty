@@ -78,7 +78,7 @@ public final class UnsafeMemoryManager implements MemoryManager {
                 cleaner.register(memory, freeAddress);
             }
         } else if (allocationType == StandardAllocationTypes.ON_HEAP) {
-            base = new byte[size32];
+            base = PlatformDependent.allocateUninitializedArray(size32);
             address = PlatformDependent.byteArrayBaseOffset();
             memory = new UnsafeMemory(base, address, size32);
         } else if (allocationType instanceof WrappingAllocation) {
