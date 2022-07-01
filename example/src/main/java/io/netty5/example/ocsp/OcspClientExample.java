@@ -96,10 +96,10 @@ public class OcspClientExample {
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000)
                         .handler(newClientHandler(context, host, promise));
 
-                Channel channel = bootstrap.connect(host, 443).get();
+                Channel channel = bootstrap.connect(host, 443).asJdkFuture().get();
 
                 try {
-                    FullHttpResponse response = promise.asFuture().get();
+                    FullHttpResponse response = promise.asFuture().asJdkFuture().get();
                     Resource.dispose(response);
                 } finally {
                     channel.close();

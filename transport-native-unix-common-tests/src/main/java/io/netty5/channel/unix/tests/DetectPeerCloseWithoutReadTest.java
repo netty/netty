@@ -80,13 +80,13 @@ public abstract class DetectPeerCloseWithoutReadTest {
                 }
             });
 
-            serverChannel = sb.bind(new InetSocketAddress(0)).get();
+            serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
 
             Bootstrap cb = new Bootstrap();
             cb.group(serverGroup);
             cb.channel(clientChannel());
             cb.handler(new ChannelHandler() { });
-            Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
+            Channel clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             Buffer buf = clientChannel.bufferAllocator().allocate(expectedBytes);
             buf.skipWritableBytes(expectedBytes);
             clientChannel.writeAndFlush(buf).addListener(clientChannel, ChannelFutureListeners.CLOSE);
@@ -147,7 +147,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
                 }
             });
 
-            serverChannel = sb.bind(new InetSocketAddress(0)).get();
+            serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
 
             Bootstrap cb = new Bootstrap();
             cb.group(serverGroup);
@@ -163,7 +163,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
                     ch.pipeline().addLast(new TestHandler(bytesRead, extraReadRequested, latch));
                 }
             });
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
 
             latch.await();
             assertEquals(expectedBytes, bytesRead.get());

@@ -90,7 +90,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
+            serverChannel = sb.bind().asJdkFuture().get();
 
             cb.handler(new ChannelInitializer<>() {
                 @Override
@@ -119,7 +119,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                     });
                 }
             });
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             latch.await();
         } finally {
             if (serverChannel != null) {

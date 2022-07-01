@@ -60,7 +60,7 @@ public final class HttpServer {
             }
         });
 
-        Channel ch = b.bind(PORT).get();
+        Channel ch = b.bind(PORT).asJdkFuture().get();
         return ch.closeFuture();
     }
 }

@@ -60,7 +60,7 @@ public class KQueueSocketChannelConfigTest {
         ch = (KQueueSocketChannel) bootstrap.group(group)
                 .channel(KQueueSocketChannel.class)
                 .handler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).get();
+                .bind(new InetSocketAddress(0)).asJdkFuture().get();
     }
 
     @AfterEach

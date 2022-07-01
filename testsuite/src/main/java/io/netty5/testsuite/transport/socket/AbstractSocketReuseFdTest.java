@@ -97,7 +97,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
             }
         };
 
-        Channel sc = sb.bind().get();
+        Channel sc = sb.bind().asJdkFuture().get();
         for (int i = 0; i < numChannels; i++) {
             cb.connect(sc.localAddress()).addListener(listener);
         }

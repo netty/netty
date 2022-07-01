@@ -59,7 +59,7 @@ public class EpollSocketTcpMd5Test {
         server = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
                 .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).get();
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).asJdkFuture().get();
     }
 
     @AfterEach
@@ -80,7 +80,7 @@ public class EpollSocketTcpMd5Test {
         EpollServerSocketChannel ch = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
                 .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).get();
+                .bind(new InetSocketAddress(0)).asJdkFuture().get();
 
         ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
@@ -102,7 +102,7 @@ public class EpollSocketTcpMd5Test {
                     .option(EpollChannelOption.TCP_MD5SIG,
                             Collections.singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-                    .connect(server.localAddress()).get();
+                    .connect(server.localAddress()).asJdkFuture().get();
             client.close().sync();
         });
         assertThat(completion.getCause())
@@ -119,7 +119,7 @@ public class EpollSocketTcpMd5Test {
                 .handler(new ChannelHandler() { })
                 .option(EpollChannelOption.TCP_MD5SIG,
                         Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY))
-                .connect(server.localAddress()).get();
+                .connect(server.localAddress()).asJdkFuture().get();
         client.close().sync();
     }
 }

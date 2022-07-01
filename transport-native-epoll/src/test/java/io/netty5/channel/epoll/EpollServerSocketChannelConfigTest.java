@@ -43,7 +43,7 @@ public class EpollServerSocketChannelConfigTest {
         ch = (EpollServerSocketChannel) bootstrap.group(group)
                 .channel(EpollServerSocketChannel.class)
                 .childHandler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).get();
+                .bind(new InetSocketAddress(0)).asJdkFuture().get();
     }
 
     @AfterAll

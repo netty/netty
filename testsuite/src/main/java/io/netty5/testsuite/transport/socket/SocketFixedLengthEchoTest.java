@@ -82,8 +82,8 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
+        Channel sc = sb.bind().asJdkFuture().get();
+        Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
         try (Buffer buffer = sc.bufferAllocator().copyOf(data)) {
             for (int i = 0; i < data.length;) {

@@ -96,8 +96,8 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asJdkFuture().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             clientChannel.writeAndFlush(clientChannel.bufferAllocator().copyOf(new byte[] {0})).sync();
 
             // The acceptor shouldn't read any data until we call read() below, but give it some time to see if it will.
@@ -172,8 +172,8 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asJdkFuture().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             clientChannel.writeAndFlush(clientChannel.bufferAllocator().copyOf(new byte[] {0})).sync();
             serverReadLatch.await();
             clientReadLatch.await();

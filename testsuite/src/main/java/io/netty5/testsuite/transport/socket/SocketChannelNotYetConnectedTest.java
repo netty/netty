@@ -50,7 +50,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
 
     public void testShutdownNotYetConnected(Bootstrap cb) throws Throwable {
         SocketChannel ch = (SocketChannel) cb.handler(new ChannelHandler() { })
-                .bind(newSocketAddress()).get();
+                .bind(newSocketAddress()).asJdkFuture().get();
         try {
             try {
                 ch.shutdown(ChannelShutdownDirection.Inbound).sync();
@@ -84,7 +84,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                         ctx.writeAndFlush(DefaultBufferAllocators.preferredAllocator().allocate(4).writeInt(42));
                     }
-                }).channel(NioServerSocketChannel.class).bind(0).get();
+                }).channel(NioServerSocketChannel.class).bind(0).asJdkFuture().get();
 
                 final CountDownLatch readLatch = new CountDownLatch(1);
                 bootstrap.handler(new ByteToMessageDecoder() {

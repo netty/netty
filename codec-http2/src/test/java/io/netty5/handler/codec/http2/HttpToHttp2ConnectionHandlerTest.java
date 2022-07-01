@@ -568,9 +568,9 @@ public class HttpToHttp2ConnectionHandlerTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress(getClass())).get();
+        serverChannel = sb.bind(new LocalAddress(getClass())).asJdkFuture().get();
 
-        clientChannel = cb.connect(serverChannel.localAddress()).get();
+        clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(WAIT_TIME_SECONDS, SECONDS));
     }

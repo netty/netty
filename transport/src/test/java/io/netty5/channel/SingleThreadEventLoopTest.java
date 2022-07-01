@@ -141,7 +141,7 @@ public class SingleThreadEventLoopTest {
     private static void testScheduleTask(EventLoop loopA) throws InterruptedException, ExecutionException {
         long startTime = System.nanoTime();
         final AtomicLong endTime = new AtomicLong();
-        loopA.schedule(() -> endTime.set(System.nanoTime()), 500, TimeUnit.MILLISECONDS).get();
+        loopA.schedule(() -> endTime.set(System.nanoTime()), 500, TimeUnit.MILLISECONDS).asJdkFuture().get();
         assertThat(endTime.get() - startTime,
                    is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(500))));
     }

@@ -91,14 +91,14 @@ public class ResolveAddressHandlerTest {
                 });
 
         // Start server
-        Channel sc = sb.bind(RESOLVED).get();
+        Channel sc = sb.bind(RESOLVED).asJdkFuture().get();
         Future<Channel> future = cb.connect(UNRESOLVED).await();
         try {
             if (fail) {
                 assertSame(ERROR, future.cause());
             } else {
                 assertTrue(future.isSuccess());
-                future.get().close().sync();
+                future.asJdkFuture().get().close().sync();
             }
         } finally {
             sc.close().sync();

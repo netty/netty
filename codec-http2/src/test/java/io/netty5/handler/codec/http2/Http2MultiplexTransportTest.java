@@ -155,7 +155,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).asJdkFuture().get();
 
         Bootstrap bs = new Bootstrap();
         bs.group(eventLoopGroup);
@@ -176,7 +176,7 @@ public class Http2MultiplexTransportTest {
                 }));
             }
         });
-        clientChannel = bs.connect(serverChannel.localAddress()).get();
+        clientChannel = bs.connect(serverChannel.localAddress()).asJdkFuture().get();
         serverConnectedChannelLatch.await();
         serverConnectedChannel = serverConnectedChannelRef.get();
 
@@ -227,7 +227,7 @@ public class Http2MultiplexTransportTest {
                     }));
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).asJdkFuture().get();
 
             final CountDownLatch latch = new CountDownLatch(1);
             Bootstrap bs = new Bootstrap();
@@ -240,7 +240,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).get();
+            clientChannel = bs.connect(serverChannel.localAddress()).asJdkFuture().get();
             Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(clientChannel);
             h2Bootstrap.handler(new ChannelHandler() {
                 @Override
@@ -339,7 +339,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).asJdkFuture().get();
 
             final SslContext clientCtx = SslContextBuilder.forClient()
                     .keyManager(ssc.key(), ssc.cert())
@@ -427,7 +427,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).get();
+            clientChannel = bs.connect(serverChannel.localAddress()).asJdkFuture().get();
             latch.await();
             AssertionError error = errorRef.get();
             if (error != null) {
@@ -503,7 +503,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).asJdkFuture().get();
 
             final SslContext clientCtx = SslContextBuilder.forClient()
                     .sslProvider(provider)
@@ -557,7 +557,7 @@ public class Http2MultiplexTransportTest {
                     });
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).get();
+            clientChannel = bs.connect(serverChannel.localAddress()).asJdkFuture().get();
 
             latch.await();
         } finally {

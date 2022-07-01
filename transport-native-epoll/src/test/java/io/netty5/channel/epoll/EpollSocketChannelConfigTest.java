@@ -65,7 +65,7 @@ public class EpollSocketChannelConfigTest {
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
                 .handler(new ChannelHandler() { })
-                .bind(new InetSocketAddress(0)).get();
+                .bind(new InetSocketAddress(0)).asJdkFuture().get();
     }
 
     @AfterEach

@@ -127,8 +127,8 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         cb.handler(ch);
         sb.childHandler(sh);
 
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
+        Channel sc = sb.bind().asJdkFuture().get();
+        Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
         BufferAllocator alloc = preferredAllocator();
         try (Buffer src = MemoryManager.unsafeWrap(data)) {

@@ -188,12 +188,12 @@ public class HttpClientCodecTest {
                 }
             });
 
-            Channel serverChannel = sb.bind(new InetSocketAddress(0)).get();
+            Channel serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
             Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
             assertTrue(ccf.await().isSuccess());
-            Channel clientChannel = ccf.get();
+            Channel clientChannel = ccf.asJdkFuture().get();
             assertTrue(serverChannelLatch.await(5, SECONDS));
             clientChannel.writeAndFlush(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
             assertTrue(responseReceivedLatch.await(5, SECONDS));

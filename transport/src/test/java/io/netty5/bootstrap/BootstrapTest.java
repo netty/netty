@@ -277,7 +277,7 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).asJdkFuture().get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
         bootstrapA.connect(localAddress).sync();
@@ -318,7 +318,7 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).asJdkFuture().get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
         Future<Channel> connectFuture = bootstrapA.connect(localAddress);

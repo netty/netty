@@ -206,7 +206,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).get();
+                    }).bind(new InetSocketAddress(0)).asJdkFuture().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -255,7 +255,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asJdkFuture().get();
 
             donePromise.asFuture().sync();
         } finally {
@@ -337,7 +337,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).get();
+                    }).bind(new InetSocketAddress(0)).asJdkFuture().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -356,7 +356,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asJdkFuture().get();
 
             promise.asFuture().sync();
         } finally {
@@ -442,7 +442,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).bind(new InetSocketAddress(0)).get();
+                    }).bind(new InetSocketAddress(0)).asJdkFuture().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -480,7 +480,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asJdkFuture().get();
 
             serverPromise.asFuture().await();
             clientPromise.asFuture().await();
@@ -590,7 +590,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
                                     serverLatch));
                         }
-                    }).bind(bindAddress).get();
+                    }).bind(bindAddress).asJdkFuture().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -604,7 +604,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
                                     clientLatch));
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asJdkFuture().get();
 
             serverLatch.await();
             assertEquals(expectedContent, serverQueue.toString());

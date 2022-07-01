@@ -46,7 +46,7 @@ public class DefaultDnsCnameCacheTest {
                 } catch (Throwable cause) {
                     return cause;
                 }
-            }, 1, TimeUnit.SECONDS).get();
+            }, 1, TimeUnit.SECONDS).asJdkFuture().get();
             if (error != null) {
                 throw error;
             }

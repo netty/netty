@@ -80,7 +80,7 @@ public final class LocalEcho {
             sb.bind(addr).sync();
 
             // Start the client.
-            Channel ch = cb.connect(addr).get();
+            Channel ch = cb.connect(addr).asJdkFuture().get();
 
             // Read commands from the stdin.
             System.out.println("Enter text (quit to end)");

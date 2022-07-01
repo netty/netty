@@ -87,7 +87,7 @@ public class KQueueChannelConfigTest {
                     .channel(KQueueSocketChannel.class)
                     .option(ChannelOption.SO_LINGER, 10)
                     .handler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0)).get();
+                    .bind(new InetSocketAddress(0)).asJdkFuture().get();
             ch.close().sync();
         } finally {
             group.shutdownGracefully();

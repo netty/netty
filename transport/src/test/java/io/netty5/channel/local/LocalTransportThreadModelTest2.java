@@ -59,7 +59,7 @@ public class LocalTransportThreadModelTest2 {
 
         int count = 100;
         for (int i = 1; i < count + 1; i ++) {
-            Channel ch = clientBootstrap.connect().get();
+            Channel ch = clientBootstrap.connect().asJdkFuture().get();
 
             // SPIN until we get what we are looking for.
             int target = i * messageCountPerRun;

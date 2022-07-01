@@ -798,12 +798,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.await().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asJdkFuture().get();
     }
 
     protected static void rethrowIfNotNull(Throwable error) {
@@ -984,12 +984,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).asJdkFuture().get();
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
         assertTrue(ccf.await().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asJdkFuture().get();
         return clientWritePromise.asFuture();
     }
 
@@ -1152,12 +1152,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.await().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asJdkFuture().get();
     }
 
     protected void runTest(String expectedApplicationProtocol) throws Exception {
@@ -1402,7 +1402,7 @@ public abstract class SSLEngineTest {
                     }
                 });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
 
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                                         // OpenSslEngine doesn't support renegotiation on client side
@@ -1462,7 +1462,7 @@ public abstract class SSLEngineTest {
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.sync().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asJdkFuture().get();
 
         serverLatch.await();
         ssc.delete();
@@ -1779,11 +1779,11 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asJdkFuture().get();
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.sync().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asJdkFuture().get();
     }
 
     @MethodSource("newTestParams")
@@ -1867,7 +1867,7 @@ public abstract class SSLEngineTest {
                 });
                 serverConnectedChannel = ch;
             }
-        }).bind(new InetSocketAddress(0)).get();
+        }).bind(new InetSocketAddress(0)).asJdkFuture().get();
 
         // We create a new chain for certificates which contains 2 certificates
         ByteArrayOutputStream chainStream = new ByteArrayOutputStream();
@@ -1892,7 +1892,7 @@ public abstract class SSLEngineTest {
                 ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.bufferAllocator()))));
             }
 
-        }).connect(serverChannel.localAddress()).get();
+        }).connect(serverChannel.localAddress()).asJdkFuture().get();
 
         promise.asFuture().sync();
 
@@ -3931,7 +3931,7 @@ public abstract class SSLEngineTest {
                     });
                     serverConnectedChannel = ch;
                 }
-            }).bind(new InetSocketAddress(0)).get();
+            }).bind(new InetSocketAddress(0)).asJdkFuture().get();
 
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
@@ -3944,7 +3944,7 @@ public abstract class SSLEngineTest {
 
             Future<SecretKey> future = promise.asFuture();
             assertTrue(future.await(10, TimeUnit.SECONDS));
-            SecretKey key = future.get();
+            SecretKey key = future.asJdkFuture().get();
             assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
         } finally {
             closeQuietly(socket);

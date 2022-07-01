@@ -81,7 +81,7 @@ public final class FileServer {
              });
 
             // Start the server.
-            Channel channel = b.bind(PORT).get();
+            Channel channel = b.bind(PORT).asJdkFuture().get();
 
             // Wait until the server socket is closed.
             channel.closeFuture().sync();

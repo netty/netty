@@ -155,11 +155,11 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).get();
+                sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
                 final CountDownLatch latch = new CountDownLatch(1);
                 // Connect to the server
-                cc = cb.connect(sc.localAddress()).get();
+                cc = cb.connect(sc.localAddress()).asJdkFuture().get();
                 final Channel ccCpy = cc;
                 cc.executor().execute(() -> {
                     // Send a message event up the pipeline.
@@ -205,10 +205,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
             // Close the channel and write something.
             cc.close().sync();
@@ -241,7 +241,7 @@ public class LocalChannelTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             Bootstrap b = new Bootstrap()
                     .group(group2)
@@ -252,7 +252,7 @@ public class LocalChannelTest {
                             // discard
                         }
                     });
-            cc = b.connect(sc.localAddress()).get();
+            cc = b.connect(sc.localAddress()).asJdkFuture().get();
             cc.writeAndFlush(new Object());
             assertTrue(latch.await(5, SECONDS));
         } finally {
@@ -307,7 +307,7 @@ public class LocalChannelTest {
                             closeLatch.countDown();
                         }
                     }).
-                    bind(TEST_ADDRESS).get();
+                    bind(TEST_ADDRESS).asJdkFuture().get();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(clientGroup).
                     channel(LocalChannel.class).
@@ -319,7 +319,7 @@ public class LocalChannelTest {
                     });
             Future<Channel> future = bootstrap.connect(sc.localAddress());
             assertTrue(future.await(2000), "Connection should finish, not time out");
-            cc = future.await().isSuccess() ? future.get() : null;
+            cc = future.await().isSuccess() ? future.asJdkFuture().get() : null;
         } finally {
             closeChannel(cc);
             closeChannel(sc);
@@ -349,10 +349,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
             cc.deregister().sync();
         } finally {
@@ -396,10 +396,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
             final Channel ccCpy = cc;
             // Make sure a write operation is executed in the eventloop
@@ -468,10 +468,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
             assertTrue(messageLatch.await(5, SECONDS));
             assertFalse(cc.isOpen());
         } finally {
@@ -512,10 +512,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
             final Channel ccCpy = cc;
             // Make sure a write operation is executed in the eventloop
@@ -582,10 +582,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
             assertTrue(serverChannelLatch.await(5, SECONDS));
 
             final Channel ccCpy = cc;
@@ -655,10 +655,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
             assertTrue(serverChannelLatch.await(5, SECONDS));
 
             final Channel ccCpy = cc;
@@ -720,10 +720,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).get();
+            cc = cb.connect(sc.localAddress()).asJdkFuture().get();
             assertTrue(serverChannelLatch.await(5, SECONDS));
 
             final Channel ccCpy = cc;
@@ -794,9 +794,9 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
-            cc = cb.register().get();
+            cc = cb.register().asJdkFuture().get();
 
             final AtomicReference<Future<Void>> ref = new AtomicReference<>();
             final Promise<Void> assertPromise = cc.executor().newPromise();
@@ -916,10 +916,10 @@ public class LocalChannelTest {
         LocalChannel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
 
             // Connect to the server
-            cc = (LocalChannel) cb.connect(sc.localAddress()).get();
+            cc = (LocalChannel) cb.connect(sc.localAddress()).asJdkFuture().get();
 
             // Close the channel
             closeChannel(cc);
@@ -994,8 +994,8 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
-            cc = cb.connect(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
+            cc = cb.connect(TEST_ADDRESS).asJdkFuture().get();
 
             latch.await();
         } finally {
@@ -1055,8 +1055,8 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
-            cc = cb.connect(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
+            cc = cb.connect(TEST_ADDRESS).asJdkFuture().get();
 
             countDownLatch.await();
         } finally {
@@ -1120,10 +1120,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).get();
+            sc = sb.bind(TEST_ADDRESS).asJdkFuture().get();
             for (int i = 0; i < 5; i++) {
                 try {
-                    cc = cb.connect(TEST_ADDRESS).get();
+                    cc = cb.connect(TEST_ADDRESS).asJdkFuture().get();
                 } finally {
                     closeChannel(cc);
                 }

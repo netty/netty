@@ -103,7 +103,7 @@ public class EpollReuseAddrTest {
     private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?, ?> bootstrap)
             throws Exception {
         bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
-        Channel channel = bootstrap.bind().get();
+        Channel channel = bootstrap.bind().asJdkFuture().get();
         try {
             bootstrap.bind(channel.localAddress()).sync();
             fail();
@@ -121,12 +121,12 @@ public class EpollReuseAddrTest {
         bootstrap.option(UnixChannelOption.SO_REUSEPORT, true);
         final AtomicBoolean accepted1 = new AtomicBoolean();
         bootstrap.childHandler(new ServerSocketTestHandler(accepted1));
-        Channel firstChannel = bootstrap.bind().get();
+        Channel firstChannel = bootstrap.bind().asJdkFuture().get();
         InetSocketAddress address1 = (InetSocketAddress) firstChannel.localAddress();
 
         final AtomicBoolean accepted2 = new AtomicBoolean();
         bootstrap.childHandler(new ServerSocketTestHandler(accepted2));
-        Channel secondChannel = bootstrap.bind(address1).get();
+        Channel secondChannel = bootstrap.bind(address1).asJdkFuture().get();
         InetSocketAddress address2 = (InetSocketAddress) secondChannel.localAddress();
 
         assertEquals(address1, address2);
@@ -149,12 +149,12 @@ public class EpollReuseAddrTest {
         bootstrap.option(UnixChannelOption.SO_REUSEPORT, true);
         final AtomicBoolean received1 = new AtomicBoolean();
         bootstrap.handler(new DatagramSocketTestHandler(received1));
-        Channel firstChannel = bootstrap.bind().get();
+        Channel firstChannel = bootstrap.bind().asJdkFuture().get();
         final InetSocketAddress address1 = (InetSocketAddress) firstChannel.localAddress();
 
         final AtomicBoolean received2 = new AtomicBoolean();
         bootstrap.handler(new DatagramSocketTestHandler(received2));
-        Channel secondChannel = bootstrap.bind(address1).get();
+        Channel secondChannel = bootstrap.bind(address1).asJdkFuture().get();
         final InetSocketAddress address2 = (InetSocketAddress) secondChannel.localAddress();
 
         assertEquals(address1, address2);

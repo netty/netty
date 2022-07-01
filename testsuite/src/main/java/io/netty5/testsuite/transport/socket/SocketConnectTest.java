@@ -66,18 +66,18 @@ public class SocketConnectTest extends AbstractSocketTest {
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             localAddressPromise.setSuccess((InetSocketAddress) ctx.channel().localAddress());
                         }
-                    }).bind().get();
+                    }).bind().asJdkFuture().get();
 
-            clientChannel = cb.handler(new ChannelHandler() { }).register().get();
+            clientChannel = cb.handler(new ChannelHandler() { }).register().asJdkFuture().get();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
 
-            clientChannel.connect(serverChannel.localAddress()).get();
+            clientChannel.connect(serverChannel.localAddress()).asJdkFuture().get();
             assertLocalAddress((InetSocketAddress) clientChannel.localAddress());
             assertNotNull(clientChannel.remoteAddress());
 
-            assertLocalAddress(localAddressPromise.asFuture().get());
+            assertLocalAddress(localAddressPromise.asFuture().asJdkFuture().get());
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().sync();
@@ -101,7 +101,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel cc = null;
         try {
             sb.childHandler(new ChannelHandler() { });
-            sc = sb.bind().get();
+            sc = sb.bind().asJdkFuture().get();
 
             cb.handler(new ChannelHandler() {
                 @Override
@@ -115,7 +115,7 @@ public class SocketConnectTest extends AbstractSocketTest {
                 }
             });
             // Connect and directly close again.
-            cc = cb.connect(sc.localAddress()).addListener(future -> future.getNow().close()).get();
+            cc = cb.connect(sc.localAddress()).addListener(future -> future.getNow().close()).asJdkFuture().get();
             assertEquals(0, events.take().intValue());
             assertEquals(1, events.take().intValue());
         } finally {
@@ -146,7 +146,7 @@ public class SocketConnectTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().get();
+        Channel sc = sb.bind().asJdkFuture().get();
         connectAndVerifyDataTransfer(cb, sc);
         connectAndVerifyDataTransfer(cb, sc);
     }
@@ -156,7 +156,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         BufferingClientHandler handler = new BufferingClientHandler();
         cb.handler(handler);
         Future<Channel> register = cb.register();
-        Channel channel = register.get();
+        Channel channel = register.asJdkFuture().get();
         Future<Void> write = channel.write(writeAsciiBuffer(sc, "[fastopen]"));
         SocketAddress remoteAddress = sc.localAddress();
         Future<Void> connectFuture = channel.connect(remoteAddress);

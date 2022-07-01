@@ -59,7 +59,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
         Future<Channel> future = cb.connect(BAD_HOST, BAD_PORT);
         assertThat(future.await(3000)).isTrue();
-        ExecutionException e = assertThrows(ExecutionException.class, future::get);
+        ExecutionException e = assertThrows(ExecutionException.class, future.asJdkFuture()::get);
         assertThat(e).hasCauseInstanceOf(ConnectTimeoutException.class);
     }
 
@@ -134,7 +134,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             assertThat(future.isCancelled()).isTrue();
         } else {
             // Cancellation not supported by the transport.
-            future.get().close();
+            future.asJdkFuture().get().close();
         }
     }
 

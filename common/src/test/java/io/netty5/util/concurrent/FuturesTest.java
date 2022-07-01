@@ -211,7 +211,7 @@ class FuturesTest {
         mappingLatchEnter.await();
         assertFalse(strFut.await(100));
         mappingLatchExit.countDown();
-        assertThat(strFut.get(5, SECONDS)).isEqualTo("42");
+        assertThat(strFut.asJdkFuture().get(5, SECONDS)).isEqualTo("42");
     }
 
     @Test
@@ -229,7 +229,7 @@ class FuturesTest {
         promise.cascadeTo(promise2);
         promise.setSuccess(1);
         assertTrue(promise.isSuccess());
-        assertThat(promise2.get(1, SECONDS)).isEqualTo(1);
+        assertThat(promise2.asJdkFuture().get(1, SECONDS)).isEqualTo(1);
     }
 
     @Test

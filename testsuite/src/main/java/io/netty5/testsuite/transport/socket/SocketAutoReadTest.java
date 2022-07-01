@@ -65,7 +65,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                     .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvBufferAllocator())
                     .childHandler(serverInitializer);
 
-            serverChannel = sb.bind().get();
+            serverChannel = sb.bind().asJdkFuture().get();
 
             cb.option(ChannelOption.AUTO_READ, true)
                     // We want to ensure that we attempt multiple individual read operations per read loop so we can
@@ -73,7 +73,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                     .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvBufferAllocator())
                     .handler(clientInitializer);
 
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             BufferAllocator alloc = DefaultBufferAllocators.onHeapAllocator();
 
             // 3 bytes means 3 independent reads for TestRecvBufferAllocator

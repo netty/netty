@@ -82,7 +82,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 }
             });
 
-            assertEquals(expected, f.get());
+            assertEquals(expected, f.asJdkFuture().get());
         } finally {
             executor.shutdownGracefully();
         }

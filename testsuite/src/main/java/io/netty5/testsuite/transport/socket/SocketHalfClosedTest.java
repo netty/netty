@@ -99,8 +99,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                   }
               });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asJdkFuture().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             waitHalfClosureDone.await();
         } finally {
             if (clientChannel != null) {
@@ -164,8 +164,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asJdkFuture().get();
+            Channel clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             clientChannel.closeFuture().await();
             assertEquals(1, shutdownEventReceivedCounter.get());
         } finally {
@@ -261,8 +261,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asJdkFuture().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             clientChannel.read();
 
             serverInitializedLatch.await();
@@ -330,8 +330,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asJdkFuture().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
 
             doneLatch.await();
             assertNull(causeRef.get());
@@ -568,8 +568,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asJdkFuture().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
             clientChannel.read();
 
             serverInitializedLatch.await();

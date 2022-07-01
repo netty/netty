@@ -97,7 +97,7 @@ public final class TcpDnsServer {
                                 });
                     }
                 });
-        final Channel channel = bootstrap.bind(DNS_SERVER_PORT).get();
+        final Channel channel = bootstrap.bind(DNS_SERVER_PORT).asJdkFuture().get();
         Executors.newSingleThreadScheduledExecutor().schedule(() -> {
             try {
                 clientQuery();
@@ -135,7 +135,7 @@ public final class TcpDnsServer {
                         }
                     });
 
-            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).get();
+            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).asJdkFuture().get();
 
             int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)

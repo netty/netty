@@ -661,9 +661,9 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress(getClass())).get();
+        serverChannel = sb.bind(new LocalAddress(getClass())).asJdkFuture().get();
 
-        clientChannel = cb.connect(serverChannel.localAddress()).get();
+        clientChannel = cb.connect(serverChannel.localAddress()).asJdkFuture().get();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
         // Block until we are sure the handlers are added

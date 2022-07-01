@@ -128,9 +128,9 @@ public class ServerBootstrapTest {
                     .channel(LocalChannel.class)
                     .handler(new ChannelHandler() { });
 
-            sch = sb.bind(addr).get();
+            sch = sb.bind(addr).asJdkFuture().get();
 
-            cch = cb.connect(addr).get();
+            cch = cb.connect(addr).asJdkFuture().get();
 
             initLatch.await();
             readLatch.await();
@@ -165,13 +165,13 @@ public class ServerBootstrapTest {
                         requestServed.set(true);
                     }
                 });
-        Channel serverChannel = sb.bind(addr).get();
+        Channel serverChannel = sb.bind(addr).asJdkFuture().get();
 
         Bootstrap cb = new Bootstrap();
         cb.group(group)
                 .channel(LocalChannel.class)
                 .handler(new ChannelHandler() { });
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
         serverChannel.close().sync();
         clientChannel.close().sync();
         group.shutdownGracefully();

@@ -45,6 +45,6 @@ public final class DnsNativeClient {
         System.out.println(resolver);
 
         resolver.close();
-        group.shutdownGracefully().get();
+        group.shutdownGracefully().asJdkFuture().get();
     }
 }

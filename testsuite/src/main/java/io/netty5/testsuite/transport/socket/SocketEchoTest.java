@@ -81,8 +81,8 @@ public class SocketEchoTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
+        Channel sc = sb.bind().asJdkFuture().get();
+        Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
         try (Buffer src = DefaultBufferAllocators.preferredAllocator().copyOf(data)) {
             for (int i = 0; i < data.length;) {

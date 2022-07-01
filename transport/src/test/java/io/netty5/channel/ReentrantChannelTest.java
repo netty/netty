@@ -43,7 +43,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
@@ -110,7 +110,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
@@ -179,7 +179,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
@@ -228,7 +228,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
@@ -274,7 +274,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
@@ -330,7 +330,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
@@ -386,7 +386,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
@@ -416,7 +416,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
@@ -446,7 +446,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 
@@ -487,7 +487,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).get();
+        Channel clientChannel = cb.connect(addr).asJdkFuture().get();
 
         clientChannel.pipeline().addLast(new ChannelHandler() {
 

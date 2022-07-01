@@ -128,16 +128,6 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public V get() throws InterruptedException, ExecutionException {
-        return future.get();
-    }
-
-    @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return future.get(timeout, unit);
-    }
-
-    @Override
     public FutureCompletionStage<V> asStage() {
         return future.asStage();
     }

@@ -72,7 +72,7 @@ public final class EchoClient {
              });
 
             // Start the client.
-            Channel channel = b.connect(HOST, PORT).get();
+            Channel channel = b.connect(HOST, PORT).asJdkFuture().get();
 
             // Wait until the connection is closed.
             channel.closeFuture().sync();

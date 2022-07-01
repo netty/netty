@@ -56,7 +56,7 @@ public final class TelnetClient {
              .handler(new TelnetClientInitializer(sslCtx));
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).get();
+            Channel ch = b.connect(HOST, PORT).asJdkFuture().get();
 
             // Read commands from the stdin.
             Future<Void> lastWriteFuture = null;

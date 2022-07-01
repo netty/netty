@@ -164,7 +164,7 @@ public class SslErrorTest {
                                 }
                             });
                         }
-                    }).bind(0).get();
+                    }).bind(0).asJdkFuture().get();
 
             clientChannel = new Bootstrap().group(group)
                     .channel(NioSocketChannel.class)
@@ -185,7 +185,7 @@ public class SslErrorTest {
                                 }
                             });
                         }
-                    }).connect(serverChannel.localAddress()).get();
+                    }).connect(serverChannel.localAddress()).asJdkFuture().get();
             // Block until we received the correct exception
             promise.asFuture().sync();
         } finally {

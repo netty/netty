@@ -73,7 +73,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                 }
             })
             .bind(0)
-            .get();
+            .asJdkFuture().get();
     chan = new Bootstrap()
         .channel(EpollSocketChannel.class)
         .handler(new ChannelInitializer<>() {
@@ -112,7 +112,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         })
         .group(group)
         .connect(serverChan.localAddress())
-        .get();
+        .asJdkFuture().get();
 
         abyte = chan.bufferAllocator().allocate(1);
         abyte.writeByte((byte) 'a').makeReadOnly();
@@ -134,12 +134,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public Object executeSingle() throws Exception {
-        return chan.executor().submit(runnable).get();
+        return chan.executor().submit(runnable).asJdkFuture().get();
     }
 
     @Benchmark
     @GroupThreads(3)
     public Object executeMulti() throws Exception {
-        return chan.executor().submit(runnable).get();
+        return chan.executor().submit(runnable).asJdkFuture().get();
     }
 }

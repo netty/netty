@@ -56,8 +56,8 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         cb.handler(ch);
         sb.childHandler(sh);
 
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
+        Channel sc = sb.bind().asJdkFuture().get();
+        Channel cc = cb.connect(sc.localAddress()).asJdkFuture().get();
 
         Future<Void> f = cc.write(a);
         assertTrue(f.cancel());

@@ -92,7 +92,7 @@ public class FlowControlHandlerTest {
                 }
             });
 
-        return serverBootstrap.bind(0).get();
+        return serverBootstrap.bind(0).asJdkFuture().get();
     }
 
     private static Channel newClient(SocketAddress server) throws Exception {
@@ -108,7 +108,7 @@ public class FlowControlHandlerTest {
                 }
             });
 
-        return bootstrap.connect(server).get();
+        return bootstrap.connect(server).asJdkFuture().get();
     }
 
     /**
@@ -241,7 +241,7 @@ public class FlowControlHandlerTest {
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).asJdkFuture().get());
         } finally {
             client.close();
             server.close();
@@ -323,7 +323,7 @@ public class FlowControlHandlerTest {
             setAutoReadLatch2.countDown();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).asJdkFuture().get());
         } finally {
             client.close();
             server.close();
@@ -380,7 +380,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).asJdkFuture().get());
         } finally {
             client.close();
             server.close();
@@ -426,7 +426,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(latch.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).asJdkFuture().get());
 
             Throwable cause = causeRef.get();
             if (cause != null) {
@@ -555,7 +555,7 @@ public class FlowControlHandlerTest {
 
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
-            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).asJdkFuture().get());
         } finally {
             client.close();
             server.close();
