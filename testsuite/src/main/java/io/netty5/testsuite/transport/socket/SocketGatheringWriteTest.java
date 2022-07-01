@@ -150,7 +150,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
         Future<Void> cf = cc.writeAndFlush(preferredAllocator().allocate(0));
         try {
-            assertTrue(cf.await(60000));
+            assertTrue(cf.await(60000, TimeUnit.MILLISECONDS));
             cf.sync();
         } catch (Throwable t) {
             // TODO: Remove this once we fix this test.

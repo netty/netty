@@ -58,7 +58,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     public void testConnectTimeout(Bootstrap cb) throws Throwable {
         cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
         Future<Channel> future = cb.connect(BAD_HOST, BAD_PORT);
-        assertThat(future.await(3000)).isTrue();
+        assertThat(future.await(3000, TimeUnit.MILLISECONDS)).isTrue();
         ExecutionException e = assertThrows(ExecutionException.class, future.asStage()::get);
         assertThat(e).hasCauseInstanceOf(ConnectTimeoutException.class);
     }
@@ -122,7 +122,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     public void testConnectCancellation(Bootstrap cb) throws Throwable {
         cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4000);
         Future<Channel> future = cb.connect(BAD_HOST, BAD_PORT);
-        if (future.await(1000)) {
+        if (future.await(1000, TimeUnit.MILLISECONDS)) {
             if (future.isSuccess()) {
                 fail("A connection attempt to " + BAD_HOST + " must not succeed.");
             } else {

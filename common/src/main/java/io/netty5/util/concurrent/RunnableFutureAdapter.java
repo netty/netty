@@ -89,11 +89,6 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public boolean await(long timeoutMillis) throws InterruptedException {
-        return future.await(timeoutMillis);
-    }
-
-    @Override
     public V getNow() {
         return promise.getNow();
     }

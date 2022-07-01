@@ -18,6 +18,7 @@ package io.netty5.util.concurrent;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty5.util.concurrent.ImmediateEventExecutor.INSTANCE;
@@ -209,7 +210,7 @@ class FuturesTest {
 
         executor.submit(() -> promise.setSuccess(42));
         mappingLatchEnter.await();
-        assertFalse(strFut.await(100));
+        assertFalse(strFut.await(100, TimeUnit.MILLISECONDS));
         mappingLatchExit.countDown();
         assertThat(strFut.asStage().get(5, SECONDS)).isEqualTo("42");
     }

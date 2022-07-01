@@ -421,11 +421,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public boolean await(long timeoutMillis) throws InterruptedException {
-            return future.await(timeoutMillis);
-        }
-
-        @Override
         public V getNow() {
             return future.getNow();
         }

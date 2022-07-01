@@ -268,11 +268,6 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
         return await0(unit.toNanos(timeout), true);
     }
 
-    @Override
-    public boolean await(long timeoutMillis) throws InterruptedException {
-        return await0(MILLISECONDS.toNanos(timeoutMillis), true);
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public V getNow() {

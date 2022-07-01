@@ -110,7 +110,7 @@ import java.util.function.Function;
  *
  * <h3>Do not confuse I/O timeout and await timeout</h3>
  * <p>
- * The timeout value you specify with {@link #await(long)} or {@link #await(long, TimeUnit)} are not related with
+ * The timeout value you specify with {@link #await(long, TimeUnit)} are not related with
  * I/O timeout at all.
  * If an I/O operation times out, the future will be marked as 'completed with failure,' as depicted in the
  * diagram above.  For example, connect timeout should be configured via a transport-specific option:
@@ -193,14 +193,6 @@ public interface Future<V> extends AsynchronousResult<V> {
      * @throws InterruptedException if the current thread was interrupted
      */
     boolean await(long timeout, TimeUnit unit) throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed within the specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within the specified time limit
-     * @throws InterruptedException if the current thread was interrupted
-     */
-    boolean await(long timeoutMillis) throws InterruptedException;
 
     /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all
