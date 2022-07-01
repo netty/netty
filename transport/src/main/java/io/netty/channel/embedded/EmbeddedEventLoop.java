@@ -75,6 +75,10 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         }
     }
 
+    boolean hasPendingNormalTasks() {
+        return !tasks.isEmpty();
+    }
+
     long runScheduledTasks() {
         long time = getCurrentTimeNanos();
         for (;;) {

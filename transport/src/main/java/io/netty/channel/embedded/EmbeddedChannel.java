@@ -607,6 +607,18 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
+     * Check whether this channel has any pending tasks that would be executed by a call to {@link #runPendingTasks()}.
+     * This includes normal tasks, and scheduled tasks where the deadline has expired. If this method returns
+     * {@code false}, a call to {@link #runPendingTasks()} would do nothing.
+     *
+     * @return {@code true} if there are any pending tasks, {@code false} otherwise.
+     */
+    public boolean hasPendingTasks() {
+        return embeddedEventLoop().hasPendingNormalTasks() ||
+                embeddedEventLoop().nextScheduledTask() == 0;
+    }
+
+    /**
      * Run all pending scheduled tasks in the {@link EventLoop} for this {@link Channel} and return the
      * {@code nanoseconds} when the next scheduled task is ready to run. If no other task was scheduled it will return
      * {@code -1}.

@@ -735,6 +735,34 @@ public class EmbeddedChannelTest {
         assertFalse(future20.isDone());
     }
 
+    @Test
+    void testHasPendingTasks() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.freezeTime();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        // simple execute
+        assertFalse(channel.hasPendingTasks());
+        channel.eventLoop().execute(runnable);
+        assertTrue(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
+
+        // schedule in the future (note: time is frozen above)
+        channel.eventLoop().schedule(runnable, 1, TimeUnit.SECONDS);
+        assertFalse(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
+        channel.advanceTimeBy(1, TimeUnit.SECONDS);
+        assertTrue(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
+    }
+
     private static void release(ByteBuf... buffers) {
         for (ByteBuf buffer : buffers) {
             if (buffer.refCnt() > 0) {
