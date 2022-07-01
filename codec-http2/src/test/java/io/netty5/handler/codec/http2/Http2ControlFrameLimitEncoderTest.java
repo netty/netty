@@ -141,8 +141,7 @@ public class Http2ControlFrameLimitEncoderTest {
         when(ctx.close()).thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
         when(channel.isActive()).thenReturn(false);
         when(channel.config()).thenReturn(config);
-        when(channel.isWritable()).thenReturn(true);
-        when(channel.bytesBeforeUnwritable()).thenReturn(Long.MAX_VALUE);
+        when(channel.writableBytes()).thenReturn(Long.MAX_VALUE);
         when(config.getWriteBufferHighWaterMark()).thenReturn(Integer.MAX_VALUE);
         when(config.getMessageSizeEstimator()).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
         ChannelMetadata metadata = new ChannelMetadata(false, 16);

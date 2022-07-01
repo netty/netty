@@ -32,6 +32,7 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -877,7 +878,7 @@ public class Http2MultiplexTest {
         int size = 16 * 1024 * 1024;
         childChannel.write(new DefaultHttp2DataFrame(
                 onHeapAllocator().allocate(size).fill((byte) 0).writerOffset(size).send()));
-        assertEquals(0, childChannel.bytesBeforeUnwritable());
+        assertEquals(0, childChannel.writableBytes());
         assertFalse(childChannel.isWritable());
     }
 
@@ -897,7 +898,7 @@ public class Http2MultiplexTest {
         assertTrue(childChannel.isWritable());
         childChannel.writeAndFlush(new DefaultHttp2DataFrame(bb(512).send()));
 
-        long bytesBeforeUnwritable = childChannel.bytesBeforeUnwritable();
+        long bytesBeforeUnwritable = childChannel.writableBytes();
         assertNotEquals(0, bytesBeforeUnwritable);
         // Add something to the ChannelOutboundBuffer of the parent to simulate queuing in the parents channel buffer
         // and verify that this only affect the writability of the parent channel while the child stays writable
@@ -907,13 +908,13 @@ public class Http2MultiplexTest {
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());
-        assertEquals(4096, childChannel.bytesBeforeUnwritable());
+        assertEquals(4096, childChannel.writableBytes());
 
         // Flush everything which simulate writing everything to the socket.
         parentChannel.flush();
         assertTrue(parentChannel.isWritable());
         assertTrue(childChannel.isWritable());
-        assertEquals(bytesBeforeUnwritable, childChannel.bytesBeforeUnwritable());
+        assertEquals(bytesBeforeUnwritable, childChannel.writableBytes());
 
         Future<Void> future = childChannel.writeAndFlush(new DefaultHttp2DataFrame(
                 bb((int) bytesBeforeUnwritable).send()));

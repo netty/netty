@@ -247,7 +247,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     private int maxUsableChannelBytes() {
         // If the channel isWritable, allow at least minUsableChannelBytes.
-        int channelWritableBytes = (int) min(Integer.MAX_VALUE, ctx.channel().bytesBeforeUnwritable());
+        int channelWritableBytes = (int) min(Integer.MAX_VALUE, ctx.channel().writableBytes());
         int usableBytes = channelWritableBytes > 0 ? max(channelWritableBytes, minUsableChannelBytes()) : 0;
 
         // Clip the usable bytes by the connection window.
