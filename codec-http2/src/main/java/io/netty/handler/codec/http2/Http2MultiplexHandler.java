@@ -338,9 +338,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     private boolean isServer(ChannelHandlerContext ctx) {
         if (isServer == null) {
             return ctx.channel().parent() instanceof ServerChannel;
-        } else {
-            return isServer;
-        }
+        return isServer;
     }
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
