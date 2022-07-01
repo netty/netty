@@ -238,6 +238,16 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     }
 
     @Override
+    public FutureCompletionStage<V> asStage() {
+        return future.asStage();
+    }
+
+    @Override
+    public java.util.concurrent.Future<V> asJdkFuture() {
+        return future.asJdkFuture();
+    }
+
+    @Override
     public int priorityQueueIndex(DefaultPriorityQueue<?> queue) {
         return queueIndex;
     }

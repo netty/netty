@@ -138,6 +138,16 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
+    public FutureCompletionStage<V> asStage() {
+        return future.asStage();
+    }
+
+    @Override
+    public java.util.concurrent.Future<V> asJdkFuture() {
+        return future.asJdkFuture();
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder(64)
                 .append(StringUtil.simpleClassName(this))
