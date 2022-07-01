@@ -1833,9 +1833,8 @@ public abstract class SSLEngineTest {
                                         promise.setFailure(new NullPointerException("peerCertificateChain"));
                                     } else if (peerCertificateChain.length + peerCertificates.length != 4) {
                                         String excTxtFmt = "peerCertificateChain.length:%s, peerCertificates.length:%s";
-                                        promise.setFailure(new IllegalStateException(String.format(excTxtFmt,
-                                                                                                   peerCertificateChain.length,
-                                                                                                   peerCertificates.length)));
+                                        promise.setFailure(new IllegalStateException(String.format(
+                                                excTxtFmt, peerCertificateChain.length, peerCertificates.length)));
                                     } else {
                                         for (int i = 0; i < peerCertificateChain.length; i++) {
                                             if (peerCertificateChain[i] == null || peerCertificates[i] == null) {
