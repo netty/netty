@@ -603,6 +603,18 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
         }
     }
 
+    /**
+     * Check whether this channel has any pending tasks that would be executed by a call to {@link #runPendingTasks()}.
+     * This includes normal tasks, and scheduled tasks where the deadline has expired. If this method returns
+     * {@code false}, a call to {@link #runPendingTasks()} would do nothing.
+     *
+     * @return {@code true} if there are any pending tasks, {@code false} otherwise.
+     */
+    public boolean hasPendingTasks() {
+        return embeddedEventLoop().hasPendingNormalTasks() ||
+                embeddedEventLoop().nextScheduledTask() == 0;
+    }
+
     private void recordException(Future<?> future) {
         if (future.isFailed()) {
             recordException(future.cause());

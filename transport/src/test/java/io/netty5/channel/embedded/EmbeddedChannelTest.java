@@ -487,6 +487,28 @@ public class EmbeddedChannelTest {
     }
 
     @Test
+    void testHasPendingTasks() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.freezeTime();
+        Runnable runnable = () -> { };
+
+        // simple execute
+        assertFalse(channel.hasPendingTasks());
+        channel.executor().execute(runnable);
+        channel.runPendingTasks();
+
+        // schedule in the future (note: time is frozen above)
+        channel.executor().schedule(runnable, 1, TimeUnit.SECONDS);
+        assertFalse(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
+        channel.advanceTimeBy(1, TimeUnit.SECONDS);
+        assertTrue(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
+    }
+
+    @Test
     public void testHandleInboundMessage() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
 
