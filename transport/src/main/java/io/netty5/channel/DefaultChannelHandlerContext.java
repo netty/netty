@@ -28,6 +28,8 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty5.channel.ChannelHandlerMask.MASK_BIND;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_ACTIVE;
@@ -82,6 +84,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private final DefaultChannelPipeline pipeline;
     private final ChannelHandler handler;
     private final String name;
+    private final DefaultChannelHandlerContextAwareEventExecutor executor;
+    private long currentPendingBytes;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
@@ -99,6 +103,8 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         this.pipeline = pipeline;
         executionMask = mask(handler.getClass());
         this.handler = handler;
+        // Wrap the executor so we are sure that the pending bytes will be updated correctly in all cases.
+        this.executor = new DefaultChannelHandlerContextAwareEventExecutor(pipeline.executor(), this);
     }
 
     private static Future<Void> failRemoved(DefaultChannelHandlerContext ctx) {
@@ -127,7 +133,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public EventExecutor executor() {
-        return pipeline().executor();
+        return executor;
     }
 
     @Override
@@ -145,9 +151,13 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return name;
     }
 
+    private EventExecutor wrappedExecutor() {
+        return executor.wrappedExecutor();
+    }
+
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelRegistered();
         } else {
@@ -167,15 +177,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelRegistered() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelRegistered(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelUnregistered() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelUnregistered();
         } else {
@@ -195,15 +208,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelUnregistered() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelUnregistered(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelActive();
         } else {
@@ -223,15 +239,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelActive() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelActive(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelInactive() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelInactive();
         } else {
@@ -251,15 +270,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelInactive() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelInactive(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelShutdown(ChannelShutdownDirection direction) {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelShutdown(direction);
         } else {
@@ -279,16 +301,19 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelShutdown(ChannelShutdownDirection direction) {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelShutdown(this, direction);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelExceptionCaught(Throwable cause) {
         requireNonNull(cause, "cause");
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelExceptionCaught(cause);
         } else {
@@ -315,6 +340,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelExceptionCaught(final Throwable cause) {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelExceptionCaught(this, cause);
         } catch (Throwable error) {
             if (logger.isDebugEnabled()) {
@@ -329,13 +355,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                                 "was thrown by a user handler's exceptionCaught() " +
                                 "method while handling the following exception:", error, cause);
             }
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelInboundEvent(Object event) {
         requireNonNull(event, "event");
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelInboundEvent(event);
         } else {
@@ -356,16 +384,19 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelInboundEvent(Object event) {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelInboundEvent(this, event);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
         requireNonNull(msg, "msg");
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelRead(msg);
         } else {
@@ -392,15 +423,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     void invokeChannelRead(Object msg) {
         final Object m = pipeline.touch(requireNonNull(msg, "msg"), this);
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelRead(this, m);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelReadComplete();
         } else {
@@ -421,15 +455,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelReadComplete() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelReadComplete(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelWritabilityChanged();
         } else {
@@ -450,9 +487,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelWritabilityChanged() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().channelWritabilityChanged(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
@@ -460,7 +500,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> bind(SocketAddress localAddress) {
         requireNonNull(localAddress, "localAddress");
 
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeBind(localAddress);
         }
@@ -477,7 +517,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> deregister() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeDeregister();
         }
@@ -495,9 +535,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeBind(SocketAddress localAddress) {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().bind(this, localAddress);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
@@ -505,7 +548,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeConnect(remoteAddress, localAddress);
         }
@@ -526,9 +569,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().connect(this, remoteAddress, localAddress);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
@@ -540,7 +586,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return close();
         }
 
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeDisconnect();
         }
@@ -559,15 +605,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeDisconnect() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().disconnect(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public Future<Void> close() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeClose();
         }
@@ -586,15 +635,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeClose() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().close(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, true);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public Future<Void> shutdown(ChannelShutdownDirection direction) {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeShutdown(direction);
         }
@@ -613,15 +665,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeShutdown(ChannelShutdownDirection direction) {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().shutdown(this, direction);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, true);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public Future<Void> register() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeRegister();
         }
@@ -640,9 +695,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeRegister() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().register(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
@@ -656,15 +714,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeDeregister() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().deregister(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext read() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeRead();
         } else {
@@ -683,9 +744,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private void invokeRead() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().read(this);
         } catch (Throwable t) {
             handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
@@ -697,15 +761,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Future<Void> invokeWrite(Object msg) {
         final Object m = pipeline.touch(msg, this);
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().write(this, m);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
     @Override
     public ChannelHandlerContext flush() {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeFlush();
         } else {
@@ -729,9 +796,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private void invokeFlush() {
         try {
+            saveCurrentPendingBytesIfNeeded();
             handler().flush(this);
         } catch (Throwable t) {
             handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
@@ -749,7 +819,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Future<Void> write(Object msg, boolean flush) {
         requireNonNull(msg, "msg");
 
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             final DefaultChannelHandlerContext next = findContextOutbound(flush ?
                     (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
@@ -782,7 +852,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> sendOutboundEvent(Object event) {
-        EventExecutor executor = executor();
+        EventExecutor executor = wrappedExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeSendOutboundEvent(event);
         }
@@ -801,9 +871,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeSendOutboundEvent(Object event) {
         try {
+            saveCurrentPendingBytesIfNeeded();
             return handler().sendOutboundEvent(this, event);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
+        } finally {
+            updatePendingBytesIfNeeded();
         }
     }
 
@@ -825,17 +898,17 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Promise<Void> newPromise() {
-        return pipeline().newPromise();
+        return executor.newPromise();
     }
 
     @Override
     public Future<Void> newSucceededFuture() {
-        return pipeline().newSucceededFuture();
+        return executor.newSucceededFuture(null);
     }
 
     @Override
     public Future<Void> newFailedFuture(Throwable cause) {
-        return pipeline().newFailedFuture(cause);
+        return executor.newFailedFuture(cause);
     }
 
     private DefaultChannelHandlerContext findContextInbound(int mask) {
@@ -1009,6 +1082,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         private void decrementPendingOutboundBytes() {
             if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
+                // Update the pending bytes
                 ctx.pipeline.decrementPendingOutboundBytes(size);
             }
         }
@@ -1085,6 +1159,178 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             invokeReadTask = ctx::findAndInvokeRead;
             invokeChannelWritableStateChangedTask = ctx::invokeChannelWritabilityChanged;
             invokeFlushTask = ctx::findAndInvokeFlush;
+        }
+    }
+
+    private void saveCurrentPendingBytesIfNeeded() {
+        // We only save the current pending bytes if not already done before.
+        // This is important as otherwise we might run into issues in case of reentrancy.
+        if (currentPendingBytes == -1) {
+            long pending = handler().pendingOutboundBytes(this);
+            if (pending < 0) {
+                pipeline.closeTransport(newPromise());
+                throw new IllegalStateException(StringUtil.simpleClassName(handler.getClass()) +
+                        ".pendingOutboundBytes(ChannelHandlerContext) returned a negative value: " + pending +
+                        ". Force closed transport.");
+            }
+            currentPendingBytes = pending;
+        }
+    }
+
+    private void updatePendingBytesIfNeeded() {
+        long current = currentPendingBytes;
+        if (current == -1) {
+            return;
+        }
+        this.currentPendingBytes = -1;
+        long newPendingBytes = handler().pendingOutboundBytes(this);
+        long delta = current - newPendingBytes;
+        if (delta == 0) {
+            // No changes
+            return;
+        }
+        if (delta > 0) {
+            pipeline.decrementPendingOutboundBytes(delta);
+        } else {
+            pipeline.incrementPendingOutboundBytes(-delta);
+        }
+    }
+
+    private static final class DefaultChannelHandlerContextAwareEventExecutor implements EventExecutor {
+
+        private final EventExecutor executor;
+        private final DefaultChannelHandlerContext ctx;
+
+        DefaultChannelHandlerContextAwareEventExecutor(EventExecutor executor, DefaultChannelHandlerContext ctx) {
+            this.executor = executor;
+            this.ctx = ctx;
+        }
+
+        EventExecutor wrappedExecutor() {
+            return executor;
+        }
+
+        @Override
+        public boolean inEventLoop() {
+            return executor.inEventLoop();
+        }
+
+        @Override
+        public boolean inEventLoop(Thread thread) {
+            return executor.inEventLoop(thread);
+        }
+
+        @Override
+        public boolean isShuttingDown() {
+            return executor.isShuttingDown();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return executor.isShutdown();
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return executor.isTerminated();
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return executor.awaitTermination(timeout, unit);
+        }
+
+        @Override
+        public Future<Void> shutdownGracefully() {
+            return executor.shutdownGracefully();
+        }
+
+        @Override
+        public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+            return executor.shutdownGracefully(quietPeriod, timeout, unit);
+        }
+
+        @Override
+        public Future<Void> terminationFuture() {
+            return executor.terminationFuture();
+        }
+
+        @Override
+        public Future<Void> submit(Runnable task) {
+            return executor.submit(new DefaultHandlerContextRunnable(task));
+        }
+
+        @Override
+        public <T> Future<T> submit(Runnable task, T result) {
+            return executor.submit(new DefaultHandlerContextRunnable(task), result);
+        }
+
+        @Override
+        public <T> Future<T> submit(Callable<T> task) {
+            return executor.submit(new DefaultHandlerContextCallable<>(task));
+        }
+
+        @Override
+        public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+            return executor.schedule(new DefaultHandlerContextRunnable(task), delay, unit);
+        }
+
+        @Override
+        public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+            return executor.schedule(new DefaultHandlerContextCallable<>(task), delay, unit);
+        }
+
+        @Override
+        public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
+            return executor.scheduleAtFixedRate(
+                    new DefaultHandlerContextRunnable(task), initialDelay, period, unit);
+        }
+
+        @Override
+        public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
+            return executor.scheduleWithFixedDelay(
+                    new DefaultHandlerContextRunnable(task), initialDelay, delay, unit);
+        }
+
+        @Override
+        public void execute(Runnable task) {
+            executor.execute(new DefaultHandlerContextRunnable(task));
+        }
+
+        private final class DefaultHandlerContextCallable<V> implements Callable<V> {
+
+            private final Callable<V> task;
+
+            DefaultHandlerContextCallable(Callable<V> task) {
+                this.task = task;
+            }
+
+            @Override
+            public V call() throws Exception {
+                try {
+                    ctx.saveCurrentPendingBytesIfNeeded();
+                    return task.call();
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
+        }
+
+        private final class DefaultHandlerContextRunnable implements Runnable {
+            private final Runnable task;
+            DefaultHandlerContextRunnable(Runnable task) {
+                this.task = task;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    ctx.saveCurrentPendingBytesIfNeeded();
+                    task.run();
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         }
     }
 }

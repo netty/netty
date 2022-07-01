@@ -541,4 +541,12 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline flush();
+
+    /**
+     * The number of the outbound bytes that are buffered / queued in this {@link ChannelPipeline}. This number will
+     * affect the writability of the {@link Channel} together the buffered / queued bytes in the {@link Channel} itself.
+     *
+     * @return the number of buffered / queued bytes.
+     */
+    long pendingOutboundBytes();
 }

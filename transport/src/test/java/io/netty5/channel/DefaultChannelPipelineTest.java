@@ -1039,6 +1039,57 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testPendingOutboundBytesNegative() throws InterruptedException {
+        Channel channel = newLocalChannel();
+
+        channel.pipeline().addLast(new ChannelHandler() {
+
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                // Returning a negative value is illegal and should close the channel.
+                return -1;
+            }
+
+            @Override
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+                return ctx.newSucceededFuture();
+            }
+        });
+        channel.write(new Object());
+        channel.closeFuture().sync();
+    }
+
+    @Test
+    public void testPendingOutboundBytesOverflow() throws InterruptedException {
+        Channel channel = newLocalChannel();
+        channel.pipeline().addLast(new ChannelHandler() {
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                // Returning a value that will result in an overflow
+                return 1;
+            }
+
+            @Override
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+                return ctx.newSucceededFuture();
+            }
+        }, new ChannelHandler() {
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                // Return a value which will overflow
+                return Long.MAX_VALUE;
+            }
+
+            @Override
+            public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+                return ChannelHandler.super.write(ctx, msg);
+            }
+        });
+        channel.write(new Object());
+        channel.closeFuture().sync();
+    }
+
+    @Test
     public void testNullName() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addLast(newHandler());
@@ -1634,16 +1685,12 @@ public class DefaultChannelPipelineTest {
         private void assertExecutor(ChannelHandlerContext ctx, Promise<Void> promise) {
             final boolean same;
             try {
-                same = executor == ctx.executor();
+                assertEquals(executor.inEventLoop(), ctx.executor().inEventLoop());
             } catch (Throwable cause) {
                 promise.setFailure(cause);
                 return;
             }
-            if (same) {
-                promise.setSuccess(null);
-            } else {
-                promise.setFailure(new AssertionError("EventExecutor not the same"));
-            }
+            promise.setSuccess(null);
         }
     }
 
