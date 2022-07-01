@@ -475,6 +475,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // SO_LINGER handling.
                     // See https://github.com/netty/netty/issues/4449
                     doDeregister();
+                    // 返回 GlobalEventExecutor 对象
                     return GlobalEventExecutor.INSTANCE;
                 }
             } catch (Throwable ignore) {
