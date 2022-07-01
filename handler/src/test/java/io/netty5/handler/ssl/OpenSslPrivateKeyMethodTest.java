@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -261,8 +262,9 @@ public class OpenSslPrivateKeyMethodTest {
                 }
             };
 
-            LocalAddress address = new LocalAddress("test-" + SslProvider.OPENSSL
-                                                    + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate);
+            LocalAddress address = new LocalAddress(
+                    "test-" + SslProvider.OPENSSL + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate +
+                    '-' + UUID.randomUUID());
 
             Channel server = server(address, serverHandler);
             try {
@@ -355,8 +357,9 @@ public class OpenSslPrivateKeyMethodTest {
 
         try (AutoCloseable ignore1 = autoClosing(sslServerContext);
              AutoCloseable ignore2 = autoClosing(sslClientContext)) {
-            LocalAddress address = new LocalAddress("test-" + SslProvider.OPENSSL
-                                                    + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate);
+            LocalAddress address = new LocalAddress(
+                    "test-" + SslProvider.OPENSSL + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate +
+                    '-' + UUID.randomUUID());
 
             Channel server = server(address, serverSslHandler);
             try {

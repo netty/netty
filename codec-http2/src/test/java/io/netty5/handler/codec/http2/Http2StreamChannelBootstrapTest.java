@@ -66,7 +66,7 @@ public class Http2StreamChannelBootstrapTest {
         try {
             final CountDownLatch serverChannelLatch = new CountDownLatch(1);
             group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
-            LocalAddress serverAddress = new LocalAddress(getClass().getName());
+            LocalAddress serverAddress = new LocalAddress(getClass());
             ServerBootstrap sb = new ServerBootstrap()
                     .channel(LocalServerChannel.class)
                     .group(group)

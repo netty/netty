@@ -86,7 +86,7 @@ public class ServerBootstrapTest {
     }
 
     private static void testParentHandler(boolean channelInitializer) throws Exception {
-        final LocalAddress addr = new LocalAddress(UUID.randomUUID().toString());
+        final LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
         final CountDownLatch readLatch = new CountDownLatch(1);
         final CountDownLatch initLatch = new CountDownLatch(1);
 
@@ -148,7 +148,7 @@ public class ServerBootstrapTest {
     @Test
     public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-        LocalAddress addr = new LocalAddress(UUID.randomUUID().toString());
+        LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
         final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
         final AtomicBoolean requestServed = new AtomicBoolean();
         ServerBootstrap sb = new ServerBootstrap()
