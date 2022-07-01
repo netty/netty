@@ -18,6 +18,7 @@ package io.netty5.channel.local;
 import io.netty5.channel.Channel;
 
 import java.net.SocketAddress;
+import java.util.UUID;
 
 import static io.netty5.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
@@ -54,6 +55,13 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     public LocalAddress(String id) {
         this.id = checkNonEmptyAfterTrim(id, "id").toLowerCase();
         this.strVal = "local:" + this.id;
+    }
+
+    /**
+     * Creates a new instance with a random ID based on the given class.
+     */
+    public LocalAddress(Class<?> cls) {
+        this(cls.getSimpleName() + '/' + UUID.randomUUID());
     }
 
     /**

@@ -658,7 +658,7 @@ public class SslHandlerTest {
                   }
               });
 
-            serverChannel = sb.bind(new LocalAddress("SslHandlerTest")).get();
+            serverChannel = sb.bind(new LocalAddress(getClass())).get();
             clientChannel = cb.connect(serverChannel.localAddress()).get();
             try {
                 latch.await();
@@ -784,7 +784,7 @@ public class SslHandlerTest {
         try (AutoCloseable ignore1 = autoClosing(sslServerCtx);
              AutoCloseable ignore2 = autoClosing(sslClientCtx)) {
             try {
-                LocalAddress address = new LocalAddress(getClass().getSimpleName() + ".testCloseOnHandshakeFailure");
+                LocalAddress address = new LocalAddress(getClass());
                 ServerBootstrap sb = new ServerBootstrap()
                         .group(group)
                         .channel(LocalServerChannel.class)

@@ -19,8 +19,6 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -41,6 +39,8 @@ import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty5.util.CharsetUtil;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.ResourcesUtil;
@@ -72,7 +72,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty5.buffer.BufferUtil.writeAscii;
-import static java.util.concurrent.ThreadLocalRandom.current;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -541,7 +540,7 @@ public class ParameterizedSslHandlerTest {
         try {
             Class<? extends ServerChannel> serverClass = LocalServerChannel.class;
             Class<? extends Channel> clientClass = LocalChannel.class;
-            SocketAddress bindAddress = new LocalAddress(String.valueOf(current().nextLong()));
+            SocketAddress bindAddress = new LocalAddress(getClass());
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,
                     serverClass, clientClass, false, false);
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,

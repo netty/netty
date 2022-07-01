@@ -568,7 +568,7 @@ public class HttpToHttp2ConnectionHandlerTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress("HttpToHttp2ConnectionHandlerTest")).get();
+        serverChannel = sb.bind(new LocalAddress(getClass())).get();
 
         clientChannel = cb.connect(serverChannel.localAddress()).get();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));

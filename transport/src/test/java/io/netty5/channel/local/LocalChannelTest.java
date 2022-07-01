@@ -70,7 +70,7 @@ public class LocalChannelTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannelTest.class);
 
-    private static final LocalAddress TEST_ADDRESS = new LocalAddress("test.id");
+    private static final LocalAddress TEST_ADDRESS = new LocalAddress(LocalChannelTest.class);
 
     private static EventLoopGroup group1;
     private static EventLoopGroup group2;

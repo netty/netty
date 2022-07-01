@@ -367,7 +367,7 @@ public class OcspTest {
                 try (AutoCloseable ignore2 = autoClosing(clientSslContext)) {
                     EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
                     try {
-                        LocalAddress address = new LocalAddress("handshake-" + Math.random());
+                        LocalAddress address = new LocalAddress(OcspTest.class);
                         Channel server = newServer(group, address, serverSslContext, response, serverHandler);
                         Channel client = newClient(group, address, clientSslContext, callback, clientHandler);
                         try {

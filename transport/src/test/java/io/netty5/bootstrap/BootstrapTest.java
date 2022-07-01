@@ -192,7 +192,7 @@ public class BootstrapTest {
             bootstrap.handler(registerHandler);
             bootstrap.channel(LocalServerChannel.class);
             bootstrap.childHandler(new DummyHandler());
-            bootstrap.localAddress(new LocalAddress("1"));
+            bootstrap.localAddress(new LocalAddress(getClass()));
             Future<Channel> future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);
@@ -228,7 +228,7 @@ public class BootstrapTest {
                     });
             bootstrap.childHandler(new DummyHandler());
             bootstrap.handler(registerHandler);
-            bootstrap.localAddress(new LocalAddress("1"));
+            bootstrap.localAddress(new LocalAddress(getClass()));
             Future<Channel> future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);

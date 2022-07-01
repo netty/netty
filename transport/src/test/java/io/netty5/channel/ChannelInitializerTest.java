@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChannelInitializerTest {
     private static final int TIMEOUT_MILLIS = 1000;
-    private static final LocalAddress SERVER_ADDRESS = new LocalAddress("addr");
+    private static final LocalAddress SERVER_ADDRESS = new LocalAddress(ChannelInitializerTest.class);
     private EventLoopGroup group;
     private ServerBootstrap server;
     private Bootstrap client;

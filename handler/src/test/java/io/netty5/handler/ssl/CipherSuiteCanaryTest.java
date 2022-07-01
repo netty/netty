@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -174,8 +175,9 @@ public class CipherSuiteCanaryTest {
                     }
                 };
 
-                LocalAddress address = new LocalAddress("test-" + serverSslProvider
-                        + '-' + clientSslProvider + '-' + rfcCipherName);
+                LocalAddress address = new LocalAddress(
+                        "test-" + serverSslProvider + '-' + clientSslProvider + '-' +
+                        rfcCipherName + '-' + UUID.randomUUID());
 
                 Channel server = server(address, serverHandler);
                 try {
