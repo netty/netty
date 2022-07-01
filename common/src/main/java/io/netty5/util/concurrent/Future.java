@@ -214,18 +214,7 @@ public interface Future<V> extends AsynchronousResult<V> {
      * {@linkplain Thread#interrupt() interrupted}.
      * @throws ExecutionException If the task failed, either by throwing an exception or through cancellation.
      */
-    default V get() throws InterruptedException, ExecutionException {
-        await();
-
-        Throwable cause = cause();
-        if (cause == null) {
-            return getNow();
-        }
-        if (cause instanceof CancellationException) {
-            throw (CancellationException) cause;
-        }
-        throw new ExecutionException(cause);
-    }
+    V get() throws InterruptedException, ExecutionException;
 
     /**
      * Get the result of this future, if it has completed.
@@ -245,19 +234,7 @@ public interface Future<V> extends AsynchronousResult<V> {
      * @throws ExecutionException If the task failed, either by throwing an exception, or through cancellation.
      * @throws TimeoutException If the future did not complete within the specified timeout.
      */
-    default V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        if (await(timeout, unit)) {
-            Throwable cause = cause();
-            if (cause == null) {
-                return getNow();
-            }
-            if (cause instanceof CancellationException) {
-                throw (CancellationException) cause;
-            }
-            throw new ExecutionException(cause);
-        }
-        throw new TimeoutException();
-    }
+    V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException;
 
     /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all
