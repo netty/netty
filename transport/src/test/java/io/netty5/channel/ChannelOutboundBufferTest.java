@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -213,6 +214,75 @@ public class ChannelOutboundBufferTest {
         assertNull(buffer.current());
         assertTrue(buffer.isEmpty());
         assertEquals(0, buffer.currentProgress());
+    }
+
+    @Test
+    public void cancelFirst() {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII)) {
+            int size = buf.readableBytes();
+            Promise<Void> promise = channel.newPromise();
+            buffer.addMessage(buf.copy(), size, promise);
+            buffer.addMessage(buf.copy(), size, channel.newPromise());
+
+            assertTrue(promise.cancel());
+            buffer.addFlush();
+            // Should have 1 entries.
+            assertNotNull(buffer.current());
+            assertTrue(buffer.remove());
+
+            assertNull(buffer.current());
+            assertTrue(buffer.isEmpty());
+            assertFalse(buffer.remove());
+        }
+    }
+
+    @Test
+    public void cancelLast() {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII)) {
+            int size = buf.readableBytes();
+            Promise<Void> promise = channel.newPromise();
+            buffer.addMessage(buf.copy(), size, channel.newPromise());
+            buffer.addMessage(buf.copy(), size, promise);
+
+            assertTrue(promise.cancel());
+            buffer.addFlush();
+            // Should have 1 entries.
+            assertNotNull(buffer.current());
+            assertTrue(buffer.remove());
+
+            assertNull(buffer.current());
+            assertTrue(buffer.isEmpty());
+            assertFalse(buffer.remove());
+        }
+    }
+
+    @Test
+    public void cancelInBetween() {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII)) {
+            int size = buf.readableBytes();
+            buffer.addMessage(buf.copy(), size, channel.newPromise());
+            Promise<Void> promise = channel.newPromise();
+            buffer.addMessage(buf.copy(), size, promise);
+            buffer.addMessage(buf.copy(), size, channel.newPromise());
+            assertTrue(promise.cancel());
+            buffer.addFlush();
+
+            // Should have two entries.
+            assertNotNull(buffer.current());
+            assertTrue(buffer.remove());
+            assertNotNull(buffer.current());
+            assertTrue(buffer.remove());
+
+            assertNull(buffer.current());
+            assertTrue(buffer.isEmpty());
+            assertFalse(buffer.remove());
+        }
     }
 
     private static void release(ChannelOutboundBuffer buffer) {
