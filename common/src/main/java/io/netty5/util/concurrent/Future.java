@@ -263,16 +263,12 @@ public interface Future<V> extends AsynchronousResult<V> {
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all
      * updates as well.
      */
-    default FutureCompletionStage<V> asStage() {
-        return new DefaultFutureCompletionStage<>(this);
-    }
+    FutureCompletionStage<V> asStage();
 
     /**
      * Returns a {@link java.util.concurrent.Future JDK Future that reflects the state of this {@link Future}.
      */
-    default java.util.concurrent.Future<V> asJdkFuture() {
-        return new DefaultFutureCompletionStage<>(this);
-    }
+    java.util.concurrent.Future<V> asJdkFuture();
 
     /**
      * Creates a <strong>new</strong> {@link Future} that will complete with the result of this {@link Future} mapped

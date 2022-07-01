@@ -386,6 +386,16 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
+        public FutureCompletionStage<V> asStage() {
+            return future.asStage();
+        }
+
+        @Override
+        public java.util.concurrent.Future<V> asJdkFuture() {
+            return future.asJdkFuture();
+        }
+
+        @Override
         public int compareTo(RunnableScheduledFuture<?> o) {
             return future.compareTo(o);
         }
