@@ -1006,6 +1006,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
     private void setChannelWritability(boolean isWritable) throws Http2Exception {
         when(channel.writableBytes()).thenReturn(isWritable ? Long.MAX_VALUE : 0);
+        when(channel.isWritable()).thenReturn(isWritable);
         if (controller != null) {
             controller.channelWritabilityChanged();
         }

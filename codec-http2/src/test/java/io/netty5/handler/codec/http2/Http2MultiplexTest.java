@@ -32,7 +32,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -898,8 +897,8 @@ public class Http2MultiplexTest {
         assertTrue(childChannel.isWritable());
         childChannel.writeAndFlush(new DefaultHttp2DataFrame(bb(512).send()));
 
-        long bytesBeforeUnwritable = childChannel.writableBytes();
-        assertNotEquals(0, bytesBeforeUnwritable);
+        long writableBytes = childChannel.writableBytes();
+        assertNotEquals(0, writableBytes);
         // Add something to the ChannelOutboundBuffer of the parent to simulate queuing in the parents channel buffer
         // and verify that this only affect the writability of the parent channel while the child stays writable
         // until it used all of its credits.
@@ -914,10 +913,10 @@ public class Http2MultiplexTest {
         parentChannel.flush();
         assertTrue(parentChannel.isWritable());
         assertTrue(childChannel.isWritable());
-        assertEquals(bytesBeforeUnwritable, childChannel.writableBytes());
+        assertEquals(writableBytes, childChannel.writableBytes());
 
         Future<Void> future = childChannel.writeAndFlush(new DefaultHttp2DataFrame(
-                bb((int) bytesBeforeUnwritable).send()));
+                bb((int) writableBytes).send()));
         assertFalse(childChannel.isWritable());
         assertTrue(parentChannel.isWritable());
 
@@ -928,7 +927,7 @@ public class Http2MultiplexTest {
 
         // Now write an window update frame for the stream which then should ensure we will flush the bytes that were
         // queued in the RemoteFlowController before for the stream.
-        frameInboundWriter.writeInboundWindowUpdate(childChannel.stream().id(), (int) bytesBeforeUnwritable);
+        frameInboundWriter.writeInboundWindowUpdate(childChannel.stream().id(), (int) writableBytes);
         assertTrue(childChannel.isWritable());
         assertTrue(future.isDone());
     }

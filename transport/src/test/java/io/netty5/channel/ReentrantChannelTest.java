@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import java.nio.channels.ClosedChannelException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
