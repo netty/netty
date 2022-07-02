@@ -349,7 +349,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize - pipeline.pendingOutboundBytes();
         // If bytes is negative we know we are not writable.
         if (bytes > 0) {
-            return isWritable() ? bytes : 0;
+            return unwritable == 0 ? bytes : 0;
         }
         return 0;
     }
