@@ -24,7 +24,6 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.AttributeMap;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -171,17 +170,22 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
     /**
      * Returns {@code true} if and only if the I/O thread will perform the
-     * requested write operation immediately.  Any write requests made when
+     * requested flush operation immediately. Any write requests made when
      * this method returns {@code false} are queued until the I/O thread is
      * ready to process the queued write requests.
      */
-    boolean isWritable();
+    default boolean isWritable() {
+        return writableBytes() > 0;
+    }
 
     /**
-     * Get how many bytes can be written until {@link #isWritable()} returns {@code false}.
-     * This quantity will always be non-negative. If {@link #isWritable()} is {@code false} then 0.
+     * Returns how many bytes can be written before the {@link Channel} becomes 'unwritable'.
+     * Once a {@link Channel} becomes unwritable, all messages will be queued until the I/O thread is
+     * ready to process the queued write requests.
+     *
+     * @return the number of bytes that can be written before the {@link Channel} becomes unwritable.
      */
-    long bytesBeforeUnwritable();
+    long writableBytes();
 
     /**
      * Return the assigned {@link ChannelPipeline}.

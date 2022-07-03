@@ -18,17 +18,17 @@ package io.netty5.channel;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
- * WriteBufferWaterMark is used to set low water mark and high water mark for the write buffer.
+ * {@link WriteBufferWaterMark} is used to set low water mark and high water mark for the write buffer.
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
- * {@linkplain #high high water mark}, {@link Channel#isWritable()}
- * will start to return {@code false}.
+ * {@linkplain #high high water mark}, {@link Channel#writableBytes()}
+ * will start to return {@code 0}.
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
  * {@linkplain #high high water mark} and then
  * dropped down below the {@linkplain #low low water mark},
- * {@link Channel#isWritable()} will start to return
- * {@code true} again.
+ * {@link Channel#writableBytes()} will start to return
+ * a positive value again.
  */
 public final class WriteBufferWaterMark {
 

@@ -190,11 +190,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return closePromise;
     }
 
-    @Override
-    public final boolean isWritable() {
-        return WRITABLE_UPDATER.get(this) == 1;
-    }
-
     private long totalPending() {
         ChannelOutboundBuffer buf = outboundBuffer();
         if (buf == null) {
@@ -202,8 +197,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
         return buf.totalPendingWriteBytes() + pipeline().pendingOutboundBytes();
     }
+
     @Override
-    public final long bytesBeforeUnwritable() {
+    public final long writableBytes() {
         long totalPending = totalPending();
         if (totalPending == -1) {
             // Already closed.
@@ -212,11 +208,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         long bytes = config().getWriteBufferHighWaterMark() -
                 totalPending;
-        // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check writability.
-        // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
-        // together. totalPendingSize will be updated before isWritable().
+        // If bytes is negative we know we are not writable.
         if (bytes > 0) {
-            return isWritable() ? bytes : 0;
+            return WRITABLE_UPDATER.get(this) == 0 ? 0: bytes;
         }
         return 0;
     }
@@ -830,8 +824,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
              * failing all flushed messages and also ensure the actual close of the underlying transport
              * will happen before the promises are notified.
              *
-             * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #isWritable()}
-             * may still return {@code true} even if the channel should be closed as result of the exception.
+             * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #writableBytes()}}
+             * may still return {@code true} / {@code > 0} even if the channel should be closed as result of
+             * the exception.
              */
             initialCloseCause = t;
             close(newPromise(), t, newClosedChannelException(t, "flush0()"));

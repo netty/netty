@@ -255,7 +255,7 @@ public interface ChannelHandler {
 
     /**
      * Gets called once the writable state of a {@link Channel} changed. You can check the state with
-     * {@link Channel#isWritable()}.
+     * {@link Channel#writableBytes()} or {@link Channel#isWritable()}.
      */
     @Skip
     default void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {

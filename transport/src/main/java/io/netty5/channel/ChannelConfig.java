@@ -212,16 +212,16 @@ public interface ChannelConfig {
 
     /**
      * Returns the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
+     * queued in the write buffer exceeds this value, {@link Channel#writableBytes()}
+     * will start to return {@code 0}.
      */
     int getWriteBufferHighWaterMark();
 
     /**
      * <p>
      * Sets the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
+     * queued in the write buffer exceeds this value, {@link Channel#writableBytes()}
+     * will start to return {@code 0}.
      */
     ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
@@ -229,8 +229,8 @@ public interface ChannelConfig {
      * Returns the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will start to return
-     * {@code true} again.
+     * dropped down below this value, {@link Channel#writableBytes()} ()} will start to return
+     * a positive value again.
      */
     int getWriteBufferLowWaterMark();
 
@@ -239,8 +239,8 @@ public interface ChannelConfig {
      * Sets the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will start to return
-     * {@code true} again.
+     * dropped down below this value, {@link Channel#writableBytes()} ()} will start to return
+     * a positive value again.
      */
     ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 

@@ -310,11 +310,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     @Override
-    public boolean isWritable() {
-        return unwritable == 0;
-    }
-
-    @Override
     public ChannelId id() {
         return channelId;
     }
@@ -350,13 +345,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     @Override
-    public long bytesBeforeUnwritable() {
+    public long writableBytes() {
         long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize - pipeline.pendingOutboundBytes();
-        // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check
-        // writability. Note that totalPendingSize and isWritable() use different volatile variables that are not
-        // synchronized together. totalPendingSize will be updated before isWritable().
+        // If bytes is negative we know we are not writable.
         if (bytes > 0) {
-            return isWritable() ? bytes : 0;
+            return unwritable == 0 ? bytes : 0;
         }
         return 0;
     }
