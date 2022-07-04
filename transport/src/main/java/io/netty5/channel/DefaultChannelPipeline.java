@@ -991,7 +991,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
      * in {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)}. This method is responsible
      * to call {@link Resource#dispose(Object)} on the given event at some point.
      */
-    protected void onUnhandledInboundUserEventTriggered(Object evt) {
+    protected void onUnhandledChannelInboundEvent(Object evt) {
         // This may not be a configuration error and so don't log anything.
         // The event may be superfluous for the current pipeline configuration.
         Resource.dispose(evt);
@@ -1085,7 +1085,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundUserEventTriggered(evt);
+            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledChannelInboundEvent(evt);
         }
 
         @Override

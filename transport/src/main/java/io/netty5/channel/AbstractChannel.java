@@ -1081,12 +1081,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     protected static class DefaultAbstractChannelPipeline extends DefaultChannelPipeline {
-        protected DefaultAbstractChannelPipeline(AbstractChannel channel) {
+        protected DefaultAbstractChannelPipeline(AbstractChannel<?, ?, ?> channel) {
             super(channel);
         }
 
-        protected final AbstractChannel abstractChannel() {
-            return (AbstractChannel) channel();
+        protected final AbstractChannel<?, ?, ?> abstractChannel() {
+            return (AbstractChannel<?, ?, ?>) channel();
         }
 
         @Override
@@ -1096,14 +1096,14 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         @Override
         protected final void registerTransport(Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.registerTransport(promise);
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void bindTransport(SocketAddress localAddress, Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.bindTransport(localAddress, promise);
             channel.runAfterTransportAction();
         }
@@ -1111,63 +1111,63 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         @Override
         protected final void connectTransport(
                 SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.connectTransport(remoteAddress, localAddress, promise);
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void disconnectTransport(Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.disconnectTransport(promise);
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void closeTransport(Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             abstractChannel().closeTransport(promise);
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.shutdownTransport(direction, promise);
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void deregisterTransport(Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.deregisterTransport(promise);
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void readTransport() {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.readTransport();
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void writeTransport(Object msg, Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.writeTransport(msg, promise);
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void flushTransport() {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.flushTransport();
             channel.runAfterTransportAction();
         }
 
         @Override
         protected final void sendOutboundEventTransport(Object event, Promise<Void> promise) {
-            AbstractChannel channel = abstractChannel();
+            AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.sendOutboundEventTransport(event, promise);
             channel.runAfterTransportAction();
         }

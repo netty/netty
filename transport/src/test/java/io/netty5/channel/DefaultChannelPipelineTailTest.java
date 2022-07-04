@@ -148,7 +148,7 @@ public class DefaultChannelPipelineTailTest {
         EventLoop loop = GROUP.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
-            protected void onUnhandledInboundUserEventTriggered(Object evt) {
+            protected void onUnhandledChannelInboundEvent(Object evt) {
                 latch.countDown();
             }
         };
@@ -295,7 +295,7 @@ public class DefaultChannelPipelineTailTest {
         protected void onUnhandledInboundReadComplete() {
         }
 
-        protected void onUnhandledInboundUserEventTriggered(Object evt) {
+        protected void onUnhandledChannelInboundEvent(Object evt) {
         }
 
         protected void onUnhandledInboundWritabilityChanged() {
@@ -319,7 +319,7 @@ public class DefaultChannelPipelineTailTest {
 
         private class MyChannelPipeline extends DefaultAbstractChannelPipeline {
 
-            MyChannelPipeline(AbstractChannel channel) {
+            MyChannelPipeline(AbstractChannel<?, ?, ?> channel) {
                 super(channel);
             }
 
@@ -349,8 +349,8 @@ public class DefaultChannelPipelineTailTest {
             }
 
             @Override
-            protected void onUnhandledInboundUserEventTriggered(Object evt) {
-                MyChannel.this.onUnhandledInboundUserEventTriggered(evt);
+            protected void onUnhandledChannelInboundEvent(Object evt) {
+                MyChannel.this.onUnhandledChannelInboundEvent(evt);
             }
 
             @Override
