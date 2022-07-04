@@ -18,6 +18,7 @@ package io.netty5.handler.ssl;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.util.internal.ReflectionUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -122,9 +123,9 @@ public abstract class SslMasterKeyHandler implements ChannelHandler {
     protected abstract void accept(SecretKey masterKey, SSLSession session);
 
     @Override
-    public final void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+    public final void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
         //only try to log the session info if the ssl handshake has successfully completed.
-        if (evt == SslHandshakeCompletionEvent.SUCCESS && masterKeyHandlerEnabled()) {
+        if (evt instanceof SslHandshakeCompletionEvent && evt.isSuccess() && masterKeyHandlerEnabled()) {
             final SslHandler handler = ctx.pipeline().get(SslHandler.class);
             final SSLEngine engine = handler.engine();
             final SSLSession sslSession = engine.getSession();

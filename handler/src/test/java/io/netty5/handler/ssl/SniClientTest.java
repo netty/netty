@@ -21,6 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
@@ -157,7 +158,8 @@ public class SniClientTest {
                     ch.pipeline().addFirst(handler);
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
-                        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                        public void channelProtocolChanged(
+                                ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                                 if (match) {

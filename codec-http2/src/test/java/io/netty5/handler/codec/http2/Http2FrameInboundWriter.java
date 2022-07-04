@@ -21,6 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.EventExecutor;
@@ -175,6 +176,12 @@ final class Http2FrameInboundWriter {
         @Override
         public ChannelHandlerContext fireChannelInboundEvent(Object evt) {
             channel.pipeline().fireChannelInboundEvent(evt);
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelProtocolChanged(ChannelProtocolChangeEvent<?> event) {
+            channel.pipeline().fireChannelProtocolChanged(event);
             return this;
         }
 

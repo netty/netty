@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.internal.RecyclableArrayList;
@@ -124,7 +125,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
     }
 
     @Override
-    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             // Let's first fire the event before we try to modify the pipeline.
             ctx.fireChannelInboundEvent(evt);
@@ -132,12 +133,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
             SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
             try {
                 if (handshakeEvent.isSuccess()) {
-                    SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-                    if (sslHandler == null) {
-                        throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
-                                + "application-level protocol negotiation)");
-                    }
-                    String protocol = sslHandler.applicationProtocol();
+                    String protocol = handshakeEvent.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
                     // if the event is not produced because of an successful handshake we will receive the same

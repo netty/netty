@@ -25,6 +25,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.OpenSslContext;
@@ -66,7 +67,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 
@@ -483,13 +484,12 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+        public final void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
-                SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
-                if (handshakeEvt.cause() != null) {
-                    logger.warn("Handshake failed:", handshakeEvt.cause());
+                if (evt.cause() != null) {
+                    logger.warn("Handshake failed:", evt.cause());
                 }
-                assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
+                assertTrue(evt.isSuccess());
                 negoCounter.incrementAndGet();
                 logStats("HANDSHAKEN");
             }

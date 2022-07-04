@@ -23,6 +23,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
@@ -230,7 +231,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelInboundEvent(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        public void channelProtocolChanged(final ChannelHandlerContext ctx, final ChannelProtocolChangeEvent<?> evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 final SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                 if (event.isSuccess()) {
@@ -261,7 +262,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                     }
                 }
             }
-            ctx.fireChannelInboundEvent(evt);
+            ctx.fireChannelProtocolChanged(evt);
         }
     }
 }

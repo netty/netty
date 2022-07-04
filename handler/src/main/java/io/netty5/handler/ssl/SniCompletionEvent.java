@@ -17,6 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.util.internal.UnstableApi;
 
+import javax.net.ssl.SSLSession;
+
 /**
  * Event that is fired once we did a selection of a {@link SslContext} based on the {@code SNI hostname},
  * which may be because it was successful or there was an error.
@@ -26,11 +28,12 @@ public final class SniCompletionEvent extends SslCompletionEvent {
     private final String hostname;
 
     public SniCompletionEvent(String hostname) {
+        super(null);
         this.hostname = hostname;
     }
 
     public SniCompletionEvent(String hostname, Throwable cause) {
-        super(cause);
+        super(null, cause);
         this.hostname = hostname;
     }
 

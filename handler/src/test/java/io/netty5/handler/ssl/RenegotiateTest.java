@@ -21,6 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
@@ -70,8 +71,8 @@ public abstract class RenegotiateTest {
                                 }
 
                                 @Override
-                                public void channelInboundEvent(
-                                        final ChannelHandlerContext ctx, Object evt) {
+                                public void channelProtocolChanged(
+                                        final ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
                                     if (!renegotiate && evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
 
@@ -115,8 +116,8 @@ public abstract class RenegotiateTest {
                             ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
-                                public void channelInboundEvent(
-                                        ChannelHandlerContext ctx, Object evt) {
+                                public void channelProtocolChanged(
+                                        ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                                         if (!event.isSuccess()) {

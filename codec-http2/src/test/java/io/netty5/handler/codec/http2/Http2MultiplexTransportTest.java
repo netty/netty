@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -529,7 +530,8 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelHandler() {
                         @Override
-                        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                        public void channelProtocolChanged(
+                                ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent handshakeCompletionEvent =
                                         (SslHandshakeCompletionEvent) evt;

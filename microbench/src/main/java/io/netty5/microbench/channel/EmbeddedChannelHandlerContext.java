@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -111,6 +112,12 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
 
     @Override
     public final ChannelHandlerContext fireChannelInboundEvent(Object event) {
+        Resource.dispose(event);
+        return this;
+    }
+
+    @Override
+    public ChannelHandlerContext fireChannelProtocolChanged(ChannelProtocolChangeEvent<?> event) {
         Resource.dispose(event);
         return this;
     }

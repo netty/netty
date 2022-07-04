@@ -585,7 +585,7 @@ public class SslHandler extends ByteToMessageDecoder {
             if (!handshakePromise.isDone()) {
                 cause = new SSLHandshakeException("SslHandler removed before handshake completed");
                 if (handshakePromise.tryFailure(cause)) {
-                    ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(cause));
+                    ctx.fireChannelProtocolChanged(new SslHandshakeCompletionEvent(engine().getSession(), cause));
                 }
             }
             if (!sslClosePromise.isDone()) {
@@ -1091,7 +1091,7 @@ public class SslHandler extends ByteToMessageDecoder {
             // listeners immediately close the Channel then we may end up firing the handshake event after the Channel
             // has been closed.
             if (handshakePromise.tryFailure(cause)) {
-                ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(cause));
+                ctx.fireChannelProtocolChanged(new SslHandshakeCompletionEvent(engine().getSession(), cause));
             }
 
             // We need to flush one time as there may be an alert that we should send to the remote peer because
@@ -1638,7 +1638,8 @@ public class SslHandler extends ByteToMessageDecoder {
                         session.getProtocol(),
                         session.getCipherSuite());
             }
-            ctx.fireChannelInboundEvent(SslHandshakeCompletionEvent.SUCCESS);
+            ctx.fireChannelProtocolChanged(
+                    new SslHandshakeCompletionEvent(engine.getSession(), engine.getApplicationProtocol()));
         }
         if (isStateSet(STATE_READ_DURING_HANDSHAKE)) {
             clearState(STATE_READ_DURING_HANDSHAKE);
@@ -1684,7 +1685,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 }
             }
             if (handshakePromise.tryFailure(cause) || alwaysFlushAndClose) {
-                SslUtils.handleHandshakeFailure(ctx, cause, notify);
+                SslUtils.handleHandshakeFailure(ctx, engine().getSession(), cause, notify);
             }
         } finally {
             // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
@@ -1700,7 +1701,8 @@ public class SslHandler extends ByteToMessageDecoder {
             SSLException transportFailure = new SSLException("failure when writing TLS control frames", cause);
             releaseAndFailAll(ctx, transportFailure);
             if (handshakePromise.tryFailure(transportFailure)) {
-                ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(transportFailure));
+                ctx.fireChannelProtocolChanged(
+                        new SslHandshakeCompletionEvent(engine().getSession(), transportFailure));
             }
         } finally {
             ctx.close();
@@ -1716,11 +1718,11 @@ public class SslHandler extends ByteToMessageDecoder {
     private void notifyClosePromise(Throwable cause) {
         if (cause == null) {
             if (sslClosePromise.trySuccess(ctx.channel())) {
-                ctx.fireChannelInboundEvent(SslCloseCompletionEvent.SUCCESS);
+                ctx.fireChannelProtocolChanged(new SslCloseCompletionEvent(engine().getSession()));
             }
         } else {
             if (sslClosePromise.tryFailure(cause)) {
-                ctx.fireChannelInboundEvent(new SslCloseCompletionEvent(cause));
+                ctx.fireChannelProtocolChanged(new SslCloseCompletionEvent(engine().getSession(), cause));
             }
         }
     }
@@ -1908,7 +1910,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     new SslHandshakeTimeoutException("handshake timed out after " + handshakeTimeoutMillis + "ms");
             try {
                 if (localHandshakePromise.tryFailure(exception)) {
-                    SslUtils.handleHandshakeFailure(ctx, exception, true);
+                    SslUtils.handleHandshakeFailure(ctx, engine().getSession(), exception, true);
                 }
             } finally {
                 releaseAndFailAll(ctx, exception);

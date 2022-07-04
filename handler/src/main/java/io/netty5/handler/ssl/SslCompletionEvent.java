@@ -15,17 +15,25 @@
  */
 package io.netty5.handler.ssl;
 
+import io.netty5.channel.ChannelProtocolChangeEvent;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
+
 import static java.util.Objects.requireNonNull;
 
-public abstract class SslCompletionEvent {
+public abstract class SslCompletionEvent implements ChannelProtocolChangeEvent<SSLSession> {
 
+    private final SSLSession session;
     private final Throwable cause;
 
-    SslCompletionEvent() {
+    SslCompletionEvent(SSLSession session) {
+        this.session = session;
         cause = null;
     }
 
-    SslCompletionEvent(Throwable cause) {
+    SslCompletionEvent(SSLSession session, Throwable cause) {
+        this.session = session;
         this.cause = requireNonNull(cause, "cause");
     }
 
@@ -45,7 +53,17 @@ public abstract class SslCompletionEvent {
     }
 
     @Override
-    public  String toString() {
+    public boolean isFailed() {
+        return !isSuccess();
+    }
+
+    @Override
+    public SSLSession protocolData() {
+        return session;
+    }
+
+    @Override
+    public String toString() {
         final Throwable cause = cause();
         return cause == null? getClass().getSimpleName() + "(SUCCESS)" :
                 getClass().getSimpleName() +  '(' + cause + ')';

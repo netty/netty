@@ -25,6 +25,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.nio.NioHandler;
@@ -729,17 +730,18 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            if (failureExpected) {
-                                serverException = new IllegalStateException("handshake complete. expected failure");
+                    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (evt.isSuccess()) {
+                                if (failureExpected) {
+                                    serverException = new IllegalStateException("handshake complete. expected failure");
+                                }
+                            } else {
+                                serverException = evt.cause();
                             }
                             serverLatch.countDown();
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            serverException = ((SslHandshakeCompletionEvent) evt).cause();
-                            serverLatch.countDown();
                         }
-                        ctx.fireChannelInboundEvent(evt);
+                        ctx.fireChannelProtocolChanged(evt);
                     }
 
                     @Override
@@ -771,18 +773,20 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            // With TLS1.3 a mutal auth error will not be propagated as a handshake error most of the
-                            // time as the handshake needs NO extra roundtrip.
-                            if (!failureExpected) {
+                    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (evt.isSuccess()) {
+                                // With TLS1.3 a mutal auth error will not be propagated as a handshake error most of
+                                // the time as the handshake needs NO extra roundtrip.
+                                if (!failureExpected) {
+                                    clientLatch.countDown();
+                                }
+                            } else {
+                                clientException = evt.cause();
                                 clientLatch.countDown();
                             }
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            clientException = ((SslHandshakeCompletionEvent) evt).cause();
-                            clientLatch.countDown();
                         }
-                        ctx.fireChannelInboundEvent(evt);
+                        ctx.fireChannelProtocolChanged(evt);
                     }
 
                     @Override
@@ -896,17 +900,18 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            if (failureExpected) {
-                                serverException = new IllegalStateException("handshake complete. expected failure");
+                    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (evt.isSuccess()) {
+                                if (failureExpected) {
+                                    serverException = new IllegalStateException("handshake complete. expected failure");
+                                }
+                            } else {
+                                serverException = evt.cause();
                             }
                             serverLatch.countDown();
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            serverException = ((SslHandshakeCompletionEvent) evt).cause();
-                            serverLatch.countDown();
                         }
-                        ctx.fireChannelInboundEvent(evt);
+                        ctx.fireChannelProtocolChanged(evt);
                     }
 
                     @Override
@@ -956,19 +961,19 @@ public abstract class SSLEngineTest {
                             ctx.write(ctx.bufferAllocator().copyOf(new byte[] { 1 })).cascadeTo(clientWritePromise);
                         }
                     }
-
                     @Override
-                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            if (failureExpected) {
-                                clientException = new IllegalStateException("handshake complete. expected failure");
+                    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (evt.isSuccess()) {
+                                if (failureExpected) {
+                                    clientException = new IllegalStateException("handshake complete. expected failure");
+                                }
+                            } else {
+                                clientException = evt.cause();
                             }
                             clientLatch.countDown();
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            clientException = ((SslHandshakeCompletionEvent) evt).cause();
-                            clientLatch.countDown();
                         }
-                        ctx.fireChannelInboundEvent(evt);
+                        ctx.fireChannelProtocolChanged(evt);
                     }
 
                     @Override
@@ -1096,8 +1101,8 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent && evt.isSuccess()) {
                             try {
                                 verifySSLSessionForMutualAuth(
                                         param, engine.getSession(), serverCrtFile, PRINCIPAL_NAME);
@@ -1128,8 +1133,8 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelHandler() {
                     @Override
-                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                        if (evt instanceof SslHandshakeCompletionEvent && evt.isSuccess()) {
                             try {
                                 verifySSLSessionForMutualAuth(
                                         param, handler.engine().getSession(), clientCrtFile, PRINCIPAL_NAME);
@@ -1371,15 +1376,15 @@ public abstract class SSLEngineTest {
                         p.addLast(handler);
                         p.addLast(new ChannelHandler() {
                             @Override
-                            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                                if (evt instanceof SslHandshakeCompletionEvent &&
-                                        ((SslHandshakeCompletionEvent) evt).isSuccess()) {
+                            public void channelProtocolChanged(
+                                    ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                                if (evt instanceof SslHandshakeCompletionEvent && evt.isSuccess()) {
                                     // This data will be sent to the client before any of the re-negotiation data can be
                                     // sent. The client will read this, detect that it is not the response to
                                     // renegotiation which was expected, and respond with a fatal alert.
                                     ctx.writeAndFlush(ctx.bufferAllocator().copyOf(new byte[] { 100 }));
                                 }
-                                ctx.fireChannelInboundEvent(evt);
+                                ctx.fireChannelProtocolChanged(evt);
                             }
 
                             @Override
@@ -1433,7 +1438,8 @@ public abstract class SSLEngineTest {
                         p.addLast(new ChannelHandler() {
                             private int handshakeCount;
                             @Override
-                            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                            public void channelProtocolChanged(ChannelHandlerContext ctx,
+                                                               ChannelProtocolChangeEvent<?> evt) {
                                 // OpenSSL SSLEngine sends a fatal alert for the renegotiation handshake because the
                                 // user data read as part of the handshake. The client receives this fatal alert and is
                                 // expected to shutdown the connection. The "invalid data" during the renegotiation
@@ -1446,7 +1452,7 @@ public abstract class SSLEngineTest {
                                     ctx.close();
                                     return;
                                 }
-                                ctx.fireChannelInboundEvent(evt);
+                                ctx.fireChannelProtocolChanged(evt);
                             }
 
                             @Override
@@ -1817,11 +1823,11 @@ public abstract class SSLEngineTest {
                 ch.pipeline().addFirst(sslHandler);
                 ch.pipeline().addLast(new ChannelHandler() {
                     @Override
-                    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt)
+                            throws Exception {
                         if (evt instanceof SslHandshakeCompletionEvent) {
-                            Throwable cause = ((SslHandshakeCompletionEvent) evt).cause();
-                            if (cause == null) {
-                                SSLSession session = ((SslHandler) ctx.pipeline().first()).engine().getSession();
+                            SSLSession session = ((SslHandshakeCompletionEvent) evt).protocolData();
+                            if (evt.isSuccess()) {
                                 Certificate[] peerCertificates = session.getPeerCertificates();
                                 if (peerCertificates == null) {
                                     promise.setFailure(new NullPointerException("peerCertificates"));
@@ -1860,7 +1866,7 @@ public abstract class SSLEngineTest {
                                     promise.setSuccess(null);
                                 }
                             } else {
-                                promise.setFailure(cause);
+                                promise.setFailure(evt.cause());
                             }
                         }
                     }

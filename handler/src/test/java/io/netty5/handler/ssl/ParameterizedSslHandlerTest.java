@@ -24,6 +24,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
@@ -169,7 +170,8 @@ public class ParameterizedSslHandlerTest {
                                 private Throwable writeCause;
 
                                 @Override
-                                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                                public void channelProtocolChanged(
+                                        ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (sslEvt.isSuccess()) {
@@ -233,7 +235,8 @@ public class ParameterizedSslHandlerTest {
                                 }
 
                                 @Override
-                                public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                                public void channelProtocolChanged(
+                                        ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (!sslEvt.isSuccess()) {
@@ -656,7 +659,7 @@ public class ParameterizedSslHandlerTest {
         }
 
         @Override
-        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+        public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                 if (sslEvt.isSuccess()) {

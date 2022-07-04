@@ -65,7 +65,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                                         "not an SSL/TLS record: " + BufferUtil.hexDump(in));
                                 in.skipReadableBytes(in.readableBytes());
                                 ctx.fireChannelInboundEvent(new SniCompletionEvent(e));
-                                ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(e));
+                                ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(null, e));
                                 throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA) {
@@ -250,7 +250,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
      *
      * @see #lookup(ChannelHandlerContext, Buffer)
      */
-    protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception;
+    protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future)
+            throws Exception;
 
     @Override
     public void read(ChannelHandlerContext ctx) {

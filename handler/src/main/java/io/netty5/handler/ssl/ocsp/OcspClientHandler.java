@@ -17,6 +17,7 @@ package io.netty5.handler.ssl.ocsp;
 
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.handler.ssl.ReferenceCountedOpenSslContext;
 import io.netty5.handler.ssl.ReferenceCountedOpenSslEngine;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
@@ -47,8 +48,8 @@ public abstract class OcspClientHandler implements ChannelHandler {
     protected abstract boolean verify(ChannelHandlerContext ctx, ReferenceCountedOpenSslEngine engine) throws Exception;
 
     @Override
-    public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireChannelInboundEvent(evt);
+    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) throws Exception {
+        ctx.fireChannelProtocolChanged(evt);
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
             if (event.isSuccess() && !verify(ctx, engine)) {

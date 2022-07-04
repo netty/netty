@@ -17,10 +17,12 @@ package io.netty5.example.securechat;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.handler.ssl.SslHandler;
+import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 
 import java.net.InetAddress;
@@ -33,19 +35,19 @@ public class SecureChatServerHandler extends SimpleChannelInboundHandler<String>
     static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     @Override
-    public void channelActive(final ChannelHandlerContext ctx) {
-        // Once session is secured, send a greeting and register the channel to the global channel
-        // list so the channel received the messages from others.
-        ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(future -> {
+    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) throws Exception {
+        if (evt instanceof SslHandshakeCompletionEvent && evt.isSuccess()) {
+            // Once session is secured, send a greeting and register the channel to the global channel
+            // list so the channel received the messages from others.
             ctx.writeAndFlush(
                     "Welcome to " + InetAddress.getLocalHost().getHostName() + " secure chat service!\n");
             ctx.writeAndFlush(
                     "Your session is protected by " +
-                    ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +
-                    " cipher suite.\n");
+                            ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +
+                            " cipher suite.\n");
 
             channels.add(ctx.channel());
-        });
+        }
     }
 
     @Override

@@ -22,6 +22,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.ssl.OpenSsl;
@@ -53,7 +54,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -245,7 +245,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
                 if (handshakeCounter == 0) {
@@ -253,7 +253,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                     if (handshakeEvt.cause() != null) {
                         logger.warn("Handshake failed:", handshakeEvt.cause());
                     }
-                    assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
+                    assertTrue(evt.isSuccess());
                 } else {
                     if (ctx.channel().parent() == null) {
                         assertTrue(handshakeEvt.cause() instanceof ClosedChannelException);

@@ -15,24 +15,38 @@
  */
 package io.netty5.handler.ssl;
 
+import javax.net.ssl.SSLSession;
+
 /**
  * Event that is fired once the SSL handshake is complete, which may be because it was successful or there
  * was an error.
  */
 public final class SslHandshakeCompletionEvent extends SslCompletionEvent {
 
-    public static final SslHandshakeCompletionEvent SUCCESS = new SslHandshakeCompletionEvent();
+    private final String applicationProtocol;
 
     /**
      * Creates a new event that indicates a successful handshake.
      */
-    private SslHandshakeCompletionEvent() { }
+    public SslHandshakeCompletionEvent(SSLSession session, String applicationProtocol) {
+        super(session);
+        this.applicationProtocol = applicationProtocol;
+    }
+
+    /**
+     * Returns the application protocol (if any).
+     *
+     * @return application protocol.
+     */
+    public String applicationProtocol() {
+        return applicationProtocol;
+    }
 
     /**
      * Creates a new event that indicates an unsuccessful handshake.
-     * Use {@link #SUCCESS} to indicate a successful handshake.
      */
-    public SslHandshakeCompletionEvent(Throwable cause) {
-        super(cause);
+    public SslHandshakeCompletionEvent(SSLSession session, Throwable cause) {
+        super(session, cause);
+        this.applicationProtocol = null;
     }
 }

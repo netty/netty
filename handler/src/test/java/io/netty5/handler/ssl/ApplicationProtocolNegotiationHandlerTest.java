@@ -17,6 +17,7 @@ package io.netty5.handler.ssl;
 
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelProtocolChangeEvent;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderException;
@@ -26,7 +27,13 @@ import org.junit.jupiter.api.function.Executable;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSessionContext;
+import javax.security.cert.X509Certificate;
 import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
+import java.security.cert.Certificate;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -80,7 +87,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
         SSLHandshakeException exception = new SSLHandshakeException("error");
-        SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(exception);
+        SslHandshakeCompletionEvent completionEvent = new SslHandshakeCompletionEvent(new TestSSLSession(), exception);
         channel.pipeline().fireChannelInboundEvent(completionEvent);
         channel.pipeline().fireChannelExceptionCaught(new DecoderException(exception));
         assertNull(channel.pipeline().context(alpnHandler));
@@ -120,7 +127,8 @@ public class ApplicationProtocolNegotiationHandlerTest {
             channel.pipeline().addLast(new SslHandler(engine));
             channel.pipeline().addLast(alpnHandler);
         }
-        channel.pipeline().fireChannelInboundEvent(SslHandshakeCompletionEvent.SUCCESS);
+        channel.pipeline().fireChannelInboundEvent(
+                new SslHandshakeCompletionEvent(engine.getSession(), engine.getApplicationProtocol()));
         assertNull(channel.pipeline().context(alpnHandler));
         // Should produce the close_notify messages
         channel.releaseOutbound();
@@ -139,7 +147,8 @@ public class ApplicationProtocolNegotiationHandlerTest {
             }
         };
         final EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        channel.pipeline().fireChannelInboundEvent(SslHandshakeCompletionEvent.SUCCESS);
+        channel.pipeline().fireChannelInboundEvent(
+                new SslHandshakeCompletionEvent(new TestSSLSession(), "proto"));
         assertNull(channel.pipeline().context(alpnHandler));
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
@@ -199,18 +208,125 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelHandler() {
             @Override
-            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+            public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+                if (evt instanceof SslHandshakeCompletionEvent) {
                     ctx.fireChannelRead(someBytes);
                 }
                 ctx.fireChannelInboundEvent(evt);
             }
         }, alpnHandler);
-        channel.pipeline().fireChannelInboundEvent(SslHandshakeCompletionEvent.SUCCESS);
+        channel.pipeline().fireChannelInboundEvent(engine.getSession());
         assertNull(channel.pipeline().context(alpnHandler));
         assertArrayEquals(someBytes, channelReadData.get());
         assertTrue(channelReadCompleteCalled.get());
         assertNull(channel.readInbound());
         assertTrue(channel.finishAndReleaseAll());
+    }
+
+    private static final class TestSSLSession implements SSLSession {
+        @Override
+        public byte[] getId() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public SSLSessionContext getSessionContext() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long getCreationTime() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long getLastAccessedTime() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void invalidate() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isValid() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void putValue(String name, Object value) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Object getValue(String name) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void removeValue(String name) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String[] getValueNames() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Certificate[] getLocalCertificates() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Principal getLocalPrincipal() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String getCipherSuite() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String getProtocol() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String getPeerHost() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int getPeerPort() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int getPacketBufferSize() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int getApplicationBufferSize() {
+            throw new UnsupportedOperationException();
+        }
     }
 }
