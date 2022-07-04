@@ -408,6 +408,7 @@ public interface ChannelHandler {
      * @param ctx               the {@link ChannelHandlerContext} for which the operation is made.
      * @return                  the number of buffered / queued bytes.
      */
+    @Skip
     default long pendingOutboundBytes(ChannelHandlerContext ctx) {
         return 0;
     }

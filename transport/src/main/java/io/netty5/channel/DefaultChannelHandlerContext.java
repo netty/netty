@@ -52,6 +52,7 @@ import static io.netty5.channel.ChannelHandlerMask.MASK_SHUTDOWN;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INBOUND_EVENT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_SEND_OUTBOUND_EVENT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_WRITE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_PENDING_OUTBOUND_BYTES;
 import static io.netty5.channel.ChannelHandlerMask.mask;
 import static java.util.Objects.requireNonNull;
 
@@ -84,11 +85,13 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private final DefaultChannelPipeline pipeline;
     private final ChannelHandler handler;
     private final String name;
+
+    // Is null if the ChannelHandler not implements pendingOutboundBytes(...).
     private final DefaultChannelHandlerContextAwareEventExecutor executor;
     private long currentPendingBytes;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
-    // There is no need to make this volatile as at worse it will just create a few more instances then needed.
+    // There is no need to make this volatile as at worse it will just create a few more instances than needed.
     private Tasks invokeTasks;
     private int handlerState = INIT;
 
@@ -103,8 +106,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         this.pipeline = pipeline;
         executionMask = mask(handler.getClass());
         this.handler = handler;
-        // Wrap the executor so we are sure that the pending bytes will be updated correctly in all cases.
-        this.executor = new DefaultChannelHandlerContextAwareEventExecutor(pipeline.executor(), this);
+        // Wrap the executor if the ChannelHandler implements pendingOutboundBytes(ChannelHandlerContext) so we are
+        // sure that the pending bytes will be updated correctly in all cases. Otherwise, we don't need any special
+        // wrapping and so can save some work (which is true most of the time).
+        this.executor = handlesPendingOutboundBytes(executionMask) ?
+                new DefaultChannelHandlerContextAwareEventExecutor(pipeline.executor(), this) : null;
+    }
+
+    private static boolean handlesPendingOutboundBytes(int mask) {
+        return (mask & MASK_PENDING_OUTBOUND_BYTES) != 0;
     }
 
     private static Future<Void> failRemoved(DefaultChannelHandlerContext ctx) {
@@ -133,7 +143,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public EventExecutor executor() {
-        return executor;
+        return executor == null ? pipeline().executor() : executor;
     }
 
     @Override
@@ -151,13 +161,13 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return name;
     }
 
-    private EventExecutor wrappedExecutor() {
-        return executor.wrappedExecutor();
+    private EventExecutor originalExecutor() {
+        return executor == null ? pipeline().executor() : executor.wrappedExecutor();
     }
 
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelRegistered();
         } else {
@@ -188,7 +198,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext fireChannelUnregistered() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelUnregistered();
         } else {
@@ -219,7 +229,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelActive();
         } else {
@@ -250,7 +260,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext fireChannelInactive() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelInactive();
         } else {
@@ -281,7 +291,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext fireChannelShutdown(ChannelShutdownDirection direction) {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelShutdown(direction);
         } else {
@@ -313,7 +323,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ChannelHandlerContext fireChannelExceptionCaught(Throwable cause) {
         requireNonNull(cause, "cause");
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelExceptionCaught(cause);
         } else {
@@ -363,7 +373,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ChannelHandlerContext fireChannelInboundEvent(Object event) {
         requireNonNull(event, "event");
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelInboundEvent(event);
         } else {
@@ -396,7 +406,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
         requireNonNull(msg, "msg");
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelRead(msg);
         } else {
@@ -434,7 +444,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelReadComplete();
         } else {
@@ -466,7 +476,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelWritabilityChanged();
         } else {
@@ -500,7 +510,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> bind(SocketAddress localAddress) {
         requireNonNull(localAddress, "localAddress");
 
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeBind(localAddress);
         }
@@ -517,7 +527,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> deregister() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeDeregister();
         }
@@ -548,7 +558,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public Future<Void> connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeConnect(remoteAddress, localAddress);
         }
@@ -586,7 +596,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return close();
         }
 
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeDisconnect();
         }
@@ -616,7 +626,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> close() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeClose();
         }
@@ -646,7 +656,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> shutdown(ChannelShutdownDirection direction) {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeShutdown(direction);
         }
@@ -676,7 +686,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> register() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeRegister();
         }
@@ -725,7 +735,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext read() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeRead();
         } else {
@@ -772,7 +782,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext flush() {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeFlush();
         } else {
@@ -819,7 +829,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Future<Void> write(Object msg, boolean flush) {
         requireNonNull(msg, "msg");
 
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             final DefaultChannelHandlerContext next = findContextOutbound(flush ?
                     (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
@@ -852,7 +862,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> sendOutboundEvent(Object event) {
-        EventExecutor executor = wrappedExecutor();
+        EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             return findAndInvokeSendOutboundEvent(event);
         }
@@ -898,17 +908,17 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Promise<Void> newPromise() {
-        return executor.newPromise();
+        return executor().newPromise();
     }
 
     @Override
     public Future<Void> newSucceededFuture() {
-        return executor.newSucceededFuture(null);
+        return executor().newSucceededFuture(null);
     }
 
     @Override
     public Future<Void> newFailedFuture(Throwable cause) {
-        return executor.newFailedFuture(cause);
+        return executor().newFailedFuture(cause);
     }
 
     private DefaultChannelHandlerContext findContextInbound(int mask) {
@@ -1163,6 +1173,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void saveCurrentPendingBytesIfNeeded() {
+        if (!handlesPendingOutboundBytes(executionMask)) {
+            assert currentPendingBytes == 0;
+            return;
+        }
         // We only save the current pending bytes if not already done before.
         // This is important as otherwise we might run into issues in case of reentrancy.
         if (currentPendingBytes == -1) {
@@ -1178,6 +1192,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void updatePendingBytesIfNeeded() {
+        if (!handlesPendingOutboundBytes(executionMask)) {
+            assert currentPendingBytes == 0;
+            return;
+        }
         long current = currentPendingBytes;
         if (current == -1) {
             return;
