@@ -314,25 +314,31 @@ public abstract class AbstractByteBuf extends ByteBuf {
         ensureAccessible();
         checkPositiveOrZero(minWritableBytes, "minWritableBytes");
 
+        // 容量够的
         if (minWritableBytes <= writableBytes()) {
             return 0;
         }
 
         final int maxCapacity = maxCapacity();
         final int writerIndex = writerIndex();
+        // 超过最大上限
         if (minWritableBytes > maxCapacity - writerIndex) {
+            // 不强制设置，或者已经到达最大容量
             if (!force || capacity() == maxCapacity) {
                 return 1;
             }
 
+            // 设置为最大容量
             capacity(maxCapacity);
             return 3;
         }
 
         int fastWritable = maxFastWritableBytes();
+        // 计算新的容量。默认情况下，2 倍扩容，并且不超过最大容量上限。
         int newCapacity = fastWritable >= minWritableBytes ? writerIndex + fastWritable
                 : alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
+        // 设置新的容量大小
         // Adjust to the new capacity.
         capacity(newCapacity);
         return 2;
@@ -340,10 +346,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
+        // 未改变，直接返回
         if (endianness == order()) {
             return this;
         }
         ObjectUtil.checkNotNull(endianness, "endianness");
+        // 创建 SwappedByteBuf 对象
         return newSwappedByteBuf();
     }
 

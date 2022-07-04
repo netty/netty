@@ -102,6 +102,7 @@ public abstract class ResourceLeakDetectorFactory {
         DefaultResourceLeakDetectorFactory() {
             String customLeakDetector;
             try {
+                // 自定义实现
                 customLeakDetector = SystemPropertyUtil.get("io.netty.customResourceLeakDetector");
             } catch (Throwable cause) {
                 logger.error("Could not access System property: io.netty.customResourceLeakDetector", cause);
@@ -110,7 +111,9 @@ public abstract class ResourceLeakDetectorFactory {
             if (customLeakDetector == null) {
                 obsoleteCustomClassConstructor = customClassConstructor = null;
             } else {
+                // 获取构造函数（带一个int类型参数，一个long类型参数）
                 obsoleteCustomClassConstructor = obsoleteCustomClassConstructor(customLeakDetector);
+                // 获取构造函数（带一个int类型参数）
                 customClassConstructor = customClassConstructor(customLeakDetector);
             }
         }
@@ -153,6 +156,7 @@ public abstract class ResourceLeakDetectorFactory {
         @Override
         public <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource, int samplingInterval,
                                                                    long maxActive) {
+            // 自定义实现
             if (obsoleteCustomClassConstructor != null) {
                 try {
                     @SuppressWarnings("unchecked")
@@ -169,6 +173,7 @@ public abstract class ResourceLeakDetectorFactory {
                 }
             }
 
+            // 默认实现
             ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<T>(resource, samplingInterval,
                                                                                        maxActive);
             logger.debug("Loaded default ResourceLeakDetector: {}", resourceLeakDetector);
