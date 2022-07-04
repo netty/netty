@@ -149,7 +149,7 @@
         <libquiche>libquiche.a</libquiche>
         <extraLdflags>-arch arm64 -Wl,-exported_symbol,_JNI_* -Wl,-platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget}</extraLdflags>
         <extraConfigureArg>--host=aarch64-apple-darwin</extraConfigureArg>
-        <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=aarch_64</bundleNativeCode>
+        <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=aarch64</bundleNativeCode>
         <!-- Don't run tests as we can't load the aarch64 lib on a x86_64 system -->
         <skipTests>true</skipTests>
         <crossCompile>mac</crossCompile>
@@ -441,7 +441,7 @@
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
         <extraLdflags>-Wl,--strip-debug -Wl,--exclude-libs,ALL</extraLdflags>
-        <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch_64</bundleNativeCode>
+        <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch64</bundleNativeCode>
         <jniLibName>netty_quiche_linux_aarch_64</jniLibName>
         <jni.classifier>linux-aarch_64</jni.classifier>
         <javaModuleNameWithClassifier>linux.aarch_64</javaModuleNameWithClassifier>
