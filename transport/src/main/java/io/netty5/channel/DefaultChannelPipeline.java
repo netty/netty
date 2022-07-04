@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.IntSupplier;
@@ -810,6 +809,12 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public final ChannelPipeline fireChannelProtocolChanged(ChannelProtocolChangeEvent<?> event) {
+        head.fireChannelProtocolChanged(event);
+        return this;
+    }
+
+    @Override
     public final ChannelPipeline fireChannelShutdown(ChannelShutdownDirection direction) {
         head.invokeChannelShutdown(direction);
         return this;
@@ -998,6 +1003,17 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
+     * Called once an user event hit the end of the {@link ChannelPipeline} without been handled by the user
+     * in {@link ChannelHandler#channelProtocolChanged(ChannelHandlerContext, ChannelProtocolChangeEvent)}.
+     * This method is responsible to call {@link Resource#dispose(Object)} on the given event at some point.
+     */
+    protected void onUnhandledChannelProtocolChanged(ChannelProtocolChangeEvent<?> evt) {
+        // This may not be a configuration error and so don't log anything.
+        // The event may be superfluous for the current pipeline configuration.
+        Resource.dispose(evt);
+    }
+
+    /**
      * Called once the {@link ChannelHandler#channelWritabilityChanged(ChannelHandlerContext)} event hit
      * the end of the {@link ChannelPipeline}.
      */
@@ -1086,6 +1102,11 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundUserEventTriggered(evt);
+        }
+
+        @Override
+        public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledChannelProtocolChanged(evt);
         }
 
         @Override

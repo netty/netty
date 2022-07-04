@@ -254,6 +254,14 @@ public interface ChannelHandler {
     }
 
     /**
+     * Gets called if the used protocol changed (for example after a protocol upgrade).
+     */
+    @Skip
+    default void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) throws Exception {
+        ctx.fireChannelInboundEvent(evt);
+    }
+
+    /**
      * Gets called once the writable state of a {@link Channel} changed. You can check the state with
      * {@link Channel#writableBytes()} or {@link Channel#isWritable()}.
      */

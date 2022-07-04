@@ -215,11 +215,21 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
 
     @Override
     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-            assert ctx == inboundCtx.delegatingCtx();
+        assert ctx == inboundCtx.delegatingCtx();
         if (!inboundCtx.removed) {
             inboundHandler.channelInboundEvent(inboundCtx, evt);
         } else {
             inboundCtx.fireChannelInboundEvent(evt);
+        }
+    }
+
+    @Override
+    public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) throws Exception {
+        assert ctx == inboundCtx.delegatingCtx();
+        if (!inboundCtx.removed) {
+            inboundHandler.channelProtocolChanged(inboundCtx, evt);
+        } else {
+            inboundCtx.fireChannelProtocolChanged(evt);
         }
     }
 

@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import static io.netty5.channel.ChannelHandlerMask.MASK_BIND;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_ACTIVE;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INACTIVE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_PROTOCOL_CHANGED;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ_COMPLETE;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_REGISTERED;
@@ -393,6 +394,38 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
     }
 
+    @Override
+    public ChannelHandlerContext fireChannelProtocolChanged(ChannelProtocolChangeEvent<?> event) {
+        requireNonNull(event, "event");
+        EventExecutor executor = wrappedExecutor();
+        if (executor.inEventLoop()) {
+            findAndInvokeChannelProtocolChanged(event);
+        } else {
+            executor.execute(() -> findAndInvokeChannelProtocolChanged(event));
+        }
+        return this;
+    }
+
+    private void findAndInvokeChannelProtocolChanged(ChannelProtocolChangeEvent<?> event) {
+        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_PROTOCOL_CHANGED);
+        if (ctx == null) {
+            Resource.dispose(event);
+            notifyHandlerRemovedAlready();
+            return;
+        }
+        ctx.invokeChannelProtocolChanged(event);
+    }
+
+    void invokeChannelProtocolChanged(ChannelProtocolChangeEvent<?> event) {
+        try {
+            saveCurrentPendingBytesIfNeeded();
+            handler().channelProtocolChanged(this, event);
+        } catch (Throwable t) {
+            invokeChannelExceptionCaught(t);
+        } finally {
+            updatePendingBytesIfNeeded();
+        }
+    }
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
         requireNonNull(msg, "msg");

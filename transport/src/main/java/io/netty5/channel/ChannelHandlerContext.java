@@ -120,6 +120,9 @@ public interface ChannelHandlerContext extends ChannelInboundInvoker, ChannelOut
     ChannelHandlerContext fireChannelInboundEvent(Object evt);
 
     @Override
+    ChannelHandlerContext fireChannelProtocolChanged(ChannelProtocolChangeEvent<?> event);
+
+    @Override
     ChannelHandlerContext fireChannelRead(Object msg);
 
     @Override

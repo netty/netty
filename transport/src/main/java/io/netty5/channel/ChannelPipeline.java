@@ -531,6 +531,9 @@ public interface ChannelPipeline
     ChannelPipeline fireChannelInboundEvent(Object event);
 
     @Override
+    ChannelPipeline fireChannelProtocolChanged(ChannelProtocolChangeEvent<?> event);
+
+    @Override
     ChannelPipeline fireChannelRead(Object msg);
 
     @Override

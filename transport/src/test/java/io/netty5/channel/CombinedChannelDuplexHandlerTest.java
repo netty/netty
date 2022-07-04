@@ -39,6 +39,28 @@ public class CombinedChannelDuplexHandlerTest {
     private static final SocketAddress REMOTE_ADDRESS = new InetSocketAddress(0);
     private static final Throwable CAUSE = new Throwable();
     private static final Object USER_EVENT = new Object();
+    private static final ChannelProtocolChangeEvent<Object> PROTOCOL_CHANGE_EVENT =
+            new ChannelProtocolChangeEvent<>() {
+        @Override
+        public boolean isSuccess() {
+            return false;
+        }
+
+        @Override
+        public boolean isFailed() {
+            return false;
+        }
+
+        @Override
+        public Throwable cause() {
+            return null;
+        }
+
+        @Override
+        public Object protocolData() {
+            return null;
+        }
+    };
 
     private enum Event {
         REGISTERED,
@@ -49,6 +71,7 @@ public class CombinedChannelDuplexHandlerTest {
         CHANNEL_READ_COMPLETE,
         CHANNEL_EXCEPTION_CAUGHT,
         CHANNEL_INBOUND_EVENT,
+        CHANNEL_PROTOCOL_CHANGED,
         CHANNEL_WRITABILITY_CHANGED,
         HANDLER_ADDED,
         HANDLER_REMOVED,
@@ -238,6 +261,7 @@ public class CombinedChannelDuplexHandlerTest {
         channel.pipeline().fireChannelReadComplete();
         channel.pipeline().fireChannelExceptionCaught(CAUSE);
         channel.pipeline().fireChannelInboundEvent(USER_EVENT);
+        channel.pipeline().fireChannelProtocolChanged(PROTOCOL_CHANGE_EVENT);
         channel.pipeline().fireChannelWritabilityChanged();
         channel.pipeline().fireChannelInactive();
         channel.pipeline().fireChannelUnregistered();
@@ -250,6 +274,7 @@ public class CombinedChannelDuplexHandlerTest {
         assertEquals(Event.CHANNEL_READ_COMPLETE, handler.pollEvent());
         assertEquals(Event.CHANNEL_EXCEPTION_CAUGHT, handler.pollEvent());
         assertEquals(Event.CHANNEL_INBOUND_EVENT, handler.pollEvent());
+        assertEquals(Event.CHANNEL_PROTOCOL_CHANGED, handler.pollEvent());
         assertEquals(Event.CHANNEL_WRITABILITY_CHANGED, handler.pollEvent());
         assertEquals(Event.INACTIVE, handler.pollEvent());
         assertEquals(Event.UNREGISTERED, handler.pollEvent());
@@ -301,6 +326,11 @@ public class CombinedChannelDuplexHandlerTest {
         @Override
         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             queue.add(Event.CHANNEL_INBOUND_EVENT);
+        }
+
+        @Override
+        public void channelProtocolChanged(ChannelHandlerContext ctx, ChannelProtocolChangeEvent<?> evt) {
+            queue.add(Event.CHANNEL_PROTOCOL_CHANGED);
         }
 
         @Override

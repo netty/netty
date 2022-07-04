@@ -82,6 +82,16 @@ public interface ChannelInboundInvoker {
     ChannelInboundInvoker fireChannelInboundEvent(Object event);
 
     /**
+     * A {@link Channel} changed its protocol either successfully or failed to do so.
+     *
+     * This will result in having the
+     * {@link ChannelHandler#channelProtocolChanged(ChannelHandlerContext, ChannelProtocolChangeEvent)}
+     * method  called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelInboundInvoker fireChannelProtocolChanged(ChannelProtocolChangeEvent<?> event);
+
+    /**
      * A {@link Channel} received a message.
      *
      * This will result in having the {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}
