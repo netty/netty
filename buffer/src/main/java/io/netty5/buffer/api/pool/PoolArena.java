@@ -389,6 +389,19 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
         return max(0, val);
     }
 
+    @Override
+    public long numPinnedBytes() {
+        long val = activeBytesHuge.longValue();
+        synchronized (this) {
+            for (int i = 0; i < chunkListMetrics.size(); i++) {
+                for (PoolChunkMetric m: chunkListMetrics.get(i)) {
+                    val += m.pinnedBytes();
+                }
+            }
+        }
+        return max(0, val);
+    }
+
     protected final PoolChunk newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize) {
         return new PoolChunk(this, pageSize, pageShifts, chunkSize, maxPageIdx);
     }

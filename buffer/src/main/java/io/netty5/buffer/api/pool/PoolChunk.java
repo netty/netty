@@ -178,6 +178,7 @@ final class PoolChunk implements PoolChunkMetric {
     private final int chunkSize;
 
     int freeBytes;
+    int pinnedBytes;
 
     PoolChunkList parent;
     PoolChunk prev;
@@ -328,7 +329,9 @@ final class PoolChunk implements PoolChunkMetric {
                 handle = splitLargeRun(handle, pages);
             }
 
-            freeBytes -= runSize(pageShifts, handle);
+            int pinnedSize = runSize(pageShifts, handle);
+            freeBytes -= pinnedSize;
+            pinnedBytes += pinnedSize;
             return handle;
         }
     }
@@ -437,6 +440,8 @@ final class PoolChunk implements PoolChunkMetric {
      * @param handle handle to free
      */
     void free(long handle, int normCapacity) {
+        int runSize = runSize(pageShifts, handle);
+        pinnedBytes -= runSize;
         if (isSubpage(handle)) {
             int sizeIdx = arena.size2SizeIdx(normCapacity);
             PoolSubpage head = arena.findSubpagePoolHead(sizeIdx);
@@ -459,7 +464,6 @@ final class PoolChunk implements PoolChunkMetric {
         }
 
         //start free run
-        int pages = runPages(handle);
 
         synchronized (runsAvail) {
             // collapse continuous runs, successfully collapsed runs
@@ -472,7 +476,7 @@ final class PoolChunk implements PoolChunkMetric {
             finalRun &= ~(1L << IS_SUBPAGE_SHIFT);
 
             insertAvailRun(runOffset(finalRun), runPages(finalRun), finalRun);
-            freeBytes += pages << pageShifts;
+            freeBytes += runSize;
         }
     }
 
@@ -603,6 +607,13 @@ final class PoolChunk implements PoolChunkMetric {
     public int freeBytes() {
         synchronized (arena) {
             return freeBytes;
+        }
+    }
+
+    @Override
+    public int pinnedBytes() {
+        synchronized (arena) {
+            return pinnedBytes;
         }
     }
 

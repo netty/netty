@@ -55,4 +55,10 @@ public interface BufferAllocatorMetric {
      * Returns the number of bytes of heap memory used by a {@link BufferAllocator} or {@code -1} if unknown.
      */
     long usedMemory();
+
+    /**
+     * Returns the number of bytes of memory that is currently pinned to the buffers allocated by a
+     * {@link BufferAllocator}, or {@code -1} if unknown.
+     */
+    long pinnedMemory();
 }
