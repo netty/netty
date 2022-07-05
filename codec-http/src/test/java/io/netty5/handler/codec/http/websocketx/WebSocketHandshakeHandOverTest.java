@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Timeout;
 import java.net.URI;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -44,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class WebSocketHandshakeHandOverTest {
 
     private boolean serverReceivedHandshake;
-    private WebSocketServerProtocolHandler.HandshakeComplete serverHandshakeComplete;
+    private WebSocketServerHandshakeCompletionEvent serverHandshakeComplete;
     private boolean clientReceivedHandshake;
     private boolean clientReceivedMessage;
     private boolean serverReceivedCloseHandshake;
@@ -87,9 +86,9 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                if (evt instanceof WebSocketServerHandshakeCompletionEvent) {
                     serverReceivedHandshake = true;
-                    serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
+                    serverHandshakeComplete = (WebSocketServerHandshakeCompletionEvent) evt;
                     // immediately send a message to the client on connect
                     ctx.writeAndFlush(new TextWebSocketFrame(ctx.bufferAllocator(), "abc"));
                 }
@@ -121,9 +120,9 @@ public class WebSocketHandshakeHandOverTest {
         transferAllDataWithMerge(clientChannel, serverChannel);
         assertTrue(serverReceivedHandshake);
         assertNotNull(serverHandshakeComplete);
-        assertEquals("/test", serverHandshakeComplete.requestUri());
-        assertEquals(7, serverHandshakeComplete.requestHeaders().size());
-        assertEquals("test-proto-2", serverHandshakeComplete.selectedSubprotocol());
+        assertEquals("/test", serverHandshakeComplete.data().requestUri());
+        assertEquals(7, serverHandshakeComplete.data().requestHeaders().size());
+        assertEquals("test-proto-2", serverHandshakeComplete.data().selectedSubprotocol());
 
         // Transfer the handshake response and the websocket message to the client
         transferAllDataWithMerge(serverChannel, clientChannel);
@@ -136,8 +135,8 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-                    serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
+                if (evt instanceof WebSocketServerHandshakeCompletionEvent) {
+                    serverHandshakeComplete = (WebSocketServerHandshakeCompletionEvent) evt;
                 }
             }
 
@@ -153,7 +152,7 @@ public class WebSocketHandshakeHandOverTest {
                     WebSocketHandshakeCompletionEvent event = (WebSocketHandshakeCompletionEvent) evt;
                     if (event.isSuccess()) {
                         clientReceivedHandshake = true;
-                    } else if (event.cause() instanceof TimeoutException) {
+                    } else if (event.cause() instanceof WebSocketHandshakeTimeoutException) {
                         clientHandshakeTimeout = true;
                     }
                 }

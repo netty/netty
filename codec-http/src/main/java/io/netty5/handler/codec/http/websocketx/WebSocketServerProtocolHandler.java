@@ -22,7 +22,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.FullHttpResponse;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Promise;
@@ -46,37 +45,10 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolCon
  *
  * To know once a handshake was done you can intercept the
  * {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)} and check if the event was instance
- * of {@link HandshakeComplete}, the event will contain extra information about the handshake such as the request and
- * selected subprotocol.
+ * of {@link WebSocketServerHandshakeCompletionEvent}, the event will contain extra information about the handshake
+ * such as the request and selected subprotocol.
  */
 public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
-
-    /**
-     * The Handshake was completed successfully and the channel was upgraded to websockets.
-     */
-    public static final class HandshakeComplete {
-        private final String requestUri;
-        private final HttpHeaders requestHeaders;
-        private final String selectedSubprotocol;
-
-        HandshakeComplete(String requestUri, HttpHeaders requestHeaders, String selectedSubprotocol) {
-            this.requestUri = requestUri;
-            this.requestHeaders = requestHeaders;
-            this.selectedSubprotocol = selectedSubprotocol;
-        }
-
-        public String requestUri() {
-            return requestUri;
-        }
-
-        public HttpHeaders requestHeaders() {
-            return requestHeaders;
-        }
-
-        public String selectedSubprotocol() {
-            return selectedSubprotocol;
-        }
-    }
 
     private static final AttributeKey<WebSocketServerHandshaker> HANDSHAKER_ATTR_KEY =
             AttributeKey.valueOf(WebSocketServerHandshaker.class, "HANDSHAKER");

@@ -82,7 +82,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
             if (!handshaker.isHandshakeComplete()) {
                 handshaker.finishHandshake(ctx.channel(), response);
                 handshakePromise.trySuccess(null);
-                ctx.fireChannelInboundEvent(new WebSocketHandshakeCompletionEvent(handshaker.version()));
+                ctx.fireChannelInboundEvent(new WebSocketClientHandshakeCompletionEvent(handshaker.version()));
                 ctx.pipeline().remove(this);
                 return;
             }
@@ -105,7 +105,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
                     "handshake timed out after " + handshakeTimeoutMillis + "ms");
             if (localHandshakePromise.tryFailure(exception)) {
                 ctx.flush()
-                   .fireChannelInboundEvent(new WebSocketHandshakeCompletionEvent(exception))
+                   .fireChannelInboundEvent(new WebSocketClientHandshakeCompletionEvent(exception))
                    .close();
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
