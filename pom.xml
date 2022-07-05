@@ -371,7 +371,35 @@
       <groupId>io.netty.incubator</groupId>
       <artifactId>netty-incubator-codec-native-quic</artifactId>
       <version>${netty.quic.version}</version>
-      <classifier>${netty.quic.classifier}</classifier>
+      <classifier>linux-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-native-quic</artifactId>
+      <version>${netty.quic.version}</version>
+      <classifier>linux-aarch_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-native-quic</artifactId>
+      <version>${netty.quic.version}</version>
+      <classifier>osx-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-native-quic</artifactId>
+      <version>${netty.quic.version}</version>
+      <classifier>osx-aarch_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-native-quic</artifactId>
+      <version>${netty.quic.version}</version>
+      <classifier>windows-x86_64</classifier>
       <scope>runtime</scope>
     </dependency>
     <dependency>
