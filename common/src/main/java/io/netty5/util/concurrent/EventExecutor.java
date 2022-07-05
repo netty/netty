@@ -17,6 +17,8 @@ package io.netty5.util.concurrent;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The {@link EventExecutor} is a special {@link EventExecutorGroup} which comes
@@ -77,4 +79,31 @@ public interface EventExecutor extends EventExecutorGroup {
     default <V> Future<V> newFailedFuture(Throwable cause) {
         return DefaultPromise.<V>newFailedPromise(this, cause).asFuture();
     }
+
+    // Force the implementing class to implement these methods itself. This is needed as
+    // EventExecutorGroup provides default implementations that call next() which would lead to
+    // and infinite loop if not implemented differently in the EventExecutor itself.
+    @Override
+    Future<Void> submit(Runnable task);
+
+    @Override
+    <T> Future<T> submit(Runnable task, T result);
+
+    @Override
+    <T> Future<T> submit(Callable<T> task);
+
+    @Override
+    Future<Void> schedule(Runnable task, long delay, TimeUnit unit);
+
+    @Override
+    <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit);
+
+    @Override
+    Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit);
+
+    @Override
+    Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit);
+
+    @Override
+    void execute(Runnable task);
 }
