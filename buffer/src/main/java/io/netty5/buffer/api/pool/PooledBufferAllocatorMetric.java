@@ -66,10 +66,16 @@ final class PooledBufferAllocatorMetric implements BufferAllocatorMetric {
     }
 
     @Override
+    public long pinnedMemory() {
+        return allocator.pinnedMemory();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(256);
         sb.append(StringUtil.simpleClassName(this))
                 .append("(usedMemory: ").append(usedMemory())
+                .append("; pinnedMemory: ").append(pinnedMemory())
                 .append("; numArenas: ").append(numArenas())
                 .append("; smallCacheSize: ").append(smallCacheSize())
                 .append("; normalCacheSize: ").append(normalCacheSize())
