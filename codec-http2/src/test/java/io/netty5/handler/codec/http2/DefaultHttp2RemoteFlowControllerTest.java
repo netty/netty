@@ -79,7 +79,8 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    private Promise<Void> promise;
+    @SuppressWarnings("rawtypes")
+    private Promise promise;
 
     @Mock
     private Http2RemoteFlowController.Listener listener;
@@ -87,6 +88,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private DefaultHttp2Connection connection;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 

@@ -83,7 +83,8 @@ public class Http2ConnectionHandlerTest {
     private static final int NON_EXISTANT_STREAM_ID = 13;
 
     private Http2ConnectionHandler handler;
-    private Promise<Void> promise;
+    @SuppressWarnings("rawtypes")
+    private Promise promise;
 
     @Mock
     private Http2Connection connection;

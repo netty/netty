@@ -912,18 +912,22 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final Promise<Void> newPromise() {
-        return executor().newPromise();
+    public final <V> Promise<V> newPromise() {
+        return ChannelPipeline.super.newPromise();
     }
 
     @Override
     public final Future<Void> newSucceededFuture() {
         return succeededFuture;
     }
+    @Override
+    public final <V> Future<V> newSucceededFuture(V value) {
+        return ChannelPipeline.super.newSucceededFuture(value);
+    }
 
     @Override
-    public final Future<Void> newFailedFuture(Throwable cause) {
-        return executor().newFailedFuture(cause);
+    public final  <V> Future<V> newFailedFuture(Throwable cause) {
+        return ChannelPipeline.super.newFailedFuture(cause);
     }
 
     /**

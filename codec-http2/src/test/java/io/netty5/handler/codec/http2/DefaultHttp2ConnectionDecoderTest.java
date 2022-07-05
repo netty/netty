@@ -125,7 +125,8 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        @SuppressWarnings("rawtypes")
+        Promise promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
         final AtomicInteger headersReceivedState = new AtomicInteger();
         when(channel.isActive()).thenReturn(true);
