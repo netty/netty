@@ -1139,13 +1139,15 @@ public abstract class SSLEngineTest {
                 p.addLast(new ChannelHandler() {
                     @Override
                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt instanceof SslHandshakeCompletionEvent
-                                && ((SslHandshakeCompletionEvent) evt).isSuccess()) {
-                            try {
-                                verifySSLSessionForMutualAuth(
-                                        param, handler.engine().getSession(), clientCrtFile, PRINCIPAL_NAME);
-                            } catch (Throwable cause) {
-                                clientException = cause;
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            SslHandshakeCompletionEvent handshakeCompletionEvent = (SslHandshakeCompletionEvent) evt;
+                            if (handshakeCompletionEvent.isSuccess()) {
+                                try {
+                                    verifySSLSessionForMutualAuth(param, handshakeCompletionEvent.data().session(),
+                                            clientCrtFile, PRINCIPAL_NAME);
+                                } catch (Throwable cause) {
+                                    clientException = cause;
+                                }
                             }
                         }
                     }
