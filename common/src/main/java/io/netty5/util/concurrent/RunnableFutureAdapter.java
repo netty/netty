@@ -18,9 +18,7 @@ package io.netty5.util.concurrent;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 
@@ -91,11 +89,6 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public boolean await(long timeoutMillis) throws InterruptedException {
-        return future.await(timeoutMillis);
-    }
-
-    @Override
     public V getNow() {
         return promise.getNow();
     }
@@ -128,23 +121,8 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public V get() throws InterruptedException, ExecutionException {
-        return future.get();
-    }
-
-    @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return future.get(timeout, unit);
-    }
-
-    @Override
     public FutureCompletionStage<V> asStage() {
         return future.asStage();
-    }
-
-    @Override
-    public java.util.concurrent.Future<V> asJdkFuture() {
-        return future.asJdkFuture();
     }
 
     @Override

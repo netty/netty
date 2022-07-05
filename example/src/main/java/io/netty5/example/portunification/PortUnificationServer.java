@@ -60,7 +60,7 @@ public final class PortUnificationServer {
             });
 
             // Bind and start to accept incoming connections.
-            b.bind(PORT).get().closeFuture().sync();
+            b.bind(PORT).asStage().get().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

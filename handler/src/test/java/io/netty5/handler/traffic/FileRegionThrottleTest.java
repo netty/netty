@@ -98,7 +98,7 @@ public class FileRegionThrottleTest {
                 ch.pipeline().addLast(gtsh);
             }
         });
-        Channel sc = bs.bind(0).get();
+        Channel sc = bs.bind(0).asStage().get();
         Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch));
 
         long start = TrafficCounter.milliSecondFromNano();
@@ -118,7 +118,7 @@ public class FileRegionThrottleTest {
                 ch.pipeline().addLast(readHandler);
             }
         });
-        return bc.connect(server).get();
+        return bc.connect(server).asStage().get();
     }
 
     private static final class MessageDecoder implements ChannelHandler {

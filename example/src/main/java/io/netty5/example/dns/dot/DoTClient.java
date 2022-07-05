@@ -99,7 +99,7 @@ public final class DoTClient {
                       });
                  }
              });
-            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).get();
+            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).asStage().get();
 
             int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)

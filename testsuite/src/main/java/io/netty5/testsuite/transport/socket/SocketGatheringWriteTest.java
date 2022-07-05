@@ -127,8 +127,8 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         cb.handler(ch);
         sb.childHandler(sh);
 
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
+        Channel sc = sb.bind().asStage().get();
+        Channel cc = cb.connect(sc.localAddress()).asStage().get();
 
         BufferAllocator alloc = preferredAllocator();
         try (Buffer src = MemoryManager.unsafeWrap(data)) {
@@ -150,7 +150,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
         Future<Void> cf = cc.writeAndFlush(preferredAllocator().allocate(0));
         try {
-            assertTrue(cf.await(60000));
+            assertTrue(cf.await(60000, TimeUnit.MILLISECONDS));
             cf.sync();
         } catch (Throwable t) {
             // TODO: Remove this once we fix this test.

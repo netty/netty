@@ -161,8 +161,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
+        Channel sc = sb.bind().asStage().get();
+        Channel cc = cb.connect(sc.localAddress()).asStage().get();
 
         while (cc.isActive()) {
             if (sh.exception.get() != null) {

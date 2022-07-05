@@ -122,8 +122,8 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asStage().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
 
             try (Buffer expected = newCompositeBuffer(clientChannel.bufferAllocator())) {
                 latch.await();
@@ -261,8 +261,8 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().get();
-            clientChannel = cb.connect(serverChannel.localAddress()).get();
+            serverChannel = sb.bind().asStage().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
 
             latch.await();
             Object received = clientReceived.get();

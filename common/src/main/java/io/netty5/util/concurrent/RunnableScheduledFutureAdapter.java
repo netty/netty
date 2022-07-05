@@ -20,9 +20,7 @@ import io.netty5.util.internal.DefaultPriorityQueue;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.requireNonNull;
@@ -203,11 +201,6 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     }
 
     @Override
-    public boolean await(long timeoutMillis) throws InterruptedException {
-        return future.await(timeoutMillis);
-    }
-
-    @Override
     public V getNow() {
         return promise.getNow();
     }
@@ -228,23 +221,8 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     }
 
     @Override
-    public V get() throws InterruptedException, ExecutionException {
-        return future.get();
-    }
-
-    @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return future.get(timeout, unit);
-    }
-
-    @Override
     public FutureCompletionStage<V> asStage() {
         return future.asStage();
-    }
-
-    @Override
-    public java.util.concurrent.Future<V> asJdkFuture() {
-        return future.asJdkFuture();
     }
 
     @Override

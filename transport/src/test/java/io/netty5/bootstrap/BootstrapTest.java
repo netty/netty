@@ -277,7 +277,7 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).asStage().get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
         bootstrapA.connect(localAddress).sync();
@@ -318,13 +318,13 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).asStage().get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
         Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the UnknownHostException.
-        assertTrue(connectFuture.await(10000));
+        assertTrue(connectFuture.await(10000, TimeUnit.MILLISECONDS));
         assertThat(connectFuture.cause(), instanceOf(UnknownHostException.class));
     }
 
@@ -342,7 +342,7 @@ public class BootstrapTest {
         Future<Channel> connectFuture = bootstrap.connect(LocalAddress.ANY);
 
         // Should fail with the RuntimeException.
-        assertTrue(connectFuture.await(10000));
+        assertTrue(connectFuture.await(10000, TimeUnit.MILLISECONDS));
         assertSame(connectFuture.cause(), exception);
     }
 

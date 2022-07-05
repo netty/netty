@@ -87,8 +87,8 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
         });
         cb.option(UnixChannelOption.DOMAIN_SOCKET_READ_MODE,
                   DomainSocketReadMode.FILE_DESCRIPTORS);
-        Channel sc = sb.bind().get();
-        Channel cc = cb.connect(sc.localAddress()).get();
+        Channel sc = sb.bind().asStage().get();
+        Channel cc = cb.connect(sc.localAddress()).asStage().get();
 
         Object received = queue.take();
         cc.close().sync();

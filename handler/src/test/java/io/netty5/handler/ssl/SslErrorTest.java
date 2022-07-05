@@ -145,7 +145,8 @@ public class SslErrorTest {
         final Promise<Void> promise = group.next().newPromise();
         try (AutoCloseable ignore1 = autoClosing(sslServerCtx);
              AutoCloseable ignore2 = autoClosing(sslClientCtx)) {
-            serverChannel = new ServerBootstrap().group(group)
+            serverChannel = new ServerBootstrap()
+                    .group(group)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<Channel>() {
@@ -153,8 +154,8 @@ public class SslErrorTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.bufferAllocator()));
                             if (!serverProduceError) {
-                                ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,
-                                        exception, promise));
+                                ch.pipeline().addLast(new AlertValidationHandler(
+                                        clientProvider, serverProduceError, exception, promise));
                             }
                             ch.pipeline().addLast(new ChannelHandler() {
 
@@ -164,9 +165,10 @@ public class SslErrorTest {
                                 }
                             });
                         }
-                    }).bind(0).get();
+                    }).bind(0).asStage().get();
 
-            clientChannel = new Bootstrap().group(group)
+            clientChannel = new Bootstrap()
+                    .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
@@ -174,8 +176,8 @@ public class SslErrorTest {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.bufferAllocator()));
 
                             if (serverProduceError) {
-                                ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,
-                                        exception, promise));
+                                ch.pipeline().addLast(new AlertValidationHandler(
+                                        clientProvider, serverProduceError, exception, promise));
                             }
                             ch.pipeline().addLast(new ChannelHandler() {
 
@@ -185,7 +187,7 @@ public class SslErrorTest {
                                 }
                             });
                         }
-                    }).connect(serverChannel.localAddress()).get();
+                    }).connect(serverChannel.localAddress()).asStage().get();
             // Block until we received the correct exception
             promise.asFuture().sync();
         } finally {

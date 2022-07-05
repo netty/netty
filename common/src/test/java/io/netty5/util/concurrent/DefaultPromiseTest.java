@@ -171,14 +171,14 @@ public class DefaultPromiseTest {
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel());
-        assertThrows(CancellationException.class, promise::get);
+        assertThrows(CancellationException.class, promise.asStage()::get);
     }
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws Exception {
         DefaultPromise<Void> promise = new DefaultPromise<>(INSTANCE);
         assertTrue(promise.cancel());
-        assertThrows(CancellationException.class, () -> promise.get(1, TimeUnit.SECONDS));
+        assertThrows(CancellationException.class, () -> promise.asStage().get(1, TimeUnit.SECONDS));
     }
 
     @Test

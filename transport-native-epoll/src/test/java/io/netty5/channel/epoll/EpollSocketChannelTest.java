@@ -36,9 +36,9 @@ public class EpollSocketChannelTest {
         try {
             Bootstrap bootstrap = new Bootstrap();
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
-                    .channel(EpollSocketChannel.class)
-                    .handler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0)).get();
+                                                                  .channel(EpollSocketChannel.class)
+                                                                  .handler(new ChannelHandler() { })
+                                                                  .bind(new InetSocketAddress(0)).asStage().get();
             EpollTcpInfo info = ch.tcpInfo();
             assertTcpInfo0(info);
             ch.close().sync();
@@ -54,9 +54,9 @@ public class EpollSocketChannelTest {
         try {
             Bootstrap bootstrap = new Bootstrap();
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
-                    .channel(EpollSocketChannel.class)
-                    .handler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0)).get();
+                                                                  .channel(EpollSocketChannel.class)
+                                                                  .handler(new ChannelHandler() { })
+                                                                  .bind(new InetSocketAddress(0)).asStage().get();
             EpollTcpInfo info = new EpollTcpInfo();
             ch.tcpInfo(info);
             assertTcpInfo0(info);
@@ -111,10 +111,10 @@ public class EpollSocketChannelTest {
         try {
             Bootstrap bootstrap = new Bootstrap();
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
-                    .channel(EpollSocketChannel.class)
-                    .option(ChannelOption.SO_LINGER, 10)
-                    .handler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0)).get();
+                                                                  .channel(EpollSocketChannel.class)
+                                                                  .option(ChannelOption.SO_LINGER, 10)
+                                                                  .handler(new ChannelHandler() { })
+                                                                  .bind(new InetSocketAddress(0)).asStage().get();
             ch.close().sync();
         } finally {
             group.shutdownGracefully();

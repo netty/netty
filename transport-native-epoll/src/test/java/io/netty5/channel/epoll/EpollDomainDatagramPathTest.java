@@ -38,7 +38,7 @@ class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
         run(testInfo, bootstrap -> {
             try {
                 bootstrap.handler(new ChannelHandlerAdapter() { })
-                         .connect(EpollSocketTestPermutation.newDomainSocketAddress()).get();
+                         .connect(EpollSocketTestPermutation.newDomainSocketAddress()).asStage().get();
                 fail("Expected FileNotFoundException");
             } catch (Exception e) {
                 assertTrue(e.getCause() instanceof FileNotFoundException);
@@ -51,7 +51,7 @@ class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
         run(testInfo, bootstrap -> {
             try {
                 Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
-                                      .bind(EpollSocketTestPermutation.newDomainSocketAddress()).get();
+                                      .bind(EpollSocketTestPermutation.newDomainSocketAddress()).asStage().get();
                 ch.writeAndFlush(new DomainDatagramPacket(
                         ch.bufferAllocator().copyOf("test", CharsetUtil.US_ASCII),
                         EpollSocketTestPermutation.newDomainSocketAddress())).sync();

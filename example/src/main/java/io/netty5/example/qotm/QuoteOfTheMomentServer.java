@@ -41,7 +41,7 @@ public final class QuoteOfTheMomentServer {
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentServerHandler());
 
-            b.bind(PORT).get().closeFuture().await();
+            b.bind(PORT).asStage().get().closeFuture().await();
         } finally {
             group.shutdownGracefully();
         }

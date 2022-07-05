@@ -307,7 +307,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
         });
 
-        final Channel sc = sb.bind().get();
+        final Channel sc = sb.bind().asStage().get();
         cb.connect(sc.localAddress()).sync();
 
         final Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();

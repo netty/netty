@@ -89,7 +89,7 @@ public final class Http2FrameClient {
             b.handler(new Http2ClientFrameInitializer(sslCtx));
 
             // Start the client.
-            final Channel channel = b.connect().get();
+            final Channel channel = b.connect().asStage().get();
             System.out.println("Connected to [" + HOST + ':' + PORT + ']');
 
             final Http2ClientStreamFrameResponseHandler streamFrameResponseHandler =

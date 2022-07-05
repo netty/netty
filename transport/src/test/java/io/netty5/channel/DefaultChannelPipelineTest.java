@@ -91,7 +91,7 @@ public class DefaultChannelPipelineTest {
             }
         });
 
-        Channel channel = sb.bind(LocalAddress.ANY).get();
+        Channel channel = sb.bind(LocalAddress.ANY).asStage().get();
 
         Bootstrap b = new Bootstrap();
         b.group(group).channel(LocalChannel.class);
@@ -102,7 +102,7 @@ public class DefaultChannelPipelineTest {
             }
         });
 
-        self = b.connect(channel.localAddress()).get();
+        self = b.connect(channel.localAddress()).asStage().get();
         peer = peerRef.get();
 
         channel.close().sync();
@@ -770,32 +770,32 @@ public class DefaultChannelPipelineTest {
         CallbackCheckHandler handler = new CallbackCheckHandler();
         pipeline.addFirst(handler);
         pipeline.remove(handler);
-        assertTrue(handler.addedHandler.get());
-        assertTrue(handler.removedHandler.get());
+        assertTrue(handler.addedHandler.asStage().get());
+        assertTrue(handler.removedHandler.asStage().get());
 
         CallbackCheckHandler handlerType = new CallbackCheckHandler();
         pipeline.addFirst(handlerType);
         pipeline.remove(handlerType.getClass());
-        assertTrue(handlerType.addedHandler.get());
-        assertTrue(handlerType.removedHandler.get());
+        assertTrue(handlerType.addedHandler.asStage().get());
+        assertTrue(handlerType.removedHandler.asStage().get());
 
         CallbackCheckHandler handlerName = new CallbackCheckHandler();
         pipeline.addFirst("handler", handlerName);
         pipeline.remove("handler");
-        assertTrue(handlerName.addedHandler.get());
-        assertTrue(handlerName.removedHandler.get());
+        assertTrue(handlerName.addedHandler.asStage().get());
+        assertTrue(handlerName.removedHandler.asStage().get());
 
         CallbackCheckHandler first = new CallbackCheckHandler();
         pipeline.addFirst(first);
         pipeline.removeFirst();
-        assertTrue(first.addedHandler.get());
-        assertTrue(first.removedHandler.get());
+        assertTrue(first.addedHandler.asStage().get());
+        assertTrue(first.removedHandler.asStage().get());
 
         CallbackCheckHandler last = new CallbackCheckHandler();
         pipeline.addFirst(last);
         pipeline.removeLast();
-        assertTrue(last.addedHandler.get());
-        assertTrue(last.removedHandler.get());
+        assertTrue(last.addedHandler.asStage().get());
+        assertTrue(last.removedHandler.asStage().get());
 
         pipeline.channel().register().sync();
         Throwable cause = handler.error.get();
@@ -935,9 +935,9 @@ public class DefaultChannelPipelineTest {
         pipeline.addFirst(handler);
         pipeline.replace(handler, null, handler2);
 
-        assertTrue(handler.addedHandler.get());
-        assertTrue(handler.removedHandler.get());
-        assertTrue(handler2.addedHandler.get());
+        assertTrue(handler.addedHandler.asStage().get());
+        assertTrue(handler.removedHandler.asStage().get());
+        assertTrue(handler2.addedHandler.asStage().get());
         assertFalse(handler2.removedHandler.isDone());
 
         pipeline.channel().register().sync();
@@ -953,7 +953,7 @@ public class DefaultChannelPipelineTest {
 
         assertFalse(handler2.removedHandler.isDone());
         pipeline.remove(handler2);
-        assertTrue(handler2.removedHandler.get());
+        assertTrue(handler2.removedHandler.asStage().get());
         pipeline.channel().close().sync();
     }
 

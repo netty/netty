@@ -51,7 +51,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
         Channel channel = null;
         try {
             channel = cb.handler(new ChannelHandlerAdapter() { })
-                        .bind(newSocketAddress()).get();
+                        .bind(newSocketAddress()).asStage().get();
             assertThat(channel.localAddress()).isNotNull()
                     .isInstanceOf(DomainSocketAddress.class);
         } finally {
@@ -103,7 +103,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
                 errorRef.compareAndSet(null, cause);
             }
         });
-        return cb.bind(newSocketAddress()).get();
+        return cb.bind(newSocketAddress()).asStage().get();
     }
 
     @Override
@@ -148,7 +148,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
                 });
             }
         });
-        return sb.bind(newSocketAddress()).get();
+        return sb.bind(newSocketAddress()).asStage().get();
     }
 
     @Override

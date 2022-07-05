@@ -65,7 +65,7 @@ public class Http2Server {
             }
         });
 
-        Channel ch = b.bind(PORT).get();
+        Channel ch = b.bind(PORT).asStage().get();
         return ch.closeFuture();
     }
 

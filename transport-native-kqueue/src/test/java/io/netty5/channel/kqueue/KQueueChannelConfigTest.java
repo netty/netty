@@ -83,11 +83,12 @@ public class KQueueChannelConfigTest {
 
         try {
             Bootstrap bootstrap = new Bootstrap();
-            KQueueSocketChannel ch = (KQueueSocketChannel) bootstrap.group(group)
+            KQueueSocketChannel ch = (KQueueSocketChannel) bootstrap
+                    .group(group)
                     .channel(KQueueSocketChannel.class)
                     .option(ChannelOption.SO_LINGER, 10)
                     .handler(new ChannelHandler() { })
-                    .bind(new InetSocketAddress(0)).get();
+                    .bind(new InetSocketAddress(0)).asStage().get();
             ch.close().sync();
         } finally {
             group.shutdownGracefully();

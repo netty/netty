@@ -53,7 +53,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 } catch (Throwable cause) {
                     return cause;
                 }
-            }, 1, TimeUnit.SECONDS).get();
+            }, 1, TimeUnit.SECONDS).asStage().get();
             if (error != null) {
                 throw error;
             }

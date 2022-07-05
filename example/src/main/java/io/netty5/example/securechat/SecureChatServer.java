@@ -48,7 +48,7 @@ public final class SecureChatServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new SecureChatServerInitializer(sslCtx));
 
-            b.bind(PORT).get().closeFuture().sync();
+            b.bind(PORT).asStage().get().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

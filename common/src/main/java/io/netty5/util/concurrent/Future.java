@@ -17,9 +17,7 @@ package io.netty5.util.concurrent;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 /**
@@ -112,7 +110,7 @@ import java.util.function.Function;
  *
  * <h3>Do not confuse I/O timeout and await timeout</h3>
  * <p>
- * The timeout value you specify with {@link #await(long)} or {@link #await(long, TimeUnit)} are not related with
+ * The timeout value you specify with {@link #await(long, TimeUnit)} are not related with
  * I/O timeout at all.
  * If an I/O operation times out, the future will be marked as 'completed with failure,' as depicted in the
  * diagram above.  For example, connect timeout should be configured via a transport-specific option:
@@ -197,78 +195,13 @@ public interface Future<V> extends AsynchronousResult<V> {
     boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
-     * Waits for this future to be completed within the specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within the specified time limit
-     * @throws InterruptedException if the current thread was interrupted
-     */
-    boolean await(long timeoutMillis) throws InterruptedException;
-
-    /**
-     * Get the result of this future, if it has completed.
-     * If the future has failed, then an {@link ExecutionException} will be thrown instead.
-     * If the future has not yet completed, then this method will block until it completes.
-     *
-     * @return The result of the task execution, if it completed successfully.
-     * @throws InterruptedException If the call was blocked, waiting for the future to complete, and the thread was
-     * {@linkplain Thread#interrupt() interrupted}.
-     * @throws ExecutionException If the task failed, either by throwing an exception or through cancellation.
-     */
-    default V get() throws InterruptedException, ExecutionException {
-        await();
-
-        Throwable cause = cause();
-        if (cause == null) {
-            return getNow();
-        }
-        if (cause instanceof CancellationException) {
-            throw (CancellationException) cause;
-        }
-        throw new ExecutionException(cause);
-    }
-
-    /**
-     * Get the result of this future, if it has completed.
-     * If the future has failed, then an {@link ExecutionException} will be thrown instead.
-     * If the future has not yet completed, then this method will block, waiting up to the given timeout for the future
-     * to complete.
-     * If the future does not complete within the specified timeout, then a {@link TimeoutException} will be thrown.
-     * If the timeout is zero, then this method will not block, and instead either get the result or failure of the
-     * future if completed, or immediately throw a {@link TimeoutException} if not yet completed.
-     *
-     * @param timeout The non-negative maximum amount of time, in terms of the given time unit, to wait for the
-     *                completion of the future.
-     * @param unit The time unit for the timeout.
-     * @return The value of the successfully completed future.
-     * @throws InterruptedException If this call was blocking and this thread got
-     * {@linkplain Thread#interrupt() interrupted}.
-     * @throws ExecutionException If the task failed, either by throwing an exception, or through cancellation.
-     * @throws TimeoutException If the future did not complete within the specified timeout.
-     */
-    default V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        if (await(timeout, unit)) {
-            Throwable cause = cause();
-            if (cause == null) {
-                return getNow();
-            }
-            if (cause instanceof CancellationException) {
-                throw (CancellationException) cause;
-            }
-            throw new ExecutionException(cause);
-        }
-        throw new TimeoutException();
-    }
-
-    /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all
      * updates as well.
+     * <p>
+     * The returned {@link FutureCompletionStage} also implements the JDK {@link java.util.concurrent.Future},
+     * and has blocking methods not found on the Netty {@code Future} interface, for awaiting the completion.
      */
     FutureCompletionStage<V> asStage();
-
-    /**
-     * Returns a {@link java.util.concurrent.Future JDK Future that reflects the state of this {@link Future}.
-     */
-    java.util.concurrent.Future<V> asJdkFuture();
 
     /**
      * Creates a <strong>new</strong> {@link Future} that will complete with the result of this {@link Future} mapped

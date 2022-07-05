@@ -102,11 +102,6 @@ abstract class Cache<E> {
         }
 
         @Override
-        public boolean await(long timeoutMillis) throws InterruptedException {
-            return true;
-        }
-
-        @Override
         public Object getNow() {
             return null;
         }
@@ -127,22 +122,7 @@ abstract class Cache<E> {
         }
 
         @Override
-        public Object get() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Object get(long timeout, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public FutureCompletionStage<Object> asStage() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public java.util.concurrent.Future<Object> asJdkFuture() {
             throw new UnsupportedOperationException();
         }
 

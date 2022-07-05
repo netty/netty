@@ -195,18 +195,19 @@ public class ParameterizedSslHandlerTest {
 
                                 @Override
                                 public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                    donePromise.tryFailure(new IllegalStateException("server exception sentData: " +
-                                            sentData + " writeCause: " + writeCause, cause));
+                                    donePromise.tryFailure(new IllegalStateException(
+                                            "server exception sentData: " + sentData + " writeCause: " + writeCause,
+                                            cause));
                                 }
 
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
-                                    donePromise.tryFailure(new IllegalStateException("server closed sentData: " +
-                                            sentData + " writeCause: " + writeCause));
+                                    donePromise.tryFailure(new IllegalStateException(
+                                            "server closed sentData: " + sentData + " writeCause: " + writeCause));
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).get();
+                    }).bind(new InetSocketAddress(0)).asStage().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -221,6 +222,7 @@ public class ParameterizedSslHandlerTest {
                             }
                             ch.pipeline().addLast(new ChannelHandler() {
                                 private int bytesSeen;
+
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     if (msg instanceof Buffer) {
@@ -245,17 +247,17 @@ public class ParameterizedSslHandlerTest {
                                 @Override
                                 public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     donePromise.tryFailure(new IllegalStateException("client exception. bytesSeen: " +
-                                            bytesSeen, cause));
+                                                                                     bytesSeen, cause));
                                 }
 
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
                                     donePromise.tryFailure(new IllegalStateException("client closed. bytesSeen: " +
-                                            bytesSeen));
+                                                                                     bytesSeen));
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asStage().get();
 
             donePromise.asFuture().sync();
         } finally {
@@ -337,7 +339,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).get();
+                    }).bind(new InetSocketAddress(0)).asStage().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -356,7 +358,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asStage().get();
 
             promise.asFuture().sync();
         } finally {
@@ -442,7 +444,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).bind(new InetSocketAddress(0)).get();
+                    }).bind(new InetSocketAddress(0)).asStage().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -480,7 +482,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asStage().get();
 
             serverPromise.asFuture().await();
             clientPromise.asFuture().await();
@@ -588,9 +590,9 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(
                                     disableHandshakeTimeout(sslServerCtx.newHandler(ch.bufferAllocator())));
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
-                                    serverLatch));
+                                                                                      serverLatch));
                         }
-                    }).bind(bindAddress).get();
+                    }).bind(bindAddress).asStage().get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -602,9 +604,9 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(
                                     disableHandshakeTimeout(sslClientCtx.newHandler(ch.bufferAllocator())));
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
-                                    clientLatch));
+                                                                                      clientLatch));
                         }
-                    }).connect(sc.localAddress()).get();
+                    }).connect(sc.localAddress()).asStage().get();
 
             serverLatch.await();
             assertEquals(expectedContent, serverQueue.toString());

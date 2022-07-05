@@ -22,9 +22,7 @@ import io.netty5.util.internal.PriorityQueueNode;
 import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.callable;
@@ -376,23 +374,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public V get() throws InterruptedException, ExecutionException {
-            return future.get();
-        }
-
-        @Override
-        public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-            return future.get(timeout, unit);
-        }
-
-        @Override
         public FutureCompletionStage<V> asStage() {
             return future.asStage();
-        }
-
-        @Override
-        public java.util.concurrent.Future<V> asJdkFuture() {
-            return future.asJdkFuture();
         }
 
         @Override
@@ -435,11 +418,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         @Override
         public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
             return future.await(timeout, unit);
-        }
-
-        @Override
-        public boolean await(long timeoutMillis) throws InterruptedException {
-            return future.await(timeoutMillis);
         }
 
         @Override

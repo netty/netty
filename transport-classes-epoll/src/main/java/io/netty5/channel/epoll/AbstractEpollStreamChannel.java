@@ -20,7 +20,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.Resource;
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
@@ -40,7 +39,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
-import java.util.concurrent.Executor;
 
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;

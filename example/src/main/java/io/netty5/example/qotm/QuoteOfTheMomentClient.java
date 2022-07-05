@@ -27,6 +27,8 @@ import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.util.internal.SocketUtils;
 
+import java.util.concurrent.TimeUnit;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -49,7 +51,7 @@ public final class QuoteOfTheMomentClient {
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentClientHandler());
 
-            Channel ch = b.bind(0).get();
+            Channel ch = b.bind(0).asStage().get();
 
             // Broadcast the QOTM request to port 8080.
             Buffer message = DefaultBufferAllocators.preferredAllocator().copyOf("QOTM?", UTF_8);
@@ -58,7 +60,7 @@ public final class QuoteOfTheMomentClient {
             // QuoteOfTheMomentClientHandler will close the DatagramChannel when a
             // response is received.  If the channel is not closed within 5 seconds,
             // print an error message and quit.
-            if (!ch.closeFuture().await(5000)) {
+            if (!ch.closeFuture().await(5000, TimeUnit.MILLISECONDS)) {
                 System.err.println("QOTM request timed out.");
             }
         } finally {

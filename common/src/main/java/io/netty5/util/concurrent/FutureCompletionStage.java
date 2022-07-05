@@ -30,13 +30,17 @@ import java.util.function.Function;
  * A {@link CompletionStage} that provides the same threading semantics and guarantees as the underlying
  * {@link Future}, which means that all the callbacks will be executed by {@link #executor()}
  * if not specified otherwise (by calling the corresponding *Async methods).
- *
+ * <p>
+ * This interface also extends {@link java.util.concurrent.Future}, to provide blocking methods for awaiting the result
+ * of the future.
+ * This is in contrast to the Netty {@link Future}, which is entirely non-blocking.
+ * <p>
  * Please be aware that {@link FutureCompletionStage#toCompletableFuture()} is not supported and so will throw
- * a {@link UnsupportedOperationException} when invoked.
+ * an {@link UnsupportedOperationException} when invoked.
  *
  * @param <V> the value type.
  */
-public interface FutureCompletionStage<V> extends CompletionStage<V> {
+public interface FutureCompletionStage<V> extends CompletionStage<V>, java.util.concurrent.Future<V> {
 
     /**
      * Returns the underlying {@link Future} of this {@link FutureCompletionStage}.

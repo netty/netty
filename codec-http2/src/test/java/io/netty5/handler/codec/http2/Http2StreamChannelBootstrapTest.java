@@ -78,7 +78,7 @@ public class Http2StreamChannelBootstrapTest {
                             serverChannelLatch.countDown();
                         }
                     });
-            serverChannel = sb.bind(serverAddress).get();
+            serverChannel = sb.bind(serverAddress).asStage().get();
 
             Bootstrap cb = new Bootstrap()
                     .channel(LocalChannel.class)
@@ -89,7 +89,7 @@ public class Http2StreamChannelBootstrapTest {
                             ch.pipeline().addLast(forClient().build(), newMultiplexedHandler());
                         }
                     });
-            clientChannel = cb.connect(serverAddress).get();
+            clientChannel = cb.connect(serverAddress).asStage().get();
             assertTrue(serverChannelLatch.await(3, SECONDS));
 
             Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(clientChannel);
@@ -101,7 +101,7 @@ public class Http2StreamChannelBootstrapTest {
             ExecutionException exception = assertThrows(ExecutionException.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
-                    promise.asFuture().get(3, SECONDS);
+                    promise.asFuture().asStage().get(3, SECONDS);
                 }
             });
             assertThat(exception.getCause(), IsInstanceOf.instanceOf(ClosedChannelException.class));

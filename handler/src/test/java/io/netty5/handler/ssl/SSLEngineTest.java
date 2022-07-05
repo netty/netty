@@ -798,12 +798,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.await().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asStage().get();
     }
 
     protected static void rethrowIfNotNull(Throwable error) {
@@ -984,12 +984,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).asStage().get();
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
         assertTrue(ccf.await().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asStage().get();
         return clientWritePromise.asFuture();
     }
 
@@ -1152,12 +1152,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.await().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asStage().get();
     }
 
     protected void runTest(String expectedApplicationProtocol) throws Exception {
@@ -1402,7 +1402,7 @@ public abstract class SSLEngineTest {
                     }
                 });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
 
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                                         // OpenSslEngine doesn't support renegotiation on client side
@@ -1462,7 +1462,7 @@ public abstract class SSLEngineTest {
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.sync().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asStage().get();
 
         serverLatch.await();
         ssc.delete();
@@ -1779,11 +1779,11 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).get();
+        serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.sync().isSuccess());
-        clientChannel = ccf.get();
+        clientChannel = ccf.asStage().get();
     }
 
     @MethodSource("newTestParams")
@@ -1810,7 +1810,7 @@ public abstract class SSLEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
 
-                SslHandler sslHandler = !param.delegate ?
+                SslHandler sslHandler = !param.delegate?
                         serverSslCtx.newHandler(ch.bufferAllocator()) :
                         serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
@@ -1833,9 +1833,8 @@ public abstract class SSLEngineTest {
                                         promise.setFailure(new NullPointerException("peerCertificateChain"));
                                     } else if (peerCertificateChain.length + peerCertificates.length != 4) {
                                         String excTxtFmt = "peerCertificateChain.length:%s, peerCertificates.length:%s";
-                                        promise.setFailure(new IllegalStateException(String.format(excTxtFmt,
-                                                peerCertificateChain.length,
-                                                peerCertificates.length)));
+                                        promise.setFailure(new IllegalStateException(String.format(
+                                                excTxtFmt, peerCertificateChain.length, peerCertificates.length)));
                                     } else {
                                         for (int i = 0; i < peerCertificateChain.length; i++) {
                                             if (peerCertificateChain[i] == null || peerCertificates[i] == null) {
@@ -1867,7 +1866,7 @@ public abstract class SSLEngineTest {
                 });
                 serverConnectedChannel = ch;
             }
-        }).bind(new InetSocketAddress(0)).get();
+        }).bind(new InetSocketAddress(0)).asStage().get();
 
         // We create a new chain for certificates which contains 2 certificates
         ByteArrayOutputStream chainStream = new ByteArrayOutputStream();
@@ -1892,7 +1891,7 @@ public abstract class SSLEngineTest {
                 ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.bufferAllocator()))));
             }
 
-        }).connect(serverChannel.localAddress()).get();
+        }).connect(serverChannel.localAddress()).asStage().get();
 
         promise.asFuture().sync();
 
@@ -3918,7 +3917,7 @@ public abstract class SSLEngineTest {
                 protected void initChannel(Channel ch) {
                     ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
 
-                    SslHandler sslHandler = !param.delegate() ?
+                    SslHandler sslHandler = !param.delegate()?
                             serverSslCtx.newHandler(ch.bufferAllocator()) :
                             serverSslCtx.newHandler(ch.bufferAllocator(), delegatingExecutor);
 
@@ -3931,7 +3930,7 @@ public abstract class SSLEngineTest {
                     });
                     serverConnectedChannel = ch;
                 }
-            }).bind(new InetSocketAddress(0)).get();
+            }).bind(new InetSocketAddress(0)).asStage().get();
 
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
@@ -3944,7 +3943,7 @@ public abstract class SSLEngineTest {
 
             Future<SecretKey> future = promise.asFuture();
             assertTrue(future.await(10, TimeUnit.SECONDS));
-            SecretKey key = future.get();
+            SecretKey key = future.asStage().get();
             assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
         } finally {
             closeQuietly(socket);

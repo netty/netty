@@ -65,7 +65,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
         Future<Channel> future = cb.connect(NetUtil.LOCALHOST, SocketTestPermutation.BAD_PORT);
         Channel datagramChannel = null;
         try {
-            datagramChannel = future.get();
+            datagramChannel = future.asStage().get();
             assertTrue(datagramChannel.isActive());
             BufferAllocator allocator = datagramChannel.bufferAllocator();
             datagramChannel.writeAndFlush(

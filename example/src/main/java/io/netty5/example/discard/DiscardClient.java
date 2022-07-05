@@ -65,7 +65,7 @@ public final class DiscardClient {
              });
 
             // Make the connection attempt.
-            Channel channel = b.connect(HOST, PORT).get();
+            Channel channel = b.connect(HOST, PORT).asStage().get();
 
             // Wait until the connection is closed.
             channel.closeFuture().sync();

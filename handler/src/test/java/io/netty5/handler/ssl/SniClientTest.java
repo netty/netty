@@ -176,7 +176,7 @@ public class SniClientTest {
                                         } else {
                                             promise.setFailure(
                                                     new AssertionError("cause not of type SSLException: "
-                                                            + ThrowableUtil.stackTraceToString(cause)));
+                                                                       + ThrowableUtil.stackTraceToString(cause)));
                                         }
                                     }
                                 }
@@ -184,7 +184,7 @@ public class SniClientTest {
                         }
                     });
                 }
-            }).bind(address).get();
+            }).bind(address).asStage().get();
 
             sslClientContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(sslClientProvider).build();
@@ -192,7 +192,7 @@ public class SniClientTest {
             SslHandler sslHandler = new SslHandler(
                     sslClientContext.newEngine(offHeapAllocator(), sniHost, -1));
             Bootstrap cb = new Bootstrap();
-            cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler).connect(address).get();
+            cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler).connect(address).asStage().get();
 
             promise.asFuture().sync();
             sslHandler.handshakeFuture().sync();
@@ -430,7 +430,7 @@ public class SniClientTest {
                         return finalContext;
                     }));
                 }
-            }).bind(address).get();
+            }).bind(address).asStage().get();
 
             TrustManagerFactory tmf = newSniX509TrustmanagerFactory(sniHostName);
             sslClientContext = SslContextBuilder.forClient().trustManager(tmf)
@@ -439,7 +439,7 @@ public class SniClientTest {
 
             SslHandler handler = new SslHandler(
                     sslClientContext.newEngine(offHeapAllocator(), sniHostName, -1));
-            cc = cb.group(group).channel(LocalChannel.class).handler(handler).connect(address).get();
+            cc = cb.group(group).channel(LocalChannel.class).handler(handler).connect(address).asStage().get();
             assertEquals(sniHostName, promise.asFuture().sync().getNow());
 
             // After we are done with handshaking getHandshakeSession() should return null.

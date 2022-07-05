@@ -447,8 +447,8 @@ public class SniHandlerTest {
                     }
                 });
 
-                serverChannel = sb.bind(new InetSocketAddress(0)).get();
-                clientChannel = cb.connect(serverChannel.localAddress()).get();
+                serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
+                clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
 
                 assertTrue(serverApnDoneLatch.await(5, TimeUnit.SECONDS));
                 assertTrue(clientApnDoneLatch.await(5, TimeUnit.SECONDS));
@@ -541,12 +541,12 @@ public class SniHandlerTest {
 
                     ServerBootstrap sb = new ServerBootstrap();
                     sc = sb.group(group).channel(LocalServerChannel.class)
-                            .childHandler(new ChannelInitializer<Channel>() {
-                        @Override
-                        protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addFirst(handler);
-                        }
-                    }).bind(address).get();
+                           .childHandler(new ChannelInitializer<Channel>() {
+                               @Override
+                               protected void initChannel(Channel ch) throws Exception {
+                                   ch.pipeline().addFirst(handler);
+                               }
+                           }).bind(address).asStage().get();
 
                     sslContext = SslContextBuilder.forClient().sslProvider(provider)
                             .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -555,7 +555,7 @@ public class SniHandlerTest {
                     cc = cb.group(group).channel(LocalChannel.class)
                            .handler(new SslHandler(
                                    sslContext.newEngine(offHeapAllocator(), sniHost, -1)))
-                           .connect(address).get();
+                           .connect(address).asStage().get();
 
                     cc.writeAndFlush(cc.bufferAllocator().copyOf("Hello, World!", UTF_8))
                             .sync();

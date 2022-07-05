@@ -85,7 +85,7 @@ public final class Http2Server {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new Http2ServerInitializer(sslCtx));
 
-            Channel ch = b.bind(PORT).get();
+            Channel ch = b.bind(PORT).asStage().get();
 
             System.err.println("Open your HTTP/2-enabled web browser and navigate to " +
                     (SSL? "https" : "http") + "://127.0.0.1:" + PORT + '/');

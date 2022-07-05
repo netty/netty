@@ -187,8 +187,8 @@ public class NettyBlockHoundIntegrationTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testHashedWheelTimerStartStop() throws Exception {
         HashedWheelTimer timer = new HashedWheelTimer();
-        GlobalEventExecutor.INSTANCE.submit(timer::start).get(5, TimeUnit.SECONDS);
-        GlobalEventExecutor.INSTANCE.submit(timer::stop).get(5, TimeUnit.SECONDS);
+        GlobalEventExecutor.INSTANCE.submit(timer::start).asStage().get(5, TimeUnit.SECONDS);
+        GlobalEventExecutor.INSTANCE.submit(timer::stop).asStage().get(5, TimeUnit.SECONDS);
     }
 
     // Tests copied from io.netty5.handler.ssl.SslHandlerTest
@@ -290,8 +290,7 @@ public class NettyBlockHoundIntegrationTest {
                         .channel(NioServerSocketChannel.class)
                         .childHandler(new ChannelHandler() {
                         })
-                        .bind(new InetSocketAddress(0))
-                        .get();
+                        .bind(new InetSocketAddress(0)).asStage().get();
 
                 cc = new Bootstrap()
                         .group(group)
@@ -322,8 +321,9 @@ public class NettyBlockHoundIntegrationTest {
                             }
                         })
                         .connect(sc.localAddress())
-                        .addListener(future -> future.get().writeAndFlush(alloc.copyOf(new byte[] { 1, 2, 3, 4 })))
-                        .get();
+                        .addListener(future -> future.asStage().get().writeAndFlush(
+                                    alloc.copyOf(new byte[] { 1, 2, 3, 4 })))
+                        .asStage().get();
 
                 assertTrue(activeLatch.await(5, TimeUnit.SECONDS));
                 assertNull(error.get());
@@ -450,7 +450,7 @@ public class NettyBlockHoundIntegrationTest {
                         .group(group)
                         .channel(NioServerSocketChannel.class)
                         .childHandler(serverSslHandler)
-                        .bind(new InetSocketAddress(0)).get();
+                        .bind(new InetSocketAddress(0)).asStage().get();
 
                 Future<Channel> future = new Bootstrap()
                         .group(group)
@@ -473,7 +473,7 @@ public class NettyBlockHoundIntegrationTest {
                                   });
                             }
                         }).connect(sc.localAddress());
-                cc = future.get();
+                cc = future.asStage().get();
 
                 clientSslHandler.handshakeFuture().await().sync();
                 serverSslHandler.handshakeFuture().await().sync();
