@@ -66,7 +66,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 
@@ -489,7 +489,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 if (handshakeEvt.cause() != null) {
                     logger.warn("Handshake failed:", handshakeEvt.cause());
                 }
-                assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
+                assertTrue(handshakeEvt.isSuccess());
                 negoCounter.incrementAndGet();
                 logStats("HANDSHAKEN");
             }

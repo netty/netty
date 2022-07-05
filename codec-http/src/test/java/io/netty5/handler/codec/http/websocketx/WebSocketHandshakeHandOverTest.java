@@ -25,7 +25,6 @@ import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpServerCodec;
-import io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +33,7 @@ import org.junit.jupiter.api.Timeout;
 import java.net.URI;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -103,7 +103,8 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel clientChannel = createClientChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                if (evt instanceof WebSocketHandshakeCompletionEvent
+                        && ((WebSocketHandshakeCompletionEvent) evt).isSuccess()) {
                     clientReceivedHandshake = true;
                 }
             }
@@ -148,10 +149,13 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel clientChannel = createClientChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-                    clientReceivedHandshake = true;
-                } else if (evt == ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT) {
-                    clientHandshakeTimeout = true;
+                if (evt instanceof WebSocketHandshakeCompletionEvent) {
+                    WebSocketHandshakeCompletionEvent event = (WebSocketHandshakeCompletionEvent) evt;
+                    if (event.isSuccess()) {
+                        clientReceivedHandshake = true;
+                    } else if (event.cause() instanceof TimeoutException) {
+                        clientHandshakeTimeout = true;
+                    }
                 }
             }
 
@@ -240,7 +244,8 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel clientChannel = createClientChannel(handshaker, new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                if (evt instanceof WebSocketHandshakeCompletionEvent
+                        && ((WebSocketHandshakeCompletionEvent) evt).isSuccess()) {
                     ctx.channel().closeFuture().addListener(future -> clientForceClosed = true);
                     handshaker.close(ctx.channel(), new CloseWebSocketFrame(
                             true, 0, ctx.bufferAllocator().allocate(0)));

@@ -124,7 +124,8 @@ public abstract class SslMasterKeyHandler implements ChannelHandler {
     @Override
     public final void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
         //only try to log the session info if the ssl handshake has successfully completed.
-        if (evt == SslHandshakeCompletionEvent.SUCCESS && masterKeyHandlerEnabled()) {
+        if (evt instanceof SslHandshakeCompletionEvent &&
+                ((SslHandshakeCompletionEvent) evt).isSuccess() && masterKeyHandlerEnabled()) {
             final SslHandler handler = ctx.pipeline().get(SslHandler.class);
             final SSLEngine engine = handler.engine();
             final SSLSession sslSession = engine.getSession();

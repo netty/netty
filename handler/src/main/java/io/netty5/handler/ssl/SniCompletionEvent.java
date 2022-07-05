@@ -22,16 +22,13 @@ import io.netty5.util.internal.UnstableApi;
  * which may be because it was successful or there was an error.
  */
 @UnstableApi
-public final class SniCompletionEvent extends SslCompletionEvent {
-    private final String hostname;
-
+public final class SniCompletionEvent extends SslCompletionEvent<String> {
     public SniCompletionEvent(String hostname) {
-        this.hostname = hostname;
+        super(hostname);
     }
 
     public SniCompletionEvent(String hostname, Throwable cause) {
-        super(cause);
-        this.hostname = hostname;
+        super(hostname, cause);
     }
 
     public SniCompletionEvent(Throwable cause) {
@@ -41,14 +38,15 @@ public final class SniCompletionEvent extends SslCompletionEvent {
     /**
      * Returns the SNI hostname send by the client if we were able to parse it, {@code null} otherwise.
      */
-    public String hostname() {
-        return hostname;
+    @Override
+    public String data() {
+        return super.data();
     }
 
     @Override
     public String toString() {
         final Throwable cause = cause();
-        return cause == null ? getClass().getSimpleName() + "(SUCCESS='"  + hostname + "'\")":
+        return cause == null ? getClass().getSimpleName() + "(SUCCESS='"  + data() + "'\")":
                 getClass().getSimpleName() +  '(' + cause + ')';
     }
 }

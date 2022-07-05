@@ -52,16 +52,6 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolCon
 public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
     /**
-     * Events that are fired to notify about handshake status
-     */
-    public enum ServerHandshakeStateEvent {
-        /**
-         * The Handshake was timed out
-         */
-        HANDSHAKE_TIMEOUT
-    }
-
-    /**
      * The Handshake was completed successfully and the channel was upgraded to websockets.
      */
     public static final class HandshakeComplete {

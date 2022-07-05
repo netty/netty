@@ -28,6 +28,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -414,12 +415,13 @@ final class SslUtils {
         return packetLength;
     }
 
-    static void handleHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean notify) {
+    static void handleHandshakeFailure(ChannelHandlerContext ctx, SSLSession session, String applicationProtocol,
+                                       Throwable cause, boolean notify) {
         // We have may haven written some parts of data before an exception was thrown so ensure we always flush.
         // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
         ctx.flush();
         if (notify) {
-            ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(cause));
+            ctx.fireChannelInboundEvent(new SslHandshakeCompletionEvent(session, applicationProtocol, cause));
         }
     }
 

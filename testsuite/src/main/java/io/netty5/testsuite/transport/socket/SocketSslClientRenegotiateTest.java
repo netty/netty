@@ -53,7 +53,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -253,7 +252,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                     if (handshakeEvt.cause() != null) {
                         logger.warn("Handshake failed:", handshakeEvt.cause());
                     }
-                    assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
+                    assertTrue(handshakeEvt.isSuccess());
                 } else {
                     if (ctx.channel().parent() == null) {
                         assertTrue(handshakeEvt.cause() instanceof ClosedChannelException);

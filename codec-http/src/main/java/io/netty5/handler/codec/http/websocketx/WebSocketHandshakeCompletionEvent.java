@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,38 +13,48 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.ssl;
+package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.handler.codec.ProtocolEvent;
 
 import static java.util.Objects.requireNonNull;
 
-public abstract class SslCompletionEvent<V> implements ProtocolEvent<V> {
+/**
+ * {@link ProtocolEvent} that indicate the completion of a websocket handshake.
+ */
+public final class WebSocketHandshakeCompletionEvent implements ProtocolEvent<WebSocketVersion> {
 
-    private final V data;
+    private final WebSocketVersion version;
     private final Throwable cause;
 
-    SslCompletionEvent(V data) {
-        this.data = data;
-        cause = null;
+    /**
+     * Create a new event that indicate a successful websocket handshake.
+     *
+     * @param version the version.
+     */
+    public WebSocketHandshakeCompletionEvent(WebSocketVersion version) {
+        this.version = requireNonNull(version, "version");
+        this.cause = null;
     }
 
-    SslCompletionEvent(V data, Throwable cause) {
-        this.data = data;
+    /**
+     * Create a new event that indicate a failed websocket handshake.
+     *
+     * @param cause the cause of the failure
+     */
+    public WebSocketHandshakeCompletionEvent(Throwable cause) {
+        this.version = null;
         this.cause = requireNonNull(cause, "cause");
     }
 
     @Override
-    public V data() {
-        return data;
+    public Throwable cause() {
+        return cause;
     }
 
-    /**
-     * Return the {@link Throwable} if {@link #isSuccess()} returns {@code false}
-     * and so the completion failed.
-     */
-    public final Throwable cause() {
-        return cause;
+    @Override
+    public WebSocketVersion data() {
+        return version;
     }
 
     @Override
