@@ -56,7 +56,7 @@ public class EpollHandler implements IoHandler {
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
-    private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<>(4096);
+    private final IntObjectMap<AbstractEpollChannel<?, ?, ?>> channels = new IntObjectHashMap<>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
 
@@ -72,9 +72,9 @@ public class EpollHandler implements IoHandler {
     // See https://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
-    private static AbstractEpollChannel cast(Channel channel) {
+    private static AbstractEpollChannel<?, ?, ?> cast(Channel channel) {
         if (channel instanceof AbstractEpollChannel) {
-            return (AbstractEpollChannel) channel;
+            return (AbstractEpollChannel<?, ?, ?>) channel;
         }
         throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
     }
@@ -180,7 +180,7 @@ public class EpollHandler implements IoHandler {
 
     @Override
     public final void register(Channel channel) throws Exception {
-        final AbstractEpollChannel epollChannel = cast(channel);
+        final AbstractEpollChannel<?, ?, ?> epollChannel = cast(channel);
         epollChannel.register0(new EpollRegistration() {
             @Override
             public void update() throws IOException {
@@ -221,10 +221,10 @@ public class EpollHandler implements IoHandler {
     /**
      * Register the given channel with this {@link EpollHandler}.
      */
-    private void add(AbstractEpollChannel ch) throws IOException {
+    private void add(AbstractEpollChannel<?, ?, ?> ch) throws IOException {
         int fd = ch.socket.intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
-        AbstractEpollChannel old = channels.put(fd, ch);
+        AbstractEpollChannel<?, ?, ?> old = channels.put(fd, ch);
 
         // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
         // closed.
@@ -234,17 +234,17 @@ public class EpollHandler implements IoHandler {
     /**
      * The flags of the given epoll was modified so update the registration
      */
-    private void modify(AbstractEpollChannel ch) throws IOException {
+    private void modify(AbstractEpollChannel<?, ?, ?> ch) throws IOException {
         Native.epollCtlMod(epollFd.intValue(), ch.socket.intValue(), ch.flags);
     }
 
     /**
      * Deregister the given channel from this {@link EpollHandler}.
      */
-    private void remove(AbstractEpollChannel ch) throws IOException {
+    private void remove(AbstractEpollChannel<?, ?, ?> ch) throws IOException {
         int fd = ch.socket.intValue();
 
-        AbstractEpollChannel old = channels.remove(fd);
+        AbstractEpollChannel<?, ?, ?> old = channels.remove(fd);
         if (old != null && old != ch) {
             // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
             channels.put(fd, old);
@@ -368,9 +368,9 @@ public class EpollHandler implements IoHandler {
     public void prepareToDestroy() {
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
-        AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
+        AbstractEpollChannel<?, ?, ?>[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
 
-        for (AbstractEpollChannel ch: localChannels) {
+        for (AbstractEpollChannel<?, ?, ?> ch: localChannels) {
             ch.closeTransportNow();
         }
     }
@@ -387,7 +387,7 @@ public class EpollHandler implements IoHandler {
             } else {
                 final long ev = events.events(i);
 
-                AbstractEpollChannel ch = channels.get(fd);
+                AbstractEpollChannel<?, ?, ?> ch = channels.get(fd);
                 if (ch != null) {
                     // Don't change the ordering of processing EPOLLOUT | EPOLLRDHUP / EPOLLIN if you're not 100%
                     // sure about it!
