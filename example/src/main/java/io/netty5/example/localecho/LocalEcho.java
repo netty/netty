@@ -98,7 +98,7 @@ public final class LocalEcho {
 
             // Wait until all messages are flushed before closing the channel.
             if (lastWriteFuture != null) {
-                lastWriteFuture.await();
+                lastWriteFuture.asStage().await();
             }
         } finally {
             serverGroup.shutdownGracefully();

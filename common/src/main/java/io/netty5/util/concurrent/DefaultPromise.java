@@ -238,7 +238,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
     }
 
     @Override
-    public Future<V> await() throws InterruptedException {
+    public FutureCompletionStage<V> await() throws InterruptedException {
         if (isDone()) {
             return this;
         }

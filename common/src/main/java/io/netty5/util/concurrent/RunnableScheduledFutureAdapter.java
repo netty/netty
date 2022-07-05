@@ -20,7 +20,6 @@ import io.netty5.util.internal.DefaultPriorityQueue;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.requireNonNull;
@@ -186,12 +185,6 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     @Override
     public RunnableScheduledFuture<V> sync() throws InterruptedException {
         future.sync();
-        return this;
-    }
-
-    @Override
-    public RunnableScheduledFuture<V> await() throws InterruptedException {
-        future.await();
         return this;
     }
 

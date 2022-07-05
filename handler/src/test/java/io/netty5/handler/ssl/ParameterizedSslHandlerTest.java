@@ -484,8 +484,8 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).asStage().get();
 
-            serverPromise.asFuture().await();
-            clientPromise.asFuture().await();
+            serverPromise.asFuture().asStage().await();
+            clientPromise.asFuture().asStage().await();
 
             // Server always received the close_notify as the client triggers the close sequence.
             assertTrue(serverPromise.isSuccess());

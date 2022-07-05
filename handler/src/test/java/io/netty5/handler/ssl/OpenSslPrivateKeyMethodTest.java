@@ -365,8 +365,8 @@ public class OpenSslPrivateKeyMethodTest {
             try {
                 Channel client = client(server, clientSslHandler);
                 try {
-                    Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
-                    Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
+                    Throwable clientCause = clientSslHandler.handshakeFuture().asStage().join((r, e) -> e);
+                    Throwable serverCause = serverSslHandler.handshakeFuture().asStage().join((r, e) -> e);
                     assertNotNull(clientCause);
                     assertThat(serverCause, Matchers.instanceOf(SSLHandshakeException.class));
                 } finally {

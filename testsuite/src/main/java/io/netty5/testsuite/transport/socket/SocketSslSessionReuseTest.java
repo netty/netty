@@ -134,7 +134,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
             assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");
             rethrowHandlerExceptions(sh, ch);
         } finally {
-            sc.close().await();
+            sc.close().asStage().await();
         }
     }
 

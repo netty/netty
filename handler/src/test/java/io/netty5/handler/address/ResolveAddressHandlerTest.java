@@ -92,7 +92,7 @@ public class ResolveAddressHandlerTest {
 
         // Start server
         Channel sc = sb.bind(RESOLVED).asStage().get();
-        Future<Channel> future = cb.connect(UNRESOLVED).await();
+        Future<Channel> future = cb.connect(UNRESOLVED).asStage().await().future();
         try {
             if (fail) {
                 assertSame(ERROR, future.cause());

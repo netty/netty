@@ -120,7 +120,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
 
     @Override
     public DefaultChannelGroupFuture await() throws InterruptedException {
-        super.await();
+        asStage().await();
         return this;
     }
 

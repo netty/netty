@@ -105,7 +105,8 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         FileRegion region = new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), 0, data.length + 1024);
 
-        assertThat(cc.writeAndFlush(region).await().cause()).isInstanceOf(IOException.class);
+        Throwable result = cc.writeAndFlush(region).asStage().join((r, e) -> e);
+        assertThat(result).isInstanceOf(IOException.class);
         cc.close().sync();
         sc.close().sync();
     }

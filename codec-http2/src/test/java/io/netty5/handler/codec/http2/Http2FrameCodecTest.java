@@ -381,7 +381,7 @@ public class Http2FrameCodecTest {
         assertEquals(1, frame.refCnt());
 
         Future<Void> f = channel.write(frame);
-        f.await();
+        f.asStage().await();
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
         assertThat(f.cause(), instanceOf(UnsupportedMessageTypeException.class));

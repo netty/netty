@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureCompletionStage;
 import io.netty5.util.concurrent.FutureListener;
 
 import java.util.Iterator;
@@ -42,10 +43,10 @@ import java.util.Iterator;
  * {@link ChannelGroupFutureListener} so you can get notified when the I/O
  * operation have been completed.
  *
- * <h3>Prefer {@link #addListener(FutureListener)} to {@link #await()}</h3>
+ * <h3>Prefer {@link #addListener(FutureListener)} to {@link FutureCompletionStage#await()}</h3>
  *
  * It is recommended to prefer {@link #addListener(FutureListener)} to
- * {@link #await()} wherever possible to get notified when I/O operations are
+ * {@link FutureCompletionStage#await()} wherever possible to get notified when I/O operations are
  * done and to do any follow-up tasks.
  * <p>
  * {@link #addListener(FutureListener)} is non-blocking.  It simply
@@ -56,27 +57,27 @@ import java.util.Iterator;
  * utilization because it does not block at all, but it could be tricky to
  * implement a sequential logic if you are not used to event-driven programming.
  * <p>
- * By contrast, {@link #await()} is a blocking operation.  Once called, the
+ * By contrast, {@link FutureCompletionStage#await()} is a blocking operation.  Once called, the
  * caller thread blocks until all I/O operations are done.  It is easier to
- * implement a sequential logic with {@link #await()}, but the caller thread
+ * implement a sequential logic with {@link FutureCompletionStage#await()}, but the caller thread
  * blocks unnecessarily until all I/O operations are done and there's relatively
  * expensive cost of inter-thread notification.  Moreover, there's a chance of
  * dead lock in a particular circumstance, which is described below.
  *
- * <h3>Do not call {@link #await()} inside {@link ChannelHandler}</h3>
+ * <h3>Do not call {@link FutureCompletionStage#await()} inside {@link ChannelHandler}</h3>
  * <p>
  * The event handler methods in {@link ChannelHandler} is often called by
- * an I/O thread.  If {@link #await()} is called by an event handler
+ * an I/O thread.  If {@link FutureCompletionStage#await()} is called by an event handler
  * method, which is called by the I/O thread, the I/O operation it is waiting
- * for might never be complete because {@link #await()} can block the I/O
- * operation it is waiting for, which is a dead lock.
+ * for might never be complete because {@link FutureCompletionStage#await()} can block the I/O
+ * operation it is waiting for, which is a deadlock.
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
  * public void messageReceived({@link ChannelHandlerContext} ctx, ShutdownMessage msg) {
  *     {@link ChannelGroup} allChannels = MyServer.getAllChannels();
  *     {@link ChannelGroupFuture} future = allChannels.close();
- *     future.await();
+ *     future.asStage().await();
  *     // Perform post-shutdown operation
  *     // ...
  *
@@ -97,8 +98,8 @@ import java.util.Iterator;
  * </pre>
  * <p>
  * In spite of the disadvantages mentioned above, there are certainly the cases
- * where it is more convenient to call {@link #await()}. In such a case, please
- * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
+ * where it is more convenient to call {@link FutureCompletionStage#await()}. In such a case, please
+ * make sure you do not call {@link FutureCompletionStage#await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
  */
 public interface ChannelGroupFuture extends Future<Void>, Iterable<Future<Void>> {
@@ -141,9 +142,6 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<Future<Void>>
 
     @Override
     ChannelGroupFuture addListener(FutureListener<? super Void> listener);
-
-    @Override
-    ChannelGroupFuture await() throws InterruptedException;
 
     @Override
     ChannelGroupFuture sync() throws InterruptedException;

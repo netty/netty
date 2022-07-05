@@ -100,7 +100,7 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            assertTrue(pipeline.channel().register().await().cause() instanceof ClosedChannelException);
+            assertTrue(pipeline.channel().register().asStage().await().future().cause() instanceof ClosedChannelException);
         }
         pipeline.channel().close().sync();
         pipeline.channel().closeFuture().sync();

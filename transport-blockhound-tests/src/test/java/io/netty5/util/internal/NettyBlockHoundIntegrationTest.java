@@ -475,8 +475,8 @@ public class NettyBlockHoundIntegrationTest {
                         }).connect(sc.localAddress());
                 cc = future.asStage().get();
 
-                clientSslHandler.handshakeFuture().await().sync();
-                serverSslHandler.handshakeFuture().await().sync();
+                clientSslHandler.handshakeFuture().sync();
+                serverSslHandler.handshakeFuture().sync();
             } finally {
                 if (cc != null) {
                     cc.close().sync();

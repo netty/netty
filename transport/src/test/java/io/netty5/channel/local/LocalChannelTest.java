@@ -88,9 +88,9 @@ public class LocalChannelTest {
         Future<?> group1Future = group1.shutdownGracefully(0, 0, SECONDS);
         Future<?> group2Future = group2.shutdownGracefully(0, 0, SECONDS);
         Future<?> sharedGroupFuture = sharedGroup.shutdownGracefully(0, 0, SECONDS);
-        group1Future.await();
-        group2Future.await();
-        sharedGroupFuture.await();
+        group1Future.asStage().await();
+        group2Future.asStage().await();
+        sharedGroupFuture.asStage().await();
     }
 
     static Stream<IntFunction<Buffer>> allocators() {
@@ -319,11 +319,11 @@ public class LocalChannelTest {
                     });
             Future<Channel> future = bootstrap.connect(sc.localAddress());
             assertTrue(future.asStage().await(2000, TimeUnit.MILLISECONDS), "Connection should finish, not time out");
-            cc = future.await().isSuccess() ? future.asStage().get() : null;
+            cc = future.asStage().join((r, e) -> r);
         } finally {
             closeChannel(cc);
             closeChannel(sc);
-            clientGroup.shutdownGracefully(0, 0, SECONDS).await();
+            clientGroup.shutdownGracefully(0, 0, SECONDS).asStage().await();
         }
     }
 

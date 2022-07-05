@@ -828,7 +828,7 @@ public class Http2MultiplexTest {
 
         Promise<Void> first = writePromises.poll();
         first.setFailure(new ClosedChannelException());
-        f.await();
+        f.asStage().await();
 
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());

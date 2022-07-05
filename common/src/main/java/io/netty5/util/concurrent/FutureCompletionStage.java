@@ -44,6 +44,42 @@ import java.util.function.Function;
 public interface FutureCompletionStage<V> extends CompletionStage<V>, java.util.concurrent.Future<V> {
 
     /**
+     * Waits for the future to complete, then calls the given result handler with the outcome.
+     * <p>
+     * If the future completes successfully, then the result handler is called with the result of the future -
+     * which may be {@code null} - and a {@code null} exception.
+     * <p>
+     * If the future fails, then the result handler is called with a {@code null} result, and a non-{@code null}
+     * exception.
+     * <p>
+     * Success or failure of the future can be determined on whether the exception is {@code null} or not.
+     * <p>
+     * The result handler may compute a new result, which will be the return value of the {@code join} call.
+     *
+     * @param resultHandler The function that will process the result of the completed future.
+     * @return The result of the {@code resultHandler} computation.
+     * @param <T> The return type of the {@code resultHandler}.
+     * @throws InterruptedException if the thread is interrupted while waiting for the future to complete.
+     */
+    default <T> T join(BiFunction<V, Throwable, T> resultHandler) throws InterruptedException {
+        Objects.requireNonNull(resultHandler, "resultHandler");
+        await();
+        var fut = future();
+        if (fut.isSuccess()) {
+            return resultHandler.apply(fut.getNow(), null);
+        } else {
+            return resultHandler.apply(null, fut.cause());
+        }
+    }
+
+    /**
+     * Waits for this future to be completed.
+     *
+     * @throws InterruptedException if the current thread was interrupted
+     */
+    FutureCompletionStage<V> await() throws InterruptedException;
+
+    /**
      * Waits for this future to be completed within the specified time limit.
      *
      * @return {@code true} if and only if the future was completed within the specified time limit

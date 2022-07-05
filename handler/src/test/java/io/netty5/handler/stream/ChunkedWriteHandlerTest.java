@@ -435,7 +435,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         EmbeddedChannel ch = new EmbeddedChannel(noOpWrites, new ChunkedWriteHandler());
-        ch.writeAndFlush(nonClosableInput).await();
+        ch.writeAndFlush(nonClosableInput).asStage().await();
         // Should be `false` as we do not expect any messages to be written
         assertFalse(ch.finish());
         buffer.close();
@@ -676,7 +676,7 @@ public class ChunkedWriteHandlerTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(failFirst, new ChunkedWriteHandler());
         Future<Void> r1 = ch.write(input1);
-        Future<Void> r2 = ch.writeAndFlush(input2).await();
+        Future<Void> r2 = ch.writeAndFlush(input2).asStage().await().future();
         assertTrue(ch.finish());
 
         assertTrue(r1.cause() instanceof RuntimeException);

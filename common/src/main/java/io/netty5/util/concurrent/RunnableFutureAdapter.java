@@ -18,7 +18,6 @@ package io.netty5.util.concurrent;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
@@ -74,12 +73,6 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     @Override
     public RunnableFuture<V> sync() throws InterruptedException {
         future.sync();
-        return this;
-    }
-
-    @Override
-    public RunnableFuture<V> await() throws InterruptedException {
-        future.await();
         return this;
     }
 

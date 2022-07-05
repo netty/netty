@@ -100,7 +100,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 }
             });
 
-            assertSame(cause, f.await().cause());
+            assertSame(cause, f.asStage().join((r, e) -> e));
         } finally {
             executor.shutdownGracefully();
         }

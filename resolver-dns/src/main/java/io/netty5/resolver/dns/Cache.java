@@ -92,11 +92,6 @@ abstract class Cache<E> {
         }
 
         @Override
-        public Future<Object> await() throws InterruptedException {
-            return this;
-        }
-
-        @Override
         public Object getNow() {
             return null;
         }

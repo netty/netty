@@ -106,7 +106,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 bootstrap.connect(serverChannel.localAddress()).sync();
 
                 readLatch.await();
-                group.shutdownGracefully().await();
+                group.shutdownGracefully().asStage().await();
             }
         });
     }

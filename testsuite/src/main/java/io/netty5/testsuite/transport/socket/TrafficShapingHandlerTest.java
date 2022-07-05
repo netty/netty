@@ -347,7 +347,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
         cc.flush();
 
-        promise.asFuture().await();
+        promise.asFuture().asStage().await();
         Long stop = TrafficCounter.milliSecondFromNano();
         assertTrue(promise.isSuccess(), "Error during execution of TrafficShapping: " + promise.cause());
 

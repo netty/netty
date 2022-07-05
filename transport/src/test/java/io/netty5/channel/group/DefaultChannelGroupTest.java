@@ -51,7 +51,7 @@ public class DefaultChannelGroupTest {
 
         if (f.isSuccess()) {
             allChannels.add(f.getNow());
-            allChannels.close().await();
+            allChannels.close().asStage().await();
         }
 
         bossGroup.shutdownGracefully();

@@ -122,9 +122,9 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @AfterEach
-    public void teardown() throws Exception {
+    public void tearDown() throws Exception {
         if (clientChannel != null) {
-            clientChannel.close().await();
+            clientChannel.close().asStage().await();
             clientChannel = null;
         }
         if (serverChannel != null) {

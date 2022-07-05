@@ -48,6 +48,7 @@ import static io.netty5.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRE
 import static io.netty5.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty5.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -278,7 +279,8 @@ public class StreamBufferingEncoderTest {
         connection.goAwayReceived(11, 8, empty());
         Future<Void> f = encoderWriteHeaders(5);
 
-        assertTrue(f.await().cause() instanceof Http2GoAwayException);
+        Throwable result = f.asStage().join((r, e) -> e);
+        assertThat(result).isInstanceOf(Http2GoAwayException.class);
         assertEquals(0, encoder.numBufferedStreams());
     }
 
@@ -466,7 +468,7 @@ public class StreamBufferingEncoderTest {
         Future<Void> f = encoderWriteHeaders(-1);
 
         // Verify that the write fails.
-        assertNotNull(f.await().cause());
+        assertNotNull(f.asStage().join((r, e) -> e));
     }
 
     @Test
@@ -497,9 +499,9 @@ public class StreamBufferingEncoderTest {
         Future<Void> f3 = encoderWriteHeaders(7);
 
         encoder.close();
-        assertNotNull(f1.await().cause());
-        assertNotNull(f2.await().cause());
-        assertNotNull(f3.await().cause());
+        assertNotNull(f1.asStage().join((r, e) -> e));
+        assertNotNull(f2.asStage().join((r, e) -> e));
+        assertNotNull(f3.asStage().join((r, e) -> e));
     }
 
     @Test

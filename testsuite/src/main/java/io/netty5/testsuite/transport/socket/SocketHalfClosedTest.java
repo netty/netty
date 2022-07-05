@@ -166,7 +166,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().asStage().get();
             Channel clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
-            clientChannel.closeFuture().await();
+            clientChannel.closeFuture().asStage().await();
             assertEquals(1, shutdownEventReceivedCounter.get());
         } finally {
             if (serverChannel != null) {

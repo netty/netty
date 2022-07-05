@@ -176,7 +176,7 @@ public class FutureCompletionStageTest {
                                     boolean exception) throws Exception {
         FutureCompletionStage<Boolean> stage = future.asStage();
 
-        Future<Boolean> f = fn.apply(stage).future().await();
+        Future<Boolean> f = fn.apply(stage).future().asStage().await().future();
         if (exception) {
             assertSame(EXPECTED_EXCEPTION, f.cause());
         } else {
@@ -282,7 +282,7 @@ public class FutureCompletionStageTest {
                                         boolean exception)
             throws Exception {
         FutureCompletionStage<Boolean> stage = future.asStage();
-        Future<Void> f = fn.apply(stage).future().await();
+        Future<Void> f = fn.apply(stage).future().asStage().await().future();
         if (exception) {
             assertSame(EXPECTED_EXCEPTION, f.cause());
         } else {
@@ -812,7 +812,7 @@ public class FutureCompletionStageTest {
                 }
             }
 
-            f.await();
+            f.asStage().await().future();
 
             switch (testMode) {
                 case COMPLETE_EXCEPTIONAL:
@@ -1103,7 +1103,7 @@ public class FutureCompletionStageTest {
         FutureCompletionStage<Boolean> stage = FutureCompletionStage.toFutureCompletionStage(
                 future, ImmediateEventExecutor.INSTANCE);
         assertSame(ImmediateEventExecutor.INSTANCE, stage.executor());
-        assertSame(exception, stage.future().await().cause());
+        assertSame(exception, stage.future().asStage().await().future().cause());
     }
 
     @Test

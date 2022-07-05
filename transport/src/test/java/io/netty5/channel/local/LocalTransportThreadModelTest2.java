@@ -78,7 +78,7 @@ public class LocalTransportThreadModelTest2 {
         if (localChannel.executor().inEventLoop()) {
             // Wait until all messages are flushed before closing the channel.
             if (localRegistrationHandler.lastWriteFuture != null) {
-                localRegistrationHandler.lastWriteFuture.await();
+                localRegistrationHandler.lastWriteFuture.asStage().await();
             }
 
             localChannel.close();
@@ -91,7 +91,7 @@ public class LocalTransportThreadModelTest2 {
         });
 
         // Wait until the connection is closed or the connection attempt fails.
-        localChannel.closeFuture().await();
+        localChannel.closeFuture().asStage().await();
     }
 
     static class LocalHandler implements ChannelHandler {

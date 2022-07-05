@@ -807,7 +807,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.await().isSuccess());
+        assertTrue(ccf.asStage().await().future().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
@@ -847,7 +847,7 @@ public abstract class SSLEngineTest {
                 "unexpected exception: " + serverException);
 
         // Verify that any pending writes are failed with the cached handshake exception and not a general SSLException.
-        clientWriteFuture.await();
+        clientWriteFuture.asStage().await();
         Throwable actualCause = clientWriteFuture.cause();
         assertTrue(clientWriteFuture.isDone());
         assertTrue(clientWriteFuture.isFailed());
@@ -997,7 +997,7 @@ public abstract class SSLEngineTest {
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
-        assertTrue(ccf.await().isSuccess());
+        assertTrue(ccf.asStage().await().future().isSuccess());
         clientChannel = ccf.asStage().get();
         return clientWritePromise.asFuture();
     }
@@ -1169,7 +1169,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.await().isSuccess());
+        assertTrue(ccf.asStage().await().future().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
