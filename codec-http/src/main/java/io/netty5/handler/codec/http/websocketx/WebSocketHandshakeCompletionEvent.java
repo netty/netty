@@ -29,6 +29,8 @@ public abstract class WebSocketHandshakeCompletionEvent implements ProtocolEvent
 
     /**
      * Create a new event that indicate a successful websocket handshake.
+     *
+     * @param version   the {@link WebSocketVersion} that was used.
      */
     WebSocketHandshakeCompletionEvent(WebSocketVersion version) {
         this.version = requireNonNull(version, "version");

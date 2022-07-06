@@ -342,7 +342,7 @@ public final class WebSocketClientProtocolConfig {
         }
 
         /**
-         * Handshake timeout in millis, when handshake timeout, will trigger and inbound channel
+         * Handshake timeout in millis, when handshake timeout, will trigger an inbound channel
          * event {@link WebSocketClientHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
          */
         public Builder handshakeTimeoutMillis(long handshakeTimeoutMillis) {

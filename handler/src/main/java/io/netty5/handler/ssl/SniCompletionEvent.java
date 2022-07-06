@@ -23,16 +23,32 @@ package io.netty5.handler.ssl;
 public final class SniCompletionEvent extends SslCompletionEvent {
     private final String hostname;
 
+    /**
+     * Creates a new event that indicates a successful processing of the SNI extension.
+     *
+     * @param hostname      the hostname that was used for SNI.
+     */
     public SniCompletionEvent(String hostname) {
         super(null);
         this.hostname = hostname;
     }
 
+    /**
+     * Creates a new event that indicates a failed processing of the SNI extension.
+     *
+     * @param hostname      the hostname that was used for SNI.
+     * @param cause         the cause of the failure.
+     */
     public SniCompletionEvent(String hostname, Throwable cause) {
         super(null, cause);
         this.hostname = hostname;
     }
 
+    /**
+     * Creates a new event that indicates a failed processing of the SNI extension.
+     *
+     * @param cause         the cause of the failure.
+     */
     public SniCompletionEvent(Throwable cause) {
         this(null, cause);
     }

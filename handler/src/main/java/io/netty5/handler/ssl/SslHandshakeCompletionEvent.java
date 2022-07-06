@@ -22,11 +22,13 @@ import javax.net.ssl.SSLSession;
  * was an error.
  */
 public final class SslHandshakeCompletionEvent extends SslCompletionEvent {
-
     private final String applicationProtocol;
 
     /**
      * Creates a new event that indicates a successful handshake.
+     *
+     * @param session               the {@link SSLSession} for the handshake.
+     * @param applicationProtocol   the application protocol that was selected (if any).
      */
     public SslHandshakeCompletionEvent(SSLSession session, String applicationProtocol) {
         super(session);
@@ -35,6 +37,10 @@ public final class SslHandshakeCompletionEvent extends SslCompletionEvent {
 
     /**
      * Creates a new event that indicates an unsuccessful handshake.
+     *
+     * @param session               the {@link SSLSession} for the handshake.
+     * @param applicationProtocol   the application protocol that was selected (if any).
+     * @param cause                 the cause of the failure.
      */
     public SslHandshakeCompletionEvent(SSLSession session, String applicationProtocol, Throwable cause) {
         super(session, cause);
@@ -43,6 +49,8 @@ public final class SslHandshakeCompletionEvent extends SslCompletionEvent {
 
     /**
      * Creates a new event that indicates an unsuccessful handshake.
+     *
+     * @param cause the cause of the failure.
      */
     public SslHandshakeCompletionEvent(Throwable cause) {
         this(null, null, cause);

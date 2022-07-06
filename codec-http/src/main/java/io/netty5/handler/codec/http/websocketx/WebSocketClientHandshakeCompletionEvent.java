@@ -21,10 +21,20 @@ package io.netty5.handler.codec.http.websocketx;
 public final class WebSocketClientHandshakeCompletionEvent
         extends WebSocketHandshakeCompletionEvent {
 
+    /**
+     * Create a new event that indicate a successful websocket handshake.
+     *
+     * @param version   the {@link WebSocketVersion} that was used.
+     */
     public WebSocketClientHandshakeCompletionEvent(WebSocketVersion version) {
         super(version);
     }
 
+    /**
+     * Create a new event that indicate a failed websocket handshake.
+     *
+     * @param cause the cause of the failure.
+     */
     public WebSocketClientHandshakeCompletionEvent(Throwable cause) {
         super(cause);
     }

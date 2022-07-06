@@ -17,8 +17,6 @@ package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.handler.codec.http.HttpHeaders;
 
-import java.util.Objects;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -29,6 +27,14 @@ public final class WebSocketServerHandshakeCompletionEvent extends WebSocketHand
     private final HttpHeaders requestHeaders;
     private final String selectedSubprotocol;
 
+    /**
+     * Create a new event that indicate a successful websocket handshake.
+     *
+     * @param version               the {@link WebSocketVersion} that was used.
+     * @param requestUri            the URI of the request.
+     * @param requestHeaders        the headers of the upgrade request.
+     * @param selectedSubprotocol   the selected sub-protocol, if any.
+     */
     public WebSocketServerHandshakeCompletionEvent(WebSocketVersion version,
             String requestUri, HttpHeaders requestHeaders, String selectedSubprotocol) {
         super(version);
@@ -37,6 +43,11 @@ public final class WebSocketServerHandshakeCompletionEvent extends WebSocketHand
         this.selectedSubprotocol = selectedSubprotocol;
     }
 
+    /**
+     * Create a new event that indicate a failed websocket handshake.
+     *
+     * @param cause the cause of the failure.
+     */
     public WebSocketServerHandshakeCompletionEvent(Throwable cause) {
         super(cause);
         requestUri = null;
