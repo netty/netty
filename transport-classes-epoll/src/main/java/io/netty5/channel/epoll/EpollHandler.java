@@ -29,11 +29,12 @@ import io.netty5.util.IntSupplier;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.internal.StringUtil;
+import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
@@ -43,6 +44,9 @@ import static java.util.Objects.requireNonNull;
  * {@link IoHandler} which uses epoll under the covers. Only works on Linux!
  */
 public class EpollHandler implements IoHandler {
+    private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
+            SystemPropertyUtil.getLong("io.netty5.channel.epoll.epollWaitThreshold", 10);
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollHandler.class);
 
     static {
@@ -66,7 +70,16 @@ public class EpollHandler implements IoHandler {
 
     private final SelectStrategy selectStrategy;
     private final IntSupplier selectNowSupplier = this::epollWaitNow;
-    private final AtomicInteger wakenUp = new AtomicInteger(1);
+
+    private static final long AWAKE = -1L;
+    private static final long NONE = Long.MAX_VALUE;
+
+    // nextWakeupNanos is:
+    //    AWAKE            when EL is awake
+    //    NONE             when EL is waiting with no wakeup scheduled
+    //    other value T    when EL is waiting with wakeup scheduled at time T
+    private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
+
     private boolean pendingWakeup;
 
     // See https://man7.org/linux/man-pages/man2/timerfd_create.2.html.
@@ -212,7 +225,7 @@ public class EpollHandler implements IoHandler {
 
     @Override
     public final void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && wakenUp.getAndSet(1) == 0) {
+        if (!inEventLoop && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventFd.intValue(), 1L);
         }
@@ -258,20 +271,19 @@ public class EpollHandler implements IoHandler {
         }
     }
 
-    private int epollWait(IoExecutionContext context) throws IOException {
-        int delaySeconds;
-        int delayNanos;
-        long curDeadlineNanos = context.deadlineNanos();
-        if (curDeadlineNanos == prevDeadlineNanos) {
-            delaySeconds = -1;
-            delayNanos = -1;
-        } else {
-            long totalDelay = context.delayNanos(System.nanoTime());
-            prevDeadlineNanos = curDeadlineNanos;
-            delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
-            delayNanos = (int) min(totalDelay - delaySeconds * 1000000000L, MAX_SCHEDULED_TIMERFD_NS);
+    private long epollWait(IoExecutionContext context, long deadlineNanos) throws IOException {
+        if (deadlineNanos == NONE) {
+            return Native.epollWait(epollFd, events, timerFd,
+                    Integer.MAX_VALUE, 0, EPOLL_WAIT_MILLIS_THRESHOLD); // disarm timer
         }
-        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos);
+        long totalDelay = context.delayNanos(System.nanoTime());
+        int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
+        int delayNanos = (int) min(totalDelay - delaySeconds * 1000000000L, MAX_SCHEDULED_TIMERFD_NS);
+        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos, EPOLL_WAIT_MILLIS_THRESHOLD);
+    }
+
+    private int epollWaitNoTimerChange() throws IOException {
+        return Native.epollWait(epollFd, events, false);
     }
 
     private int epollWaitNow() throws IOException {
@@ -318,15 +330,29 @@ public class EpollHandler implements IoHandler {
                         // fall-through
                     }
 
-                    wakenUp.set(0);
+                    long curDeadlineNanos = context.deadlineNanos();
+                    if (curDeadlineNanos == -1L) {
+                        curDeadlineNanos = NONE; // nothing on the calendar
+                    }
+                    nextWakeupNanos.set(curDeadlineNanos);
                     try {
                         if (context.canBlock()) {
-                            strategy = epollWait(context);
+                            if (curDeadlineNanos == prevDeadlineNanos) {
+                                // No timer activity needed
+                                strategy = epollWaitNoTimerChange();
+                            } else {
+                                // Timerfd needs to be re-armed or disarmed
+                                long result = epollWait(context, curDeadlineNanos);
+                                // The result contains the actual return value and if a timer was used or not.
+                                // We need to "unpack" using the helper methods exposed in Native.
+                                strategy = Native.epollReady(result);
+                                prevDeadlineNanos = Native.epollTimerWasUsed(result) ? curDeadlineNanos : NONE;
+                            }
                         }
                     } finally {
                         // Try get() first to avoid much more expensive CAS in the case we
                         // were woken via the wakeup() method (submitted task)
-                        if (wakenUp.get() == 1 || wakenUp.getAndSet(1) == 1) {
+                        if (nextWakeupNanos.get() == AWAKE || nextWakeupNanos.getAndSet(AWAKE) == AWAKE) {
                             pendingWakeup = true;
                         }
                     }
@@ -335,7 +361,9 @@ public class EpollHandler implements IoHandler {
             }
             if (strategy > 0) {
                 handled = strategy;
-                processReady(events, strategy);
+                if (processReady(events, strategy)) {
+                    prevDeadlineNanos = NONE;
+                }
             }
             if (allowGrowing && strategy == events.length()) {
                 //increase the size of the array as we needed the whole space for the events
@@ -375,15 +403,15 @@ public class EpollHandler implements IoHandler {
         }
     }
 
-    private void processReady(EpollEventArray events, int ready) {
+    // Returns true if a timerFd event was encountered
+    private boolean processReady(EpollEventArray events, int ready) {
+        boolean timerFired = false;
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
             if (fd == eventFd.intValue()) {
                 pendingWakeup = false;
             } else if (fd == timerFd.intValue()) {
-                // Just ignore as we use ET mode for the eventfd and timerfd.
-                //
-                // See also https://stackoverflow.com/a/12492308/1074097
+                timerFired = true;
             } else {
                 final long ev = events.events(i);
 
@@ -436,6 +464,7 @@ public class EpollHandler implements IoHandler {
                 }
             }
         }
+        return timerFired;
     }
 
     @Override

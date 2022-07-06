@@ -144,28 +144,12 @@ public final class Native {
     private static native int eventFd();
     private static native int timerFd();
     public static native void eventFdWrite(int fd, long value);
-    public static native void eventFdRead(int fd);
-    static native void timerFdRead(int fd);
 
     public static FileDescriptor newEpollCreate() {
         return new FileDescriptor(epollCreate());
     }
 
     private static native int epollCreate();
-
-    /**
-     * @deprecated this method is no longer supported. This functionality is internal to this package.
-     */
-    @Deprecated
-    public static int epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
-                                int timeoutSec, int timeoutNs) throws IOException {
-        int ready = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
-                               timeoutSec, timeoutNs);
-        if (ready < 0) {
-            throw newIOException("epoll_wait", ready);
-        }
-        return ready;
-    }
 
     static int epollWait(FileDescriptor epollFd, EpollEventArray events, boolean immediatePoll) throws IOException {
         return epollWait(epollFd, events, immediatePoll ? 0 : -1);
@@ -182,9 +166,40 @@ public final class Native {
         return ready;
     }
 
+    static long epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
+                          int timeoutSec, int timeoutNs, long millisThreshold) throws IOException {
+        if (timeoutSec == 0 && timeoutNs == 0) {
+            // Zero timeout => poll (aka return immediately)
+            // We shift this to be consistent with what is done in epollWait0(...)
+            return ((long) epollWait(epollFd, events, 0)) << 32;
+        }
+        if (timeoutSec == Integer.MAX_VALUE) {
+            // Max timeout => wait indefinitely: disarm timerfd first
+            timeoutSec = 0;
+            timeoutNs = 0;
+        }
+        long result = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
+                timeoutSec, timeoutNs, millisThreshold);
+        int ready = epollReady(result);
+        if (ready < 0) {
+            throw newIOException("epoll_wait", ready);
+        }
+        return result;
+    }
+
+    // IMPORTANT: This needs to be consistent with what is used in netty5_epoll_native.c
+    static int epollReady(long result) {
+        return (int) (result >> 32);
+    }
+
+    // IMPORTANT: This needs to be consistent with what is used in netty5_epoll_native.c
+    static boolean epollTimerWasUsed(long result) {
+        return (result & 0xff) != 0;
+    }
+
     /**
      * Non-blocking variant of
-     * {@link #epollWait(FileDescriptor, EpollEventArray, FileDescriptor, int, int)}
+     * {@link #epollWait(FileDescriptor, EpollEventArray, FileDescriptor, int, int, long)}
      * that will also hint to processor we are in a busy-wait loop.
      */
     public static int epollBusyWait(FileDescriptor epollFd, EpollEventArray events) throws IOException {
@@ -195,7 +210,8 @@ public final class Native {
         return ready;
     }
 
-    private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
+    private static native long epollWait0(int efd, long address, int len, int timerFd,
+                                         int timeoutSec, int timeoutNs, long millisThreshold);
     private static native int epollWait(int efd, long address, int len, int timeout);
     private static native int epollBusyWait0(int efd, long address, int len);
 
