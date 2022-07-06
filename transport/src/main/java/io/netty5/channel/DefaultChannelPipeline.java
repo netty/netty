@@ -926,7 +926,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final  <V> Future<V> newFailedFuture(Throwable cause) {
+    public final <V> Future<V> newFailedFuture(Throwable cause) {
         return ChannelPipeline.super.newFailedFuture(cause);
     }
 
