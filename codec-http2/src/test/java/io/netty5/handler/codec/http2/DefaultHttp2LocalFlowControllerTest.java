@@ -78,7 +78,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     private void setupChannelHandlerContext(boolean allowFlush) {
         reset(ctx);
-        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.<Void>newPromise()).thenReturn(promise);
         if (allowFlush) {
             when(ctx.flush()).then((Answer<ChannelHandlerContext>) invocationOnMock -> ctx);
         } else {

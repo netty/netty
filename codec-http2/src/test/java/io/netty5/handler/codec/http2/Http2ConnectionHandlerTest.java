@@ -194,7 +194,7 @@ public class Http2ConnectionHandlerTest {
                 .thenAnswer(invocationOnMock ->
                         ImmediateEventExecutor.INSTANCE.newFailedFuture(invocationOnMock.getArgument(0)));
         when(ctx.newSucceededFuture()).thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
-        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.<Void>newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
         doAnswer(in -> {

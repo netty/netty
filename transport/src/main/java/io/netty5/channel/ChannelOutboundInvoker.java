@@ -17,13 +17,13 @@ package io.netty5.channel;
 
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.FutureListener;
+import io.netty5.util.concurrent.FuturePromiseFactory;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
 
-public interface ChannelOutboundInvoker {
+public interface ChannelOutboundInvoker extends FuturePromiseFactory {
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link Future} once the operation
@@ -174,28 +174,18 @@ public interface ChannelOutboundInvoker {
      */
     Future<Void> sendOutboundEvent(Object event);
 
-    /**
-     * Return a new {@link Promise}.
-     */
-    default Promise<Void> newPromise() {
+    @Override
+    default <V> Promise<V> newPromise() {
         return executor().newPromise();
     }
 
-    /**
-     * Create a new {@link Future} which is marked as succeeded already. So {@link Future#isSuccess()}
-     * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
-     * every call of blocking methods will just return without blocking.
-     */
-    default Future<Void> newSucceededFuture() {
-        return executor().newSucceededFuture(null);
+    @Override
+    default <V> Future<V> newSucceededFuture(V value) {
+        return executor().newSucceededFuture(value);
     }
 
-    /**
-     * Create a new {@link Future} which is marked as failed already. So {@link Future#isSuccess()}
-     * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
-     * every call of blocking methods will just return without blocking.
-     */
-    default Future<Void> newFailedFuture(Throwable cause) {
+    @Override
+    default <V> Future<V> newFailedFuture(Throwable cause) {
         return executor().newFailedFuture(cause);
     }
 

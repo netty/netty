@@ -90,7 +90,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
-        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.<Void>newPromise()).thenReturn(promise);
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
         setChannelWritability(true);
         when(channel.config()).thenReturn(config);

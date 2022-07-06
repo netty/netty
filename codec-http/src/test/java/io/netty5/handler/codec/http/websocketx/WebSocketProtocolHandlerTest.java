@@ -158,7 +158,7 @@ public class WebSocketProtocolHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-                Future<Void> future = ctx.newPromise().asFuture();
+                Future<Void> future = ctx.<Void>newPromise().asFuture();
                 ref.set(future);
                 Resource.dispose(msg);
                 return future;
