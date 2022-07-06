@@ -17,39 +17,59 @@ package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.handler.codec.http.HttpHeaders;
 
-public final class WebSocketServerHandshakeCompletionEvent
-        extends WebSocketHandshakeCompletionEvent<WebSocketServerHandshakeCompletionEvent.WebSocketHandshakeData> {
+import java.util.Objects;
 
-    public WebSocketServerHandshakeCompletionEvent(
+import static java.util.Objects.requireNonNull;
+
+/**
+ * A websocket handshake was completed on the server-side.
+ */
+public final class WebSocketServerHandshakeCompletionEvent extends WebSocketHandshakeCompletionEvent {
+    private final String requestUri;
+    private final HttpHeaders requestHeaders;
+    private final String selectedSubprotocol;
+
+    public WebSocketServerHandshakeCompletionEvent(WebSocketVersion version,
             String requestUri, HttpHeaders requestHeaders, String selectedSubprotocol) {
-        super(new WebSocketHandshakeData(requestUri, requestHeaders, selectedSubprotocol));
+        super(version);
+        this.requestUri = requireNonNull(requestUri, "requestUri");
+        this.requestHeaders = requireNonNull(requestHeaders, "requestHeaders");
+        this.selectedSubprotocol = selectedSubprotocol;
     }
 
     public WebSocketServerHandshakeCompletionEvent(Throwable cause) {
         super(cause);
+        requestUri = null;
+        requestHeaders = null;
+        selectedSubprotocol = null;
     }
 
-    public static final class WebSocketHandshakeData {
-        private final String requestUri;
-        private final HttpHeaders requestHeaders;
-        private final String selectedSubprotocol;
+    /**
+     * Return the request uri of the handshake if {@link #isSuccess()} returns {@code true}, {@code null} otherwise.
+     *
+     * @return the uri.
+     */
+    public String requestUri() {
+        return requestUri;
+    }
 
-        WebSocketHandshakeData(String requestUri, HttpHeaders requestHeaders, String selectedSubprotocol) {
-            this.requestUri = requestUri;
-            this.requestHeaders = requestHeaders;
-            this.selectedSubprotocol = selectedSubprotocol;
-        }
+    /**
+     * Return the request {@link HttpHeaders} of the handshake if {@link #isSuccess()} returns {@code true},
+     * {@code null} otherwise.
+     *
+     * @return the headers.
+     */
+    public HttpHeaders requestHeaders() {
+        return requestHeaders;
+    }
 
-        public String requestUri() {
-            return requestUri;
-        }
-
-        public HttpHeaders requestHeaders() {
-            return requestHeaders;
-        }
-
-        public String selectedSubprotocol() {
-            return selectedSubprotocol;
-        }
+    /**
+     * Return the selected sub-protocol of the handshake if {@link #isSuccess()} returns {@code true} and one was
+     * selected, {@code null} otherwise.
+     *
+     * @return the sub-protocol.
+     */
+    public String selectedSubprotocol() {
+        return selectedSubprotocol;
     }
 }

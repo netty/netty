@@ -20,7 +20,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
-import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 
@@ -44,7 +43,7 @@ public class SecureChatServerHandler extends SimpleChannelInboundHandler<String>
                         "Welcome to " + InetAddress.getLocalHost().getHostName() + " secure chat service!\n");
                 ctx.writeAndFlush(
                         "Your session is protected by " +
-                                ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +
+                                completionEvent.session().getCipherSuite() +
                                 " cipher suite.\n");
                 channels.add(ctx.channel());
             } else {

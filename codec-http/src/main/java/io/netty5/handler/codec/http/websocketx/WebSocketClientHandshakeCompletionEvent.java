@@ -15,8 +15,12 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
+/**
+ * A websocket handshake was completed on the client-side.
+ */
 public final class WebSocketClientHandshakeCompletionEvent
-        extends WebSocketHandshakeCompletionEvent<WebSocketVersion> {
+        extends WebSocketHandshakeCompletionEvent {
+
     public WebSocketClientHandshakeCompletionEvent(WebSocketVersion version) {
         super(version);
     }

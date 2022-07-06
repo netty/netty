@@ -96,7 +96,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                         } else {
                             localHandshakePromise.trySuccess(null);
                             ctx.fireChannelInboundEvent(
-                                    new WebSocketServerHandshakeCompletionEvent(
+                                    new WebSocketServerHandshakeCompletionEvent(handshaker.version(),
                                             req.uri(), req.headers(), handshaker.selectedSubprotocol()));
                         }
                         ctx.pipeline().remove(this);

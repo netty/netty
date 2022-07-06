@@ -120,9 +120,9 @@ public class WebSocketHandshakeHandOverTest {
         transferAllDataWithMerge(clientChannel, serverChannel);
         assertTrue(serverReceivedHandshake);
         assertNotNull(serverHandshakeComplete);
-        assertEquals("/test", serverHandshakeComplete.data().requestUri());
-        assertEquals(7, serverHandshakeComplete.data().requestHeaders().size());
-        assertEquals("test-proto-2", serverHandshakeComplete.data().selectedSubprotocol());
+        assertEquals("/test", serverHandshakeComplete.requestUri());
+        assertEquals(7, serverHandshakeComplete.requestHeaders().size());
+        assertEquals("test-proto-2", serverHandshakeComplete.selectedSubprotocol());
 
         // Transfer the handshake response and the websocket message to the client
         transferAllDataWithMerge(serverChannel, clientChannel);

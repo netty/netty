@@ -15,20 +15,22 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.util.internal.UnstableApi;
 
 /**
  * Event that is fired once we did a selection of a {@link SslContext} based on the {@code SNI hostname},
  * which may be because it was successful or there was an error.
  */
-@UnstableApi
-public final class SniCompletionEvent extends SslCompletionEvent<String> {
+public final class SniCompletionEvent extends SslCompletionEvent {
+    private final String hostname;
+
     public SniCompletionEvent(String hostname) {
-        super(hostname);
+        super(null);
+        this.hostname = hostname;
     }
 
     public SniCompletionEvent(String hostname, Throwable cause) {
-        super(hostname, cause);
+        super(null, cause);
+        this.hostname = hostname;
     }
 
     public SniCompletionEvent(Throwable cause) {
@@ -38,15 +40,14 @@ public final class SniCompletionEvent extends SslCompletionEvent<String> {
     /**
      * Returns the SNI hostname send by the client if we were able to parse it, {@code null} otherwise.
      */
-    @Override
-    public String data() {
-        return super.data();
+    public String hostname() {
+        return hostname;
     }
 
     @Override
     public String toString() {
         final Throwable cause = cause();
-        return cause == null ? getClass().getSimpleName() + "(SUCCESS='"  + data() + "'\")":
+        return cause == null ? getClass().getSimpleName() + "(SUCCESS='"  + hostname() + "'\")":
                 getClass().getSimpleName() +  '(' + cause + ')';
     }
 }

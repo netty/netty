@@ -234,7 +234,7 @@ public class SniHandlerTest {
 
                 SniCompletionEvent evt = evtRef.get();
                 assertNotNull(evt);
-                assertEquals("chat4.leancloud.cn", evt.data());
+                assertEquals("chat4.leancloud.cn", evt.hostname());
                 assertTrue(evt.isSuccess());
                 assertNull(evt.cause());
             } finally {

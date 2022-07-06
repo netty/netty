@@ -17,26 +17,25 @@ package io.netty5.handler.ssl;
 
 import io.netty5.handler.codec.ProtocolEvent;
 
+import javax.net.ssl.SSLSession;
+
 import static java.util.Objects.requireNonNull;
 
-public abstract class SslCompletionEvent<V> implements ProtocolEvent<V> {
-
-    private final V data;
+/**
+ * A {@link ProtocolEvent} for a completed SSL related event.
+ */
+public abstract class SslCompletionEvent implements ProtocolEvent {
+    private final SSLSession session;
     private final Throwable cause;
 
-    SslCompletionEvent(V data) {
-        this.data = data;
+    SslCompletionEvent(SSLSession session) {
+        this.session = session;
         cause = null;
     }
 
-    SslCompletionEvent(V data, Throwable cause) {
-        this.data = data;
+    SslCompletionEvent(SSLSession session, Throwable cause) {
+        this.session = session;
         this.cause = requireNonNull(cause, "cause");
-    }
-
-    @Override
-    public V data() {
-        return data;
     }
 
     /**
@@ -45,6 +44,15 @@ public abstract class SslCompletionEvent<V> implements ProtocolEvent<V> {
      */
     public final Throwable cause() {
         return cause;
+    }
+
+    /**
+     * Returns the {@link SSLSession} or {@code null} if none existed yet.
+     *
+     * @return the session.
+     */
+    public SSLSession session() {
+        return session;
     }
 
     @Override

@@ -1143,7 +1143,7 @@ public abstract class SSLEngineTest {
                             SslHandshakeCompletionEvent handshakeCompletionEvent = (SslHandshakeCompletionEvent) evt;
                             if (handshakeCompletionEvent.isSuccess()) {
                                 try {
-                                    verifySSLSessionForMutualAuth(param, handshakeCompletionEvent.data().session(),
+                                    verifySSLSessionForMutualAuth(param, handshakeCompletionEvent.session(),
                                             clientCrtFile, PRINCIPAL_NAME);
                                 } catch (Throwable cause) {
                                     clientException = cause;

@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec;
 
+import io.netty5.channel.ChannelPipeline;
+
 /**
- * An event for an application protocol that should be processed by the {@link io.netty5.channel.ChannelPipeline}.
- *
- * @param <T>   the type of the extra data that is passed with the event.
+ * An event for an application protocol that should be processed by the {@link ChannelPipeline}.
  */
-public interface ProtocolEvent<T> {
+public interface ProtocolEvent {
 
     /**
      * Returns {@code true} if the event was sent because of some successful protocol event.
@@ -46,11 +46,4 @@ public interface ProtocolEvent<T> {
      * @return the {@link Throwable} if {@link #isFailed()}  or {@code null} if {@link #isSuccess()}.
      */
     Throwable cause();
-
-    /**
-     * The extra data that is part of the event. Might be {@code null} if none.
-     *
-     * @return the data.
-     */
-    T data();
 }

@@ -16,22 +16,22 @@
 package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.handler.codec.ProtocolEvent;
-import io.netty5.handler.codec.http.HttpHeaders;
 
 import static java.util.Objects.requireNonNull;
 
 /**
  * {@link ProtocolEvent} that indicate the completion of a websocket handshake.
  */
-public abstract class WebSocketHandshakeCompletionEvent<V> implements ProtocolEvent<V> {
+public abstract class WebSocketHandshakeCompletionEvent implements ProtocolEvent {
+
+    private final WebSocketVersion version;
     private final Throwable cause;
-    private final V data;
 
     /**
      * Create a new event that indicate a successful websocket handshake.
      */
-    protected WebSocketHandshakeCompletionEvent(V data) {
-        this.data = requireNonNull(data, "data");
+    WebSocketHandshakeCompletionEvent(WebSocketVersion version) {
+        this.version = requireNonNull(version, "version");
         this.cause = null;
     }
 
@@ -40,19 +40,23 @@ public abstract class WebSocketHandshakeCompletionEvent<V> implements ProtocolEv
      *
      * @param cause the cause of the failure
      */
-    protected WebSocketHandshakeCompletionEvent(Throwable cause) {
-        this.data = null;
+    WebSocketHandshakeCompletionEvent(Throwable cause) {
         this.cause = requireNonNull(cause, "cause");
+        version = null;
     }
 
     @Override
-    public V data() {
-        return data;
-    }
-
-    @Override
-    public Throwable cause() {
+    public final Throwable cause() {
         return cause;
+    }
+
+    /**
+     * Return the {@link WebSocketVersion} of the handshake or {@code null} in case of a failure.
+     *
+     * @return the version.
+     */
+    public final WebSocketVersion version() {
+        return version;
     }
 
     @Override

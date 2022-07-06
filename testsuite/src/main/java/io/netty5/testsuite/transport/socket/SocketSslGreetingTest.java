@@ -234,7 +234,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 final SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                 if (event.isSuccess()) {
-                    SSLSession session = ctx.pipeline().get(SslHandler.class).engine().getSession();
+                    SSLSession session = event.session();
                     try {
                         session.getPeerCertificates();
                         fail();
