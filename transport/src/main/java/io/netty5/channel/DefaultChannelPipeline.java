@@ -1109,9 +1109,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public Future<Void> bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.bindTransport(localAddress, promise);
             } else {
@@ -1124,9 +1124,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         public Future<Void> connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.connectTransport(remoteAddress, localAddress, promise);
             } else {
@@ -1138,9 +1138,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public Future<Void> disconnect(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.disconnectTransport(promise);
             } else {
@@ -1151,9 +1151,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public Future<Void> close(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.closeTransport(promise);
             } else {
@@ -1164,9 +1164,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public Future<Void> shutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.shutdownTransport(direction, promise);
             } else {
@@ -1177,9 +1177,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public Future<Void> register(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.registerTransport(promise);
             } else {
@@ -1190,9 +1190,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public Future<Void> deregister(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.deregisterTransport(promise);
             } else {
@@ -1214,9 +1214,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.writeTransport(msg, promise);
             } else {
@@ -1238,9 +1238,9 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
-            Promise<Void> promise = ctx.newPromise();
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
             if (executor.inEventLoop()) {
                 pipeline.sendOutboundEventTransport(event, promise);
             } else {
