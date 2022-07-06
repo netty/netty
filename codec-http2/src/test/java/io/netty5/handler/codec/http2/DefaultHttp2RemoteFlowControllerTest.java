@@ -79,8 +79,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    @SuppressWarnings("rawtypes")
-    private Promise promise;
+    private Promise<Void> promise;
 
     @Mock
     private Http2RemoteFlowController.Listener listener;
@@ -88,11 +87,10 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private DefaultHttp2Connection connection;
 
     @BeforeEach
-    @SuppressWarnings("unchecked")
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
-        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.<Void>newPromise()).thenReturn(promise);
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
         setChannelWritability(true);
         when(channel.config()).thenReturn(config);

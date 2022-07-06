@@ -83,8 +83,7 @@ public class Http2ConnectionHandlerTest {
     private static final int NON_EXISTANT_STREAM_ID = 13;
 
     private Http2ConnectionHandler handler;
-    @SuppressWarnings("rawtypes")
-    private Promise promise;
+    private Promise<Void> promise;
 
     @Mock
     private Http2Connection connection;
@@ -195,7 +194,7 @@ public class Http2ConnectionHandlerTest {
                 .thenAnswer(invocationOnMock ->
                         ImmediateEventExecutor.INSTANCE.newFailedFuture(invocationOnMock.getArgument(0)));
         when(ctx.newSucceededFuture()).thenReturn(ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
-        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.<Void>newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
         doAnswer(in -> {

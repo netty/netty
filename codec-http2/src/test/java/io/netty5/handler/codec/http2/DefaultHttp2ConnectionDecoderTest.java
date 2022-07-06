@@ -125,8 +125,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        @SuppressWarnings("rawtypes")
-        Promise promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
         final AtomicInteger headersReceivedState = new AtomicInteger();
         when(channel.isActive()).thenReturn(true);
@@ -194,7 +193,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.bufferAllocator()).thenReturn(onHeapAllocator());
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);
-        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.<Void>newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);

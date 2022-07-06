@@ -63,8 +63,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    @SuppressWarnings("rawtypes")
-    private Promise promise;
+    private Promise<Void> promise;
 
     private DefaultHttp2Connection connection;
 
@@ -77,10 +76,9 @@ public class DefaultHttp2LocalFlowControllerTest {
         initController(false);
     }
 
-    @SuppressWarnings("unchecked")
     private void setupChannelHandlerContext(boolean allowFlush) {
         reset(ctx);
-        when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.<Void>newPromise()).thenReturn(promise);
         if (allowFlush) {
             when(ctx.flush()).then((Answer<ChannelHandlerContext>) invocationOnMock -> ctx);
         } else {
