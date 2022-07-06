@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -42,14 +41,13 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
-    public void testRemoveItselfIfNoSslHandlerPresent() throws NoSuchAlgorithmException {
+    public void testRemoveItselfIfNoSslHandshakeCompletionEvent() throws NoSuchAlgorithmException {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -126,7 +124,8 @@ public class ApplicationProtocolNegotiationHandlerTest {
             channel.pipeline().addLast(new SslHandler(engine));
             channel.pipeline().addLast(alpnHandler);
         }
-        channel.pipeline().fireChannelInboundEvent(new SslHandshakeCompletionEvent(engine.getSession(), "proto"));
+        channel.pipeline().fireChannelInboundEvent(
+                new SslHandshakeCompletionEvent(engine.getSession(), ApplicationProtocolNames.HTTP_1_1));
         assertNull(channel.pipeline().context(alpnHandler));
         // Should produce the close_notify messages
         channel.releaseOutbound();
@@ -138,21 +137,20 @@ public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
     public void testHandshakeSuccessButNoSslHandler() {
+        final AtomicBoolean configureCalled = new AtomicBoolean(false);
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
-                fail();
+                configureCalled.set(true);
+                assertEquals(ApplicationProtocolNames.HTTP_1_1, protocol);
             }
         };
         final EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
-        channel.pipeline().fireChannelInboundEvent(new SslHandshakeCompletionEvent(new TestSSLSession(), null));
+        channel.pipeline().fireChannelInboundEvent(
+                new SslHandshakeCompletionEvent(new TestSSLSession(), ApplicationProtocolNames.HTTP_1_1));
         assertNull(channel.pipeline().context(alpnHandler));
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.finishAndReleaseAll();
-            }
-        });
+        channel.finishAndReleaseAll();
+        assertTrue(configureCalled.get());
     }
 
     @Test
