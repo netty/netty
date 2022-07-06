@@ -33,11 +33,11 @@ import static io.netty5.channel.unix.Limits.SSIZE_MAX;
 public class EpollChannelConfig extends DefaultChannelConfig {
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
-    EpollChannelConfig(AbstractEpollChannel channel) {
+    EpollChannelConfig(AbstractEpollChannel<?, ?, ?> channel) {
         super(channel);
     }
 
-    EpollChannelConfig(AbstractEpollChannel channel, RecvBufferAllocator recvBufferAllocator) {
+    EpollChannelConfig(AbstractEpollChannel<?, ?, ?> channel, RecvBufferAllocator recvBufferAllocator) {
         super(channel, recvBufferAllocator);
     }
     @SuppressWarnings("unchecked")
@@ -46,13 +46,13 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         try {
             if (option instanceof IntegerUnixChannelOption) {
                 IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
-                return (T) Integer.valueOf(((AbstractEpollChannel) channel).socket.getIntOpt(
+                return (T) Integer.valueOf(((AbstractEpollChannel<?, ?, ?>) channel).socket.getIntOpt(
                         opt.level(), opt.optname()));
             }
             if (option instanceof RawUnixChannelOption) {
                 RawUnixChannelOption opt = (RawUnixChannelOption) option;
                 ByteBuffer out = ByteBuffer.allocate(opt.length());
-                ((AbstractEpollChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
+                ((AbstractEpollChannel<?, ?, ?>) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
                 return (T) out.flip();
             }
         } catch (IOException e) {
@@ -67,11 +67,12 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         try {
             if (option instanceof IntegerUnixChannelOption) {
                 IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
-                ((AbstractEpollChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                ((AbstractEpollChannel<?, ?, ?>) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
                 return true;
             } else if (option instanceof RawUnixChannelOption) {
                 RawUnixChannelOption opt = (RawUnixChannelOption) option;
-                ((AbstractEpollChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                ((AbstractEpollChannel<?, ?, ?>) channel).socket.setRawOpt(
+                        opt.level(), opt.optname(), (ByteBuffer) value);
                 return true;
             }
         } catch (IOException e) {
@@ -145,7 +146,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
 
     @Override
     protected final void autoReadCleared() {
-        ((AbstractEpollChannel) channel).clearEpollIn();
+        ((AbstractEpollChannel<?, ?, ?>) channel).clearEpollIn();
     }
 
     final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {

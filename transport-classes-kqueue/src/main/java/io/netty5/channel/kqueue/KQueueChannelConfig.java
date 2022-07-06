@@ -39,11 +39,11 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     private volatile boolean transportProvidesGuess;
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
-    KQueueChannelConfig(AbstractKQueueChannel channel) {
+    KQueueChannelConfig(AbstractKQueueChannel<?, ?, ?> channel) {
         super(channel);
     }
 
-    KQueueChannelConfig(AbstractKQueueChannel channel, RecvBufferAllocator recvBufferAllocator) {
+    KQueueChannelConfig(AbstractKQueueChannel<?, ?, ?> channel, RecvBufferAllocator recvBufferAllocator) {
         super(channel, recvBufferAllocator);
     }
 
@@ -61,13 +61,13 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
         try {
             if (option instanceof IntegerUnixChannelOption) {
                 IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
-                return (T) Integer.valueOf(((AbstractKQueueChannel) channel).socket.getIntOpt(
+                return (T) Integer.valueOf(((AbstractKQueueChannel<?, ?, ?>) channel).socket.getIntOpt(
                         opt.level(), opt.optname()));
             }
             if (option instanceof RawUnixChannelOption) {
                 RawUnixChannelOption opt = (RawUnixChannelOption) option;
                 ByteBuffer out = ByteBuffer.allocate(opt.length());
-                ((AbstractKQueueChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
+                ((AbstractKQueueChannel<?, ?, ?>) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
                 return (T) out.flip();
             }
         } catch (IOException e) {
@@ -86,11 +86,13 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
             try {
                 if (option instanceof IntegerUnixChannelOption) {
                     IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
-                    ((AbstractKQueueChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                    ((AbstractKQueueChannel<?, ?, ?>) channel).socket.setIntOpt(
+                            opt.level(), opt.optname(), (Integer) value);
                     return true;
                 } else if (option instanceof RawUnixChannelOption) {
                     RawUnixChannelOption opt = (RawUnixChannelOption) option;
-                    ((AbstractKQueueChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                    ((AbstractKQueueChannel<?, ?, ?>) channel).socket.setRawOpt(
+                            opt.level(), opt.optname(), (ByteBuffer) value);
                     return true;
                 }
             } catch (IOException e) {
@@ -184,7 +186,7 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
 
     @Override
     protected final void autoReadCleared() {
-        ((AbstractKQueueChannel) channel).clearReadFilter();
+        ((AbstractKQueueChannel<?, ?, ?>) channel).clearReadFilter();
     }
 
     final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {

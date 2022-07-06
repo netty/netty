@@ -303,13 +303,13 @@ public final class NioHandler implements IoHandler {
                 SelectionKey newKey = key.channel().register(newSelectorTuple.unwrappedSelector, interestOps, a);
                 if (a instanceof AbstractNioChannel) {
                     // Update SelectionKey
-                    ((AbstractNioChannel) a).selectionKey = newKey;
+                    ((AbstractNioChannel<?, ?, ?>) a).selectionKey = newKey;
                 }
                 nChannels ++;
             } catch (Exception e) {
                 logger.warn("Failed to re-register a Channel to the new Selector.", e);
                 if (a instanceof AbstractNioChannel) {
-                    AbstractNioChannel ch = (AbstractNioChannel) a;
+                    AbstractNioChannel<?, ?, ?> ch = (AbstractNioChannel<?, ?, ?>) a;
                     ch.closeTransportNow();
                 } else {
                     @SuppressWarnings("unchecked")
@@ -336,16 +336,16 @@ public final class NioHandler implements IoHandler {
         }
     }
 
-    private static AbstractNioChannel cast(Channel channel) {
+    private static AbstractNioChannel<?, ?, ?> cast(Channel channel) {
         if (channel instanceof AbstractNioChannel) {
-            return (AbstractNioChannel) channel;
+            return (AbstractNioChannel<?, ?, ?>) channel;
         }
         throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
     }
 
     @Override
     public void register(Channel channel) throws Exception {
-        AbstractNioChannel nioChannel = cast(channel);
+        AbstractNioChannel<?, ?, ?> nioChannel = cast(channel);
         boolean selected = false;
         for (;;) {
             try {
@@ -368,7 +368,7 @@ public final class NioHandler implements IoHandler {
 
     @Override
     public void deregister(Channel channel) {
-        AbstractNioChannel nioChannel = cast(channel);
+        AbstractNioChannel<?, ?, ?> nioChannel = cast(channel);
         cancel(nioChannel.selectionKey());
     }
 
@@ -541,7 +541,7 @@ public final class NioHandler implements IoHandler {
         final Object a = k.attachment();
 
         if (a instanceof AbstractNioChannel) {
-            processSelectedKey(k, (AbstractNioChannel) a);
+            processSelectedKey(k, (AbstractNioChannel<?, ?, ?>) a);
         } else {
             @SuppressWarnings("unchecked")
             NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
@@ -549,7 +549,7 @@ public final class NioHandler implements IoHandler {
         }
     }
 
-    private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
+    private void processSelectedKey(SelectionKey k, AbstractNioChannel<?, ?, ?> ch) {
         if (!k.isValid()) {
 
             // close the channel if the key is not valid anymore
@@ -617,11 +617,11 @@ public final class NioHandler implements IoHandler {
     public void prepareToDestroy() {
         selectAgain();
         Set<SelectionKey> keys = selector.keys();
-        Collection<AbstractNioChannel> channels = new ArrayList<>(keys.size());
+        Collection<AbstractNioChannel<?, ?, ?>> channels = new ArrayList<>(keys.size());
         for (SelectionKey k: keys) {
             Object a = k.attachment();
             if (a instanceof AbstractNioChannel) {
-                channels.add((AbstractNioChannel) a);
+                channels.add((AbstractNioChannel<?, ?, ?>) a);
             } else {
                 k.cancel();
                 @SuppressWarnings("unchecked")
@@ -630,7 +630,7 @@ public final class NioHandler implements IoHandler {
             }
         }
 
-        for (AbstractNioChannel ch: channels) {
+        for (AbstractNioChannel<?, ?, ?> ch: channels) {
             ch.closeTransportNow();
         }
     }
