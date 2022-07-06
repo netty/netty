@@ -15,8 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty5.util.concurrent.Promise;
-
 import java.net.SocketAddress;
 
 /**
@@ -67,7 +65,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     }
 
     @Override
-    protected final void doShutdown(ChannelShutdownDirection direction) throws Exception {
+    protected final void doShutdown(ChannelShutdownDirection direction) {
         throw new UnsupportedOperationException();
     }
 
@@ -77,7 +75,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     }
 
     @Override
-    protected final void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected final void doWrite(ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
 
@@ -87,7 +85,12 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     }
 
     @Override
-    public final void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        safeSetFailure(promise, new UnsupportedOperationException());
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean doFinishConnect(R requestedRemoteAddress) {
+        throw new UnsupportedOperationException();
     }
 }

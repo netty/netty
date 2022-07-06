@@ -25,7 +25,6 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ConnectTimeoutException;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.RecvBufferAllocator.Handle;
 import io.netty5.channel.socket.SocketChannelConfig;
@@ -33,17 +32,12 @@ import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannel;
-import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
@@ -57,9 +51,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private Promise<Void> connectPromise;
-    private Future<?> connectTimeoutFuture;
-    private R requestedRemoteAddress;
     protected EpollRegistration registration;
 
     private volatile L local;
@@ -165,22 +156,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
         inputClosedSeenErrorOnRead = true;
-        try {
-            Promise<Void> promise = connectPromise;
-            if (promise != null) {
-                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                promise.tryFailure(new ClosedChannelException());
-                connectPromise = null;
-            }
-
-            Future<?> future = connectTimeoutFuture;
-            if (future != null) {
-                future.cancel();
-                connectTimeoutFuture = null;
-            }
-        } finally {
-            socket.close();
-        }
+        socket.close();
     }
 
     @SuppressWarnings("unchecked")
@@ -478,7 +454,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
      * Called once a EPOLLOUT event is ready to be processed
      */
     final void epollOutReady() {
-        if (connectPromise != null) {
+        if (isConnectPending()) {
             // pending connect which is now complete so handle it.
             finishConnect();
         } else if (!socket.isOutputShutdown()) {
@@ -502,131 +478,13 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void connectTransport(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
-        if (!promise.setUncancellable() || !ensureOpen(promise)) {
-            return;
-        }
-
-        try {
-            if (connectPromise != null) {
-                throw new ConnectionPendingException();
-            }
-
-            boolean wasActive = isActive();
-            if (doConnect(remoteAddress, localAddress)) {
-                fulfillConnectPromise(promise, wasActive);
-            } else {
-                connectPromise = promise;
-                requestedRemoteAddress = (R) remoteAddress;
-
-                // Schedule connect timeout.
-                int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                if (connectTimeoutMillis > 0) {
-                    connectTimeoutFuture = executor().schedule(() -> {
-                        Promise<Void> connectPromise = AbstractEpollChannel.this.connectPromise;
-                        if (connectPromise != null && !connectPromise.isDone()
-                                && connectPromise.tryFailure(new ConnectTimeoutException(
-                                "connection timed out: " + remoteAddress))) {
-                            closeTransport(newPromise());
-                        }
-                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                }
-
-                promise.asFuture().addListener(future -> {
-                    if (future.isCancelled()) {
-                        if (connectTimeoutFuture != null) {
-                            connectTimeoutFuture.cancel();
-                        }
-                        connectPromise = null;
-                        closeTransport(newPromise());
-                    }
-                });
-            }
-        } catch (Throwable t) {
-            closeIfClosed();
-            promise.tryFailure(annotateConnectException(t, remoteAddress));
-        }
-    }
-
-    private void fulfillConnectPromise(Promise<Void> promise, boolean wasActive) {
-        if (promise == null) {
-            // Closed via cancellation and the promise has been notified already.
-            return;
-        }
-        active = true;
-
-        // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
-        // We still need to ensure we call fireChannelActive() in this case.
-        boolean active = isActive();
-
-        // trySuccess() will return false if a user cancelled the connection attempt.
-        boolean promiseSet = promise.trySuccess(null);
-
-        // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-        // because what happened is what happened.
-        if (!wasActive && active) {
-            pipeline().fireChannelActive();
-            readIfIsAutoRead();
-        }
-
-        // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-        if (!promiseSet) {
-            closeTransport(newPromise());
-        }
-    }
-
-    private void fulfillConnectPromise(Promise<Void> promise, Throwable cause) {
-        if (promise == null) {
-            // Closed via cancellation and the promise has been notified already.
-            return;
-        }
-
-        // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-        promise.tryFailure(cause);
-        closeIfClosed();
-    }
-
-    private void finishConnect() {
-        // Note this method is invoked by the event loop only if the connection attempt was
-        // neither cancelled nor timed out.
-
-        assert executor().inEventLoop();
-
-        boolean connectStillInProgress = false;
-        try {
-            boolean wasActive = isActive();
-            if (!doFinishConnect()) {
-                connectStillInProgress = true;
-                return;
-            }
-            fulfillConnectPromise(connectPromise, wasActive);
-        } catch (Throwable t) {
-            fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
-        } finally {
-            if (!connectStillInProgress) {
-                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
-                // See https://github.com/netty/netty/issues/1770
-                if (connectTimeoutFuture != null) {
-                    connectTimeoutFuture.cancel();
-                }
-                connectPromise = null;
-            }
-        }
-    }
-
-    /**
-     * Finish the connect
-     */
-    @SuppressWarnings("unchecked")
-    private boolean doFinishConnect() throws Exception {
+    protected boolean doFinishConnect(R requestedRemoteAddress) throws Exception {
         if (socket.finishConnect()) {
+            active = true;
             clearFlag(Native.EPOLLOUT);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
                 remote = (R) computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
             }
-            requestedRemoteAddress = null;
-
             return true;
         }
         setFlag(Native.EPOLLOUT);
@@ -673,6 +531,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
         if (connected) {
             remote = remoteSocketAddr == null ?
                     (R) remoteAddress : (R) computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+            active = true;
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.
         //

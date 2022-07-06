@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.ChannelHandlerMask.Skip;

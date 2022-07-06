@@ -33,7 +33,6 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -42,7 +41,6 @@ import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -75,7 +73,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
-    private volatile Promise<Void> connectPromise;
     private volatile boolean readInProgress;
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
@@ -187,13 +184,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                 if (writeInProgress && peer != null) {
                     finishPeerRead(peer);
                 }
-
-                Promise<Void> promise = connectPromise;
-                if (promise != null) {
-                    // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                    promise.tryFailure(new ClosedChannelException());
-                    connectPromise = null;
-                }
             }
 
             if (peer != null) {
@@ -235,13 +225,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
             closeTransport(newPromise());
         } else {
             releaseInboundBuffers();
-
-            Promise<Void> promise = connectPromise;
-            if (promise != null) {
-                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                promise.tryFailure(new ClosedChannelException());
-                connectPromise = null;
-            }
+            closeForciblyTransport();
         }
     }
 
@@ -331,7 +315,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
         writeInProgress = true;
         try {
-            ClosedChannelException exception = null;
             for (;;) {
                 Object msg = in.current();
                 if (msg == null) {
@@ -352,10 +335,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                         }
                         in.remove();
                     } else {
-                        if (exception == null) {
-                            exception = new ClosedChannelException();
-                        }
-                        in.remove(exception);
+                        break;
                     }
                 } catch (Throwable cause) {
                     in.remove(cause);
@@ -430,24 +410,10 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     @Override
-    protected void connectTransport(final SocketAddress remoteAddress,
-            SocketAddress localAddress, final Promise<Void> promise) {
-        if (!promise.setUncancellable() || !ensureOpen(promise)) {
-            return;
-        }
-
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (state == State.CONNECTED) {
-            Exception cause = new AlreadyConnectedException();
-            safeSetFailure(promise, cause);
-            pipeline().fireChannelExceptionCaught(cause);
-            return;
+            throw new AlreadyConnectedException();
         }
-
-        if (connectPromise != null) {
-            throw new ConnectionPendingException();
-        }
-
-        connectPromise = promise;
 
         if (state != State.BOUND) {
             // Not bound yet and no localAddress specified - get one.
@@ -460,54 +426,60 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
             try {
                 doBind(localAddress);
             } catch (Throwable t) {
-                safeSetFailure(promise, t);
                 closeTransport(newPromise());
-                return;
+                throw t;
             }
         }
 
         Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
         if (!(boundChannel instanceof LocalServerChannel)) {
             Exception cause = new ConnectException("connection refused: " + remoteAddress);
-            safeSetFailure(promise, cause);
             closeTransport(newPromise());
-            return;
+            throw cause;
         }
 
         LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
         peer = serverChannel.serve(LocalChannel.this);
+        return false;
+    }
+
+    @Override
+    protected boolean doFinishConnect(LocalAddress requestedRemoteAddress) throws Exception {
+        final LocalChannel peer = LocalChannel.this.peer;
+        if (peer == null) {
+            return false;
+        }
+        state = State.CONNECTED;
+        remoteAddress = peer.parent().localAddress();
+
+        // As we changed our state to connected now we also need to try to flush the previous queued messages by the
+        // peer.
+        peer.writeFlushedAsync();
+        return true;
+    }
+
+    private void writeFlushedAsync() {
+        executor().execute(this::writeFlushed);
+    }
+
+    private void finishConnectAsync() {
+        // We always dispatch to also ensure correct ordering if the peer Channel is on the same EventLoop
+        executor().execute(() -> {
+            if (isConnectPending()) {
+                finishConnect();
+            }
+        });
     }
 
     @Override
     public void registerTransportNow() {
-        // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
-        // This is needed as a peer may not be null also if a LocalChannel was connected before and
-        // deregistered / registered later again.
-        //
-        // See https://github.com/netty/netty/issues/2400
-        if (peer != null && parent() != null) {
-            // Store the peer in a local variable as it may be set to null if doClose() is called.
-            // See https://github.com/netty/netty/issues/2144
-            final LocalChannel peer = LocalChannel.this.peer;
+        // Store the peer in a local variable as it may be set to null if doClose() is called.
+        // See https://github.com/netty/netty/issues/2144
+        LocalChannel peer = this.peer;
+        if (parent() != null && peer != null) {
+            // Mark this Channel as active before finish the connect on the remote peer.
             state = State.CONNECTED;
-
-            peer.remoteAddress = parent() == null ? null : parent().localAddress();
-            peer.state = State.CONNECTED;
-
-            // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
-            // This ensures that if both channels are on the same event loop, the peer's channelActive
-            // event is triggered *after* this channel's channelRegistered event, so that this channel's
-            // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-            peer.executor().execute(() -> {
-                Promise<Void> promise = peer.connectPromise;
-
-                // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
-                // connectPromise may be set to null if doClose() was called in the meantime.
-                if (promise != null && promise.trySuccess(null)) {
-                    peer.pipeline().fireChannelActive();
-                    peer.readIfIsAutoRead();
-                }
-            });
+            peer.finishConnectAsync();
         }
     }
 

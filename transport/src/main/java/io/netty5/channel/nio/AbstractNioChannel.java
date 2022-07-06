@@ -22,20 +22,14 @@ import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ConnectTimeoutException;
 import io.netty5.channel.EventLoop;
-import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
@@ -51,14 +45,6 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     volatile SelectionKey selectionKey;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = this::clearReadPending0;
-
-    /**
-     * The future of the current connection attempt.  If not null, subsequent
-     * connection attempts will fail.
-     */
-    private Promise<Void> connectPromise;
-    private Future<?> connectTimeoutFuture;
-    private SocketAddress requestedRemoteAddress;
 
     /**
      * Create a new instance
@@ -179,118 +165,6 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
         }
     }
 
-    final SelectableChannel ch() {
-        return javaChannel();
-    }
-
-    @Override
-    protected final void connectTransport(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, Promise<Void> promise) {
-        if (!promise.setUncancellable() || !ensureOpen(promise)) {
-            return;
-        }
-
-        try {
-            if (connectPromise != null) {
-                // Already a connect in process.
-                throw new ConnectionPendingException();
-            }
-
-            boolean wasActive = isActive();
-            if (doConnect(remoteAddress, localAddress)) {
-                fulfillConnectPromise(promise, wasActive);
-            } else {
-                connectPromise = promise;
-                requestedRemoteAddress = remoteAddress;
-
-                // Schedule connect timeout.
-                int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                if (connectTimeoutMillis > 0) {
-                    connectTimeoutFuture = executor().schedule(() -> {
-                        Promise<Void> connectPromise = AbstractNioChannel.this.connectPromise;
-                        if (connectPromise != null && !connectPromise.isDone()
-                                && connectPromise.tryFailure(new ConnectTimeoutException(
-                                "connection timed out: " + remoteAddress))) {
-                            closeTransport(newPromise());
-                        }
-                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                }
-
-                promise.asFuture().addListener(future -> {
-                    if (future.isCancelled()) {
-                        if (connectTimeoutFuture != null) {
-                            connectTimeoutFuture.cancel();
-                        }
-                        connectPromise = null;
-                        closeTransport(newPromise());
-                    }
-                });
-            }
-        } catch (Throwable t) {
-            promise.tryFailure(annotateConnectException(t, remoteAddress));
-            closeIfClosed();
-        }
-    }
-
-    private void fulfillConnectPromise(Promise<Void> promise, boolean wasActive) {
-        if (promise == null) {
-            // Closed via cancellation and the promise has been notified already.
-            return;
-        }
-
-        // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
-        // We still need to ensure we call fireChannelActive() in this case.
-        boolean active = isActive();
-
-        // trySuccess() will return false if a user cancelled the connection attempt.
-        boolean promiseSet = promise.trySuccess(null);
-
-        // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-        // because what happened is what happened.
-        if (!wasActive && active) {
-            pipeline().fireChannelActive();
-            readIfIsAutoRead();
-        }
-
-        // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-        if (!promiseSet) {
-            closeTransport(newPromise());
-        }
-    }
-
-    private void fulfillConnectPromise(Promise<Void> promise, Throwable cause) {
-        if (promise == null) {
-            // Closed via cancellation and the promise has been notified already.
-            return;
-        }
-
-        // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-        promise.tryFailure(cause);
-        closeIfClosed();
-    }
-
-    final void finishConnect() {
-        // Note this method is invoked by the event loop only if the connection attempt was
-        // neither cancelled nor timed out.
-
-        assert executor().inEventLoop();
-
-        try {
-            boolean wasActive = isActive();
-            doFinishConnect();
-            fulfillConnectPromise(connectPromise, wasActive);
-        } catch (Throwable t) {
-            fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
-        } finally {
-            // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
-            // See https://github.com/netty/netty/issues/1770
-            if (connectTimeoutFuture != null) {
-                connectTimeoutFuture.cancel();
-            }
-            connectPromise = null;
-        }
-    }
-
     @Override
     protected final void writeFlushed() {
         // Flush immediately only when there's no pending flush.
@@ -328,15 +202,10 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
         }
     }
 
-    /**
-     * Connect to the remote peer
-     */
-    protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
-
-    /**
-     * Finish the connect
-     */
-    protected abstract void doFinishConnect() throws Exception;
+    @Override
+    protected void doClose() throws Exception {
+        javaChannel().close();
+    }
 
     /**
      * Allocates a new off-heap copy of the given buffer, unless the cost of doing so is too high.
@@ -385,25 +254,13 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
         }
     }
 
-    @Override
-    protected void doClose() throws Exception {
-        Promise<Void> promise = connectPromise;
-        if (promise != null) {
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(new ClosedChannelException());
-            connectPromise = null;
-        }
-
-        Future<?> future = connectTimeoutFuture;
-        if (future != null) {
-            future.cancel();
-            connectTimeoutFuture = null;
-        }
-    }
-
     protected abstract void readNow();
 
     final void closeTransportNow() {
         closeTransport(newPromise());
+    }
+
+    final void finishConnectNow() {
+        finishConnect();
     }
 }

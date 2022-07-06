@@ -568,7 +568,7 @@ public final class NioHandler implements IoHandler {
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
 
-                ch.finishConnect();
+                ch.finishConnectNow();
             }
 
             // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.

@@ -250,18 +250,13 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected void doFinishConnect() throws Exception {
-        throw new Error();
+    protected boolean doFinishConnect(InetSocketAddress requestedRemoteAddress) {
+        return true;
     }
 
     @Override
     protected void doDisconnect() throws Exception {
         javaChannel().disconnect();
-    }
-
-    @Override
-    protected void doClose() throws Exception {
-        javaChannel().close();
     }
 
     @Override
