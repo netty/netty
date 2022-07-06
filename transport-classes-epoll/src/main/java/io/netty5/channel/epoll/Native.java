@@ -199,7 +199,7 @@ public final class Native {
 
     /**
      * Non-blocking variant of
-     * {@link #epollWait(FileDescriptor, EpollEventArray, FileDescriptor, int, int)}
+     * {@link #epollWait(FileDescriptor, EpollEventArray, FileDescriptor, int, int, long)}
      * that will also hint to processor we are in a busy-wait loop.
      */
     public static int epollBusyWait(FileDescriptor epollFd, EpollEventArray events) throws IOException {
@@ -210,7 +210,7 @@ public final class Native {
         return ready;
     }
 
-    private static native int epollWait0(int efd, long address, int len, int timerFd,
+    private static native long epollWait0(int efd, long address, int len, int timerFd,
                                          int timeoutSec, int timeoutNs, long millisThreshold);
     private static native int epollWait(int efd, long address, int len, int timeout);
     private static native int epollBusyWait0(int efd, long address, int len);
