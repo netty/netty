@@ -176,13 +176,13 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             }
 
             @Override
-            public Future<Void> registerForIO(Channel channel) {
-                return eventLoop.registerForIO(channel);
+            public Future<Void> registerForIo(Channel channel) {
+                return eventLoop.registerForIo(channel);
             }
 
             @Override
-            public Future<Void> deregisterForIO(Channel channel) {
-                return eventLoop.deregisterForIO(channel);
+            public Future<Void> deregisterForIo(Channel channel) {
+                return eventLoop.deregisterForIo(channel);
             }
         }
 

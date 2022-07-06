@@ -37,7 +37,7 @@ public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
      * @param channel   the {@link Channel} to register.
      * @return          the {@link Future} that is notified once the operations completes.
      */
-    Future<Void> registerForIO(Channel channel);
+    Future<Void> registerForIo(Channel channel);
 
     /**
      * Deregister the {@link Channel} from the {@link EventLoop} for I/O processing.
@@ -45,5 +45,5 @@ public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
      * @param channel   the {@link Channel} to deregister.
      * @return          the {@link Future} that is notified once the operations completes.
      */
-    Future<Void> deregisterForIO(Channel channel);
+    Future<Void> deregisterForIo(Channel channel);
 }

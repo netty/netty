@@ -193,7 +193,7 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     }
 
     @Override
-    public final Future<Void> registerForIO(Channel channel) {
+    public final Future<Void> registerForIo(Channel channel) {
         Promise<Void> promise = newPromise();
         if (inEventLoop()) {
             registerForIO0(channel, promise);
@@ -220,7 +220,7 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     }
 
     @Override
-    public final Future<Void> deregisterForIO(Channel channel) {
+    public final Future<Void> deregisterForIo(Channel channel) {
        Promise<Void> promise = newPromise();
        if (inEventLoop()) {
            deregisterForIO(channel, promise);
