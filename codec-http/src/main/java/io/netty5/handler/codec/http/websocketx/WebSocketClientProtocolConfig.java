@@ -344,7 +344,7 @@ public final class WebSocketClientProtocolConfig {
 
         /**
          * Handshake timeout in millis, when handshake timeout, will trigger channel
-         * event {@link SslHandshakeCompletionEvent} with an {@link WebSocketHandshakeException}.
+         * event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
          */
         public Builder handshakeTimeoutMillis(long handshakeTimeoutMillis) {
             this.handshakeTimeoutMillis = handshakeTimeoutMillis;

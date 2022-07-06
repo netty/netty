@@ -190,7 +190,7 @@ public final class WebSocketServerProtocolConfig {
 
         /**
          * Handshake timeout in millis, when handshake timeout, will trigger channel
-         * event {@link WebSocketHandshakeCompletionEvent} with an {@link WebSocketHandshakeException}.
+         * event {@link WebSocketHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
          */
         public Builder handshakeTimeoutMillis(long handshakeTimeoutMillis) {
             this.handshakeTimeoutMillis = handshakeTimeoutMillis;

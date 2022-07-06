@@ -18,12 +18,12 @@ package io.netty5.handler.codec;
 /**
  * An event for an application protocol that should be processed by the {@link io.netty5.channel.ChannelPipeline}.
  *
- * @param <T>   the type of the extra data that is pasrt of the event.
+ * @param <T>   the type of the extra data that is passed with the event.
  */
 public interface ProtocolEvent<T> {
 
     /**
-     * Returns {@code} true if the event was sent because of some successful protocol event.
+     * Returns {@code true} if the event was sent because of some successful protocol event.
      *
      * @return {@code true} when success, {@code false} otherwise.
      */
@@ -32,7 +32,7 @@ public interface ProtocolEvent<T> {
     }
 
     /**
-     * Returns {@code} true if the event was sent because of some unsuccessful protocol event.
+     * Returns {@code true} if the event was sent because of some unsuccessful protocol event.
      *
      * @return {@code true} when unsuccessful, {@code false} otherwise.
      */

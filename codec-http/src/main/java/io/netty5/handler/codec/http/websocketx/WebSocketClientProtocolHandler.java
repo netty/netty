@@ -137,7 +137,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            accepted.
      * @param handshakeTimeoutMillis
      *            Handshake timeout in mills, when handshake timeout, will trigger channel
-     *           event {@link SslHandshakeCompletionEvent} with an {@link WebSocketHandshakeTimeoutException}.
+     *           event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeTimeoutException}.
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                           boolean allowExtensions, HttpHeaders customHeaders,
@@ -191,7 +191,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            {@code true} if close frames should not be forwarded and just close the channel
      * @param handshakeTimeoutMillis
      *            Handshake timeout in millis, when handshake timeout, will trigger channel
-     *            event {@link SslHandshakeCompletionEvent} with an {@link WebSocketHandshakeException}.
+     *            event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                           boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
@@ -238,7 +238,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            Maximum length of a frame's payload
      * @param handshakeTimeoutMillis
      *            Handshake timeout in millis, when handshake timeout, will trigger channel
-     *            event {@link SslHandshakeCompletionEvent} with an {@link WebSocketHandshakeException}.
+     *            event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                           boolean allowExtensions, HttpHeaders customHeaders,
@@ -270,7 +270,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            {@code true} if close frames should not be forwarded and just close the channel
      * @param handshakeTimeoutMillis
      *            Handshake timeout in millis, when handshake timeout, will trigger channel
-     *            event {@link SslHandshakeCompletionEvent} with an {@link WebSocketHandshakeException}.
+     *            event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           long handshakeTimeoutMillis) {
@@ -305,7 +305,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            {@code true} if pong frames should not be forwarded
      * @param handshakeTimeoutMillis
      *            Handshake timeout in millis, when handshake timeout, will trigger channel
-     *            event {@link SslHandshakeCompletionEvent} with an {@link WebSocketHandshakeException}.
+     *            event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           boolean dropPongFrames, long handshakeTimeoutMillis) {
@@ -336,7 +336,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            was established to the remote peer.
      * @param handshakeTimeoutMillis
      *            Handshake timeout in millis, when handshake timeout, will trigger channel
-     *            event {@link SslHandshakeCompletionEvent} with an {@link WebSocketHandshakeException}.
+     *            event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, long handshakeTimeoutMillis) {
         this(handshaker, DEFAULT_HANDLE_CLOSE_FRAMES, handshakeTimeoutMillis);
