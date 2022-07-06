@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.HttpHeaders;
-import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 
 import java.net.URI;
 import java.util.Objects;
@@ -343,8 +342,8 @@ public final class WebSocketClientProtocolConfig {
         }
 
         /**
-         * Handshake timeout in millis, when handshake timeout, will trigger channel
-         * event {@link SslHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
+         * Handshake timeout in millis, when handshake timeout, will trigger and inbound channel
+         * event {@link WebSocketClientHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
          */
         public Builder handshakeTimeoutMillis(long handshakeTimeoutMillis) {
             this.handshakeTimeoutMillis = handshakeTimeoutMillis;
