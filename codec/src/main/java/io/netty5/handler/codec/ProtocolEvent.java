@@ -18,7 +18,7 @@ package io.netty5.handler.codec;
 import io.netty5.channel.ChannelPipeline;
 
 /**
- * An event for an application protocol that should be processed by the {@link ChannelPipeline}.
+ * An application-level event propagated via an {@link ChannelPipeline}, such as a TLS or WebSocket handshake event.
  */
 public interface ProtocolEvent {
 
@@ -41,7 +41,7 @@ public interface ProtocolEvent {
     }
 
     /**
-     * The error which was the cause for the event, or {@code null} if {@link #isSuccess()}.
+     * Returns the cause of the failure, or {@code null} if {@link #isSuccess()}.
      *
      * @return the {@link Throwable} if {@link #isFailed()}  or {@code null} if {@link #isSuccess()}.
      */
