@@ -53,37 +53,36 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private final ChannelPipeline pipeline;
     private final ClosePromise closePromise;
     private final Runnable fireChannelWritabilityChangedTask;
-
-    private volatile L localAddress;
-    private volatile R remoteAddress;
     private final EventLoop eventLoop;
-    private volatile boolean registered;
-    private boolean closeInitiated;
-    private Throwable initialCloseCause;
-    private boolean readBeforeActive;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
     private String strVal;
 
-    private volatile ChannelOutboundBuffer outboundBuffer;
-    private RecvBufferAllocator.Handle recvHandle;
-    private MessageSizeEstimator.Handle estimatorHandler;
-
-    private boolean inFlush0;
-    /** true if the channel has never been registered, false otherwise */
-    private boolean neverRegistered = true;
-
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbstractChannel> WRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "writable");
     private volatile int writable = 1;
+    private volatile ChannelOutboundBuffer outboundBuffer;
+    private volatile L localAddress;
+    private volatile R remoteAddress;
+    private volatile boolean registered;
+
+    // All fields below are only called from within the EventLoop thread.
+    private boolean closeInitiated;
+    private Throwable initialCloseCause;
+    private boolean readBeforeActive;
+    private RecvBufferAllocator.Handle recvHandle;
+    private MessageSizeEstimator.Handle estimatorHandler;
+    private boolean inFlush0;
+    /** true if the channel has never been registered, false otherwise */
+    private boolean neverRegistered = true;
 
     /**
      * Creates a new instance.
      *
-     * @param parent
-     *        the parent of this channel. {@code null} if there's no parent.
+     * @param parent        the parent of this channel. {@code null} if there's no parent.
+     * @param eventLoop     the {@link EventLoop} which will be used.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop) {
         this(parent, eventLoop, DefaultChannelId.newInstance());
@@ -92,21 +91,18 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Creates a new instance.
      *
-     * @param parent
-     *        the parent of this channel. {@code null} if there's no parent.
+     * @param parent        the parent of this channel. {@code null} if there's no parent.
+     * @param eventLoop     the {@link EventLoop} which will be used.
+     * @param id            the {@link ChannelId} which will be used.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop, ChannelId id) {
         this.parent = parent;
-        this.eventLoop = validateEventLoop(eventLoop);
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         closePromise = new ClosePromise(eventLoop);
         outboundBuffer = new ChannelOutboundBuffer(eventLoop);
         this.id = id;
         pipeline = newChannelPipeline();
         fireChannelWritabilityChangedTask = () -> pipeline().fireChannelWritabilityChanged();
-    }
-
-    private static EventLoop validateEventLoop(EventLoop eventLoop) {
-        return requireNonNull(eventLoop, "eventLoop");
     }
 
     protected final int maxMessagesPerWrite() {
@@ -936,6 +932,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return null;
     }
 
+    /**
+     * Returns the {@link ChannelOutboundBuffer} that is used by this {@link AbstractChannel}. This might be
+     * {@code null} if no more writes are allowed.
+     *
+     * @return the outbound buffer.
+     */
     protected final ChannelOutboundBuffer outboundBuffer() {
         return outboundBuffer;
     }
@@ -965,6 +967,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      */
     protected abstract void doClose() throws Exception;
 
+    /**
+     * Shutdown one direction of the {@link Channel}.
+     *
+     * @param direction     the direction to shutdown.
+     * @throws Exception    thrown on error.
+     */
     protected abstract void doShutdown(ChannelShutdownDirection direction) throws Exception;
 
     /**
