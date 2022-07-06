@@ -472,12 +472,12 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Future<Void> registerForIO(Channel channel) {
+        public Future<Void> registerForIo(Channel channel) {
             return newSucceededFuture(null);
         }
 
         @Override
-        public Future<Void> deregisterForIO(Channel channel) {
+        public Future<Void> deregisterForIo(Channel channel) {
             return newSucceededFuture(null);
         }
     }
@@ -518,12 +518,12 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Future<Void> registerForIO(Channel channel) {
+        public Future<Void> registerForIo(Channel channel) {
             return newSucceededFuture(null);
         }
 
         @Override
-        public Future<Void> deregisterForIO(Channel channel) {
+        public Future<Void> deregisterForIo(Channel channel) {
             return newSucceededFuture(null);
         }
     }

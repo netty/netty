@@ -314,7 +314,7 @@ public class NioSocketChannel
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.
                 // See https://github.com/netty/netty/issues/4449
-                return executor().deregisterForIO(this).map(v -> GlobalEventExecutor.INSTANCE);
+                return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
             }
         } catch (Throwable ignore) {
             // Ignore the error as the underlying channel may be closed in the meantime and so

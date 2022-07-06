@@ -320,7 +320,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 return;
             }
             boolean firstRegistration = neverRegistered;
-            executor().registerForIO(this).addListener(f -> {
+            executor().registerForIo(this).addListener(f -> {
                 if (f.isSuccess()) {
 
                     neverRegistered = false;
@@ -650,7 +650,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         // https://github.com/netty/netty/issues/4435
         invokeLater(() -> {
             try {
-                eventLoop.deregisterForIO(this).addListener(f -> {
+                eventLoop.deregisterForIo(this).addListener(f -> {
                     if (f.isFailed()) {
                         logger.warn("Unexpected exception occurred while deregistering a channel.", f.cause());
                     }

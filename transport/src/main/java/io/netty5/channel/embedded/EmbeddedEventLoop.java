@@ -62,7 +62,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    public Future<Void> registerForIO(Channel channel) {
+    public Future<Void> registerForIo(Channel channel) {
         Promise<Void> promise = newPromise();
         if (inEventLoop()) {
             registerForIO0(channel, promise);
@@ -89,7 +89,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         promise.setSuccess(null);
     }
     @Override
-    public Future<Void> deregisterForIO(Channel channel) {
+    public Future<Void> deregisterForIo(Channel channel) {
         Promise<Void> promise = newPromise();
         if (inEventLoop()) {
             deregisterForIO0(channel, promise);
