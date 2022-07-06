@@ -31,6 +31,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.StringUtil.COMMA;
+import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -49,8 +50,7 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isOriginForm(URI uri) {
-        return uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
-               uri.getHost() == null && uri.getAuthority() == null;
+        return isNullOrEmpty(uri.getScheme()) && isNullOrEmpty(uri.getAuthority()) && uri.toString().startsWith("/");
     }
 
     /**
@@ -58,10 +58,7 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isAsteriskForm(URI uri) {
-        return "*".equals(uri.getPath()) &&
-                uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
-                uri.getHost() == null && uri.getAuthority() == null && uri.getQuery() == null &&
-                uri.getFragment() == null;
+        return "*".equals(uri.toString());
     }
 
     /**
