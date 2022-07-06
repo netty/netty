@@ -906,21 +906,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return newFailedFuture(new IllegalStateException(msg, cause));
     }
 
-    @Override
-    public Promise<Void> newPromise() {
-        return executor().newPromise();
-    }
-
-    @Override
-    public Future<Void> newSucceededFuture() {
-        return executor().newSucceededFuture(null);
-    }
-
-    @Override
-    public Future<Void> newFailedFuture(Throwable cause) {
-        return executor().newFailedFuture(cause);
-    }
-
     private DefaultChannelHandlerContext findContextInbound(int mask) {
         DefaultChannelHandlerContext ctx = this;
         if (ctx.next == null) {

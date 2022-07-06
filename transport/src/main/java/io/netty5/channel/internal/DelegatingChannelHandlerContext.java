@@ -204,7 +204,7 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     }
 
     @Override
-    public Promise<Void> newPromise() {
+    public <V> Promise<V> newPromise() {
         return ctx.newPromise();
     }
 
@@ -214,7 +214,12 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     }
 
     @Override
-    public Future<Void> newFailedFuture(Throwable cause) {
+    public <V> Future<V> newFailedFuture(Throwable cause) {
         return ctx.newFailedFuture(cause);
+    }
+
+    @Override
+    public <V> Future<V> newSucceededFuture(V value) {
+        return ctx.newSucceededFuture(value);
     }
 }
