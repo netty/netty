@@ -999,7 +999,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         next = null;
     }
 
-    private static boolean safeExecute(EventExecutor executor, Runnable runnable, Promise<Void> promise, Object msg) {
+    static boolean safeExecute(EventExecutor executor, Runnable runnable, Promise<Void> promise, Object msg) {
         try {
             executor.execute(runnable);
             return true;

@@ -1090,6 +1090,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         @Override
+        protected final EventExecutor transportExecutor() {
+            return abstractChannel().executor();
+        }
+
+        @Override
         protected final void pendingOutboundBytesUpdated(long pendingOutboundBytes) {
             abstractChannel().updateWritabilityIfNeeded(true, false);
         }

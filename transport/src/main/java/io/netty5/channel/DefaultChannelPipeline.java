@@ -40,6 +40,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
+import static io.netty5.channel.DefaultChannelHandlerContext.safeExecute;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -1112,8 +1113,14 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public Future<Void> bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).bindTransport(localAddress, promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.bindTransport(localAddress, promise);
+            } else {
+                safeExecute(executor, () -> pipeline.bindTransport(localAddress, promise), promise, null);
+            }
             return promise.asFuture();
         }
 
@@ -1121,135 +1128,209 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         public Future<Void> connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).connectTransport(remoteAddress, localAddress, promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.connectTransport(remoteAddress, localAddress, promise);
+            } else {
+                safeExecute(executor, () ->
+                        pipeline.connectTransport(remoteAddress, localAddress, promise), promise, null);
+            }
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> disconnect(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).disconnectTransport(promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.disconnectTransport(promise);
+            } else {
+                safeExecute(executor, () -> pipeline.disconnectTransport(promise), promise, null);
+            }
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> close(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).closeTransport(promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.closeTransport(promise);
+            } else {
+                safeExecute(executor, () -> pipeline.closeTransport(promise), promise, null);
+            }
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> shutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).shutdownTransport(direction, promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.shutdownTransport(direction, promise);
+            } else {
+                safeExecute(executor, () -> pipeline.shutdownTransport(direction, promise), promise, null);
+            }
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> register(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).registerTransport(promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.registerTransport(promise);
+            } else {
+                safeExecute(executor, () -> pipeline.registerTransport(promise), promise, null);
+            }
             return promise.asFuture();
         }
 
         @Override
         public Future<Void> deregister(ChannelHandlerContext ctx) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).deregisterTransport(promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.deregisterTransport(promise);
+            } else {
+                safeExecute(executor, () -> pipeline.deregisterTransport(promise), promise, null);
+            }
             return promise.asFuture();
         }
 
         @Override
         public void read(ChannelHandlerContext ctx) {
-            defaultChannelPipeline(ctx).readTransport();
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            if (executor.inEventLoop()) {
+                pipeline.readTransport();
+            } else {
+                safeExecute(executor, pipeline::readTransport, null, null);
+            }
         }
 
         @Override
         public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).writeTransport(msg, promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.writeTransport(msg, promise);
+            } else {
+                safeExecute(executor, () -> pipeline.writeTransport(msg, promise), promise, msg);
+            }
             return promise.asFuture();
         }
 
         @Override
         public void flush(ChannelHandlerContext ctx) {
-            defaultChannelPipeline(ctx).flushTransport();
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            if (executor.inEventLoop()) {
+                pipeline.flushTransport();
+            } else {
+                safeExecute(executor, pipeline::flushTransport, null, null);
+            }
         }
 
         @Override
         public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object event) {
-            Promise<Void> promise = ctx.newPromise();
-            defaultChannelPipeline(ctx).sendOutboundEventTransport(event, promise);
+            DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
+            EventExecutor executor = pipeline.transportExecutor();
+            Promise<Void> promise = executor.newPromise();
+            if (executor.inEventLoop()) {
+                pipeline.sendOutboundEventTransport(event, promise);
+            } else {
+                safeExecute(executor, () -> pipeline.sendOutboundEventTransport(event, promise), promise, event);
+            }
             return promise.asFuture();
         }
     }
 
     /**
-     * Register the {@link Channel} of the {@link Promise} and notify
-     * the {@link Future} once the registration was complete.
+     * Returns the {@link EventExecutor} that is used for all the abstract transport operations.
+     *
+     * @return executor.
+     */
+    protected abstract EventExecutor transportExecutor();
+
+    /**
+     * Register the transport and notify the {@link Promise} once the operation was completed. This method is
+     * guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void registerTransport(Promise<Void> promise);
 
     /**
-     * Bind the {@link SocketAddress} to the {@link Channel} of the {@link Promise} and notify
-     * it once its done.
+     * Bind the {@link SocketAddress} to the transport and notify the {@link Promise} once the operation was completed.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void bindTransport(SocketAddress localAddress, Promise<Void> promise);
 
     /**
-     * Connect the {@link Channel} of the given {@link Future} with the given remote {@link SocketAddress}.
-     * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
-     * pass {@code null} to it.
+     * Connect the transport with the given remote {@link SocketAddress}. If a specific local {@link SocketAddress}
+     * should be used it needs to be given as argument. Otherwise just pass {@code null} to it.
      *
-     * The {@link Promise} will get notified once the connect operation was complete.
+     * The {@link Promise} will get notified once the operation was completed.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void connectTransport(
             SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
 
     /**
-     * Disconnect the {@link Channel} of the {@link Future} and notify the {@link Promise} once the
-     * operation was complete.
+     * Disconnect the transport and notify the {@link Promise} once the operation was completed.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void disconnectTransport(Promise<Void> promise);
 
     /**
-     * Close the {@link Channel} of the {@link Promise} and notify the {@link Promise} once the
-     * operation was complete.
+     * Close the transport and notify the {@link Promise} once the operation was completed.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void closeTransport(Promise<Void> promise);
 
     /**
-     * Shutdown the given direction of the {@link Channel} and notify the {@link Promise} once the
-     * operation was complete.
+     * Shutdown the given direction of the transport and notify the {@link Promise} once the operation was completed.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise);
 
     /**
-     * Deregister the {@link Channel} of the {@link Promise} from {@link EventLoop} and notify the
-     * {@link Promise} once the operation was complete.
+     * Deregister the transport of the {@link EventLoop} and notify the {@link Promise} once the operation was
+     * completed.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void deregisterTransport(Promise<Void> promise);
 
     /**
-     * Schedules a read operation that fills the inbound buffer of the first {@link ChannelHandler} in the
-     * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
+     * Schedules a read operation on the transport that fills the inbound buffer of the first {@link ChannelHandler}
+     * in the {@link ChannelPipeline}. If there's already a pending read operation, this method does nothing.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void readTransport();
 
     /**
-     * Schedules a write operation.
+     * Schedules a write operation on the transport. The given {@link Promise} will be notified once the write was
+     * either successful or failed.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void writeTransport(Object msg, Promise<Void> promise);
 
     /**
-     * Flush out all write operations scheduled via {@link #writeTransport(Object, Promise)}.
+     * Flush out all (previous) scheduled write operations, scheduled via {@link #writeTransport(Object, Promise)}.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void flushTransport();
 
     /**
-     * Send a custom outbound event.
+     * Send a custom outbound event on the transport.
+     * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void sendOutboundEventTransport(Object event, Promise<Void> promise);
 }

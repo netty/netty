@@ -32,6 +32,7 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty5.util.DefaultAttributeMap;
+import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
@@ -997,6 +998,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
         private DefaultHttp2StreamChannel defaultHttp2StreamChannel() {
             return (DefaultHttp2StreamChannel) channel();
+        }
+
+        @Override
+        protected EventExecutor transportExecutor() {
+            return defaultHttp2StreamChannel().executor();
         }
 
         @Override
