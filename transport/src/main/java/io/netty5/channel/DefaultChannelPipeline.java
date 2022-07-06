@@ -1251,7 +1251,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
-     * The {@link EventExecutor} that is used for all the abstract transport operations.
+     * Returns the {@link EventExecutor} that is used for all the abstract transport operations.
      *
      * @return executor.
      */
