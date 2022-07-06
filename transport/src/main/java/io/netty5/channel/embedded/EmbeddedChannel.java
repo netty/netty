@@ -35,7 +35,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.RecyclableArrayList;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -824,8 +823,13 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        safeSetSuccess(promise);
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        return true;
+    }
+
+    @Override
+    protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) {
+        return true;
     }
 
     private final class EmbeddedChannelPipeline extends DefaultAbstractChannelPipeline {

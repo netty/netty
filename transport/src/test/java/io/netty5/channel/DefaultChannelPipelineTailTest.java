@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.util.concurrent.Promise;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -328,6 +328,17 @@ public class DefaultChannelPipelineTailTest {
             }
         }
 
+        @Override
+        protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+            active = true;
+            return true;
+        }
+
+        @Override
+        protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) {
+            return true;
+        }
+
         protected void onUnhandledInboundChannelActive() {
         }
 
@@ -347,22 +358,6 @@ public class DefaultChannelPipelineTailTest {
         }
 
         protected void onUnhandledInboundWritabilityChanged() {
-        }
-
-        @Override
-        protected void connectTransport(
-                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            if (!ensureOpen(promise)) {
-                return;
-            }
-
-            if (!active) {
-                active = true;
-                pipeline().fireChannelActive();
-                readIfIsAutoRead();
-            }
-
-            promise.setSuccess(null);
         }
 
         private class MyChannelPipeline extends DefaultAbstractChannelPipeline {

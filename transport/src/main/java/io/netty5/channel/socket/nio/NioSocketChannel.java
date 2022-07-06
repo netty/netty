@@ -194,21 +194,13 @@ public class NioSocketChannel
     }
 
     @Override
-    protected void doFinishConnect() throws Exception {
-        if (!javaChannel().finishConnect()) {
-            throw new Error();
-        }
+    protected boolean doFinishConnect(InetSocketAddress requestedRemoteAddress) throws Exception {
+        return javaChannel().finishConnect();
     }
 
     @Override
     protected void doDisconnect() throws Exception {
         doClose();
-    }
-
-    @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        javaChannel().close();
     }
 
     @Override

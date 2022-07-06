@@ -25,21 +25,15 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ConnectTimeoutException;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.UnixChannel;
-import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
@@ -61,9 +55,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel, L extends SocketAddr
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private Promise<Void> connectPromise;
-    private Future<?> connectTimeoutFuture;
-    private SocketAddress requestedRemoteAddress;
     private KQueueRegistration registration;
 
     final BsdSocket socket;
@@ -383,24 +374,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel, L extends SocketAddr
         }
     }
 
-    final boolean failConnectPromise(Throwable cause) {
-        if (connectPromise != null) {
-            // SO_ERROR has been shown to return 0 on macOS if detect an error via read() and the write filter was
-            // not set before calling connect. This means finishConnect will not detect any error and would
-            // successfully complete the connectPromise and update the channel state to active (which is incorrect).
-            Promise<Void> connectPromise = AbstractKQueueChannel.this.connectPromise;
-            AbstractKQueueChannel.this.connectPromise = null;
-            if (connectPromise.tryFailure(cause instanceof ConnectException? cause
-                            : new ConnectException("failed to connect").initCause(cause))) {
-                closeIfClosed();
-                return true;
-            }
-        }
-        return false;
-    }
-
     final void writeReady() {
-        if (connectPromise != null) {
+        if (isConnectPending()) {
             // pending connect which is now complete so handle it.
             finishConnect();
         } else if (!socket.isOutputShutdown()) {
@@ -418,7 +393,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel, L extends SocketAddr
         // with a ClosedChannelException as a close() will happen and so the FD is closed before we
         // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
         // we observe the correct exception in case of a connect failure.
-        if (readEOF && connectPromise != null) {
+        if (readEOF && isConnectPending()) {
             finishConnect();
         }
         if (!socket.isInputShutdown()) {
@@ -488,127 +463,14 @@ abstract class AbstractKQueueChannel<P extends UnixChannel, L extends SocketAddr
     }
 
     @Override
-    protected void connectTransport(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, Promise<Void> promise) {
-        if (!promise.setUncancellable() || !ensureOpen(promise)) {
-            return;
-        }
-
-        try {
-            if (connectPromise != null) {
-                throw new ConnectionPendingException();
-            }
-
-            boolean wasActive = isActive();
-            if (doConnect(remoteAddress, localAddress)) {
-                fulfillConnectPromise(promise, wasActive);
-            } else {
-                connectPromise = promise;
-                requestedRemoteAddress = remoteAddress;
-
-                // Schedule connect timeout.
-                int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                if (connectTimeoutMillis > 0) {
-                    connectTimeoutFuture = executor().schedule(() -> {
-                        Promise<Void> connectPromise = AbstractKQueueChannel.this.connectPromise;
-                        if (connectPromise != null && !connectPromise.isDone()
-                                && connectPromise.tryFailure(new ConnectTimeoutException(
-                                "connection timed out: " + remoteAddress))) {
-                            closeTransport(newPromise());
-                        }
-                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                }
-
-                promise.asFuture().addListener(future -> {
-                    if (future.isCancelled()) {
-                        if (connectTimeoutFuture != null) {
-                            connectTimeoutFuture.cancel();
-                        }
-                        connectPromise = null;
-                        closeTransport(newPromise());
-                    }
-                });
-            }
-        } catch (Throwable t) {
-            closeIfClosed();
-            promise.tryFailure(annotateConnectException(t, remoteAddress));
-        }
-    }
-
-    private void fulfillConnectPromise(Promise<Void> promise, boolean wasActive) {
-        if (promise == null) {
-            // Closed via cancellation and the promise has been notified already.
-            return;
-        }
-        active = true;
-
-        // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
-        // We still need to ensure we call fireChannelActive() in this case.
-        boolean active = isActive();
-
-        // trySuccess() will return false if a user cancelled the connection attempt.
-        boolean promiseSet = promise.trySuccess(null);
-
-        // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-        // because what happened is what happened.
-        if (!wasActive && active) {
-            pipeline().fireChannelActive();
-            readIfIsAutoRead();
-        }
-
-        // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-        if (!promiseSet) {
-            closeTransport(newPromise());
-        }
-    }
-
-    private void fulfillConnectPromise(Promise<Void> promise, Throwable cause) {
-        if (promise == null) {
-            // Closed via cancellation and the promise has been notified already.
-            return;
-        }
-
-        // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-        promise.tryFailure(cause);
-        closeIfClosed();
-    }
-
-    private void finishConnect() {
-        // Note this method is invoked by the event loop only if the connection attempt was
-        // neither cancelled nor timed out.
-
-        assert executor().inEventLoop();
-
-        boolean connectStillInProgress = false;
-        try {
-            boolean wasActive = isActive();
-            if (!doFinishConnect()) {
-                connectStillInProgress = true;
-                return;
-            }
-            fulfillConnectPromise(connectPromise, wasActive);
-        } catch (Throwable t) {
-            fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
-        } finally {
-            if (!connectStillInProgress) {
-                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
-                // See https://github.com/netty/netty/issues/1770
-                if (connectTimeoutFuture != null) {
-                    connectTimeoutFuture.cancel();
-                }
-                connectPromise = null;
-            }
-        }
-    }
-
     @SuppressWarnings("unchecked")
-    private boolean doFinishConnect() throws Exception {
+    protected boolean doFinishConnect(R requestedRemoteAddress) throws Exception {
         if (socket.finishConnect()) {
+            active = true;
             writeFilter(false);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
                 remote = (R) computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
             }
-            requestedRemoteAddress = null;
             return true;
         }
         writeFilter(true);
@@ -653,6 +515,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel, L extends SocketAddr
 
         boolean connected = doConnect0(remoteAddress, localAddress);
         if (connected) {
+            active = true;
             remote = remoteSocketAddr == null?
                     (R) remoteAddress : (R) computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
         }
