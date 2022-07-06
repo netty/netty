@@ -189,6 +189,11 @@ public interface ChannelOutboundInvoker extends FuturePromiseFactory {
         return executor().newFailedFuture(cause);
     }
 
+    @Override
+    default Future<Void> newSucceededFuture() {
+        return executor().newSucceededFuture();
+    }
+
     /**
      * Returns the {@link EventExecutor} that is used to execute the operations of this {@link ChannelOutboundInvoker}.
      *
