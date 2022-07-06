@@ -132,12 +132,7 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
             SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
             try {
                 if (handshakeEvent.isSuccess()) {
-                    SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-                    if (sslHandler == null) {
-                        throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
-                                + "application-level protocol negotiation)");
-                    }
-                    String protocol = sslHandler.applicationProtocol();
+                    String protocol = handshakeEvent.applicationProtocol();
                     configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
                 } else {
                     // if the event is not produced because of an successful handshake we will receive the same

@@ -24,7 +24,6 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
-import io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -97,7 +96,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                         } else {
                             localHandshakePromise.trySuccess(null);
                             ctx.fireChannelInboundEvent(
-                                    new WebSocketServerProtocolHandler.HandshakeComplete(
+                                    new WebSocketServerHandshakeCompletionEvent(handshaker.version(),
                                             req.uri(), req.headers(), handshaker.selectedSubprotocol()));
                         }
                         ctx.pipeline().remove(this);
@@ -158,10 +157,14 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
         }
 
         final Future<?> timeoutFuture = ctx.executor().schedule(() -> {
-            if (!localHandshakePromise.isDone() &&
-                    localHandshakePromise.tryFailure(new WebSocketServerHandshakeException("handshake timed out"))) {
+            if (localHandshakePromise.isDone()) {
+                return;
+            }
+            WebSocketHandshakeException exception = new WebSocketHandshakeTimeoutException(
+                    "handshake timed out after " + handshakeTimeoutMillis + "ms");
+            if (localHandshakePromise.tryFailure(exception)) {
                 ctx.flush()
-                   .fireChannelInboundEvent(ServerHandshakeStateEvent.HANDSHAKE_TIMEOUT)
+                   .fireChannelInboundEvent(new WebSocketServerHandshakeCompletionEvent(exception))
                    .close();
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);

@@ -25,7 +25,6 @@ import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpServerCodec;
-import io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class WebSocketHandshakeHandOverTest {
 
     private boolean serverReceivedHandshake;
-    private WebSocketServerProtocolHandler.HandshakeComplete serverHandshakeComplete;
+    private WebSocketServerHandshakeCompletionEvent serverHandshakeComplete;
     private boolean clientReceivedHandshake;
     private boolean clientReceivedMessage;
     private boolean serverReceivedCloseHandshake;
@@ -87,9 +86,9 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                if (evt instanceof WebSocketServerHandshakeCompletionEvent) {
                     serverReceivedHandshake = true;
-                    serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
+                    serverHandshakeComplete = (WebSocketServerHandshakeCompletionEvent) evt;
                     // immediately send a message to the client on connect
                     ctx.writeAndFlush(new TextWebSocketFrame(ctx.bufferAllocator(), "abc"));
                 }
@@ -103,7 +102,8 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel clientChannel = createClientChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                if (evt instanceof WebSocketHandshakeCompletionEvent
+                        && ((WebSocketHandshakeCompletionEvent) evt).isSuccess()) {
                     clientReceivedHandshake = true;
                 }
             }
@@ -135,8 +135,8 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-                    serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
+                if (evt instanceof WebSocketServerHandshakeCompletionEvent) {
+                    serverHandshakeComplete = (WebSocketServerHandshakeCompletionEvent) evt;
                 }
             }
 
@@ -148,10 +148,13 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel clientChannel = createClientChannel(new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-                    clientReceivedHandshake = true;
-                } else if (evt == ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT) {
-                    clientHandshakeTimeout = true;
+                if (evt instanceof WebSocketHandshakeCompletionEvent) {
+                    WebSocketHandshakeCompletionEvent event = (WebSocketHandshakeCompletionEvent) evt;
+                    if (event.isSuccess()) {
+                        clientReceivedHandshake = true;
+                    } else if (event.cause() instanceof WebSocketHandshakeTimeoutException) {
+                        clientHandshakeTimeout = true;
+                    }
                 }
             }
 
@@ -240,7 +243,8 @@ public class WebSocketHandshakeHandOverTest {
         EmbeddedChannel clientChannel = createClientChannel(handshaker, new SimpleChannelInboundHandler<>() {
             @Override
             public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                if (evt instanceof WebSocketHandshakeCompletionEvent
+                        && ((WebSocketHandshakeCompletionEvent) evt).isSuccess()) {
                     ctx.channel().closeFuture().addListener(future -> clientForceClosed = true);
                     handshaker.close(ctx.channel(), new CloseWebSocketFrame(
                             true, 0, ctx.bufferAllocator().allocate(0)));

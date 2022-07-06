@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,46 +13,52 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.ssl;
+package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.handler.codec.ProtocolEvent;
-
-import javax.net.ssl.SSLSession;
 
 import static java.util.Objects.requireNonNull;
 
 /**
- * A {@link ProtocolEvent} for a completed SSL related event.
+ * {@link ProtocolEvent} that indicate the completion of a websocket handshake.
  */
-public abstract class SslCompletionEvent implements ProtocolEvent {
-    private final SSLSession session;
+public abstract class WebSocketHandshakeCompletionEvent implements ProtocolEvent {
+
+    private final WebSocketVersion version;
     private final Throwable cause;
 
-    SslCompletionEvent(SSLSession session) {
-        this.session = session;
-        cause = null;
-    }
-
-    SslCompletionEvent(SSLSession session, Throwable cause) {
-        this.session = session;
-        this.cause = requireNonNull(cause, "cause");
+    /**
+     * Create a new event that indicate a successful websocket handshake.
+     *
+     * @param version   the {@link WebSocketVersion} that was used.
+     */
+    WebSocketHandshakeCompletionEvent(WebSocketVersion version) {
+        this.version = requireNonNull(version, "version");
+        this.cause = null;
     }
 
     /**
-     * Return the {@link Throwable} if {@link #isSuccess()} returns {@code false}
-     * and so the completion failed.
+     * Create a new event that indicate a failed websocket handshake.
+     *
+     * @param cause the cause of the failure
      */
+    WebSocketHandshakeCompletionEvent(Throwable cause) {
+        this.cause = requireNonNull(cause, "cause");
+        version = null;
+    }
+
+    @Override
     public final Throwable cause() {
         return cause;
     }
 
     /**
-     * Returns the {@link SSLSession} or {@code null} if none existed yet.
+     * Return the {@link WebSocketVersion} of the handshake or {@code null} in case of a failure.
      *
-     * @return the session.
+     * @return the version.
      */
-    public SSLSession session() {
-        return session;
+    public final WebSocketVersion version() {
+        return version;
     }
 
     @Override

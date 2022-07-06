@@ -15,23 +15,29 @@
  */
 package io.netty5.handler.ssl;
 
+import javax.net.ssl.SSLSession;
+
 /**
- * Event that is fired once the close_notify was received or if an failure happens before it was received.
+ * Event that is fired once the {@code close_notify} was received or if a failure happens before it was received.
  */
 public final class SslCloseCompletionEvent extends SslCompletionEvent {
 
-    public static final SslCloseCompletionEvent SUCCESS = new SslCloseCompletionEvent();
+    /**
+     * Creates a new event that indicates a successful receiving of {@code close_notify}.
+     *
+     * @param session               the {@link SSLSession} that is used.
+     */
+    public SslCloseCompletionEvent(SSLSession session) {
+        super(session);
+    }
 
     /**
-     * Creates a new event that indicates a successful receiving of close_notify.
+     * Creates a new event that indicates a {@code close_notify} was not received because of a previous error.
+     *
+     * @param session               the {@link SSLSession} that is used.
+     * @param cause                 the cause of the failure.
      */
-    private SslCloseCompletionEvent() { }
-
-    /**
-     * Creates a new event that indicates an close_notify was not received because of an previous error.
-     * Use {@link #SUCCESS} to indicate a success.
-     */
-    public SslCloseCompletionEvent(Throwable cause) {
-        super(cause);
+    public SslCloseCompletionEvent(SSLSession session, Throwable cause) {
+        super(session, cause);
     }
 }

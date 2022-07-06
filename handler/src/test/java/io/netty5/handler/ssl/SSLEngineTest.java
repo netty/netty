@@ -730,13 +730,15 @@ public abstract class SSLEngineTest {
                 p.addLast(new ChannelHandler() {
                     @Override
                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            if (failureExpected) {
-                                serverException = new IllegalStateException("handshake complete. expected failure");
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
+                            if (event.isSuccess()) {
+                                if (failureExpected) {
+                                    serverException = new IllegalStateException("handshake complete. expected failure");
+                                }
+                            } else {
+                                serverException = event.cause();
                             }
-                            serverLatch.countDown();
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            serverException = ((SslHandshakeCompletionEvent) evt).cause();
                             serverLatch.countDown();
                         }
                         ctx.fireChannelInboundEvent(evt);
@@ -772,15 +774,18 @@ public abstract class SSLEngineTest {
                 p.addLast(new ChannelHandler() {
                     @Override
                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            // With TLS1.3 a mutal auth error will not be propagated as a handshake error most of the
-                            // time as the handshake needs NO extra roundtrip.
-                            if (!failureExpected) {
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
+                            if (event.isSuccess()) {
+                                // With TLS1.3 a mutal auth error will not be propagated as a handshake error most of
+                                // the time as the handshake needs NO extra roundtrip.
+                                if (!failureExpected) {
+                                    clientLatch.countDown();
+                                }
+                            } else {
+                                clientException = event.cause();
                                 clientLatch.countDown();
                             }
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            clientException = ((SslHandshakeCompletionEvent) evt).cause();
-                            clientLatch.countDown();
                         }
                         ctx.fireChannelInboundEvent(evt);
                     }
@@ -897,13 +902,15 @@ public abstract class SSLEngineTest {
                 p.addLast(new ChannelHandler() {
                     @Override
                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            if (failureExpected) {
-                                serverException = new IllegalStateException("handshake complete. expected failure");
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
+                            if (event.isSuccess()) {
+                                if (failureExpected) {
+                                    serverException = new IllegalStateException("handshake complete. expected failure");
+                                }
+                            } else {
+                                serverException  = event.cause();
                             }
-                            serverLatch.countDown();
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            serverException = ((SslHandshakeCompletionEvent) evt).cause();
                             serverLatch.countDown();
                         }
                         ctx.fireChannelInboundEvent(evt);
@@ -959,13 +966,15 @@ public abstract class SSLEngineTest {
 
                     @Override
                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            if (failureExpected) {
-                                clientException = new IllegalStateException("handshake complete. expected failure");
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
+                            if (event.isSuccess()) {
+                                if (failureExpected) {
+                                    clientException = new IllegalStateException("handshake complete. expected failure");
+                                }
+                            } else {
+                                clientException = event.cause();
                             }
-                            clientLatch.countDown();
-                        } else if (evt instanceof SslHandshakeCompletionEvent) {
-                            clientException = ((SslHandshakeCompletionEvent) evt).cause();
                             clientLatch.countDown();
                         }
                         ctx.fireChannelInboundEvent(evt);
@@ -1097,7 +1106,8 @@ public abstract class SSLEngineTest {
 
                     @Override
                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                        if (evt instanceof SslHandshakeCompletionEvent
+                                && ((SslHandshakeCompletionEvent) evt).isSuccess()) {
                             try {
                                 verifySSLSessionForMutualAuth(
                                         param, engine.getSession(), serverCrtFile, PRINCIPAL_NAME);
@@ -1129,12 +1139,15 @@ public abstract class SSLEngineTest {
                 p.addLast(new ChannelHandler() {
                     @Override
                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            try {
-                                verifySSLSessionForMutualAuth(
-                                        param, handler.engine().getSession(), clientCrtFile, PRINCIPAL_NAME);
-                            } catch (Throwable cause) {
-                                clientException = cause;
+                        if (evt instanceof SslHandshakeCompletionEvent) {
+                            SslHandshakeCompletionEvent handshakeCompletionEvent = (SslHandshakeCompletionEvent) evt;
+                            if (handshakeCompletionEvent.isSuccess()) {
+                                try {
+                                    verifySSLSessionForMutualAuth(param, handshakeCompletionEvent.session(),
+                                            clientCrtFile, PRINCIPAL_NAME);
+                                } catch (Throwable cause) {
+                                    clientException = cause;
+                                }
                             }
                         }
                     }

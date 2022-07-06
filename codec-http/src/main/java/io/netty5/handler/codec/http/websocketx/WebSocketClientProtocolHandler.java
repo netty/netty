@@ -42,7 +42,7 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolCon
  *
  * To know once a handshake was done you can intercept the
  * {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)} and check if the event was of type
- * {@link ClientHandshakeStateEvent#HANDSHAKE_ISSUED} or {@link ClientHandshakeStateEvent#HANDSHAKE_COMPLETE}.
+ * {@link WebSocketHandshakeCompletionEvent}.
  */
 public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     private final WebSocketClientHandshaker handshaker;
@@ -53,26 +53,6 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      */
     public WebSocketClientHandshaker handshaker() {
         return handshaker;
-    }
-
-    /**
-     * Events that are fired to notify about handshake status
-     */
-    public enum ClientHandshakeStateEvent {
-        /**
-         * The Handshake was timed out
-         */
-        HANDSHAKE_TIMEOUT,
-
-        /**
-         * The Handshake was started but the server did not response yet to the request
-         */
-        HANDSHAKE_ISSUED,
-
-        /**
-         * The Handshake was complete succesful and so the channel was upgraded to websockets
-         */
-        HANDSHAKE_COMPLETE
     }
 
     /**
@@ -155,8 +135,9 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            When set to true, frames which are not masked properly according to the standard will still be
      *            accepted.
      * @param handshakeTimeoutMillis
-     *            Handshake timeout in mills, when handshake timeout, will trigger user
-     *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+     *            Handshake timeout in mills, when handshake timeout, will trigger an inbound channel
+     *            event {@link WebSocketClientHandshakeCompletionEvent} with a
+     *            {@link WebSocketHandshakeTimeoutException}.
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                           boolean allowExtensions, HttpHeaders customHeaders,
@@ -209,8 +190,9 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      * @param handleCloseFrames
      *            {@code true} if close frames should not be forwarded and just close the channel
      * @param handshakeTimeoutMillis
-     *            Handshake timeout in mills, when handshake timeout, will trigger user
-     *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+     *            Handshake timeout in mills, when handshake timeout, will trigger an inbound channel
+     *            event {@link WebSocketClientHandshakeCompletionEvent} with a
+     *            {@link WebSocketHandshakeTimeoutException}.
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                           boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
@@ -256,8 +238,9 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
      * @param handshakeTimeoutMillis
-     *            Handshake timeout in mills, when handshake timeout, will trigger user
-     *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+     *            Handshake timeout in mills, when handshake timeout, will trigger an inbound channel
+     *            event {@link WebSocketClientHandshakeCompletionEvent} with a
+     *            {@link WebSocketHandshakeTimeoutException}.
      */
     public WebSocketClientProtocolHandler(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                           boolean allowExtensions, HttpHeaders customHeaders,
@@ -288,8 +271,9 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      * @param handleCloseFrames
      *            {@code true} if close frames should not be forwarded and just close the channel
      * @param handshakeTimeoutMillis
-     *            Handshake timeout in mills, when handshake timeout, will trigger user
-     *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+     *            Handshake timeout in mills, when handshake timeout, will trigger an inbound channel
+     *            event {@link WebSocketClientHandshakeCompletionEvent} with a
+     *            {@link WebSocketHandshakeTimeoutException}.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           long handshakeTimeoutMillis) {
@@ -323,8 +307,9 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      * @param dropPongFrames
      *            {@code true} if pong frames should not be forwarded
      * @param handshakeTimeoutMillis
-     *            Handshake timeout in mills, when handshake timeout, will trigger user
-     *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+     *            Handshake timeout in mills, when handshake timeout, will trigger an inbound channel
+     *            event {@link WebSocketClientHandshakeCompletionEvent} with a
+     *            {@link WebSocketHandshakeTimeoutException}.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           boolean dropPongFrames, long handshakeTimeoutMillis) {
@@ -354,8 +339,9 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            The {@link WebSocketClientHandshaker} which will be used to issue the handshake once the connection
      *            was established to the remote peer.
      * @param handshakeTimeoutMillis
-     *            Handshake timeout in mills, when handshake timeout, will trigger user
-     *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+     *            Handshake timeout in mills, when handshake timeout, will trigger an inbound channel
+     *            event {@link WebSocketClientHandshakeCompletionEvent} with a
+     *            {@link WebSocketHandshakeTimeoutException}.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, long handshakeTimeoutMillis) {
         this(handshaker, DEFAULT_HANDLE_CLOSE_FRAMES, handshakeTimeoutMillis);

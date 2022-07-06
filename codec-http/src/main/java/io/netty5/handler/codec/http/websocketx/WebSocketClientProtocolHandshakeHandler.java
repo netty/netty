@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http.websocketx;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.FullHttpResponse;
-import io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
@@ -57,9 +56,6 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
             if (future.isFailed()) {
                 handshakePromise.tryFailure(future.cause());
                 ctx.fireChannelExceptionCaught(future.cause());
-            } else {
-                ctx.fireChannelInboundEvent(
-                        WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED);
             }
         });
         applyHandshakeTimeout();
@@ -86,8 +82,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
             if (!handshaker.isHandshakeComplete()) {
                 handshaker.finishHandshake(ctx.channel(), response);
                 handshakePromise.trySuccess(null);
-                ctx.fireChannelInboundEvent(
-                        ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
+                ctx.fireChannelInboundEvent(new WebSocketClientHandshakeCompletionEvent(handshaker.version()));
                 ctx.pipeline().remove(this);
                 return;
             }
@@ -106,9 +101,11 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
                 return;
             }
 
-            if (localHandshakePromise.tryFailure(new WebSocketClientHandshakeException("handshake timed out"))) {
+            WebSocketHandshakeException exception = new WebSocketHandshakeTimeoutException(
+                    "handshake timed out after " + handshakeTimeoutMillis + "ms");
+            if (localHandshakePromise.tryFailure(exception)) {
                 ctx.flush()
-                   .fireChannelInboundEvent(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
+                   .fireChannelInboundEvent(new WebSocketClientHandshakeCompletionEvent(exception))
                    .close();
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);

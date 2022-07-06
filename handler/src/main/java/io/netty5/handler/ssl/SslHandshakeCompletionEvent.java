@@ -15,24 +15,64 @@
  */
 package io.netty5.handler.ssl;
 
+import javax.net.ssl.SSLSession;
+
 /**
  * Event that is fired once the SSL handshake is complete, which may be because it was successful or there
  * was an error.
  */
 public final class SslHandshakeCompletionEvent extends SslCompletionEvent {
-
-    public static final SslHandshakeCompletionEvent SUCCESS = new SslHandshakeCompletionEvent();
+    private final String applicationProtocol;
 
     /**
      * Creates a new event that indicates a successful handshake.
+     *
+     * @param session               the {@link SSLSession} for the handshake.
+     * @param applicationProtocol   the application protocol that was selected (if any).
      */
-    private SslHandshakeCompletionEvent() { }
+    public SslHandshakeCompletionEvent(SSLSession session, String applicationProtocol) {
+        super(session);
+        this.applicationProtocol = applicationProtocol;
+    }
 
     /**
      * Creates a new event that indicates an unsuccessful handshake.
-     * Use {@link #SUCCESS} to indicate a successful handshake.
+     *
+     * @param session               the {@link SSLSession} for the handshake.
+     * @param applicationProtocol   the application protocol that was selected (if any).
+     * @param cause                 the cause of the failure.
+     */
+    public SslHandshakeCompletionEvent(SSLSession session, String applicationProtocol, Throwable cause) {
+        super(session, cause);
+        this.applicationProtocol = applicationProtocol;
+    }
+
+    /**
+     * Creates a new event that indicates an unsuccessful handshake.
+     *
+     * @param cause the cause of the failure.
      */
     public SslHandshakeCompletionEvent(Throwable cause) {
-        super(cause);
+        this(null, null, cause);
+    }
+
+    /**
+     * Returns the {@link SSLSession} in case of {@link #isSuccess()} to be {@code true}, {@code null} in case of a
+     * failure.
+     *
+     * @return the session.
+     */
+    @Override
+    public SSLSession session() {
+        return super.session();
+    }
+
+    /**
+     * Return the application protocol that was selected or {@code null} if none was selected.
+     *
+     * @return the application protocol.
+     */
+    public String applicationProtocol() {
+        return applicationProtocol;
     }
 }

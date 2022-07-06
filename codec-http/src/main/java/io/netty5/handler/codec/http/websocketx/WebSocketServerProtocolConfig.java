@@ -15,8 +15,6 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
-
 import java.util.Objects;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
@@ -191,8 +189,8 @@ public final class WebSocketServerProtocolConfig {
         }
 
         /**
-         * Handshake timeout in mills, when handshake timeout, will trigger user
-         * event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+         * Handshake timeout in millis, when handshake timeout, will trigger an inbound channel
+         * event {@link WebSocketHandshakeCompletionEvent} with a {@link WebSocketHandshakeException}.
          */
         public Builder handshakeTimeoutMillis(long handshakeTimeoutMillis) {
             this.handshakeTimeoutMillis = handshakeTimeoutMillis;
