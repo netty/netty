@@ -27,13 +27,13 @@ public interface IoExecutionContext {
     boolean canBlock();
 
     /**
-     * Returns the amount of time left until the scheduled task with the closest dead line should run..
+     * Returns the amount of time left until the scheduled task with the closest deadline should run.
      */
     long delayNanos(long currentTimeNanos);
 
     /**
-     * Returns the absolute point in time (relative to {@link SingleThreadEventLoop#nanoTime()}) at which the the next
-     * closest scheduled task should run.
+     * Returns the absolute point in time at which the next
+     * closest scheduled task should run or {@code -1} if nothing is scheduled to run.
      */
     long deadlineNanos();
 }

@@ -390,17 +390,14 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
     /**
      * Returns the absolute point in time (relative to {@link #getCurrentTimeNanos()} ()}) at which the next
-     * closest scheduled task should run.
+     * closest scheduled task should run or {@code -1} if none is scheduled at the mment.
      *
      * This method must be called from the {@link EventExecutor} thread.
      */
     protected final long deadlineNanos() {
         assert inEventLoop();
         RunnableScheduledFuture<?> scheduledTask = peekScheduledTask();
-        if (scheduledTask == null) {
-            return getCurrentTimeNanos() + SCHEDULE_PURGE_INTERVAL;
-        }
-        return scheduledTask.deadlineNanos();
+        return scheduledTask == null ? -1 : scheduledTask.deadlineNanos();
     }
 
     /**
