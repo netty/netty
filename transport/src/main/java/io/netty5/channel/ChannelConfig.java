@@ -57,6 +57,8 @@ import java.util.Map;
  * <td>{@link ChannelOption#AUTO_READ}</td><td>{@link #setAutoRead(boolean)}</td>
  * </tr><tr>
  * <td>{@link ChannelOption#ALLOW_HALF_CLOSURE}</td><td>{@link #setAllowHalfClosure(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#MAX_MESSAGES_PER_WRITE}</td><td>{@link #setMaxMessagesPerWrite(int)}</td>
  * </tr>
  * </table>
  * <p>
@@ -283,4 +285,16 @@ public interface ChannelConfig {
      * If {@code false}, the connection is closed automatically.
      */
     ChannelConfig setAllowHalfClosure(boolean allowHalfClosure);
+
+    /**
+     * Get the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    int getMaxMessagesPerWrite();
+
+    /**
+     * Set the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    ChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite);
 }

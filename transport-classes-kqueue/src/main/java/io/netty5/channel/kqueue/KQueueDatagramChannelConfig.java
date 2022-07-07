@@ -388,4 +388,10 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         super.setMaxMessagesPerWrite(maxMessagesPerWrite);
         return this;
     }
+
+    @Override
+    public KQueueDatagramChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        super.setAllowHalfClosure(allowHalfClosure);
+        return this;
+    }
 }

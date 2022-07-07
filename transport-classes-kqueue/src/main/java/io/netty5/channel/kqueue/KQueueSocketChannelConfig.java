@@ -393,6 +393,12 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         return this;
     }
 
+    @Override
+    public KQueueSocketChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
+    }
+
     private void calculateMaxBytesPerGatheringWrite() {
         // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
         int newSendBufferSize = getSendBufferSize() << 1;

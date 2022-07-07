@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.socket;
 
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MessageSizeEstimator;
@@ -165,4 +166,16 @@ public interface SocketChannelConfig extends ChannelConfig {
 
     @Override
     SocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
+
+    @Override
+    SocketChannelConfig setBufferAllocator(BufferAllocator allocator);
+
+    @Override
+    SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    SocketChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite);
 }

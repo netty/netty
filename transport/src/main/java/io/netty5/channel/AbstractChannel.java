@@ -116,18 +116,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return group;
     }
 
-    protected final int maxMessagesPerWrite() {
-        ChannelConfig config = config();
-        if (config instanceof DefaultChannelConfig) {
-            return ((DefaultChannelConfig) config).getMaxMessagesPerWrite();
-        }
-        Integer value = config.getOption(ChannelOption.MAX_MESSAGES_PER_WRITE);
-        if (value == null) {
-            return Integer.MAX_VALUE;
-        }
-        return value;
-    }
-
     @Override
     public final ChannelId id() {
         return id;

@@ -560,4 +560,10 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         super.setMaxMessagesPerWrite(maxMessagesPerWrite);
         return this;
     }
+
+    @Override
+    public EpollDatagramChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        super.setAllowHalfClosure(allowHalfClosure);
+        return this;
+    }
 }

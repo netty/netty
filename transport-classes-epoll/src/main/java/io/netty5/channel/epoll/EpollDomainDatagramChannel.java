@@ -152,7 +152,7 @@ public final class EpollDomainDatagramChannel
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int maxMessagesPerWrite = maxMessagesPerWrite();
+        int maxMessagesPerWrite = config().getMaxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {

@@ -16,6 +16,7 @@
 package io.netty5.channel.socket;
 
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultChannelConfig;
@@ -319,7 +320,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public SocketChannelConfig setAutoRead(boolean autoRead) {
-         super.setAutoRead(autoRead);
+        super.setAutoRead(autoRead);
         return this;
     }
 
@@ -350,6 +351,12 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
+        return this;
+    }
+
+    @Override
+    public SocketChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
         return this;
     }
 }

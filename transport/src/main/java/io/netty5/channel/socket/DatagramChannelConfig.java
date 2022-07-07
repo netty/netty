@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.socket;
 
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MessageSizeEstimator;
@@ -181,4 +182,18 @@ public interface DatagramChannelConfig extends ChannelConfig {
     @Override
     DatagramChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
 
+    @Override
+    DatagramChannelConfig setBufferAllocator(BufferAllocator allocator);
+
+    @Override
+    DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    DatagramChannelConfig setAllowHalfClosure(boolean allowHalfClosure);
+
+    @Override
+    DatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite);
 }
