@@ -1878,7 +1878,7 @@ public class DnsNameResolverTest {
 
     @Test
     public void testRRNameContainsDifferentSearchDomainNoDomains() {
-        CompletionException e = assertThrows(CompletionException.class, new Executable() {
+        Exception e = assertThrows(Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 testRRNameContainsDifferentSearchDomain(Collections.emptyList(), "netty");
@@ -2381,9 +2381,9 @@ public class DnsNameResolverTest {
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
             resolver[0] = builder.build();
-            final CompletionException completion = assertThrows(CompletionException.class,
+            Exception exception = assertThrows(Exception.class,
                 () -> resolver[0].resolveAll("somehost.netty.io").asStage().get());
-            assertTrue(completion.getCause() instanceof UnknownHostException);
+            assertThat(exception.getCause(), instanceOf(UnknownHostException.class));
         } catch (CompletionException e) {
             throw e.getCause();
         } finally {
@@ -2411,9 +2411,9 @@ public class DnsNameResolverTest {
 
             resolver[0].cnameCache().cache(name, name2, Long.MAX_VALUE, resolver[0].executor());
             resolver[0].cnameCache().cache(name2, name, Long.MAX_VALUE, resolver[0].executor());
-            final CompletionException completion = assertThrows(CompletionException.class,
+            Exception completion = assertThrows(Exception.class,
                 () -> resolver[0].resolve(name).asStage().get());
-            assertTrue(completion.getCause() instanceof UnknownHostException);
+            assertThat(completion.getCause(), instanceOf(UnknownHostException.class));
         } finally {
             if (resolver[0] != null) {
                 resolver[0].close();
