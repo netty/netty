@@ -45,7 +45,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
     private volatile boolean acceptInProgress;
 
     public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, childEventLoopGroup);
+        super(eventLoop, childEventLoopGroup, LocalChannel.class);
         config().setBufferAllocator(DefaultBufferAllocators.onHeapAllocator());
     }
 

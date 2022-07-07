@@ -22,6 +22,7 @@ import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -97,12 +98,22 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      */
     protected AbstractChannel(P parent, EventLoop eventLoop, ChannelId id) {
         this.parent = parent;
-        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
+        this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", getClass());
         closePromise = new ClosePromise(eventLoop);
         outboundBuffer = new ChannelOutboundBuffer(eventLoop);
         this.id = id;
         pipeline = newChannelPipeline();
         fireChannelWritabilityChangedTask = () -> pipeline().fireChannelWritabilityChanged();
+    }
+
+    protected static <T extends EventLoopGroup> T validateEventLoopGroup(
+            T group, String name, Class<? extends Channel> channelType) {
+        requireNonNull(group, name);
+        if (!group.isCompatible(channelType)) {
+            throw new IllegalArgumentException(group + " does not support channel of type " +
+                            StringUtil.simpleClassName(channelType));
+        }
+        return group;
     }
 
     protected final int maxMessagesPerWrite() {

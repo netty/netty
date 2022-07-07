@@ -516,4 +516,9 @@ public class EpollHandler implements IoHandler {
             events.free();
         }
     }
+
+    @Override
+    public boolean isCompatible(Class<? extends Channel> channelType) {
+        return AbstractEpollChannel.class.isAssignableFrom(channelType);
+    }
 }

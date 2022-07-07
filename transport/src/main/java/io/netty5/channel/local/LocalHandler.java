@@ -98,4 +98,9 @@ public final class LocalHandler implements IoHandler {
             unsafe.deregisterTransportNow();
         }
     }
+
+    @Override
+    public boolean isCompatible(Class<? extends Channel> channelType) {
+        return LocalChannelUnsafe.class.isAssignableFrom(channelType);
+    }
 }

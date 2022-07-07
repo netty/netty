@@ -51,14 +51,14 @@ public final class EpollServerSocketChannel
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     InternetProtocolFamily protocolFamily) {
-        super(eventLoop, childEventLoopGroup, newSocketStream(protocolFamily), false);
+        super(eventLoop, childEventLoopGroup, EpollSocketChannel.class, newSocketStream(protocolFamily), false);
         config = new EpollServerSocketChannelConfig(this);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(eventLoop, childEventLoopGroup, new LinuxSocket(fd));
+        super(eventLoop, childEventLoopGroup, EpollSocketChannel.class, new LinuxSocket(fd));
         config = new EpollServerSocketChannelConfig(this);
     }
 

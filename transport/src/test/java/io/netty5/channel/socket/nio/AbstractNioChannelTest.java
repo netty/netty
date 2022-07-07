@@ -184,6 +184,11 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             public Future<Void> deregisterForIo(Channel channel) {
                 return eventLoop.deregisterForIo(channel);
             }
+
+            @Override
+            public boolean isCompatible(Class<? extends Channel> channelType) {
+                return eventLoop.isCompatible(channelType);
+            }
         }
 
         EventLoop wrapped = new WrappedEventLoop(eventLoop);

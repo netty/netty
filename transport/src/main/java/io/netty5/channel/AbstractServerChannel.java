@@ -19,8 +19,6 @@ import io.netty5.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
  * {@link Channel} does not allow the following operations:
@@ -42,9 +40,10 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     /**
      * Creates a new instance.
      */
-    protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+    protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                    Class<? extends Channel> childChannelType) {
         super(null, eventLoop);
-        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 
     @Override

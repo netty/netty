@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty5.channel.local.LocalHandler;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,7 +35,56 @@ public class DefaultChannelPipelineTailTest {
 
     @BeforeAll
     public static void init() {
-        GROUP = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        GROUP = new MultithreadEventLoopGroup(1, () -> new IoHandler() {
+            private final Object lock = new Object();
+            @Override
+            public int run(IoExecutionContext context) {
+                if (context.canBlock()) {
+                    synchronized (lock) {
+                        try {
+                            lock.wait();
+                        } catch (InterruptedException e) {
+                            Thread.interrupted();
+                        }
+                    }
+                }
+                return 0;
+            }
+
+            @Override
+            public void prepareToDestroy() {
+                // NOOP
+            }
+
+            @Override
+            public void destroy() {
+                // NOOP
+            }
+
+            @Override
+            public void register(Channel channel) {
+                // NOOP
+            }
+
+            @Override
+            public void deregister(Channel channel) {
+                // NOOP
+            }
+
+            @Override
+            public void wakeup(boolean inEventLoop) {
+                if (!inEventLoop) {
+                    synchronized (lock) {
+                        lock.notify();
+                    }
+                }
+            }
+
+            @Override
+            public boolean isCompatible(Class<? extends Channel> channelType) {
+                return MyChannel.class.isAssignableFrom(channelType);
+            }
+        });
     }
 
     @AfterAll

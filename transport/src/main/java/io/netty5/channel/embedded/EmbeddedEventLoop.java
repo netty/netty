@@ -247,4 +247,9 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     public boolean inEventLoop(Thread thread) {
         return running;
     }
+
+    @Override
+    public boolean isCompatible(Class<? extends Channel> channelType) {
+        return EmbeddedChannel.class.isAssignableFrom(channelType);
+    }
 }

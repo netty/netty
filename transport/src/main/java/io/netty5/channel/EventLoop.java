@@ -46,4 +46,10 @@ public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
      * @return          the {@link Future} that is notified once the operations completes.
      */
     Future<Void> deregisterForIo(Channel channel);
+
+    // Force the implementing class to implement this method itself. This is needed as
+    // EventLoopGroup provides default implementations that call next() which would lead to
+    // and infinite loop if not implemented differently in the EventLoop itself.
+    @Override
+    boolean isCompatible(Class<? extends Channel> channelType);
 }

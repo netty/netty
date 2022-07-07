@@ -29,8 +29,6 @@ import io.netty5.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
 
-import static java.util.Objects.requireNonNull;
-
 @UnstableApi
 public abstract class AbstractKQueueServerChannel
         <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
@@ -43,13 +41,15 @@ public abstract class AbstractKQueueServerChannel
     // So use 26 bytes as it's a power of two.
     private final byte[] acceptedAddress = new byte[26];
 
-    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
-        this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
+    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                Class<? extends Channel> childChannelType, BsdSocket fd) {
+        this(eventLoop, childEventLoopGroup, childChannelType, fd, isSoErrorZero(fd));
     }
 
-    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
+    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                Class<? extends Channel> childChannelType, BsdSocket fd, boolean active) {
         super(null, eventLoop, fd, active);
-        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 
     @Override

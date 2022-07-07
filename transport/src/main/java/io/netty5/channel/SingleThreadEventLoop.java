@@ -256,4 +256,9 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
         assert inEventLoop();
         ioHandler.destroy();
     }
+
+    @Override
+    public boolean isCompatible(Class<? extends Channel> channelType) {
+        return ioHandler.isCompatible(channelType);
+    }
 }
