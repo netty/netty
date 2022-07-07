@@ -373,7 +373,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     private void flushInbound(boolean recordException) {
       if (checkOpen(recordException)) {
           pipeline().fireChannelReadComplete();
-          readIfIsAutoRead();
+          embeddedEventLoop().execute(this::readIfIsAutoRead);
           runPendingTasks();
       }
       checkException();
