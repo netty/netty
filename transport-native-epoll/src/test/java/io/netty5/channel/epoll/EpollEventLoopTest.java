@@ -19,6 +19,7 @@ import io.netty5.channel.DefaultSelectStrategyFactory;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandlerFactory;
+import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.channel.unix.FileDescriptor;
@@ -157,6 +158,16 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
             epoll.close();
             eventFd.close();
             timerFd.close();
+        }
+    }
+
+    @Test
+    public void testSupportsIoHandler() {
+        EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
+        try {
+            assertTrue(group.next().supportsIoHandler(EpollHandler.class));
+        } finally {
+            group.shutdownGracefully();
         }
     }
 

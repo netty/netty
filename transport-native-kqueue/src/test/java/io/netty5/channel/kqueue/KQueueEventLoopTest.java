@@ -45,6 +45,16 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
         group.shutdownGracefully();
     }
 
+    @Test
+    public void testSupportsIoHandler() {
+        EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
+        try {
+            assertTrue(group.next().supportsIoHandler(KQueueHandler.class));
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
         return KQueueHandler.newFactory();

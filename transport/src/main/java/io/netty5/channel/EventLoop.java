@@ -46,4 +46,8 @@ public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
      * @return          the {@link Future} that is notified once the operations completes.
      */
     Future<Void> deregisterForIo(Channel channel);
+
+    default boolean supportsIoHandler(Class<? extends IoHandler> ioHandlerClass) {
+        return false;
+    }
 }

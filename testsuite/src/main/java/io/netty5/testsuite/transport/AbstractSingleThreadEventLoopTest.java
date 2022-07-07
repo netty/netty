@@ -20,6 +20,8 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.IoExecutionContext;
+import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
@@ -100,6 +102,16 @@ public abstract class AbstractSingleThreadEventLoopTest {
         assertRejection(loop);
     }
 
+    @Test
+    public void testDoesNotSupportIoHandler() {
+        EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
+        try {
+            assertFalse(group.next().supportsIoHandler(TestIoHandler.class));
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
     private static final Runnable NOOP = () -> { };
 
     private static void assertRejection(EventExecutor loop) {
@@ -113,4 +125,32 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
     protected abstract IoHandlerFactory newIoHandlerFactory();
     protected abstract Class<? extends ServerChannel> serverChannelClass();
+
+    private static class TestIoHandler implements IoHandler {
+
+        @Override
+        public int run(IoExecutionContext context) {
+            return 0;
+        }
+
+        @Override
+        public void wakeup(boolean inEventLoop) {
+        }
+
+        @Override
+        public void prepareToDestroy() {
+        }
+
+        @Override
+        public void destroy() {
+        }
+
+        @Override
+        public void register(Channel channel) {
+        }
+
+        @Override
+        public void deregister(Channel channel) {
+        }
+    }
 }

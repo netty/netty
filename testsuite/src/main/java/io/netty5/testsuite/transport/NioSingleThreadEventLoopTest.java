@@ -15,12 +15,28 @@
  */
 package io.netty5.testsuite.transport;
 
+import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandlerFactory;
+import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioSingleThreadEventLoopTest extends AbstractSingleThreadEventLoopTest {
+
+    @Test
+    public void testSupportsIoHandler() {
+        EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
+        try {
+            assertTrue(group.next().supportsIoHandler(NioHandler.class));
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
         return NioHandler.newFactory();

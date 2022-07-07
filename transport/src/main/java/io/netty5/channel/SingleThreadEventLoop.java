@@ -230,6 +230,11 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
        return promise.asFuture();
     }
 
+    @Override
+    public boolean supportsIoHandler(Class<? extends IoHandler> ioHandlerClass) {
+        return ioHandlerClass.isAssignableFrom(ioHandler.getClass());
+    }
+
     private void deregisterForIO(Channel channel, Promise<Void> promise) {
         try {
             if (!channel.isRegistered()) {
