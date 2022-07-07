@@ -70,7 +70,7 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
             for (int i = 0; i < futuresHolder.num; i++) {
                 futuresHolder.futures.get(i).cancel();
             }
-        }).asStage().sync();
+        }).asStage().sync().future();
     }
 
     @Benchmark
@@ -79,6 +79,6 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
             for (int i = futuresHolder.num - 1; i >= 0; i--) {
                 futuresHolder.futures.get(i).cancel();
             }
-        }).asStage().sync();
+        }).asStage().sync().future();
     }
 }

@@ -53,7 +53,7 @@ public interface FutureCompletionStage<V>
      * @throws CompletionException   if the computation threw an exception.
      * @throws InterruptedException  if the current thread was interrupted while waiting
      */
-    Future<V> sync() throws InterruptedException;
+    FutureCompletionStage<V> sync() throws InterruptedException;
 
     /**
      * Waits for the future to complete, then calls the given result handler with the outcome.

@@ -31,6 +31,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureCompletionStage;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.RejectedExecutionHandler;
@@ -820,7 +821,7 @@ public class LocalChannelTest {
             });
             // Connect to the server
             cc.connect(sc.localAddress()).asStage().sync();
-            Future<Void> f = ref.get().asStage().sync();
+            FutureCompletionStage<Void> f = ref.get().asStage().sync();
 
             assertPromise.asFuture().asStage().sync();
             assertTrue(f.isSuccess());
