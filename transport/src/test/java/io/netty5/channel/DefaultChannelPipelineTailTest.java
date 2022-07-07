@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty5.channel.local.LocalHandler;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,22 +53,22 @@ public class DefaultChannelPipelineTailTest {
 
             @Override
             public void prepareToDestroy() {
-
+                // NOOP
             }
 
             @Override
             public void destroy() {
-
+                // NOOP
             }
 
             @Override
-            public void register(Channel channel) throws Exception {
-
+            public void register(Channel channel) {
+                // NOOP
             }
 
             @Override
-            public void deregister(Channel channel) throws Exception {
-
+            public void deregister(Channel channel) {
+                // NOOP
             }
 
             @Override
