@@ -589,7 +589,6 @@ public class SslHandlerTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testHandshakeFailBeforeWritePromise() throws Exception {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
@@ -670,25 +669,15 @@ public class SslHandlerTest {
             }
 
             SslCompletionEvent evt = (SslCompletionEvent) events.take();
-            assertThat(evt, is(instanceOf(SslHandshakeCompletionEvent.class)));
+            assertTrue(evt instanceof SslHandshakeCompletionEvent);
             assertThat(evt.cause(), is(instanceOf(SSLException.class)));
 
-            Object event = events.take();
-            if (event instanceof SslCompletionEvent) {
-                evt = (SslCompletionEvent) event;
-                assertThat(evt, is(instanceOf(SslCloseCompletionEvent.class)));
-                assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
+            evt = (SslCompletionEvent) events.take();
+            assertTrue(evt instanceof SslCloseCompletionEvent);
+            assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
 
-                Future<Void> future = (Future<Void>) events.take();
-                assertThat(future.cause(), is(instanceOf(SSLException.class)));
-            } else {
-                Future<Void> future = (Future<Void>) event;
-                assertThat(future.cause(), is(instanceOf(SSLException.class)));
-
-                evt = (SslCompletionEvent) events.take();
-                assertThat(evt, is(instanceOf(SslCloseCompletionEvent.class)));
-                assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
-            }
+            Future<Void> future = (Future<Void>) events.take();
+            assertThat(future.cause(), is(instanceOf(SSLException.class)));
 
             serverChannel.close().sync();
             serverChannel = null;

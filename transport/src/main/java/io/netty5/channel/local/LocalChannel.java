@@ -443,26 +443,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         return false;
     }
 
-    private void activate(boolean connect) {
-        // Always call executor().execute() even if executor().inEventLoop() is true.
-        // This ensures that if both channels are on the same event loop, the peer's channelActive
-        // event is triggered *after* this channel's channelRegistered event, so that this channel's
-        // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-        executor().execute(() -> {
-            if (connect) {
-                if (isConnectPending()) {
-                    finishConnect();
-                }
-            } else {
-                // Update our state and start to process the previous flushed messages.
-                state = State.CONNECTED;
-                if (fireChannelActiveIfNotActiveBefore()) {
-                    readIfIsAutoRead();
-                }
-                peer.executor().execute(peer::flush0);
-            }
-        });
-    }
     @Override
     protected boolean doFinishConnect(LocalAddress requestedRemoteAddress) throws Exception {
         final LocalChannel peer = LocalChannel.this.peer;
@@ -472,24 +452,34 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         state = State.CONNECTED;
         remoteAddress = peer.parent().localAddress();
 
-        peer.activate(false);
+        // As we changed our state to connected now we also need to try to flush the previous queued messages by the
+        // peer.
+        peer.flush0Async();
         return true;
+    }
+
+    private void flush0Async() {
+        executor().execute(this::flush0);
+    }
+
+    private void finishConnectAsync() {
+        // We always dispatch to also ensure correct ordering if the peer Channel is on the same EventLoop
+        executor().execute(() -> {
+            if (isConnectPending()) {
+                finishConnect();
+            }
+        });
     }
 
     @Override
     public void registerTransportNow() {
         // Store the peer in a local variable as it may be set to null if doClose() is called.
         // See https://github.com/netty/netty/issues/2144
-
-        final LocalChannel peer = LocalChannel.this.peer;
-
-        // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
-        // This is needed as a peer may not be null also if a LocalChannel was connected before and
-        // deregistered / registered later again.
-        //
-        // See https://github.com/netty/netty/issues/2400
-        if (peer != null && parent() != null) {
-            peer.activate(true);
+        LocalChannel peer = this.peer;
+        if (parent() != null && peer != null) {
+            // Mark this Channel as active before finish the connect on the remote peer.
+            state = State.CONNECTED;
+            peer.finishConnectAsync();
         }
     }
 
