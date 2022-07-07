@@ -44,7 +44,7 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.newPromise()).thenReturn(INSTANCE.newPromise());
-
+        when(eventLoop.isCompatible(any())).thenReturn(true);
         TestChannel channel = new TestChannel(eventLoop);
         // Using spy as otherwise intelliJ will not be able to understand that we dont want to skip the handler
         ChannelHandler handler = spy(new ChannelHandler() {
@@ -78,6 +78,7 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.newPromise()).thenAnswer(inv -> INSTANCE.newPromise());
+        when(eventLoop.isCompatible(any())).thenReturn(true);
 
         doAnswer(invocationOnMock -> {
             ((Runnable) invocationOnMock.getArgument(0)).run();
@@ -121,6 +122,7 @@ public class AbstractChannelTest {
     @Test
     public void ensureDefaultChannelId() {
         final EventLoop eventLoop = mock(EventLoop.class);
+        when(eventLoop.isCompatible(any())).thenReturn(true);
         TestChannel channel = new TestChannel(eventLoop);
         final ChannelId channelId = channel.id();
         assertTrue(channelId instanceof DefaultChannelId);
@@ -137,6 +139,7 @@ public class AbstractChannelTest {
             ((Runnable) invocationOnMock.getArgument(0)).run();
             return null;
         }).when(eventLoop).execute(any(Runnable.class));
+        when(eventLoop.isCompatible(any())).thenReturn(true);
 
         final Channel channel = new TestChannel(eventLoop) {
             private boolean open = true;
