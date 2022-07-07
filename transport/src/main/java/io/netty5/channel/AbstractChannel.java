@@ -80,6 +80,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private boolean inWriteFlushed;
     /** true if the channel has never been registered, false otherwise */
     private boolean neverRegistered = true;
+    private boolean neverActive = true;
+
     /**
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
@@ -352,7 +354,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                     // multiple channel actives if the channel is deregistered and re-registered.
                     if (isActive()) {
                         if (firstRegistration) {
-                            pipeline.fireChannelActive();
+                            fireChannelActiveIfNotActiveBefore();
                         }
                         readIfIsAutoRead();
                     }
@@ -366,6 +368,20 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // Close the channel directly to avoid FD leak.
             closeNowAndFail(promise, t);
         }
+    }
+
+    /**
+     * Calls {@link ChannelPipeline#fireChannelActive()} if it was not done yet.
+     *
+     * @return {@code true} if {@link ChannelPipeline#fireChannelActive()} was called, {@code false} otherwise.
+     */
+    protected final boolean fireChannelActiveIfNotActiveBefore() {
+        if (neverActive) {
+            neverActive = false;
+            pipeline().fireChannelActive();
+            return true;
+        }
+        return false;
     }
 
     private void closeNowAndFail(Promise<Void> promise, Throwable cause) {
@@ -405,8 +421,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         if (!wasActive && isActive()) {
             invokeLater(() -> {
-                pipeline.fireChannelActive();
-                readIfIsAutoRead();
+                if (fireChannelActiveIfNotActiveBefore()) {
+                    readIfIsAutoRead();
+                }
             });
         }
 
@@ -426,6 +443,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // Reset remoteAddress and localAddress
             remoteAddress = null;
             localAddress = null;
+            neverActive = true;
         } catch (Throwable t) {
             safeSetFailure(promise, t);
             closeIfClosed();
@@ -1132,8 +1150,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
         // because what happened is what happened.
         if (!wasActive && active) {
-            pipeline().fireChannelActive();
-            readIfIsAutoRead();
+            if (fireChannelActiveIfNotActiveBefore()) {
+                readIfIsAutoRead();
+            }
         }
 
         // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().

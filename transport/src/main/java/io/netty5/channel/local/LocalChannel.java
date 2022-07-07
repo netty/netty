@@ -33,7 +33,6 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -42,7 +41,6 @@ import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -340,6 +338,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                     } else {
                         if (exception == null) {
                             exception = new ClosedChannelException();
+                            exception.initCause(new Throwable(peer.state + " " + parent()));
                         }
                         in.remove(exception);
                     }
@@ -449,36 +448,50 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         return false;
     }
 
+    private void activate(boolean connect) {
+        // Always call executor().execute() even if executor().inEventLoop() is true.
+        // This ensures that if both channels are on the same event loop, the peer's channelActive
+        // event is triggered *after* this channel's channelRegistered event, so that this channel's
+        // pipeline is fully initialized by ChannelInitializer before any channelRead events.
+        executor().execute(() -> {
+            if (connect) {
+                if (isConnectPending()) {
+                    finishConnect();
+                }
+            } else if (fireChannelActiveIfNotActiveBefore()) {
+                readIfIsAutoRead();
+            }
+        });
+    }
     @Override
     protected boolean doFinishConnect(LocalAddress requestedRemoteAddress) throws Exception {
+        final LocalChannel peer = LocalChannel.this.peer;
+        if (peer == null) {
+            return false;
+        }
         state = State.CONNECTED;
+        peer.state = State.CONNECTED;
+
+        remoteAddress = peer.parent().localAddress();
+
+        peer.activate(false);
         return true;
     }
 
     @Override
     public void registerTransportNow() {
+        // Store the peer in a local variable as it may be set to null if doClose() is called.
+        // See https://github.com/netty/netty/issues/2144
+
+        final LocalChannel peer = LocalChannel.this.peer;
+
         // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
         // This is needed as a peer may not be null also if a LocalChannel was connected before and
         // deregistered / registered later again.
         //
         // See https://github.com/netty/netty/issues/2400
         if (peer != null && parent() != null) {
-            // Store the peer in a local variable as it may be set to null if doClose() is called.
-            // See https://github.com/netty/netty/issues/2144
-            final LocalChannel peer = LocalChannel.this.peer;
-            state = State.CONNECTED;
-
-            peer.remoteAddress = parent().localAddress();
-
-            // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
-            // This ensures that if both channels are on the same event loop, the peer's channelActive
-            // event is triggered *after* this channel's channelRegistered event, so that this channel's
-            // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-            peer.executor().execute(() -> {
-                if (peer.isConnectPending()) {
-                    peer.finishConnect();
-                }
-            });
+            peer.activate(true);
         }
     }
 
