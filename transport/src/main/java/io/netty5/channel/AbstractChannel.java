@@ -376,6 +376,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * @return {@code true} if {@link ChannelPipeline#fireChannelActive()} was called, {@code false} otherwise.
      */
     protected final boolean fireChannelActiveIfNotActiveBefore() {
+        assertEventLoop();
         if (neverActive) {
             neverActive = false;
             pipeline().fireChannelActive();

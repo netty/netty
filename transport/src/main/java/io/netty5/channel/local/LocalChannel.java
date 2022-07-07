@@ -315,7 +315,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
         writeInProgress = true;
         try {
-            ClosedChannelException exception = null;
             for (;;) {
                 Object msg = in.current();
                 if (msg == null) {
@@ -336,11 +335,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                         }
                         in.remove();
                     } else {
-                        if (exception == null) {
-                            exception = new ClosedChannelException();
-                            exception.initCause(new Throwable(peer.state + " " + parent()));
-                        }
-                        in.remove(exception);
+                        break;
                     }
                 } catch (Throwable cause) {
                     in.remove(cause);
@@ -458,8 +453,13 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                 if (isConnectPending()) {
                     finishConnect();
                 }
-            } else if (fireChannelActiveIfNotActiveBefore()) {
-                readIfIsAutoRead();
+            } else {
+                // Update our state and start to process the previous flushed messages.
+                state = State.CONNECTED;
+                if (fireChannelActiveIfNotActiveBefore()) {
+                    readIfIsAutoRead();
+                }
+                peer.executor().execute(peer::flush0);
             }
         });
     }
@@ -470,8 +470,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
             return false;
         }
         state = State.CONNECTED;
-        peer.state = State.CONNECTED;
-
         remoteAddress = peer.parent().localAddress();
 
         peer.activate(false);
