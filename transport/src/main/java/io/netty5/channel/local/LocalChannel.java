@@ -454,12 +454,12 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
         // As we changed our state to connected now we also need to try to flush the previous queued messages by the
         // peer.
-        peer.flush0Async();
+        peer.writeFlushedAsync();
         return true;
     }
 
-    private void flush0Async() {
-        executor().execute(this::flush0);
+    private void writeFlushedAsync() {
+        executor().execute(this::writeFlushed);
     }
 
     private void finishConnectAsync() {
