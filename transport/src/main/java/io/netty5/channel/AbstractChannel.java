@@ -74,7 +74,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private boolean readBeforeActive;
     private RecvBufferAllocator.Handle recvHandle;
     private MessageSizeEstimator.Handle estimatorHandler;
-    private boolean inFlush0;
+    private boolean inWriteFlushed;
     /** true if the channel has never been registered, false otherwise */
     private boolean neverRegistered = true;
 
@@ -284,6 +284,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     protected final void readIfIsAutoRead() {
+        assertEventLoop();
+
         if (config().isAutoRead() || readBeforeActive) {
             readBeforeActive = false;
             read();
@@ -295,6 +297,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     protected RecvBufferAllocator.Handle recvBufAllocHandle() {
+        assertEventLoop();
+
         if (recvHandle == null) {
             recvHandle = config().getRecvBufferAllocator().newHandle();
         }
@@ -538,7 +542,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         } finally {
             closeAndUpdateWritability(outboundBuffer, cause, closeCause);
         }
-        if (inFlush0) {
+        if (inWriteFlushed) {
             invokeLater(() -> fireChannelInactiveAndDeregister(wasActive));
         } else {
             fireChannelInactiveAndDeregister(wasActive);
@@ -570,6 +574,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     protected final void closeForciblyTransport() {
+        assertEventLoop();
+
         try {
             doClose();
         } catch (Exception e) {
@@ -579,6 +585,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     protected final void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise) {
         assertEventLoop();
+
         if (!promise.setUncancellable()) {
             return;
         }
@@ -718,7 +725,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             } finally {
                 // If the outboundBuffer is null we know the channel was closed or the outbound was shutdown, so
                 // need to fail the future right away. If it is not null the handling of the rest
-                // will be done in flush0()
+                // will be done in writeFlushed()
                 // See https://github.com/netty/netty/issues/2362
                 final Throwable cause;
                 if (!isActive()) {
@@ -766,11 +773,16 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         outboundBuffer.addFlush();
-        flush0();
+        writeFlushed();
     }
 
-    protected void flush0() {
-        if (inFlush0) {
+    /**
+     * Write previous flushed messages.
+     */
+    protected void writeFlushed() {
+        assertEventLoop();
+
+        if (inWriteFlushed) {
             // Avoid re-entrance
             return;
         }
@@ -780,7 +792,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             return;
         }
 
-        inFlush0 = true;
+        inWriteFlushed = true;
 
         // Mark all pending write requests as failure if the channel is inactive.
         if (!isActive()) {
@@ -792,11 +804,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                         updateWritabilityIfNeeded(true, true);
                     } else {
                         // Do not trigger channelWritabilityChanged because the channel is closed already.
-                        outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause, "flush0()"));
+                        outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause, "writeFlushed()"));
                     }
                 }
             } finally {
-                inFlush0 = false;
+                inWriteFlushed = false;
             }
             return;
         }
@@ -809,7 +821,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // It's important that we call this with notifyLater true so we not get into trouble when flush() is called
             // again in channelWritabilityChanged(...).
             updateWritabilityIfNeeded(true, true);
-            inFlush0 = false;
+            inWriteFlushed = false;
         }
     }
 
@@ -825,7 +837,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
              * the exception.
              */
             initialCloseCause = t;
-            close(newPromise(), t, newClosedChannelException(t, "flush0()"));
+            close(newPromise(), t, newClosedChannelException(t, "writeFlushed()"));
         } else {
             try {
                 if (shutdownOutput(newPromise(), t)) {
@@ -833,7 +845,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 }
             } catch (Throwable t2) {
                 initialCloseCause = t;
-                close(newPromise(), t2, newClosedChannelException(t, "flush0()"));
+                close(newPromise(), t2, newClosedChannelException(t, "writeFlushed()"));
             }
         }
     }
@@ -880,6 +892,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     protected final void closeIfClosed() {
+        assertEventLoop();
+
         if (isOpen()) {
             return;
         }

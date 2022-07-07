@@ -55,7 +55,7 @@ public abstract class AbstractKQueueStreamChannel
 
     // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
     // meantime.
-    private final Runnable flushTask = this::flush0;
+    private final Runnable flushTask = this::writeFlushed;
 
     AbstractKQueueStreamChannel(P parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
         super(parent, eventLoop, fd, active);

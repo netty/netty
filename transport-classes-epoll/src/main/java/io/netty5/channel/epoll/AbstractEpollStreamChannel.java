@@ -52,7 +52,7 @@ public abstract class AbstractEpollStreamChannel
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
     // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
     // meantime.
-    private final Runnable flushTask = this::flush0;
+    private final Runnable flushTask = this::writeFlushed;
 
     private WritableByteChannel byteChannel;
 
