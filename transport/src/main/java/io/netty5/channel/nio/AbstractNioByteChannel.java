@@ -50,7 +50,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
 
     // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
     // meantime.
-    private final Runnable flushTask = this::flush0;
+    private final Runnable flushTask = this::writeFlushed;
     private boolean inputClosedSeenErrorOnRead;
 
     /**

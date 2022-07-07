@@ -292,18 +292,18 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     @Override
-    protected final void flush0() {
+    protected final void writeFlushed() {
         // Flush immediately only when there's no pending flush.
         // If there's a pending flush operation, event loop will call forceFlush() later,
         // and thus there's no need to call it now.
         if (!isFlushPending()) {
-            super.flush0();
+            super.writeFlushed();
         }
     }
 
     final void forceFlush() {
         // directly call super.flush0() to force a flush now
-        super.flush0();
+        super.writeFlushed();
     }
 
     private boolean isFlushPending() {
