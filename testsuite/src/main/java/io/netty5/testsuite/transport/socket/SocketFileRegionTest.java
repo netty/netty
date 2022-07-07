@@ -107,8 +107,8 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         Throwable result = cc.writeAndFlush(region).asStage().join((r, e) -> e);
         assertThat(result).isInstanceOf(IOException.class);
-        cc.close().sync();
-        sc.close().sync();
+        cc.close().asStage().sync();
+        sc.close().asStage().sync();
     }
 
     private static void testFileRegion0(
@@ -196,9 +196,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             }
         }
 
-        sh.channel.close().sync();
-        cc.close().sync();
-        sc.close().sync();
+        sh.channel.close().asStage().sync();
+        cc.close().asStage().sync();
+        sc.close().asStage().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

@@ -111,11 +111,11 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             cc.writeAndFlush(element + delimiter);
         }
 
-        ch.donePromise.asFuture().sync();
-        sh.donePromise.asFuture().sync();
-        sh.channel.close().sync();
-        ch.channel.close().sync();
-        sc.close().sync();
+        ch.donePromise.asFuture().asStage().sync();
+        sh.donePromise.asFuture().asStage().sync();
+        sh.channel.close().asStage().sync();
+        ch.channel.close().asStage().sync();
+        sc.close().asStage().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

@@ -128,20 +128,20 @@ public class Http2ConnectionRoundtripTest {
             clientChannel = null;
         }
         if (serverChannel != null) {
-            serverChannel.close().sync();
+            serverChannel.close().asStage().sync();
             serverChannel = null;
         }
         final Channel serverConnectedChannel = this.serverConnectedChannel;
         if (serverConnectedChannel != null) {
-            serverConnectedChannel.close().sync();
+            serverConnectedChannel.close().asStage().sync();
             this.serverConnectedChannel = null;
         }
         Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 5, SECONDS);
         Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 5, SECONDS);
         Future<?> clientGroup = cb.config().group().shutdownGracefully(0, 5, SECONDS);
-        serverGroup.sync();
-        serverChildGroup.sync();
-        clientGroup.sync();
+        serverGroup.asStage().sync();
+        serverChildGroup.asStage().sync();
+        clientGroup.asStage().sync();
     }
 
     @Test
@@ -682,7 +682,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
         assertThat(e).hasCauseInstanceOf(IllegalStateException.class);
-        assertPromise.asFuture().sync();
+        assertPromise.asFuture().asStage().sync();
     }
 
     @Test

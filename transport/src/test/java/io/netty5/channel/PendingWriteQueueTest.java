@@ -97,7 +97,7 @@ public class PendingWriteQueueTest {
             }
             assertTrue(channel.writeOutbound(buffers));
             assertTrue(channel.finish());
-            channel.closeFuture().sync();
+            channel.closeFuture().asStage().sync();
 
             for (int i = 0; i < buffers.length; i++) {
                 assertBuffer(channel, buffer);
@@ -133,7 +133,7 @@ public class PendingWriteQueueTest {
                 assertTrue(e instanceof TestException);
             }
             assertFalse(channel.finish());
-            channel.closeFuture().sync();
+            channel.closeFuture().asStage().sync();
 
             assertNull(channel.readOutbound());
         }
@@ -282,7 +282,7 @@ public class PendingWriteQueueTest {
     public void testCloseChannelOnCreation() throws Exception {
         EmbeddedChannel channel = newChannel();
         ChannelHandlerContext context = channel.pipeline().firstContext();
-        channel.close().sync();
+        channel.close().asStage().sync();
 
         final PendingWriteQueue queue = new PendingWriteQueue(context.executor(),
                 channel.config().getMessageSizeEstimator().newHandle());

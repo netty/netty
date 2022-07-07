@@ -264,7 +264,7 @@ public class SslHandlerTest {
                 ch.runPendingTasks();
             }
 
-            handler.handshakeFuture().sync();
+            handler.handshakeFuture().asStage().sync();
         } catch (CompletionException e) {
             throw e.getCause();
         } finally {
@@ -409,7 +409,7 @@ public class SslHandlerTest {
                 assertEquals(1, ((ReferenceCounted) sslEngine).refCnt());
 
                 assertTrue(ch.finishAndReleaseAll());
-                ch.close().sync();
+                ch.close().asStage().sync();
 
                 assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
                 assertEquals(0, ((ReferenceCounted) sslEngine).refCnt());
@@ -494,14 +494,14 @@ public class SslHandlerTest {
             sc = serverBootstrap.bind(new InetSocketAddress(0)).asStage().get();
             cc = bootstrap.connect(sc.localAddress()).asStage().get();
 
-            serverPromise.asFuture().sync();
-            clientPromise.asFuture().sync();
+            serverPromise.asFuture().asStage().sync();
+            clientPromise.asFuture().asStage().sync();
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
             group.shutdownGracefully();
         }
@@ -679,9 +679,9 @@ public class SslHandlerTest {
             Future<Void> future = (Future<Void>) events.take();
             assertThat(future.cause(), is(instanceOf(SSLException.class)));
 
-            serverChannel.close().sync();
+            serverChannel.close().asStage().sync();
             serverChannel = null;
-            clientChannel.close().sync();
+            clientChannel.close().asStage().sync();
             clientChannel = null;
 
             latch2.await();
@@ -755,14 +755,14 @@ public class SslHandlerTest {
                 Buffer secondBuffer = offHeapAllocator().allocate(10);
                 secondBuffer.skipWritableBytes(secondBuffer.capacity());
                 cc.write(firstBuffer);
-                cc.writeAndFlush(secondBuffer).sync();
+                cc.writeAndFlush(secondBuffer).asStage().sync();
                 serverReceiveLatch.countDown();
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -818,13 +818,13 @@ public class SslHandlerTest {
                 handler.handshakeFuture().asStage().await();
                 assertFalse(handler.handshakeFuture().isSuccess());
 
-                cc.closeFuture().sync();
+                cc.closeFuture().asStage().sync();
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -840,7 +840,7 @@ public class SslHandlerTest {
         assertFalse(channel.finish());
         channel.pipeline().addLast(new SslHandler(engine));
         assertFalse(engine.isOutboundDone());
-        channel.close().sync();
+        channel.close().asStage().sync();
 
         assertTrue(engine.isOutboundDone());
     }
@@ -907,10 +907,10 @@ public class SslHandlerTest {
                 assertThat(sslHandler.handshakeFuture().asStage().join((r, e) -> e), instanceOf(SSLException.class));
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -980,10 +980,10 @@ public class SslHandlerTest {
                 assertThat(cause.getMessage(), containsString("timed out"));
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -1173,10 +1173,10 @@ public class SslHandlerTest {
                 }
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -1253,10 +1253,10 @@ public class SslHandlerTest {
                 }
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -1371,7 +1371,7 @@ public class SslHandlerTest {
                 }
             } finally {
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -1412,7 +1412,7 @@ public class SslHandlerTest {
                     }).connect(serverAddress);
             cc = future.asStage().get();
 
-            assertTrue(clientSslHandler.handshakeFuture().sync().isSuccess());
+            assertTrue(clientSslHandler.handshakeFuture().asStage().sync().isSuccess());
 
             ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) clientSslHandler.engine();
             // This test only works for non TLSv1.3 as TLSv1.3 will establish sessions after
@@ -1432,7 +1432,7 @@ public class SslHandlerTest {
             }
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
         }
     }
@@ -1544,7 +1544,7 @@ public class SslHandlerTest {
             assertNull(errorQueue.poll(1, TimeUnit.MILLISECONDS));
         } finally {
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
             group.shutdownGracefully();
         }
@@ -1658,8 +1658,8 @@ public class SslHandlerTest {
                 Throwable serverCause = serverSslHandler.handshakeFuture().asStage().join((r, e) -> e);
                 assertThat(serverCause, instanceOf(SSLException.class));
                 assertThat(serverCause.getCause(), not(instanceOf(ClosedChannelException.class)));
-                cc.close().sync();
-                sc.close().sync();
+                cc.close().asStage().sync();
+                sc.close().asStage().sync();
 
                 Throwable eventClientCause = clientEvent.get().cause();
                 assertThat(eventClientCause, instanceOf(SSLException.class));
@@ -1760,9 +1760,9 @@ public class SslHandlerTest {
                     assertTrue(event.isSuccess());
                 }
 
-                cc1.close().sync();
-                cc2.close().sync();
-                sc.close().sync();
+                cc1.close().asStage().sync();
+                cc2.close().asStage().sync();
+                sc.close().asStage().sync();
                 assertEquals(0, clientCompletionEvents.size());
                 assertEquals(0, serverCompletionEvents.size());
             } finally {

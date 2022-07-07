@@ -48,7 +48,7 @@ public class DnsNameResolverClientSubnetTest {
                             // 157.88.0.0 / 24
                             new DefaultDnsOptEcsRecord(1024, 24,
                                                        SocketUtils.addressByName("157.88.0.0").getAddress())));
-            for (InetAddress address: future.sync().getNow()) {
+            for (InetAddress address: future.asStage().get()) {
                 System.out.println(address);
             }
         } finally {

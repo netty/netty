@@ -98,7 +98,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().asStage().get();
             clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
-            clientChannel.writeAndFlush(clientChannel.bufferAllocator().copyOf(new byte[] {0})).sync();
+            clientChannel.writeAndFlush(clientChannel.bufferAllocator().copyOf(new byte[] {0})).asStage().sync();
 
             // The acceptor shouldn't read any data until we call read() below, but give it some time to see if it will.
             Thread.sleep(sleepMs);
@@ -123,10 +123,10 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
             clientReadLatch.await();
         } finally {
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
         }
     }
@@ -174,15 +174,15 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().asStage().get();
             clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
-            clientChannel.writeAndFlush(clientChannel.bufferAllocator().copyOf(new byte[] {0})).sync();
+            clientChannel.writeAndFlush(clientChannel.bufferAllocator().copyOf(new byte[] {0})).asStage().sync();
             serverReadLatch.await();
             clientReadLatch.await();
         } finally {
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
         }
     }

@@ -61,8 +61,8 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         serverHandler.awaitPipelineInit();
 
         // and then close all sockets.
-        sc.close().sync();
-        cc.close().sync();
+        sc.close().asStage().sync();
+        cc.close().asStage().sync();
 
         serverHandler.check();
         clientHandler.check();
@@ -104,7 +104,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
 
         @Override
         void awaitPipelineInit() throws InterruptedException {
-            channelFuture.asFuture().sync();
+            channelFuture.asFuture().asStage().sync();
         }
 
         @Override

@@ -75,7 +75,7 @@ public final class EchoClient {
             Channel channel = b.connect(HOST, PORT).asStage().get();
 
             // Wait until the connection is closed.
-            channel.closeFuture().sync();
+            channel.closeFuture().asStage().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
             group.shutdownGracefully();

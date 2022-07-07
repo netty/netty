@@ -195,7 +195,7 @@ public class ChunkedWriteHandlerTest {
         final FutureListener<Void> listener = future -> listenerNotified.set(true);
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
-        ch.writeAndFlush(input).addListener(listener).sync();
+        ch.writeAndFlush(input).addListener(listener).asStage().sync();
         assertTrue(ch.finish());
 
         // the listener should have been notified
@@ -246,7 +246,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
-        ch.writeAndFlush(input).sync();
+        ch.writeAndFlush(input).asStage().sync();
         assertTrue(ch.finish());
 
         assertEquals(0, (Integer) ch.readOutbound());
@@ -586,7 +586,7 @@ public class ChunkedWriteHandlerTest {
             }
         }, new ChunkedWriteHandler());
 
-        ch.writeAndFlush(input).sync();
+        ch.writeAndFlush(input).asStage().sync();
         assertFalse(ch.finishAndReleaseAll());
     }
 

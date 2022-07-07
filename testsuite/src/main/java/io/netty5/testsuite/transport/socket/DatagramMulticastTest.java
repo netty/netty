@@ -86,20 +86,20 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), addr.getPort());
 
-        cc.joinGroup(groupAddress, iface).sync();
+        cc.joinGroup(groupAddress, iface).asStage().sync();
 
         BufferAllocator allocator = sc.bufferAllocator();
-        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).sync();
+        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).asStage().sync();
         assertTrue(mhandler.await());
 
         // leave the group
-        cc.leaveGroup(groupAddress, iface).sync();
+        cc.leaveGroup(groupAddress, iface).asStage().sync();
 
         // sleep a second to make sure we left the group
         Thread.sleep(1000);
 
         // we should not receive a message anymore as we left the group before
-        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).sync();
+        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).asStage().sync();
         mhandler.await();
 
         cc.config().setLoopbackModeDisabled(false);

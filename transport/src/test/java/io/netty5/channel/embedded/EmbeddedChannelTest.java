@@ -91,7 +91,7 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.closeFuture().addListener(channel, (c, f) -> c.close());
 
-        channel.close().sync();
+        channel.close().asStage().sync();
     }
 
     @Test
@@ -218,7 +218,7 @@ public class EmbeddedChannelTest {
                 latch.countDown();
             }
         });
-        action.doRun(channel).sync();
+        action.doRun(channel).asStage().sync();
         latch.await();
     }
 
@@ -410,9 +410,9 @@ public class EmbeddedChannelTest {
           fail("Nobody called #channelRead() in time.");
       }
 
-      channel.close().sync();
+        channel.close().asStage().sync();
 
-      // There was no #flushInbound() call so nobody should have called
+        // There was no #flushInbound() call so nobody should have called
       // #channelReadComplete()
       assertEquals(0, flushCount.get());
     }
@@ -460,7 +460,7 @@ public class EmbeddedChannelTest {
             fail("Nobody called #write() in time.");
         }
 
-        channel.close().sync();
+        channel.close().asStage().sync();
 
         // There was no #flushOutbound() call so nobody should have called #flush()
         assertEquals(0, flushCount.get());
@@ -469,7 +469,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testEnsureOpen() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.close().sync();
+        channel.close().asStage().sync();
 
         try {
             channel.writeOutbound("Hello, Netty!");

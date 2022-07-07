@@ -55,7 +55,7 @@ public class LocalTransportThreadModelTest2 {
                 .channel(LocalChannel.class)
                 .remoteAddress(new LocalAddress(LOCAL_CHANNEL)).handler(clientHandler);
 
-        serverBootstrap.bind(new LocalAddress(LOCAL_CHANNEL)).sync();
+        serverBootstrap.bind(new LocalAddress(LOCAL_CHANNEL)).asStage().sync();
 
         int count = 100;
         for (int i = 1; i < count + 1; i ++) {

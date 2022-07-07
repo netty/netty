@@ -620,7 +620,7 @@ public class Http2FrameCodecTest {
         Future<Void> f = channel.writeAndFlush(new DefaultHttp2DataFrame(bb(100).send()).stream(stream));
         assertTrue(f.isSuccess());
 
-        listenerExecuted.asFuture().sync();
+        listenerExecuted.asFuture().asStage().sync();
         assertTrue(listenerExecuted.isSuccess());
     }
 
@@ -641,7 +641,7 @@ public class Http2FrameCodecTest {
         channel.runPendingTasks();
         assertTrue(isStreamIdValid(stream2.id()));
 
-        assertTrue(future1.sync().isSuccess());
+        assertTrue(future1.asStage().sync().isSuccess());
         assertFalse(future2.isDone());
 
         // Increase concurrent streams limit to 2
@@ -649,7 +649,7 @@ public class Http2FrameCodecTest {
 
         channel.flush();
 
-        assertTrue(future2.sync().isSuccess());
+        assertTrue(future2.asStage().sync().isSuccess());
     }
 
     @Test
@@ -673,7 +673,7 @@ public class Http2FrameCodecTest {
         channel.runPendingTasks();
         assertTrue(isStreamIdValid(stream2.id()));
 
-        assertTrue(future1.sync().isSuccess());
+        assertTrue(future1.asStage().sync().isSuccess());
         assertFalse(future2.isDone());
         assertFalse(future3.isDone());
 
@@ -682,14 +682,14 @@ public class Http2FrameCodecTest {
         channel.flush();
 
         // As we increased the limit to 2 we should have also succeed the second frame.
-        assertTrue(future2.sync().isSuccess());
+        assertTrue(future2.asStage().sync().isSuccess());
         assertFalse(future3.isDone());
 
         frameInboundWriter.writeInboundSettings(new Http2Settings().maxConcurrentStreams(3));
         channel.flush();
 
         // With the max streams of 3 all streams should be succeed now.
-        assertTrue(future3.sync().isSuccess());
+        assertTrue(future3.asStage().sync().isSuccess());
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -709,7 +709,7 @@ public class Http2FrameCodecTest {
                 new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
         channel.runPendingTasks();
 
-        assertTrue(stream1HeaderFuture.sync().isSuccess());
+        assertTrue(stream1HeaderFuture.asStage().sync().isSuccess());
         assertTrue(stream2HeaderFuture.isDone());
 
         assertEquals(0, frameCodec.numInitializingStreams());
@@ -723,7 +723,7 @@ public class Http2FrameCodecTest {
         channel.executor().submit(() -> {
             assertNotNull(frameCodec.connection().local().createStream(maxServerStreamId, false));
             return null;
-        }).sync();
+        }).asStage().sync();
 
         Http2FrameStream stream = frameCodec.newStream();
         assertNotNull(stream);

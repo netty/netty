@@ -48,7 +48,7 @@ public class KQueueServerSocketChannelConfigTest {
     @AfterAll
     public static void after() throws Exception {
         try {
-            ch.close().sync();
+            ch.close().asStage().sync();
         } finally {
             group.shutdownGracefully();
         }

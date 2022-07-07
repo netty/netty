@@ -116,10 +116,10 @@ public class TrafficShapingHandlerTest {
             assertNull(attr.get());
         } finally {
             if (ch != null) {
-                ch.close().sync();
+                ch.close().asStage().sync();
             }
             if (svrChannel != null) {
-                svrChannel.close().sync();
+                svrChannel.close().asStage().sync();
             }
         }
     }

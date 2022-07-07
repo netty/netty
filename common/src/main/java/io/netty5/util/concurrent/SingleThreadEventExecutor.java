@@ -696,7 +696,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
             Thread thread = this.thread;
             if (thread == null) {
                 assert !inEventLoop();
-                submit(NOOP_TASK).sync();
+                submit(NOOP_TASK).asStage().sync();
                 thread = this.thread;
                 assert thread != null;
             }

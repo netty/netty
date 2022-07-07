@@ -194,16 +194,16 @@ public class SniClientTest {
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler).connect(address).asStage().get();
 
-            promise.asFuture().sync();
-            sslHandler.handshakeFuture().sync();
+            promise.asFuture().asStage().sync();
+            sslHandler.handshakeFuture().asStage().sync();
         } catch (CompletionException e) {
             throw e.getCause();
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
 
             Resource.dispose(sslServerContext);
@@ -440,20 +440,20 @@ public class SniClientTest {
             SslHandler handler = new SslHandler(
                     sslClientContext.newEngine(offHeapAllocator(), sniHostName, -1));
             cc = cb.group(group).channel(LocalChannel.class).handler(handler).connect(address).asStage().get();
-            assertEquals(sniHostName, promise.asFuture().sync().getNow());
+            assertEquals(sniHostName, promise.asFuture().asStage().get());
 
             // After we are done with handshaking getHandshakeSession() should return null.
-            handler.handshakeFuture().sync();
+            handler.handshakeFuture().asStage().sync();
             assertNull(handler.engine().getHandshakeSession());
 
             assertSSLSession(
                     handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
             Resource.dispose(sslServerContext);
             Resource.dispose(sslClientContext);

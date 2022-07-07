@@ -378,13 +378,13 @@ public abstract class SSLEngineTest {
         //
         // See https://github.com/netty/netty/issues/5692
         if (clientCloseFuture != null) {
-            clientCloseFuture.sync();
+            clientCloseFuture.asStage().sync();
         }
         if (serverConnectedCloseFuture != null) {
-            serverConnectedCloseFuture.sync();
+            serverConnectedCloseFuture.asStage().sync();
         }
         if (serverCloseFuture != null) {
-            serverCloseFuture.sync();
+            serverCloseFuture.asStage().sync();
         }
         if (serverSslCtx != null) {
             cleanupServerSslContext(serverSslCtx);
@@ -405,11 +405,11 @@ public abstract class SSLEngineTest {
             clientGroupShutdownFuture = cb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
         if (serverGroupShutdownFuture != null) {
-            serverGroupShutdownFuture.sync();
-            serverChildGroupShutdownFuture.sync();
+            serverGroupShutdownFuture.asStage().sync();
+            serverChildGroupShutdownFuture.asStage().sync();
         }
         if (clientGroupShutdownFuture != null) {
-            clientGroupShutdownFuture.sync();
+            clientGroupShutdownFuture.asStage().sync();
         }
         delegatingExecutor.shutdown();
         serverException = null;
@@ -1474,7 +1474,7 @@ public abstract class SSLEngineTest {
                 });
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.sync().isSuccess());
+        assertTrue(ccf.asStage().sync().isSuccess());
         clientChannel = ccf.asStage().get();
 
         serverLatch.await();
@@ -1795,7 +1795,7 @@ public abstract class SSLEngineTest {
         serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.sync().isSuccess());
+        assertTrue(ccf.asStage().sync().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
@@ -1906,7 +1906,7 @@ public abstract class SSLEngineTest {
 
         }).connect(serverChannel.localAddress()).asStage().get();
 
-        promise.asFuture().sync();
+        promise.asFuture().asStage().sync();
 
         serverCert.delete();
         clientCert.delete();

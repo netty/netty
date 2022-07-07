@@ -102,12 +102,12 @@ public class FileRegionThrottleTest {
         Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch));
 
         long start = TrafficCounter.milliSecondFromNano();
-        cc.writeAndFlush(preferredAllocator().copyOf("send-file\n", CharsetUtil.US_ASCII)).sync();
+        cc.writeAndFlush(preferredAllocator().copyOf("send-file\n", CharsetUtil.US_ASCII)).asStage().sync();
         latch.await();
         long timeTaken = TrafficCounter.milliSecondFromNano() - start;
         assertTrue(timeTaken > 3000, "Data streamed faster than expected");
-        sc.close().sync();
-        cc.close().sync();
+        sc.close().asStage().sync();
+        cc.close().asStage().sync();
     }
 
     private Channel clientConnect(final SocketAddress server, final ReadHandler readHandler) throws Exception {

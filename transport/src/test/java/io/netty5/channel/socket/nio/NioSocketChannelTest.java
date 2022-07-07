@@ -118,7 +118,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             assertThat(f3.isSuccess(), is(false));
             assertThat(f3.cause(), is(instanceOf(ClosedChannelException.class)));
         } finally {
-            group.shutdownGracefully().sync();
+            group.shutdownGracefully().asStage().sync();
         }
     }
 
@@ -157,7 +157,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
             s.close();
         } finally {
-            group.shutdownGracefully().sync();
+            group.shutdownGracefully().asStage().sync();
         }
     }
 
@@ -212,7 +212,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             bootstrap.group(group).channel(NioSocketChannel.class);
             bootstrap.handler(new ChannelHandler() { });
             cc = bootstrap.connect(sc.localAddress()).asStage().get();
-            cc.writeAndFlush(onHeapAllocator().copyOf(bytes)).sync();
+            cc.writeAndFlush(onHeapAllocator().copyOf(bytes)).asStage().sync();
             latch.await();
         } finally {
             if (cc != null) {
@@ -240,9 +240,9 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress()).asStage().get();
 
             accepted = socket.accept();
-            channel.shutdown(ChannelShutdownDirection.Outbound).sync();
+            channel.shutdown(ChannelShutdownDirection.Outbound).asStage().sync();
 
-            channel.close().sync();
+            channel.close().asStage().sync();
         } finally {
             if (accepted != null) {
                 try {

@@ -95,11 +95,11 @@ public final class DnsClient {
             DnsQuery query = new DatagramDnsQuery(null, addr, 1).setRecord(
                     DnsSection.QUESTION,
                     new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
-            ch.writeAndFlush(query).sync();
+            ch.writeAndFlush(query).asStage().sync();
             boolean success = ch.closeFuture().asStage().await(10, TimeUnit.SECONDS);
             if (!success) {
                 System.err.println("dns query timeout!");
-                ch.close().sync();
+                ch.close().asStage().sync();
             }
         } finally {
             group.shutdownGracefully();

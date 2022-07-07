@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -64,7 +65,7 @@ public class ChannelInitializerTest {
 
     @AfterEach
     public void tearDown() throws Exception {
-        group.shutdownGracefully(0, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).sync();
+        group.shutdownGracefully(0, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).asStage().sync();
     }
 
     @Test
@@ -84,7 +85,7 @@ public class ChannelInitializerTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         if (registerFirst) {
-           pipeline.channel().register().sync();
+            pipeline.channel().register().asStage().sync();
         }
         pipeline.addFirst(new ChannelInitializer<Channel>() {
             @Override
@@ -100,10 +101,11 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            assertTrue(pipeline.channel().register().asStage().await().future().cause() instanceof ClosedChannelException);
+            Throwable cause = pipeline.channel().register().asStage().join((r, e) -> e);
+            assertThat(cause).isInstanceOf(ClosedChannelException.class);
         }
-        pipeline.channel().close().sync();
-        pipeline.channel().closeFuture().sync();
+        pipeline.channel().close().asStage().sync();
+        pipeline.channel().closeFuture().asStage().sync();
 
         assertSame(exception, causeRef.get());
     }
@@ -135,8 +137,8 @@ public class ChannelInitializerTest {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
             channel.executor().submit(() -> {
-                // NOOP
-            }).sync();
+                    // NOOP
+                }).asStage().sync();
             Iterator<Map.Entry<String, ChannelHandler>> handlers = channel.pipeline().iterator();
             assertSame(handler1, handlers.next().getValue());
             assertSame(handler2, handlers.next().getValue());
@@ -144,7 +146,7 @@ public class ChannelInitializerTest {
             assertSame(handler4, handlers.next().getValue());
             assertFalse(handlers.hasNext());
         } finally {
-            channel.close().sync();
+            channel.close().asStage().sync();
         }
     }
 
@@ -172,12 +174,12 @@ public class ChannelInitializerTest {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
             channel.executor().submit(() -> {
-                // NOOP
-            }).sync();
+                    // NOOP
+                }).asStage().sync();
             assertEquals(1, initChannelCalled.get());
             assertEquals(2, registeredCalled.get());
         } finally {
-            channel.close().sync();
+            channel.close().asStage().sync();
         }
     }
 
@@ -250,7 +252,7 @@ public class ChannelInitializerTest {
 
     private static void closeChannel(Channel c) throws Exception {
         if (c != null) {
-            c.close().sync();
+            c.close().asStage().sync();
         }
     }
 

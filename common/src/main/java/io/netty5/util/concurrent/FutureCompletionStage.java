@@ -18,7 +18,9 @@ package io.netty5.util.concurrent;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +44,15 @@ import java.util.function.Function;
  * @param <V> the value type.
  */
 public interface FutureCompletionStage<V> extends CompletionStage<V>, java.util.concurrent.Future<V> {
+
+    /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future failed.
+     *
+     * @throws CancellationException if the computation was cancelled
+     * @throws CompletionException   if the computation threw an exception.
+     * @throws InterruptedException  if the current thread was interrupted while waiting
+     */
+    Future<V> sync() throws InterruptedException;
 
     /**
      * Waits for the future to complete, then calls the given result handler with the outcome.

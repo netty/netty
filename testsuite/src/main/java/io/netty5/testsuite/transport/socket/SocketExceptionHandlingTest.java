@@ -65,10 +65,10 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
                                         " exceptions when 1 was expected");
         } finally {
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
         }
     }

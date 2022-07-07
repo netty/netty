@@ -71,12 +71,6 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public RunnableFuture<V> sync() throws InterruptedException {
-        future.sync();
-        return this;
-    }
-
-    @Override
     public V getNow() {
         return promise.getNow();
     }

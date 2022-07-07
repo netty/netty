@@ -25,7 +25,4 @@ public interface RunnableFuture<V> extends Runnable, Future<V> {
 
     @Override
     <C> RunnableFuture<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
-
-    @Override
-    RunnableFuture<V> sync() throws InterruptedException;
 }

@@ -65,7 +65,7 @@ public class ServerBootstrapTest {
                       }
                   }
               });
-            sb.register().sync();
+            sb.register().asStage().sync();
             latch.await();
             assertNull(error.get());
         } finally {
@@ -136,10 +136,10 @@ public class ServerBootstrapTest {
             readLatch.await();
         } finally {
             if (sch != null) {
-                sch.close().sync();
+                sch.close().asStage().sync();
             }
             if (cch != null) {
-                cch.close().sync();
+                cch.close().asStage().sync();
             }
             group.shutdownGracefully();
         }
@@ -172,8 +172,8 @@ public class ServerBootstrapTest {
                 .channel(LocalChannel.class)
                 .handler(new ChannelHandler() { });
         Channel clientChannel = cb.connect(addr).asStage().get();
-        serverChannel.close().sync();
-        clientChannel.close().sync();
+        serverChannel.close().asStage().sync();
+        clientChannel.close().asStage().sync();
         group.shutdownGracefully();
         assertTrue(requestServed.get());
     }

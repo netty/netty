@@ -47,7 +47,7 @@ public class DefaultChannelGroupTest {
         });
         b.channel(NioServerSocketChannel.class);
 
-        Future<Channel> f = b.bind(0).sync();
+        Future<Channel> f = b.bind(0).asStage().sync();
 
         if (f.isSuccess()) {
             allChannels.add(f.getNow());
@@ -56,7 +56,7 @@ public class DefaultChannelGroupTest {
 
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
-        bossGroup.terminationFuture().sync();
-        workerGroup.terminationFuture().sync();
+        bossGroup.terminationFuture().asStage().sync();
+        workerGroup.terminationFuture().asStage().sync();
     }
 }

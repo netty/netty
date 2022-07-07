@@ -183,12 +183,6 @@ final class RunnableScheduledFutureAdapter<V> implements AbstractScheduledEventE
     }
 
     @Override
-    public RunnableScheduledFuture<V> sync() throws InterruptedException {
-        future.sync();
-        return this;
-    }
-
-    @Override
     public V getNow() {
         return promise.getNow();
     }

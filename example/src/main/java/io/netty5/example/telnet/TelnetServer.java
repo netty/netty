@@ -53,7 +53,7 @@ public final class TelnetServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new TelnetServerInitializer(sslCtx));
 
-            b.bind(PORT).asStage().get().closeFuture().sync();
+            b.bind(PORT).asStage().get().closeFuture().asStage().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

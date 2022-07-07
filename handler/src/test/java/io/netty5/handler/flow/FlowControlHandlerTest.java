@@ -140,8 +140,7 @@ public class FlowControlHandlerTest {
         Channel client = newClient(server.localAddress());
 
         try {
-            client.writeAndFlush(newOneMessage())
-                .sync();
+            client.writeAndFlush(newOneMessage()).asStage().sync();
 
             // We received three messages even through auto reading
             // was turned off after we received the first message.
@@ -188,8 +187,7 @@ public class FlowControlHandlerTest {
             Channel peer = peerRef.exchange(null, 1L, SECONDS);
 
             // Write the message
-            client.writeAndFlush(newOneMessage())
-                .sync();
+            client.writeAndFlush(newOneMessage()).asStage().sync();
 
             // Read the message
             peer.read();
@@ -235,8 +233,7 @@ public class FlowControlHandlerTest {
             Channel peer = peerRef.exchange(null, 1L, SECONDS);
 
             // Write the message
-            client.writeAndFlush(newOneMessage())
-                .sync();
+            client.writeAndFlush(newOneMessage()).asStage().sync();
 
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
@@ -307,8 +304,7 @@ public class FlowControlHandlerTest {
             // The client connection on the server side
             Channel peer = peerRef.exchange(null, 1L, SECONDS);
 
-            client.writeAndFlush(newOneMessage())
-                .sync();
+            client.writeAndFlush(newOneMessage()).asStage().sync();
 
             // channelRead(1)
             assertTrue(msgRcvLatch1.await(1L, SECONDS));
@@ -365,8 +361,7 @@ public class FlowControlHandlerTest {
             Channel peer = peerRef.exchange(null, 1L, SECONDS);
 
             // Write the message
-            client.writeAndFlush(newOneMessage())
-                .sync();
+            client.writeAndFlush(newOneMessage()).asStage().sync();
 
             // channelRead(1)
             peer.read();
@@ -419,8 +414,7 @@ public class FlowControlHandlerTest {
             Channel peer = peerRef.exchange(null, 1L, SECONDS);
 
             // Write the message
-            client.writeAndFlush(newOneMessage())
-                    .sync();
+            client.writeAndFlush(newOneMessage()).asStage().sync();
 
             // channelRead(1)
             peer.read();
@@ -551,7 +545,7 @@ public class FlowControlHandlerTest {
             Channel peer = peerRef.exchange(null, 1L, SECONDS);
 
             // Write one message
-            client.writeAndFlush(newOneMessage()).sync();
+            client.writeAndFlush(newOneMessage()).asStage().sync();
 
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));

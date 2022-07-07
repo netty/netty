@@ -173,7 +173,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 buffer.fill((byte) 0);
                 buffer.skipWritableBytes(bufferCapacity);
             }
-            cc.writeAndFlush(new SegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
+            cc.writeAndFlush(new SegmentedDatagramPacket(buffer, segmentSize, addr)).asStage().sync();
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();
@@ -184,10 +184,10 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
             }
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
         }
     }

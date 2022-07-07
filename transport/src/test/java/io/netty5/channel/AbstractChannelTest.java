@@ -173,7 +173,7 @@ public class AbstractChannelTest {
 
         try {
             registerChannel(channel);
-            channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).sync();
+            channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).asStage().sync();
             assertSame(ioException, channel.writeAndFlush("").asStage().await().future().cause());
 
             assertClosedChannelException(channel.writeAndFlush(""), ioException);
@@ -194,7 +194,7 @@ public class AbstractChannelTest {
     private static void registerChannel(Channel channel) throws Exception {
         when(channel.executor().registerForIo(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
         when(channel.executor().deregisterForIo(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
-        channel.register().sync(); // Cause any exceptions to be thrown
+        channel.register().asStage().sync(); // Cause any exceptions to be thrown
     }
 
     private static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {

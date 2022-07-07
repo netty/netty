@@ -51,7 +51,7 @@ public final class Http2Server {
 
             Channel ch = b.bind(port).asStage().get();
 
-            ch.closeFuture().sync();
+            ch.closeFuture().asStage().sync();
         } finally {
             group.shutdownGracefully();
         }

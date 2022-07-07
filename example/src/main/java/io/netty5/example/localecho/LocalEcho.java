@@ -77,7 +77,7 @@ public final class LocalEcho {
               });
 
             // Start the server.
-            sb.bind(addr).sync();
+            sb.bind(addr).asStage().sync();
 
             // Start the client.
             Channel ch = cb.connect(addr).asStage().get();

@@ -15,8 +15,6 @@
  */
 package io.netty5.util.concurrent;
 
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -171,15 +169,6 @@ public interface Future<V> extends AsynchronousResult<V> {
      * @return this future object.
      */
     <C> Future<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
-
-    /**
-     * Waits for this future until it is done, and rethrows the cause of the failure if this future failed.
-     *
-     * @throws CancellationException if the computation was cancelled
-     * @throws CompletionException   if the computation threw an exception.
-     * @throws InterruptedException  if the current thread was interrupted while waiting
-     */
-    Future<V> sync() throws InterruptedException;
 
     /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all

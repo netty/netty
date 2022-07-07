@@ -98,10 +98,10 @@ public class ResolveAddressHandlerTest {
                 assertSame(ERROR, future.cause());
             } else {
                 assertTrue(future.isSuccess());
-                future.asStage().get().close().sync();
+                future.asStage().get().close().asStage().sync();
             }
         } finally {
-            sc.close().sync();
+            sc.close().asStage().sync();
             resolverGroup.close();
         }
     }

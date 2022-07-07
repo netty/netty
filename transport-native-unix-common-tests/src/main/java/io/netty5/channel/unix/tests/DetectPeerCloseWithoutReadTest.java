@@ -95,7 +95,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             assertEquals(expectedBytes, bytesRead.get());
         } finally {
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
             if (serverGroup != null) {
                 serverGroup.shutdownGracefully();
@@ -169,10 +169,10 @@ public abstract class DetectPeerCloseWithoutReadTest {
             assertEquals(expectedBytes, bytesRead.get());
         } finally {
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverGroup != null) {
                 serverGroup.shutdownGracefully();

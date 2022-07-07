@@ -46,12 +46,12 @@ public class ChannelOutboundBufferTest {
         try {
             ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(executor);
             executor.submit(() -> {
-                try {
-                    testConsumer.accept(buffer, executor);
-                } finally {
-                    release(buffer);
-                }
-            }).sync();
+                    try {
+                        testConsumer.accept(buffer, executor);
+                    } finally {
+                        release(buffer);
+                    }
+                }).asStage().sync();
         } finally {
             executor.shutdownGracefully();
         }

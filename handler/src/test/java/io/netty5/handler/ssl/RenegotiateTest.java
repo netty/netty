@@ -132,8 +132,8 @@ public abstract class RenegotiateTest {
 
             Channel clientChannel = bootstrap.connect(channel.localAddress()).asStage().get();
             latch.await();
-            clientChannel.close().sync();
-            channel.close().sync();
+            clientChannel.close().asStage().sync();
+            channel.close().asStage().sync();
             verifyResult(error);
         } finally  {
             group.shutdownGracefully();

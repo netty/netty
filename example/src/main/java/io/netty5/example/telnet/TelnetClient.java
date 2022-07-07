@@ -73,14 +73,14 @@ public final class TelnetClient {
                 // If user typed the 'bye' command, wait until the server closes
                 // the connection.
                 if ("bye".equalsIgnoreCase(line)) {
-                    ch.closeFuture().sync();
+                    ch.closeFuture().asStage().sync();
                     break;
                 }
             }
 
             // Wait until all messages are flushed before closing the channel.
             if (lastWriteFuture != null) {
-                lastWriteFuture.sync();
+                lastWriteFuture.asStage().sync();
             }
         } finally {
             group.shutdownGracefully();

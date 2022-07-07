@@ -45,7 +45,7 @@ public final class Launcher {
         try {
             http2.start();
             System.err.println("Open your web browser and navigate to " + "http://" + Html.IP + ":" + HttpServer.PORT);
-            http.start().sync();
+            http.start().asStage().sync();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

@@ -65,7 +65,7 @@ public class EpollSocketTcpMd5Test {
 
     @AfterEach
     public void tearDown() throws Exception {
-        server.close().sync();
+        server.close().asStage().sync();
     }
 
     @Test
@@ -89,7 +89,7 @@ public class EpollSocketTcpMd5Test {
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
         ch.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.emptyMap());
 
-        ch.close().sync();
+        ch.close().asStage().sync();
     }
 
     @Test
@@ -107,7 +107,7 @@ public class EpollSocketTcpMd5Test {
                             Collections.singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
                     .connect(server.localAddress()).asStage().get();
-            client.close().sync();
+            client.close().asStage().sync();
         });
         assertThat(completion.getCause())
                 .isInstanceOf(ConnectTimeoutException.class);
@@ -124,6 +124,6 @@ public class EpollSocketTcpMd5Test {
                 .handler(new ChannelHandler() { })
                 .option(EpollChannelOption.TCP_MD5SIG, Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY))
                 .connect(server.localAddress()).asStage().get();
-        client.close().sync();
+        client.close().asStage().sync();
     }
 }

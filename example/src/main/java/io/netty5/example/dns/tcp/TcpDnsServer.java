@@ -106,7 +106,7 @@ public final class TcpDnsServer {
                 e.printStackTrace();
             }
         }, 1000, TimeUnit.MILLISECONDS);
-        channel.closeFuture().sync();
+        channel.closeFuture().asStage().sync();
     }
 
     // copy from TcpDnsClient.java
@@ -140,11 +140,11 @@ public final class TcpDnsServer {
             int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                     .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
-            ch.writeAndFlush(query).sync();
+            ch.writeAndFlush(query).asStage().sync();
             boolean success = ch.closeFuture().asStage().await(10, TimeUnit.SECONDS);
             if (!success) {
                 System.err.println("dns query timeout!");
-                ch.close().sync();
+                ch.close().asStage().sync();
             }
         } finally {
             group.shutdownGracefully();

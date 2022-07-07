@@ -47,60 +47,59 @@ final class Http2FrameInboundWriter {
     }
 
     void writeInboundData(int streamId, Buffer data, int padding, boolean endStream) throws Exception {
-        writer.writeData(ctx, streamId, data, padding, endStream).sync();
+        writer.writeData(ctx, streamId, data, padding, endStream).asStage().sync();
     }
 
     void writeInboundHeaders(int streamId, Http2Headers headers,
                          int padding, boolean endStream) throws Exception {
-        writer.writeHeaders(ctx, streamId, headers, padding, endStream).sync();
+        writer.writeHeaders(ctx, streamId, headers, padding, endStream).asStage().sync();
     }
 
     void writeInboundHeaders(
             int streamId, Http2Headers headers, int streamDependency, short weight, boolean exclusive,
             int padding, boolean endStream) throws Exception {
         writer.writeHeaders(ctx, streamId, headers, streamDependency,
-                weight, exclusive, padding, endStream).sync();
+                weight, exclusive, padding, endStream).asStage().sync();
     }
 
     void writeInboundPriority(int streamId, int streamDependency,
                                 short weight, boolean exclusive) throws Exception {
-        writer.writePriority(ctx, streamId, streamDependency, weight,
-                exclusive).sync();
+        writer.writePriority(ctx, streamId, streamDependency, weight, exclusive).asStage().sync();
     }
 
     void writeInboundRstStream(int streamId, long errorCode) throws Exception {
-        writer.writeRstStream(ctx, streamId, errorCode).sync();
+        writer.writeRstStream(ctx, streamId, errorCode).asStage().sync();
     }
 
     void writeInboundSettings(Http2Settings settings) throws Exception {
-        writer.writeSettings(ctx, settings).sync();
+        writer.writeSettings(ctx, settings).asStage().sync();
     }
 
     void writeInboundSettingsAck() throws Exception {
-        writer.writeSettingsAck(ctx).sync();
+        writer.writeSettingsAck(ctx).asStage().sync();
     }
 
     void writeInboundPing(boolean ack, long data) throws Exception {
-        writer.writePing(ctx, ack, data).sync();
+        writer.writePing(ctx, ack, data).asStage().sync();
     }
 
     void writePushPromise(int streamId, int promisedStreamId,
                                    Http2Headers headers, int padding) throws Exception {
-           writer.writePushPromise(ctx, streamId, promisedStreamId,
-                   headers, padding).sync();
+        writer.writePushPromise(ctx, streamId, promisedStreamId,
+                   headers, padding).asStage().sync();
     }
 
     void writeInboundGoAway(int lastStreamId, long errorCode, Buffer debugData) throws Exception {
-        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData).sync();
+        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData).asStage().sync();
     }
 
     void writeInboundWindowUpdate(int streamId, int windowSizeIncrement) throws Exception {
-        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement).sync();
+        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement).asStage().sync();
     }
 
     void writeInboundFrame(
             byte frameType, int streamId, Http2Flags flags, Buffer payload) throws Exception {
-        writer.writeFrame(ctx, frameType, streamId, flags, payload).sync();
+        writer.writeFrame(ctx, frameType, streamId, flags, payload).asStage().sync();
     }
 
     private static final class WriteInboundChannelHandlerContext

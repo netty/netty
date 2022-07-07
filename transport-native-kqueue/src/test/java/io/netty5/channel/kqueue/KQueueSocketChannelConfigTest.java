@@ -65,7 +65,7 @@ public class KQueueSocketChannelConfigTest {
 
     @AfterEach
     public void tearDown() throws Exception {
-        ch.close().sync();
+        ch.close().asStage().sync();
     }
 
     @Test
@@ -103,7 +103,7 @@ public class KQueueSocketChannelConfigTest {
 
     @Test
     public void testSetOptionWhenClosed() throws Exception {
-        ch.close().sync();
+        ch.close().asStage().sync();
         try {
             ch.config().setSoLinger(0);
             fail();
@@ -114,7 +114,7 @@ public class KQueueSocketChannelConfigTest {
 
     @Test
     public void testGetOptionWhenClosed() throws Exception {
-        ch.close().sync();
+        ch.close().asStage().sync();
         try {
         ch.config().getSoLinger();
             fail();

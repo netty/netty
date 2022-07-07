@@ -118,16 +118,16 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
     @TearDown
     public void tearDown() throws Exception {
-        chan.close().sync();
-        serverChan.close().sync();
+        chan.close().asStage().sync();
+        serverChan.close().asStage().sync();
         future.cancel();
-        group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+        group.shutdownGracefully(0, 0, TimeUnit.SECONDS).asStage().sync();
         abyte.close();
     }
 
     @Benchmark
     public Object pingPong() throws Exception {
-        return chan.pipeline().writeAndFlush(abyte.copy(true)).sync();
+        return chan.pipeline().writeAndFlush(abyte.copy(true)).asStage().sync();
     }
 
     @Benchmark

@@ -150,7 +150,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             sc = sb.bind(newSocketAddress()).asStage().get();
 
             if (connected) {
-                sc.connect(cc.localAddress()).sync();
+                sc.connect(cc.localAddress()).asStage().sync();
             }
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
@@ -163,7 +163,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             cc.flush();
 
             for (Future<Void> f: futures) {
-                f.sync();
+                f.asStage().sync();
             }
 
             // Enable autoread now which also triggers a read, this should cause scattering reads (recvmmsg) to happen.
@@ -178,10 +178,10 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             }
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
         }
     }
@@ -251,12 +251,12 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             sc = sb.bind(newSocketAddress()).asStage().get();
 
             if (connected) {
-                sc.connect(cc.localAddress()).sync();
+                sc.connect(cc.localAddress()).asStage().sync();
             }
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
 
-            cc.writeAndFlush(new DatagramPacket(cc.bufferAllocator().copyOf(bytes), addr)).sync();
+            cc.writeAndFlush(new DatagramPacket(cc.bufferAllocator().copyOf(bytes), addr)).asStage().sync();
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();
@@ -267,10 +267,10 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             }
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
         }
     }

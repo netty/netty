@@ -67,11 +67,11 @@ public abstract class AbstractSingleThreadEventLoopTest {
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
         Future<Channel> cf = serverChannelClass() == LocalServerChannel.class
                 ? b.bind(new LocalAddress(getClass())) : b.bind(0);
-        cf.sync();
+        cf.asStage().sync();
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
         assertTrue(loop.awaitTermination(600, TimeUnit.MILLISECONDS));
-        assertTrue(f.sync().isSuccess());
+        assertTrue(f.asStage().sync().isSuccess());
         assertTrue(loop.isShutdown());
         assertTrue(loop.isTerminated());
     }

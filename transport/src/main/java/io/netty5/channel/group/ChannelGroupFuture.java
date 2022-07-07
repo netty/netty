@@ -143,9 +143,6 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<Future<Void>>
     @Override
     ChannelGroupFuture addListener(FutureListener<? super Void> listener);
 
-    @Override
-    ChannelGroupFuture sync() throws InterruptedException;
-
     /**
      * Returns the {@link Iterator} that enumerates all {@link Future}s
      * which are associated with this future.  Please note that the returned

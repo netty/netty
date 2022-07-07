@@ -235,7 +235,7 @@ public abstract class WebSocketClientHandshakerTest {
         }
         // We need to first write the request as HttpClientCodec will fail if we receive a response before a request
         // was written.
-        shaker.handshake(ch).sync();
+        shaker.handshake(ch).asStage().sync();
         for (;;) {
             // Just consume the bytes, we are not interested in these.
             try (Buffer buf = ch.readOutbound()) {

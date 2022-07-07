@@ -144,7 +144,7 @@ public final class Http2Client {
             System.out.println("Finished HTTP/2 request(s)");
 
             // Wait until the connection is closed.
-            channel.close().sync();
+            channel.close().asStage().sync();
         } finally {
             workerGroup.shutdownGracefully();
         }

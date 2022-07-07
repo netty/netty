@@ -181,7 +181,7 @@ public class Http2MultiplexTransportTest {
         serverConnectedChannel = serverConnectedChannelRef.get();
 
         serverConnectedChannel.writeAndFlush(new DefaultHttp2SettingsFrame(new Http2Settings()
-                .maxConcurrentStreams(10))).sync();
+                .maxConcurrentStreams(10))).asStage().sync();
 
         clientSettingsLatch.await();
 
@@ -190,8 +190,8 @@ public class Http2MultiplexTransportTest {
 
         // We expect 2 settings frames, the initial settings frame during connection establishment and the setting frame
         // written in this test. We should ack both of these settings frames.
-        clientChannel.writeAndFlush(Http2SettingsAckFrame.INSTANCE).sync();
-        clientChannel.writeAndFlush(Http2SettingsAckFrame.INSTANCE).sync();
+        clientChannel.writeAndFlush(Http2SettingsAckFrame.INSTANCE).asStage().sync();
+        clientChannel.writeAndFlush(Http2SettingsAckFrame.INSTANCE).asStage().sync();
 
         serverAckAllLatch.await();
     }
@@ -251,9 +251,8 @@ public class Http2MultiplexTransportTest {
                     Resource.dispose(msg);
                 }
             });
-            Http2StreamChannel streamChannel = h2Bootstrap.open().sync().getNow();
-            streamChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true))
-                    .sync();
+            Http2StreamChannel streamChannel = h2Bootstrap.open().asStage().get();
+            streamChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).asStage().sync();
 
             latch.await();
         } finally {

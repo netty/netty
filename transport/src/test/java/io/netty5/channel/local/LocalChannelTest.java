@@ -56,9 +56,7 @@ import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -171,7 +169,7 @@ public class LocalChannelTest {
                 // Close the channel
                 closeChannel(cc);
                 closeChannel(sc);
-                sc.closeFuture().sync();
+                sc.closeFuture().asStage().sync();
 
                 assertNull(LocalChannelRegistry.get(TEST_ADDRESS), String.format(
                         "Expected null, got channel '%s' for local address '%s'",
@@ -211,13 +209,13 @@ public class LocalChannelTest {
             cc = cb.connect(sc.localAddress()).asStage().get();
 
             // Close the channel and write something.
-            cc.close().sync();
+            cc.close().asStage().sync();
             try {
-                cc.writeAndFlush(new Object()).sync();
+                cc.writeAndFlush(new Object()).asStage().sync();
                 fail("must raise a ClosedChannelException");
             } catch (CompletionException cause) {
                 Throwable e = cause.getCause();
-                assertThat(e, is(instanceOf(ClosedChannelException.class)));
+                assertThat(e).isInstanceOf(ClosedChannelException.class);
             }
         } finally {
             closeChannel(cc);
@@ -354,7 +352,7 @@ public class LocalChannelTest {
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
 
-            cc.deregister().sync();
+            cc.deregister().asStage().sync();
         } finally {
             closeChannel(cc);
             closeChannel(sc);
@@ -821,10 +819,10 @@ public class LocalChannelTest {
                 }
             });
             // Connect to the server
-            cc.connect(sc.localAddress()).sync();
-            Future<Void> f = ref.get().sync();
+            cc.connect(sc.localAddress()).asStage().sync();
+            Future<Void> f = ref.get().asStage().sync();
 
-            assertPromise.asFuture().sync();
+            assertPromise.asFuture().asStage().sync();
             assertTrue(f.isSuccess());
         } finally {
             closeChannel(cc);
@@ -836,10 +834,13 @@ public class LocalChannelTest {
     public void testConnectionRefused() throws Throwable {
         try {
             Bootstrap sb = new Bootstrap();
-            assertTrue(assertThrows(CompletionException.class, () -> sb.group(group1)
-                    .channel(LocalChannel.class)
-                    .handler(new TestHandler())
-                    .connect(LocalAddress.ANY).sync()).getCause() instanceof ConnectException);
+            var exception = assertThrows(CompletionException.class,
+                                         () -> sb.group(group1)
+                                                 .channel(LocalChannel.class)
+                                                 .handler(new TestHandler())
+                                                 .connect(LocalAddress.ANY)
+                                                 .asStage().sync());
+            assertThat(exception).hasCauseInstanceOf(ConnectException.class);
         } catch (CompletionException e) {
             throw e.getCause();
         }
@@ -858,7 +859,7 @@ public class LocalChannelTest {
 
     private static void closeChannel(Channel cc) throws Exception {
         if (cc != null) {
-            cc.close().sync();
+            cc.close().asStage().sync();
         }
     }
 
