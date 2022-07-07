@@ -34,7 +34,7 @@ public final class KQueueServerSocketChannel extends
     private final KQueueServerSocketChannelConfig config;
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, childEventLoopGroup, newSocketStream(), false);
+        super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, newSocketStream(), false);
         config = new KQueueServerSocketChannelConfig(this);
     }
 
@@ -45,12 +45,12 @@ public final class KQueueServerSocketChannel extends
     }
 
     KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
-        super(eventLoop, childEventLoopGroup, fd);
+        super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, fd);
         config = new KQueueServerSocketChannelConfig(this);
     }
 
     KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
-        super(eventLoop, childEventLoopGroup, fd, active);
+        super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, fd, active);
         config = new KQueueServerSocketChannelConfig(this);
     }
 

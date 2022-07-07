@@ -650,6 +650,11 @@ public final class NioHandler implements IoHandler {
         }
     }
 
+    @Override
+    public boolean isCompatible(Class<? extends Channel> channelType) {
+        return AbstractNioChannel.class.isAssignableFrom(channelType);
+    }
+
     Selector unwrappedSelector() {
         return unwrappedSelector;
     }

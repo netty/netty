@@ -343,6 +343,11 @@ public final class KQueueHandler implements IoHandler {
         }
     }
 
+    @Override
+    public boolean isCompatible(Class<? extends Channel> channelType) {
+        return AbstractKQueueChannel.class.isAssignableFrom(channelType);
+    }
+
     private static void handleLoopException(Throwable t) {
         logger.warn("Unexpected exception in the selector loop.", t);
 

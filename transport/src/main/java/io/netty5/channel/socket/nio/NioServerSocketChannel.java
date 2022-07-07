@@ -43,8 +43,6 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * A {@link io.netty5.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
@@ -101,7 +99,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, I
     public NioServerSocketChannel(
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ServerSocketChannel channel) {
         super(null, eventLoop, channel, SelectionKey.OP_ACCEPT);
-        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = validateEventLoopGroup(
+                childEventLoopGroup, "childEventLoopGroup", NioSocketChannel.class);
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 

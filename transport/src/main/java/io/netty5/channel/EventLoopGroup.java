@@ -28,4 +28,15 @@ public interface EventLoopGroup extends EventExecutorGroup {
      */
     @Override
     EventLoop next();
+
+    /**
+     * Returns {@code true} if the given type is compatible with this {@link EventLoopGroup} and so can be registered
+     * to the contained {@link EventLoop}s, {@code false} otherwise.
+     *
+     * @param channelType   the type of the {@link Channel}.
+     * @return              if compatible of not.
+     */
+    default boolean isCompatible(Class<? extends Channel> channelType) {
+        return next().isCompatible(channelType);
+    }
 }

@@ -480,6 +480,11 @@ public class SingleThreadEventLoopTest {
         public Future<Void> deregisterForIo(Channel channel) {
             return newSucceededFuture(null);
         }
+
+        @Override
+        public boolean isCompatible(Class<? extends Channel> channelType) {
+            return true;
+        }
     }
 
     private static class SingleThreadEventLoopB extends SingleThreadEventExecutor implements EventLoop {
@@ -525,6 +530,11 @@ public class SingleThreadEventLoopTest {
         @Override
         public Future<Void> deregisterForIo(Channel channel) {
             return newSucceededFuture(null);
+        }
+
+        @Override
+        public boolean isCompatible(Class<? extends Channel> channelType) {
+            return true;
         }
     }
 }

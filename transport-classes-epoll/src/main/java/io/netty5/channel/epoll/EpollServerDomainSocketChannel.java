@@ -40,11 +40,11 @@ public final class EpollServerDomainSocketChannel
     private volatile DomainSocketAddress local;
 
     public EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, childEventLoopGroup, newSocketDomain(), false);
+        super(eventLoop, childEventLoopGroup, EpollDomainSocketChannel.class,  newSocketDomain(), false);
     }
 
     public EpollServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
-        super(eventLoop, childEventLoopGroup, fd);
+        super(eventLoop, childEventLoopGroup, EpollDomainSocketChannel.class, fd);
     }
 
     @Override

@@ -41,7 +41,7 @@ public final class KQueueServerDomainSocketChannel
     private volatile DomainSocketAddress local;
 
     public KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, childEventLoopGroup, newSocketDomain(), false);
+        super(eventLoop, childEventLoopGroup, KQueueDomainSocketChannel.class, newSocketDomain(), false);
     }
 
     public KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
@@ -50,7 +50,7 @@ public final class KQueueServerDomainSocketChannel
 
     KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     BsdSocket socket, boolean active) {
-        super(eventLoop, childEventLoopGroup, socket, active);
+        super(eventLoop, childEventLoopGroup, KQueueDomainSocketChannel.class, socket, active);
     }
 
     @Override

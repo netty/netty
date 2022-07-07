@@ -29,8 +29,6 @@ import io.netty5.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
-import static java.util.Objects.requireNonNull;
-
 public abstract class AbstractEpollServerChannel
         <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
         extends AbstractEpollChannel<P, L, R> implements ServerChannel {
@@ -42,18 +40,20 @@ public abstract class AbstractEpollServerChannel
     // So use 26 bytes as it's a power of two.
     private final byte[] acceptedAddress = new byte[26];
 
-    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
-        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd), false);
-    }
-
-    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
-        this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
+    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                               Class<? extends Channel> childChannelType, int fd) {
+        this(eventLoop, childEventLoopGroup, childChannelType, new LinuxSocket(fd), false);
     }
 
     AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
-                               LinuxSocket fd, boolean active) {
+                               Class<? extends Channel> childChannelType, LinuxSocket fd) {
+        this(eventLoop, childEventLoopGroup, childChannelType, fd, isSoErrorZero(fd));
+    }
+
+    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                               Class<? extends Channel> childChannelType, LinuxSocket fd, boolean active) {
         super(null, eventLoop, fd, active);
-        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 
     @Override
