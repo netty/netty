@@ -267,8 +267,8 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 assertNotNull(cc.localAddress());
                 assertNull(cc.remoteAddress());
 
-                Future<Void> future = cc.writeAndFlush(buf.copy()).asStage().await().future();
-                assertThat(future.cause()).isInstanceOf(NotYetConnectedException.class);
+                Throwable cause = cc.writeAndFlush(buf.copy()).asStage().getCause();
+                assertThat(cause).isInstanceOf(NotYetConnectedException.class);
             }
         } finally {
             closeChannel(cc);

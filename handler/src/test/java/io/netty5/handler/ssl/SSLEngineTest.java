@@ -807,7 +807,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.asStage().await().future().isSuccess());
+        assertTrue(ccf.asStage().await().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
@@ -997,7 +997,7 @@ public abstract class SSLEngineTest {
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
-        assertTrue(ccf.asStage().await().future().isSuccess());
+        assertTrue(ccf.asStage().await().isSuccess());
         clientChannel = ccf.asStage().get();
         return clientWritePromise.asFuture();
     }
@@ -1169,7 +1169,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.asStage().await().future().isSuccess());
+        assertTrue(ccf.asStage().await().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 

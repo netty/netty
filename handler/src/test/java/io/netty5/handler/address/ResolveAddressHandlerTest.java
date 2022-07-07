@@ -98,7 +98,7 @@ public class ResolveAddressHandlerTest {
                 assertSame(ERROR, future.cause());
             } else {
                 assertTrue(future.isSuccess());
-                future.asStage().get().close().asStage().sync();
+                future.getNow().close().asStage().sync();
             }
         } finally {
             sc.close().asStage().sync();

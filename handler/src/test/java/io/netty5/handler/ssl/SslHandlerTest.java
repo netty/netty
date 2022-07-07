@@ -904,7 +904,7 @@ public class SslHandlerTest {
                 if (error != null) {
                     throw error;
                 }
-                assertThat(sslHandler.handshakeFuture().asStage().join((r, e) -> e), instanceOf(SSLException.class));
+                assertThat(sslHandler.handshakeFuture().asStage().getCause(), instanceOf(SSLException.class));
             } finally {
                 if (cc != null) {
                     cc.close().asStage().sync();
@@ -975,7 +975,7 @@ public class SslHandlerTest {
                 }
                 cc = future.asStage().get();
 
-                Throwable cause = sslHandler.handshakeFuture().asStage().join((r, e) -> e);
+                Throwable cause = sslHandler.handshakeFuture().asStage().getCause();
                 assertThat(cause, instanceOf(SSLException.class));
                 assertThat(cause.getMessage(), containsString("timed out"));
             } finally {
@@ -1165,8 +1165,8 @@ public class SslHandlerTest {
                         }).connect(sc.localAddress());
                 cc = future.asStage().get();
 
-                assertTrue(clientSslHandler.handshakeFuture().asStage().await().future().isSuccess());
-                assertTrue(serverSslHandler.handshakeFuture().asStage().await().future().isSuccess());
+                assertTrue(clientSslHandler.handshakeFuture().asStage().await().isSuccess());
+                assertTrue(serverSslHandler.handshakeFuture().asStage().await().isSuccess());
                 Throwable cause = causeRef.get();
                 if (cause != null) {
                     throw cause;
@@ -1243,13 +1243,13 @@ public class SslHandlerTest {
                 cc = future.asStage().get();
 
                 if (client) {
-                    Throwable cause = clientSslHandler.handshakeFuture().asStage().join((r, e) -> e);
+                    Throwable cause = clientSslHandler.handshakeFuture().asStage().getCause();
                     assertThat(cause, instanceOf(SslHandshakeTimeoutException.class));
-                    assertFalse(serverSslHandler.handshakeFuture().asStage().await().future().isSuccess());
+                    assertFalse(serverSslHandler.handshakeFuture().asStage().await().isSuccess());
                 } else {
-                    Throwable cause = serverSslHandler.handshakeFuture().asStage().join((r, e) -> e);
+                    Throwable cause = serverSslHandler.handshakeFuture().asStage().getCause();
                     assertThat(cause, instanceOf(SslHandshakeTimeoutException.class));
-                    assertFalse(clientSslHandler.handshakeFuture().asStage().await().future().isSuccess());
+                    assertFalse(clientSslHandler.handshakeFuture().asStage().await().isSuccess());
                 }
             } finally {
                 if (cc != null) {
@@ -1532,8 +1532,8 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress()).asStage().get();
             clientSslHandler.handshakeFuture().addListener(f -> channel.close());
-            assertFalse(clientSslHandler.handshakeFuture().asStage().await().future().isSuccess());
-            assertFalse(serverSslHandler.handshakeFuture().asStage().await().future().isSuccess());
+            assertFalse(clientSslHandler.handshakeFuture().asStage().await().isSuccess());
+            assertFalse(serverSslHandler.handshakeFuture().asStage().await().isSuccess());
 
             Object error = errorQueue.take();
             assertThat(error, Matchers.instanceOf(DecoderException.class));
@@ -1652,10 +1652,10 @@ public class SslHandlerTest {
                             }
                         }).connect(sc.localAddress()).asStage().get();
 
-                Throwable clientCause = clientSslHandler.handshakeFuture().asStage().join((r, e) -> e);
+                Throwable clientCause = clientSslHandler.handshakeFuture().asStage().getCause();
                 assertThat(clientCause, instanceOf(SSLException.class));
                 assertThat(clientCause.getCause(), not(instanceOf(ClosedChannelException.class)));
-                Throwable serverCause = serverSslHandler.handshakeFuture().asStage().join((r, e) -> e);
+                Throwable serverCause = serverSslHandler.handshakeFuture().asStage().getCause();
                 assertThat(serverCause, instanceOf(SSLException.class));
                 assertThat(serverCause.getCause(), not(instanceOf(ClosedChannelException.class)));
                 cc.close().asStage().sync();

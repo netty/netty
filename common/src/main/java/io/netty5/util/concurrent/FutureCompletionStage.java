@@ -43,7 +43,8 @@ import java.util.function.Function;
  *
  * @param <V> the value type.
  */
-public interface FutureCompletionStage<V> extends CompletionStage<V>, java.util.concurrent.Future<V> {
+public interface FutureCompletionStage<V>
+        extends CompletionStage<V>, java.util.concurrent.Future<V>, AsynchronousResult<V> {
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future failed.
@@ -99,13 +100,52 @@ public interface FutureCompletionStage<V> extends CompletionStage<V>, java.util.
     boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
+     * Wait for the future to complete, and return the cause if it failed, or {@code null} if it succeeded.
+     *
+     * @return The exception that caused the future to fail, if any, or {@code null}.
+     * @throws InterruptedException if the current thread was interrupted while waiting.
+     */
+    default Throwable getCause() throws InterruptedException {
+        await();
+        return cause();
+    }
+
+    /**
      * Returns the underlying {@link Future} of this {@link FutureCompletionStage}.
      */
     Future<V> future();
 
-    /**
-     * See {@link Future#executor()}.
-     */
+    @Override
+    default boolean cancel() {
+        return future().cancel();
+    }
+
+    @Override
+    default boolean isSuccess() {
+        return future().isSuccess();
+    }
+
+    @Override
+    default boolean isFailed() {
+        return future().isFailed();
+    }
+
+    @Override
+    default boolean isCancellable() {
+        return future().isCancellable();
+    }
+
+    @Override
+    default V getNow() {
+        return future().getNow();
+    }
+
+    @Override
+    default Throwable cause() {
+        return future().cause();
+    }
+
+    @Override
     default EventExecutor executor() {
         return future().executor();
     }

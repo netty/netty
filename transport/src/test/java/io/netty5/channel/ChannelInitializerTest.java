@@ -101,7 +101,7 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            Throwable cause = pipeline.channel().register().asStage().join((r, e) -> e);
+            Throwable cause = pipeline.channel().register().asStage().getCause();
             assertThat(cause).isInstanceOf(ClosedChannelException.class);
         }
         pipeline.channel().close().asStage().sync();

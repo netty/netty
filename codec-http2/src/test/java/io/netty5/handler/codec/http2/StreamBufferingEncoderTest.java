@@ -279,8 +279,7 @@ public class StreamBufferingEncoderTest {
         connection.goAwayReceived(11, 8, empty());
         Future<Void> f = encoderWriteHeaders(5);
 
-        Throwable result = f.asStage().join((r, e) -> e);
-        assertThat(result).isInstanceOf(Http2GoAwayException.class);
+        assertThat(f.asStage().getCause()).isInstanceOf(Http2GoAwayException.class);
         assertEquals(0, encoder.numBufferedStreams());
     }
 
@@ -468,7 +467,7 @@ public class StreamBufferingEncoderTest {
         Future<Void> f = encoderWriteHeaders(-1);
 
         // Verify that the write fails.
-        assertNotNull(f.asStage().join((r, e) -> e));
+        assertNotNull(f.asStage().getCause());
     }
 
     @Test
@@ -499,9 +498,9 @@ public class StreamBufferingEncoderTest {
         Future<Void> f3 = encoderWriteHeaders(7);
 
         encoder.close();
-        assertNotNull(f1.asStage().join((r, e) -> e));
-        assertNotNull(f2.asStage().join((r, e) -> e));
-        assertNotNull(f3.asStage().join((r, e) -> e));
+        assertNotNull(f1.asStage().getCause());
+        assertNotNull(f2.asStage().getCause());
+        assertNotNull(f3.asStage().getCause());
     }
 
     @Test

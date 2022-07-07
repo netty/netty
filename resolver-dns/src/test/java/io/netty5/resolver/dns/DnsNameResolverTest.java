@@ -659,9 +659,9 @@ public class DnsNameResolverTest {
 
             for (Entry<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> e : futures.entrySet()) {
                 String hostname = e.getKey();
-                Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().asStage().await().future();
+                Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue();
 
-                DnsResponse response = f.getNow().content();
+                DnsResponse response = f.asStage().get().content();
                 assertThat(response.code(), is(DnsResponseCode.NOERROR));
 
                 final int answerCount = response.count(DnsSection.ANSWER);
@@ -1086,9 +1086,9 @@ public class DnsNameResolverTest {
 
             for (Entry<String, Future<List<DnsRecord>>> e : futures.entrySet()) {
                 String hostname = e.getKey();
-                Future<List<DnsRecord>> f = e.getValue().asStage().await().future();
+                Future<List<DnsRecord>> f = e.getValue();
 
-                final List<DnsRecord> mxList = f.getNow();
+                final List<DnsRecord> mxList = f.asStage().get();
                 assertThat(mxList.size(), is(greaterThan(0)));
                 StringBuilder buf = new StringBuilder();
                 for (DnsRecord r : mxList) {
@@ -1702,7 +1702,7 @@ public class DnsNameResolverTest {
         };
 
         try {
-            Throwable cause = resolver.resolveAll(hostname).asStage().await().future().cause();
+            Throwable cause = resolver.resolveAll(hostname).asStage().getCause();
             assertTrue(cause instanceof UnknownHostException);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
@@ -1837,7 +1837,7 @@ public class DnsNameResolverTest {
         };
 
         try {
-            Throwable cause = resolver.resolveAll(hostname).asStage().await().future().cause();
+            Throwable cause = resolver.resolveAll(hostname).asStage().getCause();
             assertTrue(cause instanceof UnknownHostException);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
@@ -1974,9 +1974,9 @@ public class DnsNameResolverTest {
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(testDnsServer.localAddress())).build();
 
         try {
-            assertThat(resolver.resolve(domain).asStage().await().future().cause(),
+            assertThat(resolver.resolve(domain).asStage().getCause(),
                        instanceOf(UnknownHostException.class));
-            assertThat(resolver.resolveAll(domain).asStage().await().future().cause(),
+            assertThat(resolver.resolveAll(domain).asStage().getCause(),
                        instanceOf(UnknownHostException.class));
         } finally {
             resolver.close();
@@ -2279,8 +2279,7 @@ public class DnsNameResolverTest {
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
                         new InetSocketAddress(NetUtil.LOCALHOST, 12345)));
         DnsNameResolver resolver = builder.build();
-        Future<InetAddress> result = resolver.resolve("doesnotexist.netty.io").asStage().await().future();
-        Throwable cause = result.cause();
+        Throwable cause = resolver.resolve("doesnotexist.netty.io").asStage().getCause();
         assertThat(cause, instanceOf(UnknownHostException.class));
         assertThat(cause.getCause(), instanceOf(DnsNameResolverTimeoutException.class));
         assertTrue(DnsNameResolver.isTimeoutError(cause));
@@ -3399,31 +3398,31 @@ public class DnsNameResolverTest {
             // We expect these resolves to fail with UnknownHostException,
             // and then check that no unexpected CNAME queries were performed.
             assertThat(resolver.resolveAll(
-                    new DefaultDnsQuestion("lookup-srv.netty.io", SRV)).asStage().join((r, e) -> e),
+                    new DefaultDnsQuestion("lookup-srv.netty.io", SRV)).asStage().getCause(),
                     instanceOf(UnknownHostException.class));
             assertEquals(0, cnameQueries.get());
 
             assertThat(resolver.resolveAll(
-                    new DefaultDnsQuestion("lookup-naptr.netty.io", NAPTR)).asStage().join((r, e) -> e),
+                    new DefaultDnsQuestion("lookup-naptr.netty.io", NAPTR)).asStage().getCause(),
                        instanceOf(UnknownHostException.class));
             assertEquals(0, cnameQueries.get());
 
             assertThat(resolver.resolveAll(
-                    new DefaultDnsQuestion("lookup-cname.netty.io", CNAME)).asStage().join((r, e) -> e),
+                    new DefaultDnsQuestion("lookup-cname.netty.io", CNAME)).asStage().getCause(),
                        instanceOf(UnknownHostException.class));
             assertEquals(1, cnameQueries.getAndSet(0));
 
             assertThat(resolver.resolveAll(
-                    new DefaultDnsQuestion("lookup-a.netty.io", A)).asStage().join((r, e) -> e),
+                    new DefaultDnsQuestion("lookup-a.netty.io", A)).asStage().getCause(),
                        instanceOf(UnknownHostException.class));
             assertEquals(1, cnameQueries.getAndSet(0));
 
             assertThat(resolver.resolveAll(
-                    new DefaultDnsQuestion("lookup-aaaa.netty.io", AAAA)).asStage().join((r, e) -> e),
+                    new DefaultDnsQuestion("lookup-aaaa.netty.io", AAAA)).asStage().getCause(),
                     instanceOf(UnknownHostException.class));
             assertEquals(1, cnameQueries.getAndSet(0));
 
-            assertThat(resolver.resolveAll("lookup-address.netty.io").asStage().join((r, e) -> e),
+            assertThat(resolver.resolveAll("lookup-address.netty.io").asStage().getCause(),
                        instanceOf(UnknownHostException.class));
             assertEquals(1, cnameQueries.getAndSet(0));
         } finally {
