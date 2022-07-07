@@ -725,7 +725,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             } finally {
                 // If the outboundBuffer is null we know the channel was closed or the outbound was shutdown, so
                 // need to fail the future right away. If it is not null the handling of the rest
-                // will be done in flush0()
+                // will be done in writeFlushed()
                 // See https://github.com/netty/netty/issues/2362
                 final Throwable cause;
                 if (!isActive()) {
@@ -804,7 +804,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                         updateWritabilityIfNeeded(true, true);
                     } else {
                         // Do not trigger channelWritabilityChanged because the channel is closed already.
-                        outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause, "flush0()"));
+                        outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause, "writeFlushed()"));
                     }
                 }
             } finally {
@@ -837,7 +837,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
              * the exception.
              */
             initialCloseCause = t;
-            close(newPromise(), t, newClosedChannelException(t, "flush0()"));
+            close(newPromise(), t, newClosedChannelException(t, "writeFlushed()"));
         } else {
             try {
                 if (shutdownOutput(newPromise(), t)) {
@@ -845,7 +845,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 }
             } catch (Throwable t2) {
                 initialCloseCause = t;
-                close(newPromise(), t2, newClosedChannelException(t, "flush0()"));
+                close(newPromise(), t2, newClosedChannelException(t, "writeFlushed()"));
             }
         }
     }
