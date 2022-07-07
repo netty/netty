@@ -33,7 +33,6 @@ import io.netty5.util.internal.SocketUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -50,7 +49,7 @@ import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WR
  * {@link io.netty5.channel.socket.SocketChannel} which uses NIO selector based implementation.
  */
 public class NioSocketChannel
-        extends AbstractNioByteChannel<NioServerSocketChannel, InetSocketAddress, InetSocketAddress>
+        extends AbstractNioByteChannel<NioServerSocketChannel, SocketAddress, SocketAddress>
         implements io.netty5.channel.socket.SocketChannel {
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
@@ -154,13 +153,13 @@ public class NioSocketChannel
     }
 
     @Override
-    protected InetSocketAddress localAddress0() {
-        return (InetSocketAddress) javaChannel().socket().getLocalSocketAddress();
+    protected SocketAddress localAddress0() {
+        return javaChannel().socket().getLocalSocketAddress();
     }
 
     @Override
-    protected InetSocketAddress remoteAddress0() {
-        return (InetSocketAddress) javaChannel().socket().getRemoteSocketAddress();
+    protected SocketAddress remoteAddress0() {
+        return javaChannel().socket().getRemoteSocketAddress();
     }
 
     @Override
@@ -194,7 +193,7 @@ public class NioSocketChannel
     }
 
     @Override
-    protected boolean doFinishConnect(InetSocketAddress requestedRemoteAddress) throws Exception {
+    protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) throws Exception {
         return javaChannel().finishConnect();
     }
 

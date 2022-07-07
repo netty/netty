@@ -32,7 +32,6 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
@@ -47,7 +46,7 @@ import java.util.Map;
  * A {@link io.netty5.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
  */
-public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, InetSocketAddress, InetSocketAddress>
+public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, SocketAddress, SocketAddress>
                              implements io.netty5.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -132,8 +131,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, I
     }
 
     @Override
-    protected InetSocketAddress localAddress0() {
-        return (InetSocketAddress) SocketUtils.localSocketAddress(javaChannel().socket());
+    protected SocketAddress localAddress0() {
+        return SocketUtils.localSocketAddress(javaChannel().socket());
     }
 
     @Override
@@ -181,12 +180,12 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, I
     }
 
     @Override
-    protected boolean doFinishConnect(InetSocketAddress requestedRemoteAddress) {
+    protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected InetSocketAddress remoteAddress0() {
+    protected SocketAddress remoteAddress0() {
         return null;
     }
 

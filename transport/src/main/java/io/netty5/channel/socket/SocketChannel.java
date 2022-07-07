@@ -17,10 +17,9 @@ package io.netty5.channel.socket;
 
 import io.netty5.channel.Channel;
 
-import java.net.InetSocketAddress;
 
 /**
- * A TCP/IP socket {@link Channel}.
+ * A socket {@link Channel}.
  */
 public interface SocketChannel extends Channel {
     @Override
@@ -28,8 +27,4 @@ public interface SocketChannel extends Channel {
 
     @Override
     SocketChannelConfig config();
-    @Override
-    InetSocketAddress localAddress();
-    @Override
-    InetSocketAddress remoteAddress();
 }
