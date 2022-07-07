@@ -458,10 +458,10 @@ public class SniHandlerTest {
                 assertThat(handler.sslContext(), is(sniContext));
             } finally {
                 if (serverChannel != null) {
-                    serverChannel.close().sync();
+                    serverChannel.close().asStage().sync();
                 }
                 if (clientChannel != null) {
-                    clientChannel.close().sync();
+                    clientChannel.close().asStage().sync();
                 }
                 group.shutdownGracefully(0, 0, TimeUnit.MICROSECONDS);
             }
@@ -557,16 +557,15 @@ public class SniHandlerTest {
                                    sslContext.newEngine(offHeapAllocator(), sniHost, -1)))
                            .connect(address).asStage().get();
 
-                    cc.writeAndFlush(cc.bufferAllocator().copyOf("Hello, World!", UTF_8))
-                            .sync();
+                    cc.writeAndFlush(cc.bufferAllocator().copyOf("Hello, World!", UTF_8)).asStage().sync();
 
                     // Notice how the server's SslContext refCnt is 2 as it is incremented when the SSLEngine is created
                     // and only decremented once it is destroyed.
                     assertEquals(2, ((ReferenceCounted) sslServerContext).refCnt());
 
                     // The client disconnects
-                    cc.close().sync();
-                    if (!releasePromise.asFuture().await(10L, TimeUnit.SECONDS)) {
+                    cc.close().asStage().sync();
+                    if (!releasePromise.asFuture().asStage().await(10L, TimeUnit.SECONDS)) {
                         throw new IllegalStateException("It doesn't seem #replaceHandler() got called.");
                     }
 
@@ -574,10 +573,10 @@ public class SniHandlerTest {
                     assertEquals(0, ((ReferenceCounted) sslServerContext).refCnt());
                 } finally {
                     if (cc != null) {
-                        cc.close().sync();
+                        cc.close().asStage().sync();
                     }
                     if (sc != null) {
-                        sc.close().sync();
+                        sc.close().asStage().sync();
                     }
                     if (sslContext != null) {
                         Resource.dispose(sslContext);

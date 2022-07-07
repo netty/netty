@@ -105,12 +105,12 @@ public class EpollReuseAddrTest {
         bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
         Channel channel = bootstrap.bind().asStage().get();
         try {
-            bootstrap.bind(channel.localAddress()).sync();
+            bootstrap.bind(channel.localAddress()).asStage().sync();
             fail();
         } catch (Exception e) {
             assertTrue(e.getCause() instanceof IOException);
         }
-        channel.close().sync();
+        channel.close().asStage().sync();
     }
 
     @Test
@@ -135,8 +135,8 @@ public class EpollReuseAddrTest {
             socket.setReuseAddress(true);
             socket.close();
         }
-        firstChannel.close().sync();
-        secondChannel.close().sync();
+        firstChannel.close().asStage().sync();
+        secondChannel.close().asStage().sync();
     }
 
     @Test
@@ -184,8 +184,8 @@ public class EpollReuseAddrTest {
         }
         latch.await();
         executor.shutdown();
-        firstChannel.close().sync();
-        secondChannel.close().sync();
+        firstChannel.close().asStage().sync();
+        secondChannel.close().asStage().sync();
         assertTrue(received1.get());
         assertTrue(received2.get());
     }

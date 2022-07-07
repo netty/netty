@@ -36,7 +36,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DefaultPromise<V> implements Promise<V>, Future<V>,
                                           FutureCompletionStage<V>, java.util.concurrent.Future<V> {
@@ -239,7 +238,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
     }
 
     @Override
-    public Future<V> await() throws InterruptedException {
+    public FutureCompletionStage<V> await() throws InterruptedException {
         if (isDone()) {
             return this;
         }
@@ -347,7 +346,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
     }
 
     @Override
-    public Future<V> sync() throws InterruptedException {
+    public FutureCompletionStage<V> sync() throws InterruptedException {
         await();
         rethrowIfFailed();
         return this;

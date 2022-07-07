@@ -95,10 +95,10 @@ public class SocketAutoReadTest extends AbstractSocketTest {
             clientInitializer.autoReadHandler.assertSingleReadSecondTry();
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }

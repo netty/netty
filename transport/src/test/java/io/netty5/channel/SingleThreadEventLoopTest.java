@@ -95,7 +95,7 @@ public class SingleThreadEventLoopTest {
 
     @Test
     public void shutdownBeforeStart() throws Exception {
-        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).asStage().await();
         assertRejection(loopA);
     }
 
@@ -108,7 +108,7 @@ public class SingleThreadEventLoopTest {
         latch.await();
 
         // Request the event loop thread to stop.
-        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).asStage().await();
         assertRejection(loopA);
 
         assertTrue(loopA.isShutdown());
@@ -334,7 +334,7 @@ public class SingleThreadEventLoopTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testRegistrationAfterShutdown() throws Exception {
-        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).asStage().await();
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
@@ -348,7 +348,7 @@ public class SingleThreadEventLoopTest {
         try {
             Channel channel = new LocalChannel(loopA);
             Future<Void> f = channel.register();
-            f.await();
+            f.asStage().await();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
             // TODO: What to do in this case ?
@@ -363,7 +363,7 @@ public class SingleThreadEventLoopTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testRegistrationAfterShutdown2() throws Exception {
-        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).await();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).asStage().await();
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
 
@@ -378,7 +378,7 @@ public class SingleThreadEventLoopTest {
 
         try {
             Future<Void> f = ch.register().addListener(future -> latch.countDown());
-            f.await();
+            f.asStage().await();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
 

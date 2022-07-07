@@ -75,8 +75,8 @@ public class BootstrapTest {
     public static void destroy() throws Exception {
         groupA.shutdownGracefully();
         groupB.shutdownGracefully();
-        groupA.terminationFuture().sync();
-        groupB.terminationFuture().sync();
+        groupA.terminationFuture().asStage().sync();
+        groupB.terminationFuture().asStage().sync();
     }
 
     @Test
@@ -117,7 +117,7 @@ public class BootstrapTest {
                         assertEquals("value", ch.attr(key).get());
                     }
                 })
-                .bind(LocalAddress.ANY).sync();
+                .bind(LocalAddress.ANY).asStage().sync();
     }
 
     @Test
@@ -147,7 +147,7 @@ public class BootstrapTest {
         }
 
         for (Future<?> f: bindFutures) {
-            f.sync();
+            f.asStage().sync();
         }
     }
 
@@ -178,7 +178,7 @@ public class BootstrapTest {
         }
 
         for (Future<?> f: bindFutures) {
-            f.sync();
+            f.asStage().sync();
         }
     }
 
@@ -205,7 +205,7 @@ public class BootstrapTest {
             assertTrue(queue.take());
         } finally {
             group.shutdownGracefully();
-            group.terminationFuture().sync();
+            group.terminationFuture().asStage().sync();
         }
     }
 
@@ -241,7 +241,7 @@ public class BootstrapTest {
             assertFalse(queue.take());
         } finally {
             group.shutdownGracefully();
-            group.terminationFuture().sync();
+            group.terminationFuture().asStage().sync();
         }
     }
 
@@ -258,7 +258,7 @@ public class BootstrapTest {
             Future<Channel> future = bootstrapA.connect(LocalAddress.ANY);
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);
-            CompletionException cause = assertThrows(CompletionException.class, future::sync);
+            CompletionException cause = assertThrows(CompletionException.class, future.asStage()::sync);
             assertThat(cause.getCause(), instanceOf(ConnectException.class));
         } finally {
             group.shutdownGracefully();
@@ -280,7 +280,7 @@ public class BootstrapTest {
         SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).asStage().get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
-        bootstrapA.connect(localAddress).sync();
+        bootstrapA.connect(localAddress).asStage().sync();
     }
 
     @Test
@@ -297,9 +297,9 @@ public class BootstrapTest {
             Future<Void> registerFuture = channel.register();
             Future<Void> connectFuture = channel.connect(LocalAddress.ANY);
             registerHandler.registerPromise().setSuccess(null);
-            registerFuture.sync();
+            registerFuture.asStage().sync();
             CompletionException exception =
-                    assertThrows(CompletionException.class, connectFuture::sync);
+                    assertThrows(CompletionException.class, connectFuture.asStage()::sync);
             assertTrue(exception.getCause() instanceof ConnectException);
         } finally {
             group.shutdownGracefully();
@@ -324,7 +324,7 @@ public class BootstrapTest {
         Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the UnknownHostException.
-        assertTrue(connectFuture.await(10000, TimeUnit.MILLISECONDS));
+        assertTrue(connectFuture.asStage().await(10000, TimeUnit.MILLISECONDS));
         assertThat(connectFuture.cause(), instanceOf(UnknownHostException.class));
     }
 
@@ -342,7 +342,7 @@ public class BootstrapTest {
         Future<Channel> connectFuture = bootstrap.connect(LocalAddress.ANY);
 
         // Should fail with the RuntimeException.
-        assertTrue(connectFuture.await(10000, TimeUnit.MILLISECONDS));
+        assertTrue(connectFuture.asStage().await(10000, TimeUnit.MILLISECONDS));
         assertSame(connectFuture.cause(), exception);
     }
 
@@ -387,7 +387,7 @@ public class BootstrapTest {
                 .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1)
                 .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 2);
 
-        bootstrap.register().sync();
+        bootstrap.register().asStage().sync();
 
         latch.await();
 

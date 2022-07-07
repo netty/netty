@@ -60,11 +60,11 @@ public final class Http2StaticFileServer {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new Http2StaticFileServerInitializer(sslCtx));
 
-            Channel ch = b.bind(PORT).sync().getNow();
+            Channel ch = b.bind(PORT).asStage().get();
 
             System.out.println("Open your web browser and navigate to https://127.0.0.1:" + PORT + '/');
 
-            ch.closeFuture().sync();
+            ch.closeFuture().asStage().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

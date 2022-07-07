@@ -68,7 +68,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             s = ss.accept();
-            ch.writeAndFlush(onHeapAllocator().copyOf(new byte[] { 1 })).sync();
+            ch.writeAndFlush(onHeapAllocator().copyOf(new byte[] { 1 })).asStage().sync();
             assertEquals(1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
@@ -77,7 +77,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             // Make the connection half-closed and ensure read() returns -1.
-            ch.shutdown(ChannelShutdownDirection.Outbound).sync();
+            ch.shutdown(ChannelShutdownDirection.Outbound).asStage().sync();
             assertEquals(-1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
@@ -115,15 +115,15 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertTrue(ch.isActive());
             s = ss.accept();
 
-            ch.close().sync();
+            ch.close().asStage().sync();
             try {
-                ch.shutdown(ChannelShutdownDirection.Inbound).sync();
+                ch.shutdown(ChannelShutdownDirection.Inbound).asStage().sync();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
             }
             try {
-                ch.shutdown(ChannelShutdownDirection.Outbound).sync();
+                ch.shutdown(ChannelShutdownDirection.Outbound).asStage().sync();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
@@ -161,7 +161,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             Future<Void> writeFuture = ch.write(onHeapAllocator().copyOf(expectedBytes));
             h.assertWritability(false);
             ch.flush();
-            writeFuture.sync();
+            writeFuture.asStage().sync();
             h.assertWritability(true);
             for (byte expectedByte : expectedBytes) {
                 assertEquals(expectedByte, s.getInputStream().read());
@@ -173,7 +173,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             // Make the connection half-closed and ensure read() returns -1.
-            ch.shutdown(ChannelShutdownDirection.Outbound).sync();
+            ch.shutdown(ChannelShutdownDirection.Outbound).asStage().sync();
             assertEquals(-1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
@@ -183,7 +183,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             try {
                 // If half-closed, the local endpoint shouldn't be able to write
-                ch.writeAndFlush(onHeapAllocator().copyOf(new byte[]{ 2 })).sync();
+                ch.writeAndFlush(onHeapAllocator().copyOf(new byte[]{ 2 })).asStage().sync();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause.getCause());
@@ -231,9 +231,9 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
                        .connect(ss.getLocalSocketAddress()).asStage().get();
             s = ss.accept();
 
-            client.shutdown(ChannelShutdownDirection.Outbound).sync();
+            client.shutdown(ChannelShutdownDirection.Outbound).asStage().sync();
             if (shutdownInputAsWell) {
-                client.shutdown(ChannelShutdownDirection.Inbound).sync();
+                client.shutdown(ChannelShutdownDirection.Inbound).asStage().sync();
             }
         } finally {
             if (s != null) {

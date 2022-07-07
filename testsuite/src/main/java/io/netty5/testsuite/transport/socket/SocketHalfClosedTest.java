@@ -104,11 +104,11 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             waitHalfClosureDone.await();
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
 
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }
@@ -166,11 +166,11 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().asStage().get();
             Channel clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
-            clientChannel.closeFuture().await();
+            clientChannel.closeFuture().asStage().await();
             assertEquals(1, shutdownEventReceivedCounter.get());
         } finally {
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }
@@ -272,10 +272,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 "too many read complete events: " + clientReadCompletes.get());
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }
@@ -337,10 +337,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             assertNull(causeRef.get());
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }
@@ -579,10 +579,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 "too many read complete events: " + clientReadCompletes.get());
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }

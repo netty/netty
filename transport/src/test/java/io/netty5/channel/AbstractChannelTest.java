@@ -176,8 +176,8 @@ public class AbstractChannelTest {
 
         try {
             registerChannel(channel);
-            channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).sync();
-            assertSame(ioException, channel.writeAndFlush("").await().cause());
+            channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).asStage().sync();
+            assertSame(ioException, channel.writeAndFlush("").asStage().getCause());
 
             assertClosedChannelException(channel.writeAndFlush(""), ioException);
             assertClosedChannelException(channel.write(""), ioException);
@@ -189,7 +189,7 @@ public class AbstractChannelTest {
 
     private static void assertClosedChannelException(Future<Void> future, IOException expected)
             throws InterruptedException {
-        Throwable cause = future.await().cause();
+        Throwable cause = future.asStage().getCause();
         assertTrue(cause instanceof ClosedChannelException);
         assertSame(expected, cause.getCause());
     }
@@ -197,7 +197,7 @@ public class AbstractChannelTest {
     private static void registerChannel(Channel channel) throws Exception {
         when(channel.executor().registerForIo(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
         when(channel.executor().deregisterForIo(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
-        channel.register().sync(); // Cause any exceptions to be thrown
+        channel.register().asStage().sync(); // Cause any exceptions to be thrown
     }
 
     private static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {

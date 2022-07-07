@@ -176,11 +176,11 @@ public class FutureCompletionStageTest {
                                     boolean exception) throws Exception {
         FutureCompletionStage<Boolean> stage = future.asStage();
 
-        Future<Boolean> f = fn.apply(stage).future().await();
+        Future<Boolean> f = fn.apply(stage).await().future();
         if (exception) {
             assertSame(EXPECTED_EXCEPTION, f.cause());
         } else {
-            assertSame(EXPECTED_BOOLEAN, f.sync().getNow());
+            assertSame(EXPECTED_BOOLEAN, f.asStage().get());
         }
     }
 
@@ -281,12 +281,11 @@ public class FutureCompletionStageTest {
                                         Function<FutureCompletionStage<Boolean>, FutureCompletionStage<Void>> fn,
                                         boolean exception)
             throws Exception {
-        FutureCompletionStage<Boolean> stage = future.asStage();
-        Future<Void> f = fn.apply(stage).future().await();
+        FutureCompletionStage<Void> stage = fn.apply(future.asStage());
         if (exception) {
-            assertSame(EXPECTED_EXCEPTION, f.cause());
+            assertSame(EXPECTED_EXCEPTION, stage.getCause());
         } else {
-            assertNull(f.sync().getNow());
+            assertNull(stage.get());
         }
     }
 
@@ -812,7 +811,7 @@ public class FutureCompletionStageTest {
                 }
             }
 
-            f.await();
+            f.asStage().await().future();
 
             switch (testMode) {
                 case COMPLETE_EXCEPTIONAL:
@@ -820,7 +819,7 @@ public class FutureCompletionStageTest {
                     assertSame(EXPECTED_EXCEPTION, f.cause());
                     break;
                 case COMPLETE:
-                    assertEquals(EXPECTED_INTEGER, f.sync().getNow());
+                    assertEquals(EXPECTED_INTEGER, f.asStage().get());
                     break;
                 default:
                     fail();
@@ -939,7 +938,7 @@ public class FutureCompletionStageTest {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
 
-            assertTrue(stage.future().executor().inEventLoop());
+            assertTrue(stage.executor().inEventLoop());
         }), true);
     }
 
@@ -949,7 +948,7 @@ public class FutureCompletionStageTest {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
 
-            assertFalse(stage.future().executor().inEventLoop());
+            assertFalse(stage.executor().inEventLoop());
         }), true);
     }
 
@@ -960,7 +959,7 @@ public class FutureCompletionStageTest {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
 
-            assertFalse(stage.future().executor().inEventLoop());
+            assertFalse(stage.executor().inEventLoop());
             assertTrue(asyncExecutor.inEventLoop());
         }, asyncExecutor), true);
     }
@@ -1032,7 +1031,7 @@ public class FutureCompletionStageTest {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
 
-            assertTrue(stage.future().executor().inEventLoop());
+            assertTrue(stage.executor().inEventLoop());
 
             return EXPECTED_BOOLEAN;
         }), false);
@@ -1044,7 +1043,7 @@ public class FutureCompletionStageTest {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
 
-            assertFalse(stage.future().executor().inEventLoop());
+            assertFalse(stage.executor().inEventLoop());
 
             return EXPECTED_BOOLEAN;
         }), false);
@@ -1057,7 +1056,7 @@ public class FutureCompletionStageTest {
             assertSame(EXPECTED_EXCEPTION, cause);
             assertNull(v);
 
-            assertFalse(stage.future().executor().inEventLoop());
+            assertFalse(stage.executor().inEventLoop());
             assertTrue(asyncExecutor.inEventLoop());
 
             return EXPECTED_BOOLEAN;
@@ -1091,7 +1090,7 @@ public class FutureCompletionStageTest {
         FutureCompletionStage<Boolean> stage = FutureCompletionStage.toFutureCompletionStage(
                 CompletableFuture.completedFuture(Boolean.TRUE), ImmediateEventExecutor.INSTANCE);
         assertSame(ImmediateEventExecutor.INSTANCE, stage.executor());
-        assertSame(Boolean.TRUE, stage.future().sync().getNow());
+        assertSame(Boolean.TRUE, stage.get());
     }
 
     @Test
@@ -1103,7 +1102,7 @@ public class FutureCompletionStageTest {
         FutureCompletionStage<Boolean> stage = FutureCompletionStage.toFutureCompletionStage(
                 future, ImmediateEventExecutor.INSTANCE);
         assertSame(ImmediateEventExecutor.INSTANCE, stage.executor());
-        assertSame(exception, stage.future().await().cause());
+        assertSame(exception, stage.getCause());
     }
 
     @Test
@@ -1121,7 +1120,7 @@ public class FutureCompletionStageTest {
             FutureCompletionStage<Boolean> stage2 = FutureCompletionStage.toFutureCompletionStage(
                     stage, ImmediateEventExecutor.INSTANCE);
             assertNotSame(stage, stage2);
-            assertSame(stage.future().sync().getNow(), stage2.future().sync().getNow());
+            assertSame(stage.get(), stage2.get());
         } finally {
             group.shutdownGracefully();
         }

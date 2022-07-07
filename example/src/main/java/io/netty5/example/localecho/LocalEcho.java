@@ -77,7 +77,7 @@ public final class LocalEcho {
               });
 
             // Start the server.
-            sb.bind(addr).sync();
+            sb.bind(addr).asStage().sync();
 
             // Start the client.
             Channel ch = cb.connect(addr).asStage().get();
@@ -98,7 +98,7 @@ public final class LocalEcho {
 
             // Wait until all messages are flushed before closing the channel.
             if (lastWriteFuture != null) {
-                lastWriteFuture.await();
+                lastWriteFuture.asStage().await();
             }
         } finally {
             serverGroup.shutdownGracefully();

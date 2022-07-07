@@ -208,15 +208,15 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     private static void doOutboundOperations(Channel channel) throws Exception {
-        channel.pipeline().bind(LOCAL_ADDRESS).sync();
-        channel.pipeline().connect(REMOTE_ADDRESS, LOCAL_ADDRESS).sync();
-        channel.pipeline().write(MSG).sync();
+        channel.pipeline().bind(LOCAL_ADDRESS).asStage().sync();
+        channel.pipeline().connect(REMOTE_ADDRESS, LOCAL_ADDRESS).asStage().sync();
+        channel.pipeline().write(MSG).asStage().sync();
         channel.pipeline().flush();
         channel.pipeline().read();
         channel.pipeline().sendOutboundEvent(USER_EVENT);
-        channel.pipeline().disconnect().sync();
-        channel.pipeline().close().sync();
-        channel.pipeline().deregister().sync();
+        channel.pipeline().disconnect().asStage().sync();
+        channel.pipeline().close().asStage().sync();
+        channel.pipeline().deregister().asStage().sync();
     }
 
     private static void assertOutboundOperations(OutboundEventHandler outboundHandler) {

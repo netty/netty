@@ -34,6 +34,7 @@ import java.net.URI;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -183,9 +184,9 @@ public class WebSocketHandshakeHandOverTest {
         assertFalse(clientReceivedMessage);
         // Should throw WebSocketHandshakeException
         try {
-            assertTrue(assertThrows(CompletionException.class,
-                () -> handshakeHandler.getHandshakeFuture().sync())
-                    .getCause() instanceof WebSocketHandshakeException);
+            var exception = assertThrows(CompletionException.class,
+                                         () -> handshakeHandler.getHandshakeFuture().asStage().sync());
+            assertThat(exception).hasCauseInstanceOf(WebSocketHandshakeException.class);
         } finally {
             serverChannel.finishAndReleaseAll();
         }

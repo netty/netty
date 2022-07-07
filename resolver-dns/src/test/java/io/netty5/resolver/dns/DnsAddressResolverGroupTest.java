@@ -55,8 +55,8 @@ public class DnsAddressResolverGroupTest {
                 } catch (Throwable cause) {
                     promise.setFailure(cause);
                 }
-            }).await();
-            promise.asFuture().sync();
+            }).asStage().await();
+            promise.asFuture().asStage().sync();
         } finally {
             resolverGroup.close();
             group.shutdownGracefully();

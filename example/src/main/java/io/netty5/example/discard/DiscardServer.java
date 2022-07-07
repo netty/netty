@@ -72,7 +72,7 @@ public final class DiscardServer {
             // Wait until the server socket is closed.
             // In this example, this does not happen, but you can do that to gracefully
             // shut down your server.
-            channel.closeFuture().sync();
+            channel.closeFuture().asStage().sync();
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();

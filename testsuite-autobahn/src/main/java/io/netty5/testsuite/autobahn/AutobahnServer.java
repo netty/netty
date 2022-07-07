@@ -48,7 +48,7 @@ public class AutobahnServer {
 
             Channel channel = b.bind(port).asStage().get();
             System.out.println("Web Socket Server started at port " + port);
-            channel.closeFuture().sync();
+            channel.closeFuture().asStage().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

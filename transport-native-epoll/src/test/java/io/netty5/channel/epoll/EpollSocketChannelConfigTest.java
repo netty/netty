@@ -70,7 +70,7 @@ public class EpollSocketChannelConfigTest {
 
     @AfterEach
     public void tearDown() throws Exception {
-        ch.close().sync();
+        ch.close().asStage().sync();
     }
 
     private static long randLong(long min, long max) {
@@ -146,7 +146,7 @@ public class EpollSocketChannelConfigTest {
     // want to see a ClosedChannelException for the test to pass.
     @RepeatedIfExceptionsTest(repeats = 4)
     public void testSetOptionWhenClosed() throws Exception {
-        ch.close().sync();
+        ch.close().asStage().sync();
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -161,7 +161,7 @@ public class EpollSocketChannelConfigTest {
     // want to see a ClosedChannelException for the test to pass.
     @RepeatedIfExceptionsTest(repeats = 4)
     public void testGetOptionWhenClosed() throws Exception {
-        ch.close().sync();
+        ch.close().asStage().sync();
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {

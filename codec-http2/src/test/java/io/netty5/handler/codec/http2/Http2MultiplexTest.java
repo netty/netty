@@ -359,7 +359,7 @@ public class Http2MultiplexTest {
         assertTrue(channel.isActive());
 
         if (closeLocal) {
-            channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).sync();
+            channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).asStage().sync();
             assertEquals(Http2Stream.State.HALF_CLOSED_LOCAL, channel.stream().state());
         } else {
             assertEquals(Http2Stream.State.OPEN, channel.stream().state());
@@ -550,9 +550,8 @@ public class Http2MultiplexTest {
     }
 
     private Http2StreamChannel newOutboundStream(ChannelHandler handler) throws Exception {
-        Future<Http2StreamChannel> future = new Http2StreamChannelBootstrap(parentChannel).handler(handler)
-                .open();
-        return future.sync().getNow();
+        Future<Http2StreamChannel> future = new Http2StreamChannelBootstrap(parentChannel).handler(handler).open();
+        return future.asStage().get();
     }
 
     /**
@@ -684,7 +683,7 @@ public class Http2MultiplexTest {
         CompletionException e = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Exception {
-                future.sync();
+                future.asStage().sync();
             }
         });
         assertThat(e.getCause(), CoreMatchers.instanceOf(ClosedChannelException.class));
@@ -745,7 +744,7 @@ public class Http2MultiplexTest {
         CompletionException e = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Exception {
-                future.sync();
+                future.asStage().sync();
             }
         });
         assertThat(e.getCause(), CoreMatchers.instanceOf(Http2NoMoreStreamIdsException.class));
@@ -769,7 +768,7 @@ public class Http2MultiplexTest {
             channelOpen.set(channel.isOpen());
             channelActive.set(channel.isActive());
         });
-        childChannel.close().cascadeTo(p).sync();
+        childChannel.close().cascadeTo(p).asStage().sync();
 
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());
@@ -791,9 +790,9 @@ public class Http2MultiplexTest {
              channelOpen.set(channel.isOpen());
              channelActive.set(channel.isActive());
          });
-         childChannel.close().sync();
+        childChannel.close().asStage().sync();
 
-         assertFalse(channelOpen.get());
+        assertFalse(channelOpen.get());
          assertFalse(channelActive.get());
          assertFalse(childChannel.isActive());
     }
@@ -828,7 +827,7 @@ public class Http2MultiplexTest {
 
         Promise<Void> first = writePromises.poll();
         first.setFailure(new ClosedChannelException());
-        f.await();
+        f.asStage().await();
 
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());
@@ -842,8 +841,8 @@ public class Http2MultiplexTest {
 
         assertTrue(childChannel.isOpen());
         assertTrue(childChannel.isActive());
-        childChannel.close().sync();
-        childChannel.close().sync();
+        childChannel.close().asStage().sync();
+        childChannel.close().asStage().sync();
 
         assertFalse(childChannel.isOpen());
         assertFalse(childChannel.isActive());
@@ -952,7 +951,7 @@ public class Http2MultiplexTest {
             }
         });
 
-        childChannel.close().sync();
+        childChannel.close().asStage().sync();
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());
     }
@@ -1067,7 +1066,7 @@ public class Http2MultiplexTest {
         parentChannel.pipeline().remove(readCompleteSupressHandler);
         parentChannel.flushInbound();
 
-        childChannel.closeFuture().sync();
+        childChannel.closeFuture().asStage().sync();
     }
 
     private boolean useUserEventForResetFrame() {
@@ -1098,7 +1097,7 @@ public class Http2MultiplexTest {
         frameInboundWriter.writeInboundWindowUpdate(Http2CodecUtil.CONNECTION_STREAM_ID, 6);
 
         assertNull(parentChannel.readInbound());
-        childChannel.close().sync();
+        childChannel.close().asStage().sync();
     }
 
     @Test

@@ -91,8 +91,8 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         Channel cc = cb.connect(sc.localAddress()).asStage().get();
 
         Object received = queue.take();
-        cc.close().sync();
-        sc.close().sync();
+        cc.close().asStage().sync();
+        sc.close().asStage().sync();
 
         if (received instanceof FileDescriptor) {
             FileDescriptor fd = (FileDescriptor) received;

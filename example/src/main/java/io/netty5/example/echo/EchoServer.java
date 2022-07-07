@@ -75,7 +75,7 @@ public final class EchoServer {
             Channel channel = b.bind(PORT).asStage().get();
 
             // Wait until the server socket is closed.
-            channel.closeFuture().sync();
+            channel.closeFuture().asStage().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
             bossGroup.shutdownGracefully();

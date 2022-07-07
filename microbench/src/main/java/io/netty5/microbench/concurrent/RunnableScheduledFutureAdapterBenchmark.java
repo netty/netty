@@ -52,16 +52,16 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
         public void reset() throws Exception {
             futures.clear();
             executor.submit(() -> {
-                for (int i = 1; i <= num; i++) {
-                    futures.add(executor.schedule(NO_OP, i, TimeUnit.HOURS));
-                }
-            }).sync();
+                    for (int i = 1; i <= num; i++) {
+                        futures.add(executor.schedule(NO_OP, i, TimeUnit.HOURS));
+                    }
+                }).asStage().sync();
         }
     }
 
     @TearDown(Level.Trial)
     public void stop() throws Exception {
-        executor.shutdownGracefully().sync();
+        executor.shutdownGracefully().asStage().sync();
     }
 
     @Benchmark
@@ -70,7 +70,7 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
             for (int i = 0; i < futuresHolder.num; i++) {
                 futuresHolder.futures.get(i).cancel();
             }
-        }).sync();
+        }).asStage().sync().future();
     }
 
     @Benchmark
@@ -79,6 +79,6 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
             for (int i = futuresHolder.num - 1; i >= 0; i--) {
                 futuresHolder.futures.get(i).cancel();
             }
-        }).sync();
+        }).asStage().sync().future();
     }
 }

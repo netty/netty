@@ -138,10 +138,10 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             }
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }
@@ -275,10 +275,10 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             }
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }

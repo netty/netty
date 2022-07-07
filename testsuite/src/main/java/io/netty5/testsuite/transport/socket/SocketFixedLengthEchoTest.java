@@ -115,9 +115,9 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             Thread.sleep(50);
         }
 
-        sh.channel.close().sync();
-        ch.channel.close().sync();
-        sc.close().sync();
+        sh.channel.close().asStage().sync();
+        ch.channel.close().asStage().sync();
+        sc.close().asStage().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

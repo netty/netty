@@ -46,8 +46,8 @@ public class UniqueIpFilterTest {
                 assertFalse(ch1.isActive() && ch2.isActive());
 
                 barrier.reset();
-                ch1.close().await();
-                ch2.close().await();
+                ch1.close().asStage().await();
+                ch2.close().asStage().await();
             }
         } finally {
             executorService.shutdown();

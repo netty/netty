@@ -21,7 +21,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.util.NetUtil;
-import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -31,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class SocketMultipleConnectTest extends AbstractSocketTest {
 
@@ -50,9 +49,9 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
 
             cb.handler(new ChannelHandler() { });
             cc = cb.register().asStage().get();
-            cc.connect(sc.localAddress()).sync();
-            Future<Void> connectFuture2 = cc.connect(sc.localAddress()).await();
-            assertTrue(connectFuture2.cause() instanceof AlreadyConnectedException);
+            cc.connect(sc.localAddress()).asStage().sync();
+            Throwable cause = cc.connect(sc.localAddress()).asStage().getCause();
+            assertThat(cause).isInstanceOf(AlreadyConnectedException.class);
         } finally {
             if (cc != null) {
                 cc.close();

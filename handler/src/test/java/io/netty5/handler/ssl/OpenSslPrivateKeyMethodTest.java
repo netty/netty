@@ -300,22 +300,21 @@ public class OpenSslPrivateKeyMethodTest {
 
                 Channel client = client(server, clientHandler);
                 try {
-                    client.writeAndFlush(offHeapAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
-                          .sync();
+                    client.writeAndFlush(offHeapAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'})).asStage().sync();
 
                     Future<Object> clientFuture = clientPromise.asFuture();
                     Future<Object> serverFuture = serverPromise.asFuture();
-                    assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
-                    assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
+                    assertTrue(clientFuture.asStage().await(5L, TimeUnit.SECONDS), "client timeout");
+                    assertTrue(serverFuture.asStage().await(5L, TimeUnit.SECONDS), "server timeout");
 
-                    clientFuture.sync();
-                    serverFuture.sync();
+                    clientFuture.asStage().sync();
+                    serverFuture.asStage().sync();
                     assertTrue(signCalled.get());
                 } finally {
-                    client.close().sync();
+                    client.close().asStage().sync();
                 }
             } finally {
-                server.close().sync();
+                server.close().asStage().sync();
             }
         }
     }
@@ -365,15 +364,15 @@ public class OpenSslPrivateKeyMethodTest {
             try {
                 Channel client = client(server, clientSslHandler);
                 try {
-                    Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
-                    Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
+                    Throwable clientCause = clientSslHandler.handshakeFuture().asStage().getCause();
+                    Throwable serverCause = serverSslHandler.handshakeFuture().asStage().getCause();
                     assertNotNull(clientCause);
                     assertThat(serverCause, Matchers.instanceOf(SSLHandshakeException.class));
                 } finally {
-                    client.close().sync();
+                    client.close().asStage().sync();
                 }
             } finally {
-                server.close().sync();
+                server.close().asStage().sync();
             }
         }
     }

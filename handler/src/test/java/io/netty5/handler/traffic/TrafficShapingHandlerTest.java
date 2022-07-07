@@ -106,20 +106,20 @@ public class TrafficShapingHandlerTest {
             Attribute<Runnable> attr = ch.attr(AbstractTrafficShapingHandler.REOPEN_TASK);
             assertNull(attr.get());
             ch.writeAndFlush(preferredAllocator().copyOf("foo".getBytes(CharsetUtil.UTF_8)));
-            ch.writeAndFlush(preferredAllocator().copyOf("bar".getBytes(CharsetUtil.UTF_8))).await();
+            ch.writeAndFlush(preferredAllocator().copyOf("bar".getBytes(CharsetUtil.UTF_8))).asStage().await();
             assertNotNull(attr.get());
             final Channel clientChannel = ch;
             ch.executor().submit(() -> {
                 clientChannel.pipeline().remove("traffic-shaping");
-            }).await();
+            }).asStage().await();
             //the attribute--reopen task must be released.
             assertNull(attr.get());
         } finally {
             if (ch != null) {
-                ch.close().sync();
+                ch.close().asStage().sync();
             }
             if (svrChannel != null) {
-                svrChannel.close().sync();
+                svrChannel.close().asStage().sync();
             }
         }
     }

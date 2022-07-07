@@ -94,7 +94,7 @@ public class Http2StreamChannelBootstrapTest {
 
             Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(clientChannel);
             final Promise<Http2StreamChannel> promise = clientChannel.executor().newPromise();
-            clientChannel.close().sync();
+            clientChannel.close().asStage().sync();
 
             bootstrap.open(promise);
 
@@ -127,7 +127,7 @@ public class Http2StreamChannelBootstrapTest {
     private static void safeClose(Channel channel) {
         if (channel != null) {
             try {
-                channel.close().sync();
+                channel.close().asStage().sync();
             } catch (Exception e) {
                 logger.error(e);
             }

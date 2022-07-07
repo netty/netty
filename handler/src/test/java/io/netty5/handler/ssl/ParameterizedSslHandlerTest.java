@@ -259,13 +259,13 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).asStage().get();
 
-            donePromise.asFuture().sync();
+            donePromise.asFuture().asStage().sync();
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
             group.shutdownGracefully();
 
@@ -360,13 +360,13 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).asStage().get();
 
-            promise.asFuture().sync();
+            promise.asFuture().asStage().sync();
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
             group.shutdownGracefully();
 
@@ -484,8 +484,8 @@ public class ParameterizedSslHandlerTest {
                         }
                     }).connect(sc.localAddress()).asStage().get();
 
-            serverPromise.asFuture().await();
-            clientPromise.asFuture().await();
+            serverPromise.asFuture().asStage().await();
+            clientPromise.asFuture().asStage().await();
 
             // Server always received the close_notify as the client triggers the close sequence.
             assertTrue(serverPromise.isSuccess());
@@ -498,10 +498,10 @@ public class ParameterizedSslHandlerTest {
             }
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
             group.shutdownGracefully();
 
@@ -614,10 +614,10 @@ public class ParameterizedSslHandlerTest {
             assertEquals(expectedContent, clientQueue.toString());
         } finally {
             if (cc != null) {
-                cc.close().sync();
+                cc.close().asStage().sync();
             }
             if (sc != null) {
-                sc.close().sync();
+                sc.close().asStage().sync();
             }
 
             Resource.dispose(sslServerCtx);

@@ -55,7 +55,7 @@ public class LocalTransportThreadModelTest2 {
                 .channel(LocalChannel.class)
                 .remoteAddress(new LocalAddress(LOCAL_CHANNEL)).handler(clientHandler);
 
-        serverBootstrap.bind(new LocalAddress(LOCAL_CHANNEL)).sync();
+        serverBootstrap.bind(new LocalAddress(LOCAL_CHANNEL)).asStage().sync();
 
         int count = 100;
         for (int i = 1; i < count + 1; i ++) {
@@ -78,7 +78,7 @@ public class LocalTransportThreadModelTest2 {
         if (localChannel.executor().inEventLoop()) {
             // Wait until all messages are flushed before closing the channel.
             if (localRegistrationHandler.lastWriteFuture != null) {
-                localRegistrationHandler.lastWriteFuture.await();
+                localRegistrationHandler.lastWriteFuture.asStage().await();
             }
 
             localChannel.close();
@@ -91,7 +91,7 @@ public class LocalTransportThreadModelTest2 {
         });
 
         // Wait until the connection is closed or the connection attempt fails.
-        localChannel.closeFuture().await();
+        localChannel.closeFuture().asStage().await();
     }
 
     static class LocalHandler implements ChannelHandler {

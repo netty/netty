@@ -378,13 +378,13 @@ public abstract class SSLEngineTest {
         //
         // See https://github.com/netty/netty/issues/5692
         if (clientCloseFuture != null) {
-            clientCloseFuture.sync();
+            clientCloseFuture.asStage().sync();
         }
         if (serverConnectedCloseFuture != null) {
-            serverConnectedCloseFuture.sync();
+            serverConnectedCloseFuture.asStage().sync();
         }
         if (serverCloseFuture != null) {
-            serverCloseFuture.sync();
+            serverCloseFuture.asStage().sync();
         }
         if (serverSslCtx != null) {
             cleanupServerSslContext(serverSslCtx);
@@ -405,11 +405,11 @@ public abstract class SSLEngineTest {
             clientGroupShutdownFuture = cb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
         if (serverGroupShutdownFuture != null) {
-            serverGroupShutdownFuture.sync();
-            serverChildGroupShutdownFuture.sync();
+            serverGroupShutdownFuture.asStage().sync();
+            serverChildGroupShutdownFuture.asStage().sync();
         }
         if (clientGroupShutdownFuture != null) {
-            clientGroupShutdownFuture.sync();
+            clientGroupShutdownFuture.asStage().sync();
         }
         delegatingExecutor.shutdown();
         serverException = null;
@@ -807,7 +807,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.await().isSuccess());
+        assertTrue(ccf.asStage().await().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
@@ -847,7 +847,7 @@ public abstract class SSLEngineTest {
                 "unexpected exception: " + serverException);
 
         // Verify that any pending writes are failed with the cached handshake exception and not a general SSLException.
-        clientWriteFuture.await();
+        clientWriteFuture.asStage().await();
         Throwable actualCause = clientWriteFuture.cause();
         assertTrue(clientWriteFuture.isDone());
         assertTrue(clientWriteFuture.isFailed());
@@ -997,7 +997,7 @@ public abstract class SSLEngineTest {
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
-        assertTrue(ccf.await().isSuccess());
+        assertTrue(ccf.asStage().await().isSuccess());
         clientChannel = ccf.asStage().get();
         return clientWritePromise.asFuture();
     }
@@ -1169,7 +1169,7 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-        assertTrue(ccf.await().isSuccess());
+        assertTrue(ccf.asStage().await().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
@@ -1204,7 +1204,7 @@ public abstract class SSLEngineTest {
         List<Buffer> dataCapture = null;
         try {
             Future<Void> writeAndFlush = sendChannel.writeAndFlush(message.copy());
-            assertTrue(writeAndFlush.await(10, TimeUnit.SECONDS));
+            assertTrue(writeAndFlush.asStage().await(10, TimeUnit.SECONDS));
             if (!writeAndFlush.isSuccess()) {
                 throw new Exception("Write and flush failed", writeAndFlush.cause());
             }
@@ -1474,7 +1474,7 @@ public abstract class SSLEngineTest {
                 });
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.sync().isSuccess());
+        assertTrue(ccf.asStage().sync().isSuccess());
         clientChannel = ccf.asStage().get();
 
         serverLatch.await();
@@ -1795,7 +1795,7 @@ public abstract class SSLEngineTest {
         serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
-        assertTrue(ccf.sync().isSuccess());
+        assertTrue(ccf.asStage().sync().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
@@ -1906,7 +1906,7 @@ public abstract class SSLEngineTest {
 
         }).connect(serverChannel.localAddress()).asStage().get();
 
-        promise.asFuture().sync();
+        promise.asFuture().asStage().sync();
 
         serverCert.delete();
         clientCert.delete();
@@ -3955,7 +3955,7 @@ public abstract class SSLEngineTest {
             out.flush();
 
             Future<SecretKey> future = promise.asFuture();
-            assertTrue(future.await(10, TimeUnit.SECONDS));
+            assertTrue(future.asStage().await(10, TimeUnit.SECONDS));
             SecretKey key = future.asStage().get();
             assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
         } finally {

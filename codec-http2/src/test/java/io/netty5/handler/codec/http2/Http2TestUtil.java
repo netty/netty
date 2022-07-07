@@ -63,7 +63,7 @@ public final class Http2TestUtil {
         channel.executor().submit(() -> {
             runnable.run();
             return null;
-        }).sync();
+        }).asStage().sync();
     }
 
     /**

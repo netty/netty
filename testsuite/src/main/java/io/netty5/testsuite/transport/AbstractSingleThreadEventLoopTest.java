@@ -51,7 +51,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
     @Test
     public void shutdownGracefullyZeroQuietBeforeStart() throws Exception {
         EventLoopGroup group =  new MultithreadEventLoopGroup(newIoHandlerFactory());
-        assertTrue(group.shutdownGracefully(0L, 2L, TimeUnit.SECONDS).await(200, TimeUnit.MILLISECONDS));
+        assertTrue(group.shutdownGracefully(0L, 2L, TimeUnit.SECONDS).asStage().await(200, TimeUnit.MILLISECONDS));
     }
 
     // Copied from AbstractEventLoopTest
@@ -67,11 +67,11 @@ public abstract class AbstractSingleThreadEventLoopTest {
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
         Future<Channel> cf = serverChannelClass() == LocalServerChannel.class
                 ? b.bind(new LocalAddress(getClass())) : b.bind(0);
-        cf.sync();
+        cf.asStage().sync();
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
         assertTrue(loop.awaitTermination(600, TimeUnit.MILLISECONDS));
-        assertTrue(f.sync().isSuccess());
+        assertTrue(f.asStage().sync().isSuccess());
         assertTrue(loop.isShutdown());
         assertTrue(loop.isTerminated());
     }
@@ -79,7 +79,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
     @Test
     public void shutdownGracefullyBeforeStart() throws Exception {
         EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
-        assertTrue(group.shutdownGracefully(200L, 1000L, TimeUnit.MILLISECONDS).await(500, TimeUnit.MILLISECONDS));
+        assertTrue(group.shutdownGracefully(200L, 1000L, TimeUnit.MILLISECONDS).asStage()
+                        .await(500, TimeUnit.MILLISECONDS));
     }
 
     @Test

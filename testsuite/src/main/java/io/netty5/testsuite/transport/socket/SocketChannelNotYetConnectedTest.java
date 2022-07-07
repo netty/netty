@@ -53,20 +53,20 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                                              .bind(newSocketAddress()).asStage().get();
         try {
             try {
-                ch.shutdown(ChannelShutdownDirection.Inbound).sync();
+                ch.shutdown(ChannelShutdownDirection.Inbound).asStage().sync();
                 fail();
             } catch (Throwable cause) {
                 assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);
             }
 
             try {
-                ch.shutdown(ChannelShutdownDirection.Outbound).sync();
+                ch.shutdown(ChannelShutdownDirection.Outbound).asStage().sync();
                 fail();
             } catch (Throwable cause) {
                 assertThat(cause).hasCauseInstanceOf(NotYetConnectedException.class);
             }
         } finally {
-            ch.close().sync();
+            ch.close().asStage().sync();
         }
     }
 
@@ -103,10 +103,10 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                         }
                     }
                 });
-                bootstrap.connect(serverChannel.localAddress()).sync();
+                bootstrap.connect(serverChannel.localAddress()).asStage().sync();
 
                 readLatch.await();
-                group.shutdownGracefully().await();
+                group.shutdownGracefully().asStage().await();
             }
         });
     }

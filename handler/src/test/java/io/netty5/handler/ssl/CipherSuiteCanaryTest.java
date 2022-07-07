@@ -214,21 +214,21 @@ public class CipherSuiteCanaryTest {
                     Channel client = client(server, clientHandler);
                     try {
                         client.writeAndFlush(preferredAllocator().copyOf(new byte[] {'P', 'I', 'N', 'G'}))
-                              .sync();
+                              .asStage().sync();
 
                         Future<Object> clientFuture = clientPromise.asFuture();
                         Future<Object> serverFuture = serverPromise.asFuture();
 
-                        assertTrue(clientFuture.await(5L, TimeUnit.SECONDS), "client timeout");
-                        assertTrue(serverFuture.await(5L, TimeUnit.SECONDS), "server timeout");
+                        assertTrue(clientFuture.asStage().await(5L, TimeUnit.SECONDS), "client timeout");
+                        assertTrue(serverFuture.asStage().await(5L, TimeUnit.SECONDS), "server timeout");
 
-                        clientFuture.sync();
-                        serverFuture.sync();
+                        clientFuture.asStage().sync();
+                        serverFuture.asStage().sync();
                     } finally {
-                        client.close().sync();
+                        client.close().asStage().sync();
                     }
                 } finally {
-                    server.close().sync();
+                    server.close().asStage().sync();
                 }
             } finally {
                 Resource.dispose(sslClientContext);

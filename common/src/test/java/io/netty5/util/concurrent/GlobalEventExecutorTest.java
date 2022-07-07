@@ -73,7 +73,7 @@ public class GlobalEventExecutorTest {
     public void testScheduledTasks() throws Exception {
         TestRunnable task = new TestRunnable(0);
         Future<?> f = e.schedule(task, 1500, TimeUnit.MILLISECONDS);
-        f.sync();
+        f.asStage().sync();
         assertThat(task.ran.get(), is(true));
 
         // Ensure the thread is still running.
@@ -117,7 +117,7 @@ public class GlobalEventExecutorTest {
         TestRunnable afterTask = new TestRunnable(0);
         e.execute(afterTask);
 
-        f.sync();
+        f.asStage().sync();
 
         assertThat(beforeTask.ran.get(), is(true));
         assertThat(scheduledTask.ran.get(), is(true));
@@ -143,7 +143,7 @@ public class GlobalEventExecutorTest {
             }
         });
 
-        f.sync();
+        f.asStage().sync();
 
         assertThat(t.ran.get(), is(true));
     }

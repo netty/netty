@@ -146,21 +146,21 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogChannelClose() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.close().await();
+        channel.close().asStage().await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+CLOSE$")));
     }
 
     @Test
     public void shouldLogChannelConnect() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.connect(new InetSocketAddress(80)).await();
+        channel.connect(new InetSocketAddress(80)).asStage().await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+CONNECT: 0.0.0.0/0.0.0.0:80$")));
     }
 
     @Test
     public void shouldLogChannelConnectWithLocalAddress() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
-        channel.connect(new InetSocketAddress(80), new InetSocketAddress(81)).await();
+        channel.connect(new InetSocketAddress(80), new InetSocketAddress(81)).asStage().await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(
                 "^\\[id: 0xembedded, L:embedded - R:embedded\\] CONNECT: 0.0.0.0/0.0.0.0:80, 0.0.0.0/0.0.0.0:81$")));
     }
@@ -168,8 +168,8 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogChannelDisconnect() throws Exception {
         EmbeddedChannel channel = new DisconnectingEmbeddedChannel(new LoggingHandler());
-        channel.connect(new InetSocketAddress(80)).await();
-        channel.disconnect().await();
+        channel.connect(new InetSocketAddress(80)).asStage().await();
+        channel.disconnect().asStage().await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+DISCONNECT$")));
     }
 

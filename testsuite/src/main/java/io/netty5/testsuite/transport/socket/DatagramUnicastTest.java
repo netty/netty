@@ -190,7 +190,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             cc.flush();
 
             for (Future<Void> future: futures) {
-                future.sync();
+                future.asStage().sync();
             }
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();
@@ -226,7 +226,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             SocketAddress localAddr = sc.localAddress();
             SocketAddress addr = localAddr instanceof InetSocketAddress ?
                     sendToAddress((InetSocketAddress) localAddr) : localAddr;
-            cc.connect(addr).sync();
+            cc.connect(addr).asStage().sync();
 
             List<Future<Void>> futures = new ArrayList<>();
             for (int i = 0; i < count; i++) {
@@ -235,7 +235,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             cc.flush();
 
             for (Future<Void> future: futures) {
-                future.sync();
+                future.asStage().sync();
             }
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
@@ -262,13 +262,13 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
             if (supportDisconnect()) {
                 // Test what happens when we call disconnect()
-                cc.disconnect().sync();
+                cc.disconnect().asStage().sync();
                 assertFalse(isConnected(cc));
                 assertNotNull(cc.localAddress());
                 assertNull(cc.remoteAddress());
 
-                Future<Void> future = cc.writeAndFlush(buf.copy()).await();
-                assertThat(future.cause()).isInstanceOf(NotYetConnectedException.class);
+                Throwable cause = cc.writeAndFlush(buf.copy()).asStage().getCause();
+                assertThat(cause).isInstanceOf(NotYetConnectedException.class);
             }
         } finally {
             closeChannel(cc);
@@ -291,7 +291,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
     protected static void closeChannel(Channel channel) throws Exception {
         if (channel != null) {
-            channel.close().sync();
+            channel.close().asStage().sync();
         }
     }
 

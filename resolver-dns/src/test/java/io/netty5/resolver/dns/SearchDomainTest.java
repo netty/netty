@@ -253,26 +253,26 @@ public class SearchDomainTest {
 
     private static void assertNotResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
         Future<InetAddress> fut = resolver.resolve(inetHost);
-        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertTrue(fut.asStage().await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
     }
 
     private static void assertNotResolveAll(DnsNameResolver resolver, String inetHost) throws InterruptedException {
         Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
-        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertTrue(fut.asStage().await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
     }
 
     private static String assertResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
         Future<InetAddress> fut = resolver.resolve(inetHost);
-        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertTrue(fut.asStage().await(10, TimeUnit.SECONDS));
         return fut.getNow().getHostAddress();
     }
 
     private static List<String> assertResolveAll(DnsNameResolver resolver,
                                                  String inetHost) throws InterruptedException {
         Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
-        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertTrue(fut.asStage().await(10, TimeUnit.SECONDS));
         List<String> list = new ArrayList<>();
         for (InetAddress addr : fut.getNow()) {
             list.add(addr.getHostAddress());
@@ -289,7 +289,7 @@ public class SearchDomainTest {
         resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).ndots(1).build();
 
         Future<InetAddress> fut = resolver.resolve("unknown.hostname");
-        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertTrue(fut.asStage().await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
         final Throwable cause = fut.cause();
         assertThat(cause, instanceOf(UnknownHostException.class));
@@ -306,7 +306,7 @@ public class SearchDomainTest {
         resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).ndots(2).build();
 
         Future<InetAddress> fut = resolver.resolve("unknown.hostname");
-        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertTrue(fut.asStage().await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
         final Throwable cause = fut.cause();
         assertThat(cause, instanceOf(UnknownHostException.class));

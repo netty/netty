@@ -105,9 +105,10 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         FileRegion region = new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), 0, data.length + 1024);
 
-        assertThat(cc.writeAndFlush(region).await().cause()).isInstanceOf(IOException.class);
-        cc.close().sync();
-        sc.close().sync();
+        Throwable result = cc.writeAndFlush(region).asStage().getCause();
+        assertThat(result).isInstanceOf(IOException.class);
+        cc.close().asStage().sync();
+        sc.close().asStage().sync();
     }
 
     private static void testFileRegion0(
@@ -195,9 +196,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             }
         }
 
-        sh.channel.close().sync();
-        cc.close().sync();
-        sc.close().sync();
+        sh.channel.close().asStage().sync();
+        cc.close().asStage().sync();
+        sc.close().asStage().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

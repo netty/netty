@@ -60,7 +60,7 @@ public class SingleThreadEventExecutorTest {
         executeShouldFail(executor);
         executeShouldFail(executor);
         var exception = assertThrows(
-                CompletionException.class, () -> executor.shutdownGracefully().sync());
+                CompletionException.class, () -> executor.shutdownGracefully().asStage().sync());
         assertThat(exception).hasCauseInstanceOf(RejectedExecutionException.class);
         assertTrue(executor.isShutdown());
     }
@@ -148,10 +148,10 @@ public class SingleThreadEventExecutorTest {
         };
 
         // Start the loop
-        executor.submit(DUMMY_TASK).sync();
+        executor.submit(DUMMY_TASK).asStage().sync();
 
         // Shutdown without any quiet period
-        executor.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS).sync();
+        executor.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS).asStage().sync();
 
         // Ensure there are no user-tasks left.
         assertEquals(0, executor.drainTasks());
@@ -193,7 +193,7 @@ public class SingleThreadEventExecutorTest {
             TestRunnable afterTask = new TestRunnable();
             executor.execute(afterTask);
 
-            f.sync();
+            f.asStage().sync();
 
             assertThat(beforeTask.ran.get()).isTrue();
             assertThat(scheduledTask.ran.get()).isTrue();
@@ -234,7 +234,7 @@ public class SingleThreadEventExecutorTest {
                 }
             });
 
-            f.sync();
+            f.asStage().sync();
 
             assertThat(t.ran.get()).isTrue();
         });

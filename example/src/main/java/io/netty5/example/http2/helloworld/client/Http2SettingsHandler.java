@@ -45,7 +45,7 @@ public class Http2SettingsHandler extends SimpleChannelInboundHandler<Http2Setti
      * @throws Exception if timeout or other failure occurs
      */
     public void awaitSettings(long timeout, TimeUnit unit) throws Exception {
-        if (!promise.asFuture().await(timeout, unit)) {
+        if (!promise.asFuture().asStage().await(timeout, unit)) {
             throw new IllegalStateException("Timed out waiting for settings");
         }
         if (promise.isFailed()) {

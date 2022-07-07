@@ -308,7 +308,7 @@ public class DefaultPromiseTest {
                 assertTrue(listeners.isEmpty(), "Fail during run " + i + " / " + runs);
             }
         } finally {
-            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).asStage().sync();
         }
     }
 
@@ -321,7 +321,7 @@ public class DefaultPromiseTest {
         // Testing second execution path in DefaultPromise
         testListenerNotifyLater(2, executor);
 
-        executor.shutdownGracefully().sync();
+        executor.shutdownGracefully().asStage().sync();
     }
 
     @Test
@@ -366,7 +366,7 @@ public class DefaultPromiseTest {
             for (final Map.Entry<Thread, DefaultPromise<Void>> promise : promises.entrySet()) {
                 promise.getKey().start();
                 final long start = System.nanoTime();
-                promise.getValue().await(wait, TimeUnit.NANOSECONDS);
+                promise.getValue().asStage().await(wait, TimeUnit.NANOSECONDS);
                 assertThat(System.nanoTime() - start).isLessThan(wait);
             }
         } finally {
@@ -437,7 +437,7 @@ public class DefaultPromiseTest {
         assertTrue(promise.isFailed());
 
         try {
-            promise.sync();
+            promise.asStage().sync();
         } catch (CompletionException e) {
             assertSame(exception, e.getCause());
         }
@@ -447,7 +447,7 @@ public class DefaultPromiseTest {
     public void throwCancelled() throws InterruptedException {
         DefaultPromise<String> promise = new DefaultPromise<>(INSTANCE);
         promise.cancel();
-        assertThrows(CancellationException.class, promise::sync);
+        assertThrows(CancellationException.class, () -> promise.asStage().sync());
     }
 
     @Test
@@ -621,7 +621,7 @@ public class DefaultPromiseTest {
 
             latch3.await();
         } finally {
-            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+            executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).asStage().sync();
         }
     }
 

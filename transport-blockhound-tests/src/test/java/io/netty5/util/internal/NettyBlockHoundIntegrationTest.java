@@ -147,7 +147,7 @@ public class NettyBlockHoundIntegrationTest {
     private static void testEventExecutorTakeTask(EventExecutor eventExecutor) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         Future<?> f = eventExecutor.schedule(latch::countDown, 10, TimeUnit.MILLISECONDS);
-        f.sync();
+        f.asStage().sync();
         latch.await();
     }
 
@@ -329,10 +329,10 @@ public class NettyBlockHoundIntegrationTest {
                 assertNull(error.get());
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }
@@ -475,14 +475,14 @@ public class NettyBlockHoundIntegrationTest {
                         }).connect(sc.localAddress());
                 cc = future.asStage().get();
 
-                clientSslHandler.handshakeFuture().await().sync();
-                serverSslHandler.handshakeFuture().await().sync();
+                clientSslHandler.handshakeFuture().asStage().sync();
+                serverSslHandler.handshakeFuture().asStage().sync();
             } finally {
                 if (cc != null) {
-                    cc.close().sync();
+                    cc.close().asStage().sync();
                 }
                 if (sc != null) {
-                    sc.close().sync();
+                    sc.close().asStage().sync();
                 }
                 group.shutdownGracefully();
             }

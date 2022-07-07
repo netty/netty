@@ -37,7 +37,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -79,9 +79,9 @@ public class ReentrantChannelTest extends BaseChannelTest {
         Future<Void> future = clientChannel.write(createTestBuffer(2000));
 
         clientChannel.flush();
-        future.sync();
+        future.asStage().sync();
 
-        clientChannel.close().sync();
+        clientChannel.close().asStage().sync();
 
         assertLog(
                 "WRITABILITY: writable=true\n" +
@@ -104,7 +104,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -146,9 +146,9 @@ public class ReentrantChannelTest extends BaseChannelTest {
         Future<Void> future = clientChannel.write(createTestBuffer(2000));
 
         clientChannel.flush();
-        future.sync();
+        future.asStage().sync();
 
-        clientChannel.close().sync();
+        clientChannel.close().asStage().sync();
 
         assertLog("WRITABILITY: writable=true\n" +
                         "WRITE\n" +
@@ -173,7 +173,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -195,8 +195,8 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         assertTrue(clientChannel.isWritable());
 
-        clientChannel.write(createTestBuffer(2000)).sync();
-        clientChannel.close().sync();
+        clientChannel.write(createTestBuffer(2000)).asStage().sync();
+        clientChannel.close().asStage().sync();
 
         assertLog("WRITABILITY: writable=true\n" +
                         "WRITE\n" +
@@ -222,7 +222,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -244,8 +244,8 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         assertTrue(clientChannel.isWritable());
 
-        clientChannel.write(createTestBuffer(2000)).sync();
-        clientChannel.close().sync();
+        clientChannel.write(createTestBuffer(2000)).asStage().sync();
+        clientChannel.close().asStage().sync();
 
         assertLog("WRITABILITY: writable=true\n" +
                         "WRITE\n" +
@@ -268,7 +268,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -301,7 +301,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         });
 
         clientChannel.writeAndFlush(createTestBuffer(2000));
-        clientChannel.close().sync();
+        clientChannel.close().asStage().sync();
 
         assertLog("WRITE\n" +
                 "FLUSH\n" +
@@ -324,7 +324,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -357,7 +357,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         });
 
         clientChannel.writeAndFlush(createTestBuffer(2000));
-        clientChannel.close().sync();
+        clientChannel.close().asStage().sync();
 
         assertLog("WRITE\n" +
                 "FLUSH\n" +
@@ -380,7 +380,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -398,8 +398,8 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
         });
 
-        clientChannel.write(createTestBuffer(2000)).sync();
-        clientChannel.closeFuture().sync();
+        clientChannel.write(createTestBuffer(2000)).asStage().sync();
+        clientChannel.closeFuture().asStage().sync();
 
         assertLog("WRITE\nFLUSH\nCLOSE\n");
     }
@@ -410,7 +410,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -428,8 +428,8 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
         });
 
-        clientChannel.write(createTestBuffer(2000)).sync();
-        clientChannel.closeFuture().sync();
+        clientChannel.write(createTestBuffer(2000)).asStage().sync();
+        clientChannel.closeFuture().asStage().sync();
 
         assertLog("WRITE\nFLUSH\nCLOSE\n");
     }
@@ -440,7 +440,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -463,14 +463,14 @@ public class ReentrantChannelTest extends BaseChannelTest {
         });
 
         try {
-            clientChannel.writeAndFlush(createTestBuffer(2000)).sync();
+            clientChannel.writeAndFlush(createTestBuffer(2000)).asStage().sync();
             fail();
         } catch (Throwable cce) {
             // FIXME:  shouldn't this contain the "intentional failure" exception?
             assertThat(cce.getCause(), Matchers.instanceOf(ClosedChannelException.class));
         }
 
-        clientChannel.closeFuture().sync();
+        clientChannel.closeFuture().asStage().sync();
 
         assertLog("WRITE\nCLOSE\n");
     }
@@ -481,7 +481,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress(getClass());
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync();
+        sb.bind(addr).asStage().sync();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -504,14 +504,14 @@ public class ReentrantChannelTest extends BaseChannelTest {
         });
 
         try {
-            clientChannel.writeAndFlush(createTestBuffer(2000)).sync();
+            clientChannel.writeAndFlush(createTestBuffer(2000)).asStage().sync();
             fail();
         } catch (Throwable cce) {
             // FIXME:  shouldn't this contain the "intentional failure" exception?
             assertThat(cce.getCause(), Matchers.instanceOf(ClosedChannelException.class));
         }
 
-        clientChannel.closeFuture().sync();
+        clientChannel.closeFuture().asStage().sync();
 
         assertLog("WRITE\nCLOSE\n");
     }

@@ -122,19 +122,19 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
             SSLSessionContext clientSessionCtx = clientCtx.sessionContext();
             Buffer msg = DefaultBufferAllocators.preferredAllocator().copyOf(new byte[] { 0xa, 0xb, 0xc, 0xd });
             Channel cc = cb.connect(sc.localAddress()).asStage().get();
-            cc.writeAndFlush(msg).sync();
-            cc.closeFuture().sync();
+            cc.writeAndFlush(msg).asStage().sync();
+            cc.closeFuture().asStage().sync();
             rethrowHandlerExceptions(sh, ch);
             Set<String> sessions = sessionIdSet(clientSessionCtx.getIds());
 
             msg = DefaultBufferAllocators.preferredAllocator().copyOf(new byte[] { 0xa, 0xb, 0xc, 0xd });
             cc = cb.connect(sc.localAddress()).asStage().get();
-            cc.writeAndFlush(msg).sync();
-            cc.closeFuture().sync();
+            cc.writeAndFlush(msg).asStage().sync();
+            cc.closeFuture().asStage().sync();
             assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");
             rethrowHandlerExceptions(sh, ch);
         } finally {
-            sc.close().await();
+            sc.close().asStage().await();
         }
     }
 

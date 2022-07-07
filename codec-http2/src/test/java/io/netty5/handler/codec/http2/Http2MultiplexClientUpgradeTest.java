@@ -78,7 +78,7 @@ public class Http2MultiplexClientUpgradeTest {
         ch.executor().submit(() -> {
             codec.onHttpClientUpgrade();
             return null;
-        }).sync();
+        }).asStage().sync();
 
         assertFalse(upgradeHandler.stateOnActive.localSideOpen());
         assertTrue(upgradeHandler.stateOnActive.remoteSideOpen());
@@ -104,7 +104,7 @@ public class Http2MultiplexClientUpgradeTest {
         ch.executor().submit(() -> {
             codec.onHttpClientUpgrade();
             return null;
-        }).sync();
+        }).asStage().sync();
         latch.await();
         ch.finishAndReleaseAll();
     }

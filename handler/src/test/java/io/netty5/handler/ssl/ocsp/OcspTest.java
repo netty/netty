@@ -373,8 +373,8 @@ public class OcspTest {
                         try {
                             assertTrue(latch.await(10L, TimeUnit.SECONDS));
                         } finally {
-                            client.close().sync();
-                            server.close().sync();
+                            client.close().asStage().sync();
+                            server.close().asStage().sync();
                         }
                     } finally {
                         group.shutdownGracefully(1L, 1L, TimeUnit.SECONDS);

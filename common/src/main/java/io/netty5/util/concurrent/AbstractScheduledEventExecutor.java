@@ -384,18 +384,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
-        public RunnableFuture<V> sync() throws InterruptedException {
-            future.sync();
-            return this;
-        }
-
-        @Override
-        public RunnableFuture<V> await() throws InterruptedException {
-            future.await();
-            return this;
-        }
-
-        @Override
         public boolean isSuccess() {
             return future.isSuccess();
         }
@@ -413,11 +401,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         @Override
         public Throwable cause() {
             return future.cause();
-        }
-
-        @Override
-        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-            return future.await(timeout, unit);
         }
 
         @Override

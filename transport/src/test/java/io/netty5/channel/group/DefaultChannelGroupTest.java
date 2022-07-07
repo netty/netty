@@ -23,7 +23,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
-import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureCompletionStage;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.Test;
 
@@ -47,16 +47,16 @@ public class DefaultChannelGroupTest {
         });
         b.channel(NioServerSocketChannel.class);
 
-        Future<Channel> f = b.bind(0).sync();
+        FutureCompletionStage<Channel> f = b.bind(0).asStage().sync();
 
         if (f.isSuccess()) {
             allChannels.add(f.getNow());
-            allChannels.close().await();
+            allChannels.close().asStage().await();
         }
 
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
-        bossGroup.terminationFuture().sync();
-        workerGroup.terminationFuture().sync();
+        bossGroup.terminationFuture().asStage().sync();
+        workerGroup.terminationFuture().asStage().sync();
     }
 }

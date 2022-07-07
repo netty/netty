@@ -100,7 +100,7 @@ public final class HttpSnoopClient {
             ch.writeAndFlush(request);
 
             // Wait for the server to close the connection.
-            ch.closeFuture().sync();
+            ch.closeFuture().asStage().sync();
         } finally {
             // Shut down executor threads to exit.
             group.shutdownGracefully();

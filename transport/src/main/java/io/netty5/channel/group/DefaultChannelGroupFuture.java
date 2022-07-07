@@ -125,12 +125,6 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public DefaultChannelGroupFuture sync() throws InterruptedException {
-        super.sync();
-        return this;
-    }
-
-    @Override
     public ChannelGroupException cause() {
         return (ChannelGroupException) super.cause();
     }

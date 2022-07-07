@@ -87,7 +87,7 @@ public final class Http2Server {
             System.err.println("Open your HTTP/2-enabled web browser and navigate to " +
                     (SSL? "https" : "http") + "://127.0.0.1:" + PORT + '/');
 
-            ch.closeFuture().sync();
+            ch.closeFuture().asStage().sync();
         } finally {
             group.shutdownGracefully();
         }

@@ -68,14 +68,14 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
         while (itr.hasNext()) {
             Entry<Integer, Entry<Future<Void>, Promise<Void>>> entry = itr.next();
             Future<Void> writeFuture = entry.getValue().getKey();
-            if (!writeFuture.await(timeout, unit)) {
+            if (!writeFuture.asStage().await(timeout, unit)) {
                 throw new IllegalStateException("Timed out waiting to write for stream id " + entry.getKey());
             }
             if (writeFuture.isFailed()) {
                 throw new RuntimeException(writeFuture.cause());
             }
             Promise<Void> promise = entry.getValue().getValue();
-            if (!promise.asFuture().await(timeout, unit)) {
+            if (!promise.asFuture().asStage().await(timeout, unit)) {
                 throw new IllegalStateException("Timed out waiting for response on stream id " + entry.getKey());
             }
             if (promise.isFailed()) {

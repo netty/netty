@@ -104,11 +104,11 @@ public final class DoTClient {
             int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                     .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
-            ch.writeAndFlush(query).sync();
-            boolean success = ch.closeFuture().await(10, TimeUnit.SECONDS);
+            ch.writeAndFlush(query).asStage().sync();
+            boolean success = ch.closeFuture().asStage().await(10, TimeUnit.SECONDS);
             if (!success) {
                 System.err.println("dns query timeout!");
-                ch.close().sync();
+                ch.close().asStage().sync();
             }
         } finally {
             group.shutdownGracefully();

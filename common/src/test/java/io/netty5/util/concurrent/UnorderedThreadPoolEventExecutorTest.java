@@ -39,7 +39,7 @@ public class UnorderedThreadPoolEventExecutorTest {
             executor.execute(task);
             Future<?> future = executor.submit(task).addListener((FutureListener<Object>) future1 -> latch.countDown());
             latch.await();
-            future.sync();
+            future.asStage().sync();
 
             // Now just check if the queue stays empty multiple times. This is needed as the submit to execute(...)
             // by DefaultPromise may happen in an async fashion
@@ -100,7 +100,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 }
             });
 
-            assertSame(cause, f.await().cause());
+            assertSame(cause, f.asStage().getCause());
         } finally {
             executor.shutdownGracefully();
         }

@@ -81,8 +81,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     @AfterAll
     public static void destroyGroup() throws Exception {
-        group.shutdownGracefully().sync();
-        groupForGlobal.shutdownGracefully().sync();
+        group.shutdownGracefully().asStage().sync();
+        groupForGlobal.shutdownGracefully().asStage().sync();
         executor.shutdown();
     }
 
@@ -347,16 +347,16 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
         cc.flush();
 
-        promise.asFuture().await();
+        promise.asFuture().asStage().await();
         Long stop = TrafficCounter.milliSecondFromNano();
         assertTrue(promise.isSuccess(), "Error during execution of TrafficShapping: " + promise.cause());
 
         float average = (totalNb * messageSize) / (float) (stop - start);
         logger.info("TEST: " + currentTestName + " RUN: " + currentTestRun +
                     " Average of traffic: " + average + " compare to " + bandwidthFactor);
-        sh.channel.close().sync();
-        ch.channel.close().sync();
-        sc.close().sync();
+        sh.channel.close().asStage().sync();
+        ch.channel.close().asStage().sync();
+        sc.close().asStage().sync();
         if (autoRead != null) {
             // for extra release call in AutoRead
             Thread.sleep(minimalms);

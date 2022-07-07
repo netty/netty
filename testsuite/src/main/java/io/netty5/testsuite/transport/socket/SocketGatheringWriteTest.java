@@ -150,18 +150,18 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
         Future<Void> cf = cc.writeAndFlush(preferredAllocator().allocate(0));
         try {
-            assertTrue(cf.await(60000, TimeUnit.MILLISECONDS));
-            cf.sync();
+            assertTrue(cf.asStage().await(60000, TimeUnit.MILLISECONDS));
+            cf.asStage().sync();
         } catch (Throwable t) {
             // TODO: Remove this once we fix this test.
             TestUtils.dump(StringUtil.simpleClassName(this));
             throw t;
         }
 
-        serverDonePromise.asFuture().sync();
-        sh.channel.close().sync();
-        ch.channel.close().sync();
-        sc.close().sync();
+        serverDonePromise.asFuture().asStage().sync();
+        sh.channel.close().asStage().sync();
+        ch.channel.close().asStage().sync();
+        sc.close().asStage().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

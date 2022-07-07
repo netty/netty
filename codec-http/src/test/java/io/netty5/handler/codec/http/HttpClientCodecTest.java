@@ -192,7 +192,7 @@ public class HttpClientCodecTest {
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
             Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
-            assertTrue(ccf.await().isSuccess());
+            assertTrue(ccf.asStage().await().isSuccess());
             Channel clientChannel = ccf.asStage().get();
             assertTrue(serverChannelLatch.await(5, SECONDS));
             clientChannel.writeAndFlush(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));

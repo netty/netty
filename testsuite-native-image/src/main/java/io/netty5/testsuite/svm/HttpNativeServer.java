@@ -53,7 +53,7 @@ public final class HttpNativeServer {
 
             Channel channel = b.bind(0).asStage().get();
             System.err.println("Server started, will shutdown now.");
-            channel.close().sync();
+            channel.close().asStage().sync();
             serverStartSucess = true;
         } finally {
             bossGroup.shutdownGracefully();

@@ -190,7 +190,7 @@ class FuturesTest {
         });
 
         promise.setSuccess(42);
-        assertTrue(strFut.await(5, SECONDS));
+        assertTrue(strFut.asStage().await(5, SECONDS));
         assertTrue(strFut.isCancelled());
     }
 
@@ -210,7 +210,7 @@ class FuturesTest {
 
         executor.submit(() -> promise.setSuccess(42));
         mappingLatchEnter.await();
-        assertFalse(strFut.await(100, TimeUnit.MILLISECONDS));
+        assertFalse(strFut.asStage().await(100, TimeUnit.MILLISECONDS));
         mappingLatchExit.countDown();
         assertThat(strFut.asStage().get(5, SECONDS)).isEqualTo("42");
     }
@@ -243,7 +243,7 @@ class FuturesTest {
         Exception ex = new Exception();
         promise.setFailure(ex);
         assertTrue(promise.isFailed());
-        assertTrue(promise2.await(1, SECONDS));
+        assertTrue(promise2.asStage().await(1, SECONDS));
         assertTrue(promise2.isFailed());
         assertSame(promise.cause(), promise2.cause());
     }
@@ -257,7 +257,7 @@ class FuturesTest {
 
         assertTrue(promise.cancel());
         assertTrue(promise.isCancelled());
-        assertTrue(promise2.await(1, SECONDS));
+        assertTrue(promise2.asStage().await(1, SECONDS));
         assertTrue(promise2.isCancelled());
     }
 
@@ -272,7 +272,7 @@ class FuturesTest {
         assertTrue(promise2.isCancelled());
 
         //
-        assertTrue(promise.await(1, SECONDS));
+        assertTrue(promise.asStage().await(1, SECONDS));
         assertTrue(promise2.isCancelled());
     }
 }

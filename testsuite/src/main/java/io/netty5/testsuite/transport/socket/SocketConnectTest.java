@@ -80,10 +80,10 @@ public class SocketConnectTest extends AbstractSocketTest {
             assertLocalAddress(localAddressPromise.asFuture().asStage().get());
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();
+                clientChannel.close().asStage().sync();
             }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().asStage().sync();
             }
         }
     }
@@ -160,12 +160,12 @@ public class SocketConnectTest extends AbstractSocketTest {
         Future<Void> write = channel.write(writeAsciiBuffer(sc, "[fastopen]"));
         SocketAddress remoteAddress = sc.localAddress();
         Future<Void> connectFuture = channel.connect(remoteAddress);
-        connectFuture.sync();
-        channel.writeAndFlush(writeAsciiBuffer(sc, "[normal data]")).sync();
-        write.sync();
+        connectFuture.asStage().sync();
+        channel.writeAndFlush(writeAsciiBuffer(sc, "[normal data]")).asStage().sync();
+        write.asStage().sync();
         String expectedString = "[fastopen][normal data]";
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
-        channel.disconnect().sync();
+        channel.disconnect().asStage().sync();
         assertEquals(expectedString, result);
     }
 

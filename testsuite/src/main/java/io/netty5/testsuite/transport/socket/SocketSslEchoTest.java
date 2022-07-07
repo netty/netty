@@ -308,12 +308,12 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         });
 
         final Channel sc = sb.bind().asStage().get();
-        cb.connect(sc.localAddress()).sync();
+        cb.connect(sc.localAddress()).asStage().sync();
 
         final Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
 
         // Wait for the handshake to complete before we flush anything. SslHandler should flush non-application data.
-        clientHandshakeFuture.sync();
+        clientHandshakeFuture.asStage().sync();
         clientHandshakeEventLatch.await();
         Buffer dataBuffer = bufferAllocator.copyOf(data);
 
@@ -332,7 +332,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
             Future<Void> future = clientChannel.writeAndFlush(buf);
             clientSendCounter.set(clientSendCounterVal += length);
-            future.sync();
+            future.asStage().sync();
 
             if (needsRenegotiation && clientSendCounterVal >= data.length / 2) {
                 needsRenegotiation = false;
@@ -376,15 +376,15 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         // Wait until renegotiation is done.
         if (renegoFuture != null) {
-            renegoFuture.sync();
+            renegoFuture.asStage().sync();
         }
         if (serverHandler.renegoFuture != null) {
-            serverHandler.renegoFuture.sync();
+            serverHandler.renegoFuture.asStage().sync();
         }
 
-        serverChannel.close().await();
-        clientChannel.close().await();
-        sc.close().await();
+        serverChannel.close().asStage().await();
+        clientChannel.close().asStage().await();
+        sc.close().asStage().await();
         delegatedTaskExecutor.shutdown();
 
         if (serverException.get() != null && !(serverException.get() instanceof IOException)) {

@@ -15,8 +15,6 @@
  */
 package io.netty5.util.concurrent;
 
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -58,11 +56,11 @@ import java.util.function.Function;
  * retrieve the result of the I/O operation. It also allows you to add {@link FutureListener}s so you can get notified
  * when the I/O operation is completed.
  *
- * <h3>Prefer {@link #addListener(FutureListener)} to {@link #await()}</h3>
+ * <h3>Prefer {@link #addListener(FutureListener)} to {@link FutureCompletionStage#await()}</h3>
  * <p>
  * It is recommended to prefer {@link #addListener(FutureListener)}, or {@link #addListener(Object,
- * FutureContextListener)}, to {@link #await()} wherever possible to get notified when an I/O operation is done and to
- * do any follow-up tasks.
+ * FutureContextListener)}, to {@link FutureCompletionStage#await()} wherever possible to get notified when an I/O
+ * operation is done and to do any follow-up tasks.
  * <p>
  * The {@link #addListener(FutureListener)} method is non-blocking. It simply adds the specified {@link FutureListener}
  * to the {@link Future}, and the I/O thread will notify the listeners when the I/O operation associated with the future
@@ -70,23 +68,24 @@ import java.util.function.Function;
  * resource utilization because it does not block at all, but it could be tricky to implement a sequential logic if you
  * are not used to event-driven programming.
  * <p>
- * By contrast, {@link #await()} is a blocking operation. Once called, the caller thread blocks until the operation is
- * done. It is easier to implement a sequential logic with {@link #await()}, but the caller thread blocks unnecessarily
- * until the I/O operation is done and there's relatively expensive cost of inter-thread notification. Moreover, there's
- * a chance of dead-lock in a particular circumstance, which is described below.
+ * By contrast, {@link FutureCompletionStage#await()} is a blocking operation. Once called, the caller thread blocks
+ * until the operation is done. It is easier to implement a sequential logic with {@link FutureCompletionStage#await()},
+ * but the caller thread blocks unnecessarily until the I/O operation is done and there's relatively expensive cost of
+ * inter-thread notification. Moreover, there's a chance of deadlock in a particular circumstance, which is
+ * described below.
  *
- * <h3>Do not call {@link #await()} inside a {@link io.netty5.channel.ChannelHandler}</h3>
+ * <h3>Do not call {@link FutureCompletionStage#await()} inside a {@link io.netty5.channel.ChannelHandler}</h3>
  * <p>
- * The event handler methods in {@link io.netty5.channel.ChannelHandler} are usually called by an I/O thread. If {@link
- * #await()} is called by an event handler method, which is called by the I/O thread, the I/O operation it is waiting
- * for might never complete because {@link #await()} can block the I/O operation it is waiting for, which is a
- * dead-lock.
+ * The event handler methods in {@link io.netty5.channel.ChannelHandler} are usually called by an I/O thread.
+ * If {@link FutureCompletionStage#await()} is called by an event handler method, which is called by the I/O thread,
+ * the I/O operation it is waiting for might never complete because {@link FutureCompletionStage#await()} can block
+ * the I/O operation it is waiting for, which is a deadlock.
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
  * public void channelRead({@link io.netty5.channel.ChannelHandlerContext} ctx, Object msg) {
  *     {@link Future} future = ctx.channel().close();
- *     future.await();
+ *     future.asStage().await();
  *     // Perform post-closure operation
  *     // ...
  * }
@@ -105,12 +104,13 @@ import java.util.function.Function;
  * </pre>
  * <p>
  * In spite of the disadvantages mentioned above, there are certainly the cases where it is more convenient to call
- * {@link #await()}. In such a case, please make sure you do not call {@link #await()} in an I/O thread. Otherwise,
- * {@link BlockingOperationException} will be raised to prevent a dead-lock.
+ * {@link FutureCompletionStage#await()}. In such a case, please make sure you do not call
+ * {@link FutureCompletionStage#await()} in an I/O thread. Otherwise, {@link BlockingOperationException} will be
+ * raised to prevent a deadlock.
  *
  * <h3>Do not confuse I/O timeout and await timeout</h3>
  * <p>
- * The timeout value you specify with {@link #await(long, TimeUnit)} are not related with
+ * The timeout value you specify with {@link FutureCompletionStage#await(long, TimeUnit)} is not related to the
  * I/O timeout at all.
  * If an I/O operation times out, the future will be marked as 'completed with failure,' as depicted in the
  * diagram above.  For example, connect timeout should be configured via a transport-specific option:
@@ -118,7 +118,7 @@ import java.util.function.Function;
  * // BAD - NEVER DO THIS
  * {@link io.netty5.bootstrap.Bootstrap} b = ...;
  * {@link Future} f = b.connect(...);
- * f.await(10, TimeUnit.SECONDS);
+ * f.asStage().await(10, TimeUnit.SECONDS);
  * if (f.isCancelled()) {
  *     // Connection attempt cancelled by user
  * } else if (!f.isSuccess()) {
@@ -134,7 +134,7 @@ import java.util.function.Function;
  * // Configure the connect timeout option.
  * <b>b.option({@link io.netty5.channel.ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link Future} f = b.connect(...);
- * f.await();
+ * f.asStage().await();
  *
  * // Now we are sure the future is completed.
  * assert f.isDone();
@@ -169,30 +169,6 @@ public interface Future<V> extends AsynchronousResult<V> {
      * @return this future object.
      */
     <C> Future<V> addListener(C context, FutureContextListener<? super C, ? super V> listener);
-
-    /**
-     * Waits for this future until it is done, and rethrows the cause of the failure if this future failed.
-     *
-     * @throws CancellationException if the computation was cancelled
-     * @throws CompletionException   if the computation threw an exception.
-     * @throws InterruptedException  if the current thread was interrupted while waiting
-     */
-    Future<V> sync() throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed.
-     *
-     * @throws InterruptedException if the current thread was interrupted
-     */
-    Future<V> await() throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed within the specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within the specified time limit
-     * @throws InterruptedException if the current thread was interrupted
-     */
-    boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
      * Returns a {@link FutureCompletionStage} that reflects the state of this {@link Future} and so will receive all

@@ -195,7 +195,7 @@ public class ChunkedWriteHandlerTest {
         final FutureListener<Void> listener = future -> listenerNotified.set(true);
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
-        ch.writeAndFlush(input).addListener(listener).sync();
+        ch.writeAndFlush(input).addListener(listener).asStage().sync();
         assertTrue(ch.finish());
 
         // the listener should have been notified
@@ -246,7 +246,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
-        ch.writeAndFlush(input).sync();
+        ch.writeAndFlush(input).asStage().sync();
         assertTrue(ch.finish());
 
         assertEquals(0, (Integer) ch.readOutbound());
@@ -435,7 +435,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         EmbeddedChannel ch = new EmbeddedChannel(noOpWrites, new ChunkedWriteHandler());
-        ch.writeAndFlush(nonClosableInput).await();
+        ch.writeAndFlush(nonClosableInput).asStage().await();
         // Should be `false` as we do not expect any messages to be written
         assertFalse(ch.finish());
         buffer.close();
@@ -586,7 +586,7 @@ public class ChunkedWriteHandlerTest {
             }
         }, new ChunkedWriteHandler());
 
-        ch.writeAndFlush(input).sync();
+        ch.writeAndFlush(input).asStage().sync();
         assertFalse(ch.finishAndReleaseAll());
     }
 
@@ -676,7 +676,7 @@ public class ChunkedWriteHandlerTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(failFirst, new ChunkedWriteHandler());
         Future<Void> r1 = ch.write(input1);
-        Future<Void> r2 = ch.writeAndFlush(input2).await();
+        Future<Void> r2 = ch.writeAndFlush(input2).asStage().await().future();
         assertTrue(ch.finish());
 
         assertTrue(r1.cause() instanceof RuntimeException);

@@ -64,7 +64,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             assertEquals(value3, value4);
             assertNotEquals(value1, value4);
         } finally {
-            channel.close().sync();
+            channel.close().asStage().sync();
             eventLoopGroup.shutdownGracefully();
         }
     }
@@ -78,7 +78,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             assertFalse(channel.config().setOption(option, null));
             assertNull(channel.config().getOption(option));
         } finally {
-            channel.close().sync();
+            channel.close().asStage().sync();
             eventLoopGroup.shutdownGracefully();
         }
     }
@@ -90,7 +90,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
         try {
             channel.config().getOptions();
         } finally {
-            channel.close().sync();
+            channel.close().asStage().sync();
             eventLoopGroup.shutdownGracefully();
         }
     }
@@ -193,10 +193,10 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
         EventLoop wrapped = new WrappedEventLoop(eventLoop);
         T channel = newNioChannel(wrapped);
-        channel.register().sync();
+        channel.register().asStage().sync();
 
         assertSame(wrapped, channel.executor());
-        channel.close().sync();
+        channel.close().asStage().sync();
         eventLoopGroup.shutdownGracefully();
     }
 }

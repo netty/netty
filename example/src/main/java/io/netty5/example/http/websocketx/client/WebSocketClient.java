@@ -120,7 +120,7 @@ public final class WebSocketClient {
              });
 
             Channel ch = b.connect(uri.getHost(), port).asStage().get();
-            handler.handshakeFuture().sync();
+            handler.handshakeFuture().asStage().sync();
 
             BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
             while (true) {
@@ -129,7 +129,7 @@ public final class WebSocketClient {
                     break;
                 } else if ("bye".equalsIgnoreCase(msg)) {
                     ch.writeAndFlush(new CloseWebSocketFrame(true, 0, ch.bufferAllocator().allocate(0)));
-                    ch.closeFuture().sync();
+                    ch.closeFuture().asStage().sync();
                     break;
                 } else if ("ping".equalsIgnoreCase(msg)) {
                     WebSocketFrame frame =

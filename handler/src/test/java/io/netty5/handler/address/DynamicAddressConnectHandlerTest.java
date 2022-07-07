@@ -63,7 +63,7 @@ public class DynamicAddressConnectHandlerTest {
                 return REMOTE_NEW;
             }
         });
-        channel.connect(REMOTE, LOCAL).sync();
+        channel.connect(REMOTE, LOCAL).asStage().sync();
         assertNull(channel.pipeline().get(DynamicAddressConnectHandler.class));
         assertFalse(channel.finish());
     }

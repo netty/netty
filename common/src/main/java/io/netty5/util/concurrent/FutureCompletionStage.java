@@ -18,9 +18,12 @@ package io.netty5.util.concurrent;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -40,16 +43,109 @@ import java.util.function.Function;
  *
  * @param <V> the value type.
  */
-public interface FutureCompletionStage<V> extends CompletionStage<V>, java.util.concurrent.Future<V> {
+public interface FutureCompletionStage<V>
+        extends CompletionStage<V>, java.util.concurrent.Future<V>, AsynchronousResult<V> {
+
+    /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future failed.
+     *
+     * @throws CancellationException if the computation was cancelled
+     * @throws CompletionException   if the computation threw an exception.
+     * @throws InterruptedException  if the current thread was interrupted while waiting
+     */
+    FutureCompletionStage<V> sync() throws InterruptedException;
+
+    /**
+     * Waits for the future to complete, then calls the given result handler with the outcome.
+     * <p>
+     * If the future completes successfully, then the result handler is called with the result of the future -
+     * which may be {@code null} - and a {@code null} exception.
+     * <p>
+     * If the future fails, then the result handler is called with a {@code null} result, and a non-{@code null}
+     * exception.
+     * <p>
+     * Success or failure of the future can be determined on whether the exception is {@code null} or not.
+     * <p>
+     * The result handler may compute a new result, which will be the return value of the {@code join} call.
+     *
+     * @param resultHandler The function that will process the result of the completed future.
+     * @return The result of the {@code resultHandler} computation.
+     * @param <T> The return type of the {@code resultHandler}.
+     * @throws InterruptedException if the thread is interrupted while waiting for the future to complete.
+     */
+    default <T> T join(BiFunction<V, Throwable, T> resultHandler) throws InterruptedException {
+        Objects.requireNonNull(resultHandler, "resultHandler");
+        await();
+        var fut = future();
+        if (fut.isSuccess()) {
+            return resultHandler.apply(fut.getNow(), null);
+        } else {
+            return resultHandler.apply(null, fut.cause());
+        }
+    }
+
+    /**
+     * Waits for this future to be completed.
+     *
+     * @throws InterruptedException if the current thread was interrupted
+     */
+    FutureCompletionStage<V> await() throws InterruptedException;
+
+    /**
+     * Waits for this future to be completed within the specified time limit.
+     *
+     * @return {@code true} if and only if the future was completed within the specified time limit
+     * @throws InterruptedException if the current thread was interrupted
+     */
+    boolean await(long timeout, TimeUnit unit) throws InterruptedException;
+
+    /**
+     * Wait for the future to complete, and return the cause if it failed, or {@code null} if it succeeded.
+     *
+     * @return The exception that caused the future to fail, if any, or {@code null}.
+     * @throws InterruptedException if the current thread was interrupted while waiting.
+     */
+    default Throwable getCause() throws InterruptedException {
+        await();
+        return cause();
+    }
 
     /**
      * Returns the underlying {@link Future} of this {@link FutureCompletionStage}.
      */
     Future<V> future();
 
-    /**
-     * See {@link Future#executor()}.
-     */
+    @Override
+    default boolean cancel() {
+        return future().cancel();
+    }
+
+    @Override
+    default boolean isSuccess() {
+        return future().isSuccess();
+    }
+
+    @Override
+    default boolean isFailed() {
+        return future().isFailed();
+    }
+
+    @Override
+    default boolean isCancellable() {
+        return future().isCancellable();
+    }
+
+    @Override
+    default V getNow() {
+        return future().getNow();
+    }
+
+    @Override
+    default Throwable cause() {
+        return future().cause();
+    }
+
+    @Override
     default EventExecutor executor() {
         return future().executor();
     }

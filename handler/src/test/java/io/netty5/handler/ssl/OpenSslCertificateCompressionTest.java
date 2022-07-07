@@ -322,21 +322,20 @@ public class OpenSslCertificateCompressionTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new CertCompressionTestChannelInitializer(serverPromise, serverSslContext));
-            Channel serverChannel = sb.bind(new LocalAddress(getClass()))
-                    .sync().getNow();
+            Channel serverChannel = sb.bind(new LocalAddress(getClass())).asStage().get();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(LocalChannel.class)
                     .handler(new CertCompressionTestChannelInitializer(clientPromise, clientSslContext));
 
-            Channel clientChannel = bootstrap.connect(serverChannel.localAddress()).sync().getNow();
+            Channel clientChannel = bootstrap.connect(serverChannel.localAddress()).asStage().get();
 
-            assertTrue(clientPromise.asFuture().await(5L, TimeUnit.SECONDS), "client timeout");
-            assertTrue(serverPromise.asFuture().await(5L, TimeUnit.SECONDS), "server timeout");
-            clientPromise.asFuture().sync();
-            serverPromise.asFuture().sync();
-            clientChannel.close().sync();
-            serverChannel.close().sync();
+            assertTrue(clientPromise.asFuture().asStage().await(5L, TimeUnit.SECONDS), "client timeout");
+            assertTrue(serverPromise.asFuture().asStage().await(5L, TimeUnit.SECONDS), "server timeout");
+            clientPromise.asFuture().asStage().sync();
+            serverPromise.asFuture().asStage().sync();
+            clientChannel.close().asStage().sync();
+            serverChannel.close().asStage().sync();
         } finally  {
             group.shutdownGracefully();
         }

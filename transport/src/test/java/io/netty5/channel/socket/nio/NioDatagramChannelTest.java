@@ -62,8 +62,8 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
             }
             assertEquals(100, channelGroup.size());
         } finally {
-            channelGroup.close().sync();
-            group.shutdownGracefully().sync();
+            channelGroup.close().asStage().sync();
+            group.shutdownGracefully().asStage().sync();
         }
     }
 
