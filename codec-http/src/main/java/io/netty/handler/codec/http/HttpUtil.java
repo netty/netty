@@ -31,7 +31,6 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.StringUtil.COMMA;
-import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -50,7 +49,15 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isOriginForm(URI uri) {
-        return isNullOrEmpty(uri.getScheme()) && isNullOrEmpty(uri.getAuthority()) && uri.toString().startsWith("/");
+        return isOriginForm(uri.toString());
+    }
+
+    /**
+     * Determine if a string uri is in origin-form according to
+     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     */
+    public static boolean isOriginForm(String uri) {
+        return uri.startsWith("/");
     }
 
     /**
@@ -58,7 +65,15 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isAsteriskForm(URI uri) {
-        return "*".equals(uri.toString());
+        return isAsteriskForm(uri.toString());
+    }
+
+    /**
+     * Determine if a string uri is in asterisk-form according to
+     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     */
+    public static boolean isAsteriskForm(String uri) {
+        return "*".equals(uri);
     }
 
     /**
