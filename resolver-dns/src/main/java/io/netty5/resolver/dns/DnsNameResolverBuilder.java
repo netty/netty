@@ -28,11 +28,11 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.netty5.util.NetUtil.addressType;
 import static io.netty5.util.NetUtil.isFamilySupported;
 import static io.netty5.util.internal.ObjectUtil.intValue;
 import static java.util.Objects.requireNonNull;
@@ -446,9 +446,7 @@ public final class DnsNameResolverBuilder {
                 intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE),
                 // Let us use the sane ordering as DnsNameResolver will be used when returning
                 // nameservers from the cache.
-                new NameServerComparator(
-                        DnsNameResolver.preferredAddressType(resolvedAddressTypes) == StandardProtocolFamily.INET6 ?
-                                Inet6Address.class : Inet4Address.class));
+                new NameServerComparator(addressType(DnsNameResolver.preferredAddressType(resolvedAddressTypes))));
     }
 
     private DnsCnameCache newCnameCache() {

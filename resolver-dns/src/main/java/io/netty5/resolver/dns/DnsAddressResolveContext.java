@@ -18,7 +18,6 @@ package io.netty5.resolver.dns;
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.dns.DnsRecord;
 import io.netty5.handler.codec.dns.DnsRecordType;
-import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.InetAddress;
