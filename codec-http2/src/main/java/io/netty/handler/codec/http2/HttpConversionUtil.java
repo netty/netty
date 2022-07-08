@@ -49,6 +49,8 @@ import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
 import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
+import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
+import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
@@ -434,8 +436,7 @@ public final class HttpConversionUtil {
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
             String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            if (request.uri().startsWith("/") || "*".equals(request.uri())) {
-                // Origin or asterisk form
+            if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
                 out.path(new AsciiString(request.uri()));
                 setHttp2Scheme(inHeaders, out);
             } else {
