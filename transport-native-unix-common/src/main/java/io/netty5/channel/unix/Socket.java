@@ -502,6 +502,9 @@ public class Socket extends FileDescriptor {
     }
 
     public static boolean shouldUseIpv6(ProtocolFamily family) {
+        if (family == null) {
+            return isIPv6Preferred();
+        }
         if (family == StandardProtocolFamily.INET) {
             return false;
         }
