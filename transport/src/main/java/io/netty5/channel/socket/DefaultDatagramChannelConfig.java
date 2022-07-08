@@ -442,4 +442,10 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         super.setMaxMessagesPerWrite(maxMessagesPerWrite);
         return this;
     }
+
+    @Override
+    public DatagramChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        super.setAllowHalfClosure(allowHalfClosure);
+        return this;
+    }
 }

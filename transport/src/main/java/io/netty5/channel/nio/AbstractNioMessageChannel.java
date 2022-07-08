@@ -131,7 +131,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
         }
         final int interestOps = key.interestOps();
 
-        int maxMessagesPerWrite = maxMessagesPerWrite();
+        int maxMessagesPerWrite = config().getMaxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {

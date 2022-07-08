@@ -196,4 +196,22 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     final long getMaxBytesPerGatheringWrite() {
         return maxBytesPerGatheringWrite;
     }
+
+    @Override
+    public KQueueChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
+    }
+
+    @Override
+    public KQueueChannelConfig setAutoClose(boolean autoClose) {
+        super.setAutoClose(autoClose);
+        return this;
+    }
+
+    @Override
+    public KQueueChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        super.setAllowHalfClosure(allowHalfClosure);
+        return this;
+    }
 }

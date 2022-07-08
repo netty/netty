@@ -16,6 +16,7 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultChannelConfig;
@@ -141,6 +142,24 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     @Override
     public EpollChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
+        return this;
+    }
+
+    @Override
+    public EpollChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
+        return this;
+    }
+
+    @Override
+    public EpollChannelConfig setAutoClose(boolean autoClose) {
+        super.setAutoClose(autoClose);
+        return this;
+    }
+
+    @Override
+    public EpollChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        super.setAllowHalfClosure(allowHalfClosure);
         return this;
     }
 
