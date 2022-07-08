@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.BeforeAll;
@@ -66,6 +67,20 @@ class HttpDataTest {
         ByteBuf content = PooledByteBufAllocator.DEFAULT.buffer();
         httpData.addContent(content, false);
         assertThat(content.refCnt()).isEqualTo(0);
+    }
+
+    @ParameterizedHttpDataTest
+    void testCompletedFlagPreservedAfterRetainDuplicate(HttpData httpData) throws IOException {
+        httpData.addContent(Unpooled.wrappedBuffer("foo".getBytes(CharsetUtil.UTF_8)), false);
+        assertThat(httpData.isCompleted()).isFalse();
+        HttpData duplicate = httpData.retainedDuplicate();
+        assertThat(duplicate.isCompleted()).isFalse();
+        assertThat(duplicate.release()).isTrue();
+        httpData.addContent(Unpooled.wrappedBuffer("bar".getBytes(CharsetUtil.UTF_8)), true);
+        assertThat(httpData.isCompleted()).isTrue();
+        duplicate = httpData.retainedDuplicate();
+        assertThat(duplicate.isCompleted()).isTrue();
+        assertThat(duplicate.release()).isTrue();
     }
 
     @Test

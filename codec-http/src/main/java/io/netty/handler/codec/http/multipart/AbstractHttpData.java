@@ -83,7 +83,11 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     }
 
     protected void setCompleted() {
-        completed = true;
+        setCompleted(true);
+    }
+
+    protected void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 
     @Override
