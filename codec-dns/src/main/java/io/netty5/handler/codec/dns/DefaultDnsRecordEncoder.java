@@ -16,10 +16,13 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+
+import java.net.StandardProtocolFamily;
+
+import static io.netty5.handler.codec.dns.DnsCodecUtil.addressNumber;
 
 /**
  * The default {@link DnsRecordEncoder} implementation.
@@ -94,8 +97,8 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         }
 
         // See https://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
-        final short addressNumber = (short) (bytes.length == 4 ?
-                InternetProtocolFamily.IPv4.addressNumber() : InternetProtocolFamily.IPv6.addressNumber());
+        final short addressNumber = (short) addressNumber(bytes.length == 4 ?
+                StandardProtocolFamily.INET : StandardProtocolFamily.INET6);
         int payloadLength = calculateEcsAddressLength(sourcePrefixLength, lowOrderBitsToPreserve);
 
         int fullPayloadLength = 2 + // OPTION-CODE

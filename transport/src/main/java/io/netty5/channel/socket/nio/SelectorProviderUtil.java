@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.socket.nio;
 
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -42,7 +41,7 @@ final class SelectorProviderUtil {
     }
 
     static <C extends Channel> C newChannel(Method method, SelectorProvider provider,
-                                                    InternetProtocolFamily family) throws IOException {
+                                                    ProtocolFamily family) throws IOException {
         /*
          *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
          *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
@@ -53,7 +52,7 @@ final class SelectorProviderUtil {
             try {
                 @SuppressWarnings("unchecked")
                 C channel = (C) method.invoke(
-                        provider, ProtocolFamilyConverter.convert(family));
+                        provider, family);
                 return channel;
             } catch (InvocationTargetException | IllegalAccessException e) {
                 throw new IOException(e);

@@ -16,7 +16,6 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.channel.DefaultFileRegion;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
@@ -25,6 +24,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 
 import static io.netty5.channel.kqueue.AcceptFilter.PLATFORM_UNSUPPORTED;
 import static io.netty5.channel.kqueue.Native.CONNECT_TCP_FASTOPEN;
@@ -197,7 +197,7 @@ final class BsdSocket extends Socket {
         return new BsdSocket(newSocketStream0());
     }
 
-    public static BsdSocket newSocketStream(InternetProtocolFamily protocol) {
+    public static BsdSocket newSocketStream(ProtocolFamily protocol) {
         return new BsdSocket(newSocketStream0(protocol));
     }
 
@@ -205,7 +205,7 @@ final class BsdSocket extends Socket {
         return new BsdSocket(newSocketDgram0());
     }
 
-    public static BsdSocket newSocketDgram(InternetProtocolFamily protocol) {
+    public static BsdSocket newSocketDgram(ProtocolFamily protocol) {
         return new BsdSocket(newSocketDgram0(protocol));
     }
 

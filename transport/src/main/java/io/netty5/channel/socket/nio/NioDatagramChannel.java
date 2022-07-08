@@ -33,7 +33,6 @@ import io.netty5.channel.RecvBufferAllocator.Handle;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannelConfig;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -44,6 +43,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -96,15 +96,15 @@ public final class NioDatagramChannel
         }
     }
 
-    private static DatagramChannel newSocket(SelectorProvider provider, InternetProtocolFamily ipFamily) {
-        if (ipFamily == null) {
+    private static DatagramChannel newSocket(SelectorProvider provider, ProtocolFamily family) {
+        if (family == null) {
             return newSocket(provider);
         }
 
         checkJavaVersion();
 
         try {
-            return provider.openDatagramChannel(ProtocolFamilyConverter.convert(ipFamily));
+            return provider.openDatagramChannel(family);
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
@@ -114,7 +114,7 @@ public final class NioDatagramChannel
     }
 
     /**
-     * Create a new instance which will use the Operation Systems default {@link InternetProtocolFamily}.
+     * Create a new instance which will use the Operation Systems default {@link ProtocolFamily}.
      */
     public NioDatagramChannel(EventLoop eventLoop) {
         this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER));
@@ -122,27 +122,27 @@ public final class NioDatagramChannel
 
     /**
      * Create a new instance using the given {@link SelectorProvider}
-     * which will use the Operation Systems default {@link InternetProtocolFamily}.
+     * which will use the Operation Systems default {@link ProtocolFamily}.
      */
     public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider) {
         this(eventLoop, newSocket(provider));
     }
 
     /**
-     * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
+     * Create a new instance using the given {@link ProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public NioDatagramChannel(EventLoop eventLoop, InternetProtocolFamily ipFamily) {
-        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, ipFamily));
+    public NioDatagramChannel(EventLoop eventLoop, ProtocolFamily family) {
+        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, family));
     }
 
     /**
-     * Create a new instance using the given {@link SelectorProvider} and {@link InternetProtocolFamily}.
-     * If {@link InternetProtocolFamily} is {@code null} it will depend on the Operation Systems default
+     * Create a new instance using the given {@link SelectorProvider} and {@link ProtocolFamily}.
+     * If {@link ProtocolFamily} is {@code null} it will depend on the Operation Systems default
      * which will be chosen.
      */
-    public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider, InternetProtocolFamily ipFamily) {
-        this(eventLoop, newSocket(provider, ipFamily));
+    public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
+        this(eventLoop, newSocket(provider, family));
     }
 
     /**

@@ -25,7 +25,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DefaultServerSocketChannelConfig;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannelConfig;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -34,6 +33,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
@@ -58,7 +58,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, I
     private static final Method OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY =
             SelectorProviderUtil.findOpenMethod("openServerSocketChannel");
 
-    private static ServerSocketChannel newChannel(SelectorProvider provider, InternetProtocolFamily family) {
+    private static ServerSocketChannel newChannel(SelectorProvider provider, ProtocolFamily family) {
         try {
             ServerSocketChannel channel =
                     SelectorProviderUtil.newChannel(OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
@@ -89,7 +89,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, I
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
-                                  SelectorProvider provider, InternetProtocolFamily protocolFamily) {
+                                  SelectorProvider provider, ProtocolFamily protocolFamily) {
         this(eventLoop, childEventLoopGroup, newChannel(provider, protocolFamily));
     }
 

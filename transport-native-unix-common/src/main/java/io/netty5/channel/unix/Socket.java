@@ -16,7 +16,6 @@
 package io.netty5.channel.unix;
 
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 
@@ -25,7 +24,9 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.PortUnreachableException;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 
@@ -500,9 +501,14 @@ public class Socket extends FileDescriptor {
         return isIpv6Preferred;
     }
 
-    public static boolean shouldUseIpv6(InternetProtocolFamily family) {
-        return family == null ? isIPv6Preferred() :
-                        family == InternetProtocolFamily.IPv6;
+    public static boolean shouldUseIpv6(ProtocolFamily family) {
+        if (family == StandardProtocolFamily.INET) {
+            return false;
+        }
+        if (family == StandardProtocolFamily.INET6) {
+            return true;
+        }
+        throw new IllegalArgumentException("ProtocolFamily not supported: " + family);
     }
 
     private static native boolean isIPv6Preferred0(boolean ipv4Preferred);
@@ -540,7 +546,7 @@ public class Socket extends FileDescriptor {
         return newSocketStream0(isIPv6Preferred());
     }
 
-    protected static int newSocketStream0(InternetProtocolFamily protocol) {
+    protected static int newSocketStream0(ProtocolFamily protocol) {
         return newSocketStream0(shouldUseIpv6(protocol));
     }
 
@@ -556,7 +562,7 @@ public class Socket extends FileDescriptor {
         return newSocketDgram0(isIPv6Preferred());
     }
 
-    protected static int newSocketDgram0(InternetProtocolFamily family) {
+    protected static int newSocketDgram0(ProtocolFamily family) {
         return newSocketDgram0(shouldUseIpv6(family));
     }
 

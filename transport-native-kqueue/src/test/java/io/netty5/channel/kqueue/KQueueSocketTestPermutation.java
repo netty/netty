@@ -23,7 +23,6 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -34,6 +33,7 @@ import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.testsuite.transport.socket.SocketTestPermutation;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 
+import java.net.ProtocolFamily;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -103,7 +103,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
-            final InternetProtocolFamily family) {
+            final ProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {

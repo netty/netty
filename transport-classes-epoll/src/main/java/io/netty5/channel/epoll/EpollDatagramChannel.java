@@ -28,7 +28,6 @@ import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.Errors.NativeIoException;
 import io.netty5.channel.unix.SegmentedDatagramPacket;
@@ -48,7 +47,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.net.StandardProtocolFamily;
 
 import static io.netty5.channel.epoll.LinuxSocket.newSocketDgram;
 import static java.util.Objects.requireNonNull;
@@ -85,7 +86,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     /**
-     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * Create a new instance which selects the {@link ProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop) {
@@ -93,16 +94,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     /**
-     * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
+     * Create a new instance using the given {@link ProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public EpollDatagramChannel(EventLoop eventLoop, InternetProtocolFamily family) {
+    public EpollDatagramChannel(EventLoop eventLoop, ProtocolFamily family) {
         this(eventLoop, newSocketDgram(family),
         false);
     }
 
     /**
-     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * Create a new instance which selects the {@link ProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop, int fd) {
@@ -304,7 +305,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
-                if (socket.family() == InternetProtocolFamily.IPv6) {
+                if (socket.family() == StandardProtocolFamily.INET6) {
                     localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
                 }
             }

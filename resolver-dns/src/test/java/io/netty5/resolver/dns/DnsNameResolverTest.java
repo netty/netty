@@ -27,7 +27,6 @@ import io.netty5.channel.ReflectiveChannelFactory;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.dns.DefaultDnsQuestion;
@@ -78,6 +77,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -625,10 +625,10 @@ public class DnsNameResolverTest {
             assertThat(resolved.getHostName(), is(unresolved));
 
             boolean typeMatches = false;
-            for (InternetProtocolFamily f : resolver.resolvedInternetProtocolFamiliesUnsafe()) {
-                Class<?> resolvedType = resolved.getClass();
-                if (f.addressType().isAssignableFrom(resolvedType)) {
+            for (ProtocolFamily f : resolver.resolvedProtocolFamiliesUnsafe()) {
+                if (NetUtil.isFamilySupported(resolved, f)) {
                     typeMatches = true;
+                    break;
                 }
             }
 

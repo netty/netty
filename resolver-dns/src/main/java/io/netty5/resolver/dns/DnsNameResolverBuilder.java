@@ -19,17 +19,21 @@ import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ReflectiveChannelFactory;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.resolver.HostsFileEntriesResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.util.concurrent.Future;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.net.StandardProtocolFamily;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.netty5.util.NetUtil.isFamilySupported;
 import static io.netty5.util.internal.ObjectUtil.intValue;
 import static java.util.Objects.requireNonNull;
 
@@ -253,39 +257,54 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Compute a {@link ResolvedAddressTypes} from some {@link InternetProtocolFamily}s.
+     * Compute a {@link ResolvedAddressTypes} from some {@link ProtocolFamily}s.
      * An empty input will return the default value, based on "java.net" System properties.
      * Valid inputs are (), (IPv4), (IPv6), (Ipv4, IPv6) and (IPv6, IPv4).
-     * @param internetProtocolFamilies a valid sequence of {@link InternetProtocolFamily}s
+     * @param protocolFamilies a valid sequence of {@link ProtocolFamily}s
      * @return a {@link ResolvedAddressTypes}
      */
-    public static ResolvedAddressTypes computeResolvedAddressTypes(InternetProtocolFamily... internetProtocolFamilies) {
-        if (internetProtocolFamilies == null || internetProtocolFamilies.length == 0) {
+    public static ResolvedAddressTypes computeResolvedAddressTypes(ProtocolFamily... protocolFamilies) {
+        if (protocolFamilies == null || protocolFamilies.length == 0) {
             return DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
         }
-        if (internetProtocolFamilies.length > 2) {
-            throw new IllegalArgumentException("No more than 2 InternetProtocolFamilies");
+        if (protocolFamilies.length > 2) {
+            throw new IllegalArgumentException("No more than 2 ProtocolFamilies");
         }
 
-        switch(internetProtocolFamilies[0]) {
-            case IPv4:
-                return (internetProtocolFamilies.length >= 2
-                        && internetProtocolFamilies[1] == InternetProtocolFamily.IPv6) ?
-                        ResolvedAddressTypes.IPV4_PREFERRED: ResolvedAddressTypes.IPV4_ONLY;
-            case IPv6:
-                return (internetProtocolFamilies.length >= 2
-                        && internetProtocolFamilies[1] == InternetProtocolFamily.IPv4) ?
-                        ResolvedAddressTypes.IPV6_PREFERRED: ResolvedAddressTypes.IPV6_ONLY;
-            default:
-                throw new IllegalArgumentException(
-                        "Couldn't resolve ResolvedAddressTypes from InternetProtocolFamily array");
+        ProtocolFamily first = protocolFamilies[0];
+        if (isFamilySupported(Inet4Address.class, first)) {
+            if (protocolFamilies.length == 1) {
+                return ResolvedAddressTypes.IPV4_ONLY;
+            } else {
+                ProtocolFamily second = protocolFamilies[1];
+                if (isFamilySupported(Inet4Address.class, second)) {
+                    return ResolvedAddressTypes.IPV4_ONLY;
+                }
+                if (isFamilySupported(Inet6Address.class, second)) {
+                    return ResolvedAddressTypes.IPV4_PREFERRED;
+                }
+            }
+        } else if (isFamilySupported(Inet6Address.class, first)) {
+            if (protocolFamilies.length == 1) {
+                return ResolvedAddressTypes.IPV6_ONLY;
+            } else {
+                ProtocolFamily second = protocolFamilies[1];
+                if (isFamilySupported(Inet6Address.class, second)) {
+                    return ResolvedAddressTypes.IPV6_ONLY;
+                }
+                if (isFamilySupported(Inet4Address.class, second)) {
+                    return ResolvedAddressTypes.IPV6_PREFERRED;
+                }
+            }
         }
+        throw new IllegalArgumentException("Couldn't resolve ResolvedAddressTypes from ProtocolFamily array: " +
+                Arrays.toString(protocolFamilies));
     }
 
     /**
      * Sets the list of the protocol families of the address resolved.
-     * You can use {@link DnsNameResolverBuilder#computeResolvedAddressTypes(InternetProtocolFamily...)}
-     * to get a {@link ResolvedAddressTypes} out of some {@link InternetProtocolFamily}s.
+     * You can use {@link DnsNameResolverBuilder#computeResolvedAddressTypes(java.net.ProtocolFamily...)}
+     * to get a {@link ResolvedAddressTypes} out of some {@link ProtocolFamily}s.
      *
      * @param resolvedAddressTypes the address types
      * @return {@code this}
@@ -427,7 +446,9 @@ public final class DnsNameResolverBuilder {
                 intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE),
                 // Let us use the sane ordering as DnsNameResolver will be used when returning
                 // nameservers from the cache.
-                new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
+                new NameServerComparator(
+                        DnsNameResolver.preferredAddressType(resolvedAddressTypes) == StandardProtocolFamily.INET6 ?
+                                Inet6Address.class : Inet4Address.class));
     }
 
     private DnsCnameCache newCnameCache() {

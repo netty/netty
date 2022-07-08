@@ -18,13 +18,13 @@ package io.netty5.channel.epoll;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,11 +46,11 @@ public final class EpollServerSocketChannel
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        this(eventLoop, childEventLoopGroup, (InternetProtocolFamily) null);
+        this(eventLoop, childEventLoopGroup, (ProtocolFamily) null);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
-                                    InternetProtocolFamily protocolFamily) {
+                                    ProtocolFamily protocolFamily) {
         super(eventLoop, childEventLoopGroup, EpollSocketChannel.class, newSocketStream(protocolFamily), false);
         config = new EpollServerSocketChannelConfig(this);
     }

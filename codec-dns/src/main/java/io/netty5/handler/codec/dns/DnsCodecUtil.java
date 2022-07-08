@@ -20,6 +20,8 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.CorruptedFrameException;
 
+import java.net.ProtocolFamily;
+import java.net.StandardProtocolFamily;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty5.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
@@ -130,5 +132,20 @@ final class DnsCodecUtil {
         Buffer result = allocator.allocate(domainName.length() << 1);
         encodeDomainName(domainName, result);
         return result;
+    }
+
+    /**
+     * Returns the
+     * <a href="https://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml">address number</a>
+     * of the family.
+     */
+    static int addressNumber(ProtocolFamily family) {
+        if (family == StandardProtocolFamily.INET) {
+            return 1;
+        }
+        if (family == StandardProtocolFamily.INET6) {
+            return 2;
+        }
+        throw new IllegalArgumentException();
     }
 }

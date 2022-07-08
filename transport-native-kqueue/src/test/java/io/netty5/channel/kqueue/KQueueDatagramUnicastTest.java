@@ -16,15 +16,15 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.DatagramUnicastInetTest;
 
+import java.net.StandardProtocolFamily;
 import java.util.List;
 
 public class KQueueDatagramUnicastTest extends DatagramUnicastInetTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);
+        return KQueueSocketTestPermutation.INSTANCE.datagram(StandardProtocolFamily.INET);
     }
 }

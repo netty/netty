@@ -18,6 +18,7 @@ package io.netty5.resolver.dns;
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.dns.DnsRecord;
 import io.netty5.handler.codec.dns.DnsRecordType;
+import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.InetAddress;
@@ -25,6 +26,7 @@ import java.net.UnknownHostException;
 import java.util.List;
 
 import static io.netty5.resolver.dns.DnsAddressDecoder.decodeAddress;
+import static io.netty5.util.NetUtil.isFamilySupported;
 
 final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
@@ -67,7 +69,7 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     @Override
     boolean isCompleteEarly(InetAddress resolved) {
-        return completeEarlyIfPossible && parent.preferredAddressType().addressType() == resolved.getClass();
+        return completeEarlyIfPossible && isFamilySupported(resolved, parent.preferredAddressType());
     }
 
     @Override
@@ -91,7 +93,7 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     void doSearchDomainQuery(String hostname, Promise<List<InetAddress>> nextPromise) {
         // Query the cache for the hostname first and only do a query if we could not find it in the cache.
         if (!DnsNameResolver.doResolveAllCached(
-                hostname, additionals, nextPromise, resolveCache, parent.resolvedInternetProtocolFamiliesUnsafe())) {
+                hostname, additionals, nextPromise, resolveCache, parent.resolvedProtocolFamiliesUnsafe())) {
             super.doSearchDomainQuery(hostname, nextPromise);
         }
     }

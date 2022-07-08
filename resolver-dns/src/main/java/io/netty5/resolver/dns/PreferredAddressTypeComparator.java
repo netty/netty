@@ -15,11 +15,11 @@
  */
 package io.netty5.resolver.dns;
 
-import io.netty5.channel.socket.InternetProtocolFamily;
-
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.ProtocolFamily;
+import java.net.StandardProtocolFamily;
 import java.util.Comparator;
 
 final class PreferredAddressTypeComparator implements Comparator<InetAddress> {
@@ -27,15 +27,14 @@ final class PreferredAddressTypeComparator implements Comparator<InetAddress> {
     private static final PreferredAddressTypeComparator IPv4 = new PreferredAddressTypeComparator(Inet4Address.class);
     private static final PreferredAddressTypeComparator IPv6 = new PreferredAddressTypeComparator(Inet6Address.class);
 
-    static PreferredAddressTypeComparator comparator(InternetProtocolFamily family) {
-        switch (family) {
-            case IPv4:
-                return IPv4;
-            case IPv6:
-                return IPv6;
-            default:
-                throw new IllegalArgumentException();
+    static PreferredAddressTypeComparator comparator(ProtocolFamily family) {
+        if (family == StandardProtocolFamily.INET) {
+            return IPv4;
         }
+        if (family == StandardProtocolFamily.INET6) {
+            return IPv6;
+        }
+        throw new IllegalArgumentException("ProtocolFamily not supported: " + family);
     }
 
     private final Class<? extends InetAddress> preferredAddressType;

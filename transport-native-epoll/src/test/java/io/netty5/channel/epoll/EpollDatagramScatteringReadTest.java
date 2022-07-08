@@ -53,7 +53,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.epollOnlyDatagram(internetProtocolFamily());
+        return EpollSocketTestPermutation.INSTANCE.epollOnlyDatagram(protocolFamily());
     }
 
     @Test

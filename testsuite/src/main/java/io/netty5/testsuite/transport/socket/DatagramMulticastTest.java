@@ -22,7 +22,6 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
@@ -33,11 +32,15 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
+import java.net.ProtocolFamily;
+import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty5.util.NetUtil.isFamilySupported;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,7 +57,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         NetworkInterface iface = multicastNetworkInterface();
         assumeTrue(iface != null, "No NetworkInterface found that supports multicast and " +
-                             socketInternetProtocalFamily());
+                             socketProtocolFamily());
 
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
@@ -169,25 +172,25 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return SocketTestPermutation.INSTANCE.datagram(socketInternetProtocalFamily());
+        return SocketTestPermutation.INSTANCE.datagram(socketProtocolFamily());
     }
 
     private InetSocketAddress newAnySocketAddress() throws UnknownHostException {
-        switch (socketInternetProtocalFamily()) {
-            case IPv4:
-                return new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0);
-            case IPv6:
-                return new InetSocketAddress(InetAddress.getByName("::"), 0);
-            default:
-                throw new AssertionError();
+        ProtocolFamily family = socketProtocolFamily();
+        if (family == StandardProtocolFamily.INET) {
+            return new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0);
         }
+        if (family == StandardProtocolFamily.INET6) {
+            return new InetSocketAddress(InetAddress.getByName("::"), 0);
+        }
+        throw new AssertionError();
     }
 
     private InetSocketAddress newSocketAddress(NetworkInterface iface) {
         Enumeration<InetAddress> addresses = iface.getInetAddresses();
         while (addresses.hasMoreElements()) {
             InetAddress address = addresses.nextElement();
-            if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
+            if (isFamilySupported(address, socketProtocolFamily())) {
                 return new InetSocketAddress(address, 0);
             }
         }
@@ -202,7 +205,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     InetAddress address = addresses.nextElement();
-                    if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
+                    if (isFamilySupported(address, protocolFamily())) {
                         try (MulticastSocket socket = new MulticastSocket(newAnySocketAddress())) {
                             socket.setReuseAddress(true);
                             socket.setNetworkInterface(iface);
@@ -220,7 +223,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     private String groupAddress() {
-        return groupInternetProtocalFamily() == InternetProtocolFamily.IPv4?
+        return groupProtocolFamily() == StandardProtocolFamily.INET?
                 "230.0.0.1" : "FF01:0:0:0:0:0:0:101";
     }
 }
