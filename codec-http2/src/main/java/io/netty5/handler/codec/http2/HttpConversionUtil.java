@@ -437,8 +437,7 @@ public final class HttpConversionUtil {
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
             String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            if (request.uri().startsWith("/") || "*".equals(request.uri())) {
-                // Origin or asterisk form
+            if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
                 out.path(new AsciiString(request.uri()));
                 setHttp2Scheme(inHeaders, out);
             } else {
