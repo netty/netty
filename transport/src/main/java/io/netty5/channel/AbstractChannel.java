@@ -33,10 +33,12 @@ import java.net.NoRouteToHostException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.util.Objects.requireNonNull;
@@ -78,6 +80,15 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private boolean inWriteFlushed;
     /** true if the channel has never been registered, false otherwise */
     private boolean neverRegistered = true;
+    private boolean neverActive = true;
+
+    /**
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
+     */
+    private Promise<Void> connectPromise;
+    private Future<?> connectTimeoutFuture;
+    private R requestedRemoteAddress;
 
     /**
      * Creates a new instance.
@@ -331,7 +342,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                     // multiple channel actives if the channel is deregistered and re-registered.
                     if (isActive()) {
                         if (firstRegistration) {
-                            pipeline.fireChannelActive();
+                            fireChannelActiveIfNotActiveBefore();
                         }
                         readIfIsAutoRead();
                     }
@@ -345,6 +356,22 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // Close the channel directly to avoid FD leak.
             closeNowAndFail(promise, t);
         }
+    }
+
+    /**
+     * Calls {@link ChannelPipeline#fireChannelActive()} if it was not done yet.
+     *
+     * @return {@code true} if {@link ChannelPipeline#fireChannelActive()} was called, {@code false} otherwise.
+     */
+    protected final boolean fireChannelActiveIfNotActiveBefore() {
+        assertEventLoop();
+
+        if (neverActive) {
+            neverActive = false;
+            pipeline().fireChannelActive();
+            return true;
+        }
+        return false;
     }
 
     private void closeNowAndFail(Promise<Void> promise, Throwable cause) {
@@ -384,8 +411,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         if (!wasActive && isActive()) {
             invokeLater(() -> {
-                pipeline.fireChannelActive();
-                readIfIsAutoRead();
+                if (fireChannelActiveIfNotActiveBefore()) {
+                    readIfIsAutoRead();
+                }
             });
         }
 
@@ -405,6 +433,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // Reset remoteAddress and localAddress
             remoteAddress = null;
             localAddress = null;
+            neverActive = true;
         } catch (Throwable t) {
             safeSetFailure(promise, t);
             closeIfClosed();
@@ -559,6 +588,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private void doClose0(Promise<Void> promise) {
         try {
+            cancelConnect();
             doClose();
             closePromise.setClosed();
             safeSetSuccess(promise);
@@ -576,9 +606,25 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         assertEventLoop();
 
         try {
+            cancelConnect();
             doClose();
         } catch (Exception e) {
             logger.warn("Failed to close a channel.", e);
+        }
+    }
+
+    private void cancelConnect() {
+        Promise<Void> promise = connectPromise;
+        if (promise != null) {
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(new ClosedChannelException());
+            connectPromise = null;
+        }
+
+        Future<?> future = connectTimeoutFuture;
+        if (future != null) {
+            future.cancel();
+            connectTimeoutFuture = null;
         }
     }
 
@@ -825,6 +871,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     protected final void handleWriteError(Throwable t) {
+        assertEventLoop();
+
         if (t instanceof IOException && config().isAutoClose()) {
             /*
              * Just call {@link #close(Promise, Throwable, boolean)} here which will take care of
@@ -998,8 +1046,155 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      */
     protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
 
-    protected abstract void connectTransport(
-            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
+    /**
+     * Connect to remote peer.
+     *
+     * @param remoteAddress     the address of the remote peer.
+     * @param localAddress      the local address of this channel.
+     * @return                  {@code true} if the connect was completed, {@code false} if {@link #finishConnect()}
+     *                          will be called later again to try finishing the connect.
+     * @throws Exception        thrown on error.
+     */
+    protected abstract boolean doConnect(
+            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+
+    /**
+     * Finish a connect request.
+     *
+     * @param requestedRemoteAddress    the remote address of the peer.
+     * @return                  {@code true} if the connect was completed, {@code false} if {@link #finishConnect()}
+     *                          will be called later again to try finishing the connect.
+     * @throws Exception        thrown on error.
+     */
+    protected abstract boolean doFinishConnect(R requestedRemoteAddress) throws Exception;
+
+    /**
+     * Returns if a connect request was issued before and we are waiting for {@link #finishConnect()} to be called.
+     *
+     * @return {@code true} if there is an outstanding connect request.
+     */
+    protected final boolean isConnectPending() {
+        assertEventLoop();
+        return connectPromise != null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void connectTransport(
+            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        assertEventLoop();
+        if (!promise.setUncancellable() || !ensureOpen(promise)) {
+            return;
+        }
+
+        try {
+            if (connectPromise != null) {
+                throw new ConnectionPendingException();
+            }
+
+            boolean wasActive = isActive();
+            if (doConnect(remoteAddress, localAddress)) {
+                fulfillConnectPromise(promise, wasActive);
+            } else {
+                connectPromise = promise;
+                requestedRemoteAddress = (R) remoteAddress;
+
+                // Schedule connect timeout.
+                int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                if (connectTimeoutMillis > 0) {
+                    connectTimeoutFuture = executor().schedule(() -> {
+                        Promise<Void> connectPromise = this.connectPromise;
+                        if (connectPromise != null && !connectPromise.isDone()
+                                && connectPromise.tryFailure(new ConnectTimeoutException(
+                                "connection timed out: " + remoteAddress))) {
+                            closeTransport(newPromise());
+                        }
+                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+                }
+
+                promise.asFuture().addListener(future -> {
+                    if (future.isCancelled()) {
+                        if (connectTimeoutFuture != null) {
+                            connectTimeoutFuture.cancel();
+                        }
+                        connectPromise = null;
+                        closeTransport(newPromise());
+                    }
+                });
+            }
+        } catch (Throwable t) {
+            closeIfClosed();
+            promise.tryFailure(annotateConnectException(t, remoteAddress));
+        }
+    }
+
+    private void fulfillConnectPromise(Promise<Void> promise, boolean wasActive) {
+        if (promise == null) {
+            // Closed via cancellation and the promise has been notified already.
+            return;
+        }
+
+        // Get the state as trySuccess() may trigger an ChannelFutureListeners that will close the Channel.
+        // We still need to ensure we call fireChannelActive() in this case.
+        boolean active = isActive();
+
+        // trySuccess() will return false if a user cancelled the connection attempt.
+        boolean promiseSet = promise.trySuccess(null);
+
+        // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+        // because what happened is what happened.
+        if (!wasActive && active) {
+            if (fireChannelActiveIfNotActiveBefore()) {
+                readIfIsAutoRead();
+            }
+        }
+
+        // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+        if (!promiseSet) {
+            closeTransport(newPromise());
+        }
+    }
+
+    private void fulfillConnectPromise(Promise<Void> promise, Throwable cause) {
+        if (promise == null) {
+            // Closed via cancellation and the promise has been notified already.
+            return;
+        }
+
+        // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+        promise.tryFailure(cause);
+        closeIfClosed();
+    }
+
+    /**
+     * Should be called once the connect request is ready to be completed.
+     */
+    protected final void finishConnect() {
+        // Note this method is invoked by the event loop only if the connection attempt was
+        // neither cancelled nor timed out.
+        assertEventLoop();
+
+        boolean connectStillInProgress = false;
+        try {
+            boolean wasActive = isActive();
+            if (!doFinishConnect(requestedRemoteAddress)) {
+                connectStillInProgress = true;
+                return;
+            }
+            requestedRemoteAddress = null;
+            fulfillConnectPromise(connectPromise, wasActive);
+        } catch (Throwable t) {
+            fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+        } finally {
+            if (!connectStillInProgress) {
+                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                // See https://github.com/netty/netty/issues/1770
+                if (connectTimeoutFuture != null) {
+                    connectTimeoutFuture.cancel();
+                }
+                connectPromise = null;
+            }
+        }
+    }
 
     /**
      * Invoked when a new message is added to a {@link ChannelOutboundBuffer} of this {@link AbstractChannel}, so that

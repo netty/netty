@@ -25,7 +25,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.unix.UnixChannel;
-import io.netty5.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
@@ -87,13 +86,6 @@ public abstract class AbstractEpollServerChannel
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
     @Override
-    protected final void connectTransport(
-            SocketAddress socketAddress, SocketAddress socketAddress2, Promise<Void> channelPromise) {
-        // Connect not supported by ServerChannel implementations
-        channelPromise.setFailure(new UnsupportedOperationException());
-    }
-
-    @Override
     final void epollInReady() {
         assert executor().inEventLoop();
         final ChannelConfig config = config();
@@ -149,6 +141,12 @@ public abstract class AbstractEpollServerChannel
     @Override
     public final boolean isShutdown(ChannelShutdownDirection direction) {
         return !isActive();
+    }
+
+    @Override
+    protected final boolean doFinishConnect(R requestedRemoteAddress) {
+        // Connect not supported by ServerChannel implementations
+        throw new UnsupportedOperationException();
     }
 
     @Override

@@ -17,7 +17,6 @@ package io.netty5.channel;
 
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -146,10 +145,9 @@ public class AbstractChannelTest {
             private boolean active;
 
             @Override
-            protected void connectTransport(
-                    SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
                 active = true;
-                promise.setSuccess(null);
+                return true;
             }
 
             @Override
@@ -230,9 +228,13 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected void connectTransport(
-                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            promise.setFailure(new UnsupportedOperationException());
+        protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

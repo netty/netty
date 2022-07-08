@@ -479,7 +479,9 @@ public abstract class AbstractKQueueStreamChannel
         } else {
             buffer.close();
         }
-        if (!failConnectPromise(cause)) {
+        if (isConnectPending()) {
+            finishConnect();
+        } else {
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
             pipeline.fireChannelExceptionCaught(cause);
