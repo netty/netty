@@ -107,7 +107,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                 try {
                     command = readCommand(in);
                     frame = new DefaultStompHeadersSubframe(command);
-                    checkpoint(readHeaders(in, frame.headers()));
+                    checkpoint(readHeaders(in, frame));
                     out.add(frame);
                 } catch (Exception e) {
                     if (frame == null) {
@@ -202,9 +202,10 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
     }
 
-    private State readHeaders(ByteBuf buffer, StompHeaders headers) {
+    private State readHeaders(ByteBuf buffer, StompHeadersSubframe headersSubframe) {
+        StompHeaders headers = headersSubframe.headers();
         for (;;) {
-            boolean headerRead = headerParser.parseHeader(headers, buffer);
+            boolean headerRead = headerParser.parseHeader(headersSubframe, buffer);
             if (!headerRead) {
                 if (headers.contains(StompHeaders.CONTENT_LENGTH)) {
                     contentLength = getContentLength(headers);
@@ -301,11 +302,11 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                 interim |= (nextByte & 0x3F) << 6;
                 nextRead = false;
             } else if (interim != 0) { // flush 2 or 3 byte
-                charSeq.append((char) (interim | (nextByte & 0x3F)));
+                appendTo(charSeq, (char) (interim | (nextByte & 0x3F)));
                 interim = 0;
             } else if (nextByte >= 0) { // INITIAL BRANCH
                 // The first 128 characters (US-ASCII) need one byte.
-                charSeq.append((char) nextByte);
+                appendTo(charSeq, (char) nextByte);
             } else if ((nextByte & 0xE0) == 0xC0) {
                 // The next 1920 characters need two bytes and we can define
                 // a first byte by mask 110xxxxx.
@@ -317,6 +318,10 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
             }
 
             return true;
+        }
+
+        protected void appendTo(AppendableCharSequence charSeq, char chr) {
+            charSeq.append(chr);
         }
 
         protected void reset() {
@@ -334,19 +339,23 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         private String name;
         private boolean valid;
 
+        private boolean shouldUnescape;
+        private boolean unescapeInProgress;
+
         HeaderParser(AppendableCharSequence charSeq, int maxLineLength, boolean validateHeaders) {
             super(charSeq, maxLineLength);
             this.validateHeaders = validateHeaders;
         }
 
-        boolean parseHeader(StompHeaders headers, ByteBuf buf) {
+        boolean parseHeader(StompHeadersSubframe headersSubframe, ByteBuf buf) {
+            shouldUnescape = shouldUnescape(headersSubframe.command());
             AppendableCharSequence value = super.parse(buf);
             if (value == null || (name == null && value.length() == 0)) {
                 return false;
             }
 
             if (valid) {
-                headers.add(name, value.toString());
+                headersSubframe.headers().add(name, value.toString());
             } else if (validateHeaders) {
                 if (StringUtil.isNullOrEmpty(name)) {
                     throw new IllegalArgumentException("received an invalid header line '" + value + '\'');
@@ -380,10 +389,51 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
 
         @Override
+        protected void appendTo(AppendableCharSequence charSeq, char chr) {
+            if (!shouldUnescape) {
+                super.appendTo(charSeq, chr);
+                return;
+            }
+
+            if (chr == '\\') {
+                if (unescapeInProgress) {
+                    super.appendTo(charSeq, chr);
+                    unescapeInProgress = false;
+                } else {
+                    unescapeInProgress = true;
+                }
+                return;
+            }
+
+            if (unescapeInProgress) {
+                if (chr == 'c') {
+                    charSeq.append(':');
+                } else if (chr == 'r') {
+                    charSeq.append('\r');
+                } else if (chr == 'n') {
+                    charSeq.append('\n');
+                } else {
+                    charSeq.append('\\').append(chr);
+                    throw new IllegalArgumentException("received an invalid escape header sequence '" + charSeq + '\'');
+                }
+
+                unescapeInProgress = false;
+                return;
+            }
+
+            super.appendTo(charSeq, chr);
+        }
+
+        @Override
         protected void reset() {
             name = null;
             valid = false;
+            unescapeInProgress = false;
             super.reset();
+        }
+
+        private static boolean shouldUnescape(StompCommand command) {
+            return command != StompCommand.CONNECT && command != StompCommand.CONNECTED;
         }
     }
 }
