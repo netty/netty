@@ -160,7 +160,8 @@ final class NativeDatagramPacketArray {
                     }
                 }
                 boolean addedAny = false;
-                while (buf.readableBytes() > 0 && addReadable(buf, segmentSize, packet.recipient())) {
+                while (buf.readableBytes() > 0 &&
+                        addReadable(buf, segmentSize, (InetSocketAddress) packet.recipient())) {
                     addedAny = true;
                 }
                 added = addedAny;
