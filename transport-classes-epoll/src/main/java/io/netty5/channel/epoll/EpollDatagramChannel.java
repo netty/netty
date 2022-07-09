@@ -174,13 +174,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
+        if (executor().inEventLoop()) {
+            joinGroup0(multicastAddress, networkInterface, source, promise);
+        } else {
+            executor().execute(() -> joinGroup0(multicastAddress, networkInterface, source, promise));
+        }
+        return promise.asFuture();
+    }
+
+    private void joinGroup0(
+            final InetAddress multicastAddress, final NetworkInterface networkInterface,
+            final InetAddress source, final Promise<Void> promise) {
+        assert executor().inEventLoop();
+
         try {
             socket.joinGroup(multicastAddress, networkInterface, source);
             promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
         }
-        return promise.asFuture();
     }
 
     @Override
@@ -224,13 +236,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
+        if (executor().inEventLoop()) {
+            leaveGroup0(multicastAddress, networkInterface, source, promise);
+        } else {
+            executor().execute(() -> leaveGroup0(multicastAddress, networkInterface, source, promise));
+        }
+        return promise.asFuture();
+    }
+
+    private void leaveGroup0(
+            final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
+            final Promise<Void> promise) {
+        assert executor().inEventLoop();
+
         try {
             socket.leaveGroup(multicastAddress, networkInterface, source);
             promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
         }
-        return promise.asFuture();
     }
 
     @Override
@@ -247,7 +271,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(sourceToBlock, "sourceToBlock");
         requireNonNull(networkInterface, "networkInterface");
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        promise.setFailure(new UnsupportedOperationException("Multicast block not supported"));
         return promise.asFuture();
     }
 
