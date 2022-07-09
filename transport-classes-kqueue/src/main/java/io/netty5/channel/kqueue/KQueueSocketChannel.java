@@ -18,7 +18,6 @@ package io.netty5.channel.kqueue;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.util.concurrent.Future;
@@ -26,6 +25,7 @@ import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
@@ -39,7 +39,7 @@ public final class KQueueSocketChannel
         this(eventLoop, null);
     }
 
-    public KQueueSocketChannel(EventLoop eventLoop, InternetProtocolFamily protocol) {
+    public KQueueSocketChannel(EventLoop eventLoop, ProtocolFamily protocol) {
         super(null, eventLoop, BsdSocket.newSocketStream(protocol), false);
         config = new KQueueSocketChannelConfig(this);
     }

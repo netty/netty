@@ -26,7 +26,6 @@ import io.netty5.channel.FileRegion;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioByteChannel;
 import io.netty5.channel.socket.DefaultSocketChannelConfig;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannelConfig;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
@@ -35,6 +34,7 @@ import io.netty5.util.internal.SocketUtils;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -57,7 +57,7 @@ public class NioSocketChannel
     private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
             SelectorProviderUtil.findOpenMethod("openSocketChannel");
 
-    private static SocketChannel newChannel(SelectorProvider provider, InternetProtocolFamily family) {
+    private static SocketChannel newChannel(SelectorProvider provider, ProtocolFamily family) {
         try {
             SocketChannel channel = SelectorProviderUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
             return channel == null ? provider.openSocketChannel() : channel;
@@ -85,7 +85,7 @@ public class NioSocketChannel
     /**
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
-    public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider, InternetProtocolFamily family) {
+    public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
         this(eventLoop, newChannel(provider, family));
     }
 

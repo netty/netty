@@ -15,11 +15,13 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.util.internal.UnstableApi;
 
 import java.net.InetAddress;
+import java.net.ProtocolFamily;
 import java.util.Arrays;
+
+import static io.netty5.util.NetUtil.localHost;
 
 /**
  * Default {@link DnsOptEcsRecord} implementation.
@@ -60,11 +62,11 @@ public final class DefaultDnsOptEcsRecord extends AbstractDnsOptPseudoRrRecord i
      * Creates a new instance.
      *
      * @param maxPayloadSize the suggested max payload size in bytes
-     * @param protocolFamily the {@link InternetProtocolFamily} to use. This should be the same as the one used to
+     * @param protocolFamily the {@link ProtocolFamily} to use. This should be the same as the one used to
      *                       send the query.
      */
-    public DefaultDnsOptEcsRecord(int maxPayloadSize, InternetProtocolFamily protocolFamily) {
-        this(maxPayloadSize, 0, 0, 0, protocolFamily.localhost().getAddress());
+    public DefaultDnsOptEcsRecord(int maxPayloadSize, ProtocolFamily protocolFamily) {
+        this(maxPayloadSize, 0, 0, 0, localHost(protocolFamily).getAddress());
     }
 
     private static byte[] verifyAddress(byte[] bytes) {

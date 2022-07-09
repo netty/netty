@@ -28,7 +28,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.handler.codec.dns.DatagramDnsQueryEncoder;
@@ -65,8 +64,10 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.StandardProtocolFamily;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -77,7 +78,11 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty5.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
+import static io.netty5.util.NetUtil.addressType;
+import static io.netty5.util.NetUtil.localHost;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static io.netty5.util.NetUtil.isFamilySupported;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -92,20 +97,20 @@ public class DnsNameResolver extends InetNameResolver {
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
             {DnsRecordType.A};
-    private static final InternetProtocolFamily[] IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES =
-            {InternetProtocolFamily.IPv4};
+    private static final ProtocolFamily[] IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES =
+            {StandardProtocolFamily.INET};
     private static final DnsRecordType[] IPV4_PREFERRED_RESOLVED_RECORD_TYPES =
             {DnsRecordType.A, DnsRecordType.AAAA};
-    private static final InternetProtocolFamily[] IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
-            {InternetProtocolFamily.IPv4, InternetProtocolFamily.IPv6};
+    private static final ProtocolFamily[] IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
+            {StandardProtocolFamily.INET, StandardProtocolFamily.INET6};
     private static final DnsRecordType[] IPV6_ONLY_RESOLVED_RECORD_TYPES =
             {DnsRecordType.AAAA};
-    private static final InternetProtocolFamily[] IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES =
-            {InternetProtocolFamily.IPv6};
+    private static final ProtocolFamily[] IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES =
+            {StandardProtocolFamily.INET6};
     private static final DnsRecordType[] IPV6_PREFERRED_RESOLVED_RECORD_TYPES =
             {DnsRecordType.AAAA, DnsRecordType.A};
-    private static final InternetProtocolFamily[] IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
-            {InternetProtocolFamily.IPv6, InternetProtocolFamily.IPv4};
+    private static final ProtocolFamily[] IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
+            {StandardProtocolFamily.INET6, StandardProtocolFamily.INET};
 
     static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;
     static final String[] DEFAULT_SEARCH_DOMAINS;
@@ -231,7 +236,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final long queryTimeoutMillis;
     private final int maxQueriesPerResolve;
     private final ResolvedAddressTypes resolvedAddressTypes;
-    private final InternetProtocolFamily[] resolvedInternetProtocolFamilies;
+    private final ProtocolFamily[] resolvedProtocolFamilies;
     private final boolean recursionDesired;
     private final int maxPayloadSize;
     private final boolean optResourceEnabled;
@@ -241,7 +246,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final int ndots;
     private final boolean supportsAAAARecords;
     private final boolean supportsARecords;
-    private final InternetProtocolFamily preferredAddressType;
+    private final ProtocolFamily preferredAddressType;
     private final DnsRecordType[] resolveRecordTypes;
     private final boolean decodeIdn;
     private final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
@@ -421,32 +426,36 @@ public class DnsNameResolver extends InetNameResolver {
                 supportsAAAARecords = false;
                 supportsARecords = true;
                 resolveRecordTypes = IPV4_ONLY_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES;
+                resolvedProtocolFamilies = IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES;
                 break;
             case IPV4_PREFERRED:
                 supportsAAAARecords = true;
                 supportsARecords = true;
                 resolveRecordTypes = IPV4_PREFERRED_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
+                resolvedProtocolFamilies = IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
                 break;
             case IPV6_ONLY:
                 supportsAAAARecords = true;
                 supportsARecords = false;
                 resolveRecordTypes = IPV6_ONLY_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES;
+                resolvedProtocolFamilies = IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES;
                 break;
             case IPV6_PREFERRED:
                 supportsAAAARecords = true;
                 supportsARecords = true;
                 resolveRecordTypes = IPV6_PREFERRED_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
+                resolvedProtocolFamilies = IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
                 break;
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
         preferredAddressType = preferredAddressType(this.resolvedAddressTypes);
         this.authoritativeDnsServerCache = requireNonNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
-        nameServerComparator = new NameServerComparator(preferredAddressType.addressType());
+        Class<? extends InetAddress> addressType = addressType(preferredAddressType);
+        if (addressType == null) {
+            throw new IllegalArgumentException(preferredAddressType + " not supported");
+        }
+        nameServerComparator = new NameServerComparator(addressType);
 
         Bootstrap b = new Bootstrap();
         b.group(executor());
@@ -493,14 +502,14 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    static InternetProtocolFamily preferredAddressType(ResolvedAddressTypes resolvedAddressTypes) {
+    static ProtocolFamily preferredAddressType(ResolvedAddressTypes resolvedAddressTypes) {
         switch (resolvedAddressTypes) {
         case IPV4_ONLY:
         case IPV4_PREFERRED:
-            return InternetProtocolFamily.IPv4;
+            return StandardProtocolFamily.INET;
         case IPV6_ONLY:
         case IPV6_PREFERRED:
-            return InternetProtocolFamily.IPv6;
+            return StandardProtocolFamily.INET6;
         default:
             throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
@@ -575,8 +584,8 @@ public class DnsNameResolver extends InetNameResolver {
         return resolvedAddressTypes;
     }
 
-    InternetProtocolFamily[] resolvedInternetProtocolFamiliesUnsafe() {
-        return resolvedInternetProtocolFamilies;
+    ProtocolFamily[] resolvedProtocolFamiliesUnsafe() {
+        return resolvedProtocolFamilies;
     }
 
     final String[] searchDomains() {
@@ -595,7 +604,7 @@ public class DnsNameResolver extends InetNameResolver {
         return supportsARecords;
     }
 
-    final InternetProtocolFamily preferredAddressType() {
+    final ProtocolFamily preferredAddressType() {
         return preferredAddressType;
     }
 
@@ -899,7 +908,7 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private InetAddress loopbackAddress() {
-        return preferredAddressType().localhost();
+        return localHost(preferredAddressType());
     }
 
     /**
@@ -948,10 +957,10 @@ public class DnsNameResolver extends InetNameResolver {
         if (cause == null) {
             final int numEntries = cachedEntries.size();
             // Find the first entry with the preferred address type.
-            for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
+            for (ProtocolFamily f : resolvedProtocolFamilies) {
                 for (int i = 0; i < numEntries; i++) {
                     final DnsCacheEntry e = cachedEntries.get(i);
-                    if (f.addressType().isInstance(e.address())) {
+                    if (NetUtil.isFamilySupported(e.address(), f)) {
                         trySuccess(promise, e.address());
                         return true;
                     }
@@ -1032,7 +1041,7 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
-        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedInternetProtocolFamilies)) {
+        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedProtocolFamilies)) {
             doResolveAllUncached(hostname, additionals, promise, promise,
                                  resolveCache, completeOncePreferredResolved);
         }
@@ -1042,7 +1051,7 @@ public class DnsNameResolver extends InetNameResolver {
                                       DnsRecord[] additionals,
                                       Promise<List<InetAddress>> promise,
                                       DnsCache resolveCache,
-                                      InternetProtocolFamily[] resolvedInternetProtocolFamilies) {
+                                      ProtocolFamily[] resolvedInternetProtocolFamilies) {
         final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
         if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
@@ -1052,10 +1061,10 @@ public class DnsNameResolver extends InetNameResolver {
         if (cause == null) {
             List<InetAddress> result = null;
             final int numEntries = cachedEntries.size();
-            for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
+            for (ProtocolFamily f : resolvedInternetProtocolFamilies) {
                 for (int i = 0; i < numEntries; i++) {
                     final DnsCacheEntry e = cachedEntries.get(i);
-                    if (f.addressType().isInstance(e.address())) {
+                    if (isFamilySupported(e.address(), f)) {
                         if (result == null) {
                             result = new ArrayList<>(numEntries);
                         }

@@ -24,7 +24,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -35,6 +34,7 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.net.ProtocolFamily;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -116,7 +116,7 @@ public class SocketTestPermutation {
         return list;
     }
 
-    public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final InternetProtocolFamily family) {
+    public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final ProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Collections.singletonList(
                 () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<>() {

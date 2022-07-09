@@ -18,19 +18,20 @@ package io.netty5.testsuite.transport.socket;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.testsuite.transport.AbstractComboTestsuiteTest;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.util.NetUtil;
 
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.net.StandardProtocolFamily;
 import java.util.List;
 
 public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bootstrap, Bootstrap> {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return SocketTestPermutation.INSTANCE.datagram(socketInternetProtocalFamily());
+        return SocketTestPermutation.INSTANCE.datagram(socketProtocolFamily());
     }
 
     @Override
@@ -41,25 +42,25 @@ public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bo
     }
 
     protected SocketAddress newSocketAddress() {
-        switch (socketInternetProtocalFamily()) {
-            case IPv4:
-                return new InetSocketAddress(NetUtil.LOCALHOST4, 0);
-            case IPv6:
-                return new InetSocketAddress(NetUtil.LOCALHOST6, 0);
-            default:
-                throw new AssertionError();
+        ProtocolFamily family = socketProtocolFamily();
+        if (family == StandardProtocolFamily.INET) {
+            return new InetSocketAddress(NetUtil.LOCALHOST4, 0);
         }
+        if (family == StandardProtocolFamily.INET6) {
+            return new InetSocketAddress(NetUtil.LOCALHOST6, 0);
+        }
+        throw new AssertionError();
     }
 
-    protected InternetProtocolFamily internetProtocolFamily() {
-        return InternetProtocolFamily.IPv4;
+    protected ProtocolFamily protocolFamily() {
+        return StandardProtocolFamily.INET;
     }
 
-    protected InternetProtocolFamily groupInternetProtocalFamily() {
-        return internetProtocolFamily();
+    protected ProtocolFamily groupProtocolFamily() {
+        return protocolFamily();
     }
 
-    protected InternetProtocolFamily socketInternetProtocalFamily() {
-        return internetProtocolFamily();
+    protected ProtocolFamily socketProtocolFamily() {
+        return protocolFamily();
     }
 }

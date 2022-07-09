@@ -24,7 +24,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DatagramChannelConfig;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IovArray;
@@ -44,6 +43,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -70,7 +70,7 @@ public final class KQueueDatagramChannel
         this(eventLoop, null);
     }
 
-    public KQueueDatagramChannel(EventLoop eventLoop, InternetProtocolFamily protocolFamily) {
+    public KQueueDatagramChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
         super(null, eventLoop, newSocketDgram(protocolFamily), false);
         config = new KQueueDatagramChannelConfig(this);
     }

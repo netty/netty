@@ -25,6 +25,6 @@ public class EpollDatagramMulticastIPv6Test extends DatagramMulticastIPv6Test {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
+        return EpollSocketTestPermutation.INSTANCE.datagram(protocolFamily());
     }
 }

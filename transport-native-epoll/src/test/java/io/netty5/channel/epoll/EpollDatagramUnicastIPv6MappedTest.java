@@ -24,6 +24,6 @@ import java.util.List;
 public class EpollDatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6MappedTest {
     @Override
     protected List<BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
+        return EpollSocketTestPermutation.INSTANCE.datagram(protocolFamily());
     }
 }

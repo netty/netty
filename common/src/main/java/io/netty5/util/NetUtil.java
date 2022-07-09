@@ -33,6 +33,8 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.ProtocolFamily;
+import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -1060,6 +1062,86 @@ public final class NetUtil {
      */
     public static String getHostname(InetSocketAddress addr) {
         return addr.getHostString();
+    }
+
+    /**
+     * Returns {@code true} if the {@link ProtocolFamily} is supported by the given {@link InetAddress}.
+     *
+     * @param address   the address.
+     * @param family    the family.
+     * @return          {@code true} if supported, {@code false} otherwise.
+     */
+    public static boolean isFamilySupported(InetAddress address, ProtocolFamily family) {
+        return isFamilySupported(address.getClass(), family);
+    }
+
+    /**
+     * Returns {@code true} if the {@link ProtocolFamily} is supported by the given address type.
+     *
+     * @param addressType   the address type.
+     * @param family        the family.
+     * @return              {@code true} if supported, {@code false} otherwise.
+     */
+    public static boolean isFamilySupported(Class<? extends InetAddress> addressType, ProtocolFamily family) {
+        return family(addressType) == family;
+    }
+
+    /**
+     * Returns the address type for the given {@link ProtocolFamily}.
+     *
+     * @param family    the family.
+     * @return          the address type or {@code null} if not supported.
+     */
+    public static Class<? extends InetAddress> addressType(ProtocolFamily family) {
+        if (family == StandardProtocolFamily.INET) {
+            return Inet4Address.class;
+        }
+        if (family == StandardProtocolFamily.INET6) {
+            return Inet6Address.class;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the {@link ProtocolFamily} for the given {@link InetAddress}.
+     *
+     * @param address   the address.
+     * @return          the {@link ProtocolFamily} or {@code null} if not supported.
+     */
+    public static ProtocolFamily family(InetAddress address) {
+        return family(address.getClass());
+    }
+
+    /**
+     * Returns the {@link ProtocolFamily} for the given address type.
+     *
+     * @param addressType   the address type.
+     * @return              the {@link ProtocolFamily} or {@code null} if not supported.
+     */
+    public static ProtocolFamily family(Class<? extends InetAddress> addressType) {
+        if (Inet4Address.class.isAssignableFrom(addressType)) {
+            return StandardProtocolFamily.INET;
+        }
+        if (Inet6Address.class.isAssignableFrom(addressType)) {
+            return StandardProtocolFamily.INET6;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the localhost {@link InetAddress} for this family.
+     *
+     * @param family    the family.
+     * @return          localhost address.
+     */
+    public static InetAddress localHost(ProtocolFamily family) {
+        if (family == StandardProtocolFamily.INET) {
+            return NetUtil.LOCALHOST4;
+        }
+        if (family == StandardProtocolFamily.INET6) {
+            return NetUtil.LOCALHOST6;
+        }
+        return NetUtil.LOCALHOST;
     }
 
     /**

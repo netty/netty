@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
@@ -27,6 +26,7 @@ import io.netty5.util.concurrent.GlobalEventExecutor;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Collections;
@@ -52,7 +52,7 @@ public final class EpollSocketChannel
         this(eventLoop, null);
     }
 
-    public EpollSocketChannel(EventLoop eventLoop, InternetProtocolFamily protocolFamily) {
+    public EpollSocketChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
         super(eventLoop, newSocketStream(protocolFamily), false);
         config = new EpollSocketChannelConfig(this);
     }

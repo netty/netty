@@ -15,10 +15,10 @@
  */
 package io.netty5.resolver.dns;
 
-import io.netty5.channel.socket.InternetProtocolFamily;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
+import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +38,7 @@ public class PreferredAddressTypeComparatorTest {
         InetAddress ipv6Address2 = InetAddress.getByName("::2");
         InetAddress ipv6Address3 = InetAddress.getByName("::3");
 
-        PreferredAddressTypeComparator ipv4 = PreferredAddressTypeComparator.comparator(InternetProtocolFamily.IPv4);
+        PreferredAddressTypeComparator ipv4 = PreferredAddressTypeComparator.comparator(StandardProtocolFamily.INET);
 
         List<InetAddress> addressList = new ArrayList<InetAddress>();
         Collections.addAll(addressList, ipv4Address1, ipv4Address2, ipv6Address1,
@@ -58,7 +58,7 @@ public class PreferredAddressTypeComparatorTest {
         InetAddress ipv6Address2 = InetAddress.getByName("::2");
         InetAddress ipv6Address3 = InetAddress.getByName("::3");
 
-        PreferredAddressTypeComparator ipv4 = PreferredAddressTypeComparator.comparator(InternetProtocolFamily.IPv6);
+        PreferredAddressTypeComparator ipv4 = PreferredAddressTypeComparator.comparator(StandardProtocolFamily.INET6);
 
         List<InetAddress> addressList = new ArrayList<InetAddress>();
         Collections.addAll(addressList, ipv4Address1, ipv4Address2, ipv6Address1,

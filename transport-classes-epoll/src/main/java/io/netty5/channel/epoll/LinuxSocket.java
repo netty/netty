@@ -17,7 +17,6 @@ package io.netty5.channel.epoll;
 
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.DefaultFileRegion;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.unix.NativeInetAddress;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
@@ -28,6 +27,8 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.ProtocolFamily;
+import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
@@ -46,8 +47,8 @@ public final class LinuxSocket extends Socket {
         super(fd);
     }
 
-    InternetProtocolFamily family() {
-        return ipv6 ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
+    ProtocolFamily family() {
+        return ipv6 ? StandardProtocolFamily.INET6 : StandardProtocolFamily.INET;
     }
 
     int sendmmsg(NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
@@ -74,8 +75,8 @@ public final class LinuxSocket extends Socket {
     }
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
-        InetAddress address = deriveInetAddress(netInterface, family() == InternetProtocolFamily.IPv6);
-        if (address.equals(family() == InternetProtocolFamily.IPv4 ? INET_ANY : INET6_ANY)) {
+        InetAddress address = deriveInetAddress(netInterface, family() == StandardProtocolFamily.INET6);
+        if (address.equals(family() == StandardProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
             throw new IOException("NetworkInterface does not support " + family());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
@@ -328,7 +329,7 @@ public final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketStream0(ipv6));
     }
 
-    public static LinuxSocket newSocketStream(InternetProtocolFamily protocol) {
+    public static LinuxSocket newSocketStream(ProtocolFamily protocol) {
         return new LinuxSocket(newSocketStream0(protocol));
     }
 
@@ -340,7 +341,7 @@ public final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketDgram0(ipv6));
     }
 
-    public static LinuxSocket newSocketDgram(InternetProtocolFamily family) {
+    public static LinuxSocket newSocketDgram(ProtocolFamily family) {
         return new LinuxSocket(newSocketDgram0(family));
     }
 
