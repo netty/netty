@@ -912,7 +912,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             }  else {
                 task = WriteTask.newInstance(this, msg, promise);
             }
-            if (!safeExecute(executor, task, promise, msg)) {
+            if (task != null && !safeExecute(executor, task, promise, msg)) {
                 // We failed to submit the AbstractWriteTask. We need to cancel it so we decrement the pending bytes
                 // and put it back in the Recycler for re-use later.
                 //
@@ -1116,7 +1116,17 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             this.handle = (ObjectPool.Handle<AbstractWriteTask>) handle;
         }
 
-        protected static void init(AbstractWriteTask task, DefaultChannelHandlerContext ctx,
+        /**
+         * Init the given {@link AbstractWriteTask} if possible.
+         *
+         * @param task      the task.
+         * @param ctx       the context.
+         * @param msg       the message
+         * @param promise   the promise that will be notified.
+         * @return          {@code true} if the task could be init successfully, {@code false} otherwise. If the init
+         *                  failed it will automatically release the msg, fail the promise and recycle the task itself.
+         */
+        protected static boolean init(AbstractWriteTask task, DefaultChannelHandlerContext ctx,
                                    Object msg, Promise<Void> promise) {
             task.ctx = ctx;
             task.msg = msg;
@@ -1124,10 +1134,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
             if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
                 task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
-                ctx.pipeline.incrementPendingOutboundBytes(task.size);
+                try {
+                    ctx.pipeline.incrementPendingOutboundBytes(task.size);
+                } catch (IllegalStateException e) {
+                    task.recycle();
+                    Resource.dispose(msg);
+                    promise.setFailure(e);
+                    return false;
+                }
             } else {
                 task.size = 0;
             }
+            return true;
         }
 
         protected abstract DefaultChannelHandlerContext findContext(DefaultChannelHandlerContext ctx);
@@ -1186,7 +1204,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         static WriteTask newInstance(
                 DefaultChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             WriteTask task = RECYCLER.get();
-            init(task, ctx, msg, promise);
+            if (!init(task, ctx, msg, promise)) {
+                return null;
+            }
             return task;
         }
 
@@ -1207,7 +1227,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         static WriteAndFlushTask newInstance(
                 DefaultChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             WriteAndFlushTask task = RECYCLER.get();
-            init(task, ctx, msg, promise);
+            if (!init(task, ctx, msg, promise)) {
+                return null;
+            }
             return task;
         }
 
