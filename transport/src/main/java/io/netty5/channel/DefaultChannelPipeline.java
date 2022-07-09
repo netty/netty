@@ -1254,6 +1254,16 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    final void forceCloseTransport() {
+        EventExecutor executor = transportExecutor();
+        Promise<Void> promise = executor.newPromise();
+        if (executor.inEventLoop()) {
+            closeTransport(promise);
+        } else {
+            safeExecute(executor, () -> closeTransport(promise), promise, null);
+        }
+    }
+
     /**
      * Returns the {@link EventExecutor} that is used for all the abstract transport operations.
      *

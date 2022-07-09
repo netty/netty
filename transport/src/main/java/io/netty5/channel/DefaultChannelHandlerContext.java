@@ -1279,7 +1279,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private long pendingOutboundBytes() {
         long pending = handler().pendingOutboundBytes(this);
         if (pending < 0) {
-            pipeline.closeTransport(newPromise());
+            pipeline.forceCloseTransport();
             String message = StringUtil.simpleClassName(handler.getClass()) +
                     ".pendingOutboundBytes(ChannelHandlerContext) returned a negative value: " +
                     pending + ". Force closed transport.";
