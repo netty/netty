@@ -212,7 +212,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             return 0;
         }
 
-        long bytes = config().getWriteBufferHighWaterMark() -
+        long bytes = config().getWriteBufferWaterMark().high() -
                 totalPending;
         // If bytes is negative we know we are not writable.
         if (bytes > 0) {
@@ -458,11 +458,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private void updateWritabilityIfNeeded(boolean notify, boolean notifyLater) {
         long totalPending = totalPending();
-        if (totalPending > config().getWriteBufferHighWaterMark()) {
+        if (totalPending >  config().getWriteBufferWaterMark().high()) {
             if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
                 fireChannelWritabilityChangedIfNeeded(notify, notifyLater);
             }
-        } else if (totalPending < config().getWriteBufferLowWaterMark()) {
+        } else if (totalPending <  config().getWriteBufferWaterMark().low()) {
             if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
                 fireChannelWritabilityChangedIfNeeded(notify, notifyLater);
             }

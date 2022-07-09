@@ -190,7 +190,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > config().getWriteBufferHighWaterMark()) {
+        if (newWriteBufferSize > config().getWriteBufferWaterMark().high()) {
             setUnwritable(invokeLater);
         }
     }
@@ -206,7 +206,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         // prevent excessive buffering in the parent outbound buffer. If the parent is not writable
         // we will mark the child channel as writable once the parent becomes writable by calling
         // trySetWritable() later.
-        if (newWriteBufferSize < config().getWriteBufferLowWaterMark() && parent().isWritable()) {
+        if (newWriteBufferSize < config().getWriteBufferWaterMark().low() && parent().isWritable()) {
             setWritable(invokeLater);
         }
     }
@@ -216,7 +216,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         // Lets try to set the child channel writable to match the state of the parent channel
         // if (and only if) the totalPendingSize is smaller then the low water-mark.
         // If this is not the case we will try again later once we drop under it.
-        if (totalPendingSize < config().getWriteBufferLowWaterMark()) {
+        if (totalPendingSize < config().getWriteBufferWaterMark().low()) {
             setWritable(false);
         }
     }
@@ -347,7 +347,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     @Override
     public long writableBytes() {
-        long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize - pipeline.pendingOutboundBytes();
+        long bytes = config().getWriteBufferWaterMark().high() - totalPendingSize - pipeline.pendingOutboundBytes();
         // If bytes is negative we know we are not writable.
         if (bytes > 0) {
             return unwritable == 0 ? bytes : 0;

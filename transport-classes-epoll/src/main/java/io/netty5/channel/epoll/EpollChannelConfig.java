@@ -16,7 +16,6 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultChannelConfig;
@@ -116,20 +115,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     @Override
     public EpollChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
     }
 

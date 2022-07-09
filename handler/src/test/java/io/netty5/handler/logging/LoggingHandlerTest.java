@@ -21,6 +21,7 @@ import ch.qos.logback.core.Appender;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -126,8 +127,7 @@ public class LoggingHandlerTest {
     public void shouldLogChannelWritabilityChanged() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         // this is used to switch the channel to become unwritable
-        channel.config().setWriteBufferLowWaterMark(5);
-        channel.config().setWriteBufferHighWaterMark(10);
+        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(5, 10));
         channel.write("hello");
 
         // This is expected to be called 3 times:

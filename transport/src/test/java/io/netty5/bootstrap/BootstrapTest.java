@@ -384,16 +384,16 @@ public class BootstrapTest {
                         };
                     }
                 })
-                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1)
-                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 2);
+                .option(ChannelOption.MAX_MESSAGES_PER_WRITE, 1)
+                .option(ChannelOption.WRITE_SPIN_COUNT, 2);
 
         bootstrap.register().asStage().sync();
 
         latch.await();
 
         // Check the order is the same as what we defined before.
-        assertSame(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, options.take());
-        assertSame(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, options.take());
+        assertSame(ChannelOption.MAX_MESSAGES_PER_WRITE, options.take());
+        assertSame(ChannelOption.WRITE_SPIN_COUNT, options.take());
     }
 
     private static final class LateRegisterHandler implements ChannelHandler {

@@ -242,7 +242,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // an "adequate" amount of connection window before allocation is attempted. This is not foolproof as if the
         // number of streams is >= this minimal number then we may still have the issue, but the idea is to narrow the
         // circumstances in which this can happen without rewriting the allocation algorithm.
-        return max(ctx.channel().config().getWriteBufferLowWaterMark(), MIN_WRITABLE_CHUNK);
+        return max(ctx.channel().config().getWriteBufferWaterMark().low(), MIN_WRITABLE_CHUNK);
     }
 
     private int maxUsableChannelBytes() {
