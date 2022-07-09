@@ -20,6 +20,7 @@ import io.netty5.buffer.api.Buffer;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -149,6 +150,7 @@ import java.util.NoSuchElementException;
  *     <li>{@link ChannelHandlerContext#disconnect()}</li>
  *     <li>{@link ChannelHandlerContext#close()}</li>
  *     <li>{@link ChannelHandlerContext#shutdown(ChannelShutdownDirection)}</li>
+ *     <li>{@link ChannelHandlerContext#sendOutboundEvent(Object)}</li>
  *     <li>{@link ChannelHandlerContext#deregister()}</li>
  *     </ul>
  * </li>
@@ -297,7 +299,12 @@ public interface ChannelPipeline
      * @throws NullPointerException
      *         if the specified handler is {@code null}
      */
-    ChannelPipeline remove(ChannelHandler handler);
+    default ChannelPipeline remove(ChannelHandler handler) {
+        if (removeIfExists(handler) == null) {
+            throw new NoSuchElementException();
+        }
+        return this;
+    }
 
     /**
      * Removes the {@link ChannelHandler} with the specified name from this pipeline.
@@ -311,7 +318,13 @@ public interface ChannelPipeline
      * @throws NullPointerException
      *         if the specified name is {@code null}
      */
-    ChannelHandler remove(String name);
+    default ChannelHandler remove(String name) {
+        ChannelHandler handler = removeIfExists(name);
+        if (handler == null) {
+            throw new NoSuchElementException();
+        }
+        return handler;
+    }
 
     /**
      * Removes the {@link ChannelHandler} of the specified type from this pipeline.
@@ -326,7 +339,52 @@ public interface ChannelPipeline
      * @throws NullPointerException
      *         if the specified handler type is {@code null}
      */
-    <T extends ChannelHandler> T remove(Class<T> handlerType);
+    default <T extends ChannelHandler> T remove(Class<T> handlerType) {
+        T handler = removeIfExists(handlerType);
+        if (handler == null) {
+            throw new NoSuchElementException();
+        }
+        return handler;
+    }
+
+    /**
+     * Removes the {@link ChannelHandler} with the specified name from this pipeline if it exists.
+     *
+     * @param  name             the name under which the {@link ChannelHandler} was stored.
+     *
+     * @return the removed handler
+     *
+     * @throws NoSuchElementException
+     *         if there's no such handler with the specified name in this pipeline
+     * @throws NullPointerException
+     *         if the specified name is {@code null}
+     */
+    <T extends ChannelHandler> T removeIfExists(String name);
+
+    /**
+     * Removes the {@link ChannelHandler} of the specified type from this pipeline if it exists.
+     *
+     * @param <T>           the type of the handler
+     * @param handlerType   the type of the handler
+     *
+     * @return the removed handler or {@code null} if it didn't exist.
+     *
+     * @throws NullPointerException
+     *         if the specified handler type is {@code null}
+     */
+    <T extends ChannelHandler> T removeIfExists(Class<T> handlerType);
+
+    /**
+     * Removes the specified {@link ChannelHandler} from this pipeline if it exists
+     *
+     * @param  handler          the {@link ChannelHandler} to remove
+     *
+     * @return the removed handler or {@code null} if it didn't exist.
+     *
+     * @throws NullPointerException
+     *         if the specified handler is {@code null}
+     */
+    <T extends ChannelHandler> T removeIfExists(ChannelHandler handler);
 
     /**
      * Removes the first {@link ChannelHandler} in this pipeline.
@@ -415,7 +473,10 @@ public interface ChannelPipeline
      *
      * @return the first handler.  {@code null} if this pipeline is empty.
      */
-    ChannelHandler first();
+    default ChannelHandler first() {
+        ChannelHandlerContext ctx = firstContext();
+        return ctx == null ? null : ctx.handler();
+    }
 
     /**
      * Returns the context of the first {@link ChannelHandler} in this pipeline.
@@ -429,7 +490,10 @@ public interface ChannelPipeline
      *
      * @return the last handler.  {@code null} if this pipeline is empty.
      */
-    ChannelHandler last();
+    default ChannelHandler last() {
+        ChannelHandlerContext ctx = lastContext();
+        return ctx == null ? null : ctx.handler();
+    }
 
     /**
      * Returns the context of the last {@link ChannelHandler} in this pipeline.
@@ -501,7 +565,9 @@ public interface ChannelPipeline
     /**
      * Returns the {@link List} of the handler names.
      */
-    List<String> names();
+    default List<String> names() {
+        return new ArrayList<>(toMap().keySet());
+    }
 
     /**
      * Converts this pipeline into an ordered {@link Map} whose keys are

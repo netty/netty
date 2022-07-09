@@ -421,15 +421,18 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         return (T) ctx.handler();
     }
 
+    @Override
     public final <T extends ChannelHandler> T removeIfExists(String name) {
         return removeIfExists(() -> findCtxIdx(context -> name.equals(context.name())));
     }
 
+    @Override
     public final <T extends ChannelHandler> T removeIfExists(Class<T> handlerType) {
         return removeIfExists(() -> findCtxIdx(
                 context -> handlerType.isAssignableFrom(context.handler().getClass())));
     }
 
+    @Override
     public final <T extends ChannelHandler> T removeIfExists(ChannelHandler handler) {
         return removeIfExists(() -> findCtxIdx(context -> handler == context.handler()));
     }
