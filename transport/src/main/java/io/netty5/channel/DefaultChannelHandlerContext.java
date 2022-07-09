@@ -187,7 +187,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelRegistered() {
         try {
-            saveCurrentPendingBytesIfNeeded();
+            if (!saveCurrentPendingBytesIfNeededInbound()) {
+                return;
+            }
             handler().channelRegistered(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -217,8 +219,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelUnregistered() {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelUnregistered(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -248,8 +252,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelActive() {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelActive(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -279,8 +285,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelInactive() {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelInactive(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -310,8 +318,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelShutdown(ChannelShutdownDirection direction) {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelShutdown(this, direction);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -349,8 +359,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelExceptionCaught(final Throwable cause) {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelExceptionCaught(this, cause);
         } catch (Throwable error) {
             if (logger.isDebugEnabled()) {
@@ -393,8 +405,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelInboundEvent(Object event) {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            Resource.dispose(event);
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelInboundEvent(this, event);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -432,8 +447,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     void invokeChannelRead(Object msg) {
         final Object m = pipeline.touch(requireNonNull(msg, "msg"), this);
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            Resource.dispose(m);
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelRead(this, m);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -464,8 +482,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelReadComplete() {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelReadComplete(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -496,8 +516,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     void invokeChannelWritabilityChanged() {
+        if (!saveCurrentPendingBytesIfNeededInbound()) {
+            return;
+        }
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().channelWritabilityChanged(this);
         } catch (Throwable t) {
             invokeChannelExceptionCaught(t);
@@ -544,8 +566,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeBind(SocketAddress localAddress) {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().bind(this, localAddress);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
@@ -578,8 +604,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().connect(this, remoteAddress, localAddress);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
@@ -614,8 +644,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeDisconnect() {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().disconnect(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
@@ -644,8 +678,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeClose() {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().close(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, true);
@@ -674,8 +712,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeShutdown(ChannelShutdownDirection direction) {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().shutdown(this, direction);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, true);
@@ -704,8 +746,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeRegister() {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().register(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
@@ -723,8 +769,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeDeregister() {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().deregister(this);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
@@ -753,8 +803,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void invokeRead() {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().read(this);
         } catch (Throwable t) {
             handleOutboundHandlerException(t, false);
@@ -770,8 +824,13 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private Future<Void> invokeWrite(Object msg) {
         final Object m = pipeline.touch(msg, this);
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            Resource.dispose(m);
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().write(this, m);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
@@ -805,8 +864,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void invokeFlush() {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             handler().flush(this);
         } catch (Throwable t) {
             handleOutboundHandlerException(t, false);
@@ -880,8 +943,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private Future<Void> invokeSendOutboundEvent(Object event) {
+        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
+        if (failed != null) {
+            return failed;
+        }
+
         try {
-            saveCurrentPendingBytesIfNeeded();
             return handler().sendOutboundEvent(this, event);
         } catch (Throwable t) {
             return handleOutboundHandlerException(t, false);
@@ -944,6 +1011,13 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         // any pipeline events ctx.handler() will miss them because the state will not allow it.
         if (setAddComplete()) {
             handler().handlerAdded(this);
+            if (handlesPendingOutboundBytes(executionMask)) {
+                long pending = pendingOutboundBytes();
+                currentPendingBytes = -1;
+                if (pending > 0) {
+                    pipeline.incrementPendingOutboundBytes(pending);
+                }
+            }
         }
     }
 
@@ -952,7 +1026,17 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             // Only call handlerRemoved(...) if we called handlerAdded(...) before.
             if (handlerState == ADD_COMPLETE) {
                 handlerState = REMOVE_STARTED;
-                handler().handlerRemoved(this);
+                try {
+                    handler().handlerRemoved(this);
+                } finally {
+                    if (handlesPendingOutboundBytes(executionMask)) {
+                        long pending = pendingOutboundBytes();
+                        currentPendingBytes = -1;
+                        if (pending > 0) {
+                            pipeline.decrementPendingOutboundBytes(pending);
+                        }
+                    }
+                }
             }
         } finally {
             // Mark the handler as removed in any case.
@@ -1157,23 +1241,51 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
     }
 
-    private void saveCurrentPendingBytesIfNeeded() {
+    private boolean saveCurrentPendingBytesIfNeededInbound() {
+        IllegalStateException e = saveCurrentPendingBytesIfNeeded();
+        if (e != null) {
+            logger.error(e);
+            return false;
+        }
+        return true;
+    }
+
+    private Future<Void> saveCurrentPendingBytesIfNeededOutbound() {
+        IllegalStateException e = saveCurrentPendingBytesIfNeeded();
+        if (e != null) {
+            logger.error(e);
+            return newFailedFuture(e);
+        }
+        return null;
+    }
+
+    private IllegalStateException saveCurrentPendingBytesIfNeeded() {
         if (!handlesPendingOutboundBytes(executionMask)) {
             assert currentPendingBytes == 0;
-            return;
+            return null;
         }
         // We only save the current pending bytes if not already done before.
         // This is important as otherwise we might run into issues in case of reentrancy.
         if (currentPendingBytes == -1) {
-            long pending = handler().pendingOutboundBytes(this);
-            if (pending < 0) {
-                pipeline.closeTransport(newPromise());
-                throw new IllegalStateException(StringUtil.simpleClassName(handler.getClass()) +
-                        ".pendingOutboundBytes(ChannelHandlerContext) returned a negative value: " + pending +
-                        ". Force closed transport.");
+            try {
+                currentPendingBytes = pendingOutboundBytes();
+            } catch (IllegalStateException e) {
+                return e;
             }
-            currentPendingBytes = pending;
         }
+        return null;
+    }
+
+    private long pendingOutboundBytes() {
+        long pending = handler().pendingOutboundBytes(this);
+        if (pending < 0) {
+            pipeline.closeTransport(newPromise());
+            String message = StringUtil.simpleClassName(handler.getClass()) +
+                    ".pendingOutboundBytes(ChannelHandlerContext) returned a negative value: " +
+                    pending + ". Force closed transport.";
+            throw new IllegalStateException(message);
+        }
+        return pending;
     }
 
     private void updatePendingBytesIfNeeded() {
@@ -1186,16 +1298,20 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return;
         }
         this.currentPendingBytes = -1;
-        long newPendingBytes = handler().pendingOutboundBytes(this);
-        long delta = current - newPendingBytes;
-        if (delta == 0) {
-            // No changes
-            return;
-        }
-        if (delta > 0) {
-            pipeline.decrementPendingOutboundBytes(delta);
-        } else {
-            pipeline.incrementPendingOutboundBytes(-delta);
+        try {
+            long newPendingBytes = pendingOutboundBytes();
+            long delta = current - newPendingBytes;
+            if (delta == 0) {
+                // No changes
+                return;
+            }
+            if (delta > 0) {
+                pipeline.decrementPendingOutboundBytes(delta);
+            } else {
+                pipeline.incrementPendingOutboundBytes(-delta);
+            }
+        } catch (IllegalStateException e) {
+            logger.error(e);
         }
     }
 
@@ -1310,11 +1426,23 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
             @Override
             public V call() throws Exception {
+                IllegalStateException e = ctx.saveCurrentPendingBytesIfNeeded();
                 try {
-                    ctx.saveCurrentPendingBytesIfNeeded();
-                    return task.call();
+                    V value = null;
+                    try {
+                        value = task.call();
+                        return value;
+                    } finally {
+                        if (e != null) {
+                            Resource.dispose(value);
+                            logger.error(e);
+                            throw e;
+                        }
+                    }
                 } finally {
-                    ctx.updatePendingBytesIfNeeded();
+                    if (e == null) {
+                        ctx.updatePendingBytesIfNeeded();
+                    }
                 }
             }
         }
@@ -1327,11 +1455,17 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
             @Override
             public void run() {
+                IllegalStateException e = ctx.saveCurrentPendingBytesIfNeeded();
                 try {
-                    ctx.saveCurrentPendingBytesIfNeeded();
                     task.run();
+                    if (e != null) {
+                        logger.error(e);
+                        throw e;
+                    }
                 } finally {
-                    ctx.updatePendingBytesIfNeeded();
+                    if (e == null) {
+                        ctx.updatePendingBytesIfNeeded();
+                    }
                 }
             }
         }
