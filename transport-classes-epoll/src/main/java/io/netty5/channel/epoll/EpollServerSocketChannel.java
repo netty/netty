@@ -23,7 +23,6 @@ import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Collection;
@@ -39,7 +38,7 @@ import static io.netty5.channel.unix.NativeInetAddress.address;
  * maximal performance.
  */
 public final class EpollServerSocketChannel
-        extends AbstractEpollServerChannel<UnixChannel, InetSocketAddress, InetSocketAddress>
+        extends AbstractEpollServerChannel<UnixChannel, SocketAddress, SocketAddress>
         implements ServerSocketChannel {
 
     private final EpollServerSocketChannelConfig config;

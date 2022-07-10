@@ -41,7 +41,7 @@ import static io.netty5.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
  * maximal performance.
  */
 public final class EpollSocketChannel
-        extends AbstractEpollStreamChannel<EpollServerSocketChannel, InetSocketAddress, InetSocketAddress>
+        extends AbstractEpollStreamChannel<EpollServerSocketChannel, SocketAddress, SocketAddress>
         implements SocketChannel {
 
     private final EpollSocketChannelConfig config;
