@@ -16,8 +16,10 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.StandardCompressionOptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -28,7 +30,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@EnabledIf("isBrotiAvailable")
 class HttpContentCompressorOptionsTest {
+
+    static boolean isBrotiAvailable() {
+        return Brotli.isAvailable();
+    }
 
     @Test
     void testGetBrTargetContentEncoding() {
