@@ -945,6 +945,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Future<Void> invokeSendOutboundEvent(Object event) {
         Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
         if (failed != null) {
+            Resource.dispose(event);
             return failed;
         }
 
