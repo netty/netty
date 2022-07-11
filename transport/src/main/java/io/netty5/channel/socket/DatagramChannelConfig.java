@@ -186,12 +186,6 @@ public interface DatagramChannelConfig extends ChannelConfig {
     DatagramChannelConfig setBufferAllocator(BufferAllocator allocator);
 
     @Override
-    DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    @Override
-    DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
-
-    @Override
     DatagramChannelConfig setAllowHalfClosure(boolean allowHalfClosure);
 
     @Override

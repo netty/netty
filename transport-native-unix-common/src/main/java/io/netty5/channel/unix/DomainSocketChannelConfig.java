@@ -47,14 +47,6 @@ public interface DomainSocketChannelConfig extends ChannelConfig {
     DomainSocketChannelConfig setAutoClose(boolean autoClose);
 
     @Override
-    @Deprecated
-    DomainSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    @Override
-    @Deprecated
-    DomainSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
-
-    @Override
     DomainSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
 
     @Override

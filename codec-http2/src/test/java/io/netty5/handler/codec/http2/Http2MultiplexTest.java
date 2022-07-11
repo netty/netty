@@ -870,7 +870,7 @@ public class Http2MultiplexTest {
         parentChannel.flush();
 
         // Test for initial window size
-        assertTrue(initialRemoteStreamWindow < childChannel.config().getWriteBufferHighWaterMark());
+        assertTrue(initialRemoteStreamWindow < childChannel.config().getWriteBufferWaterMark().high());
 
         assertTrue(childChannel.isWritable());
         int size = 16 * 1024 * 1024;

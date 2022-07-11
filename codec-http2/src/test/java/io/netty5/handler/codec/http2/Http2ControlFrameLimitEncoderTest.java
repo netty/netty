@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
@@ -143,7 +144,7 @@ public class Http2ControlFrameLimitEncoderTest {
         when(channel.config()).thenReturn(config);
         when(channel.writableBytes()).thenReturn(Long.MAX_VALUE);
         when(channel.isWritable()).thenReturn(true);
-        when(config.getWriteBufferHighWaterMark()).thenReturn(Integer.MAX_VALUE);
+        when(config.getWriteBufferWaterMark()).thenReturn(new WriteBufferWaterMark(1024, Integer.MAX_VALUE));
         when(config.getMessageSizeEstimator()).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
         ChannelMetadata metadata = new ChannelMetadata(false, 16);
         when(channel.metadata()).thenReturn(metadata);

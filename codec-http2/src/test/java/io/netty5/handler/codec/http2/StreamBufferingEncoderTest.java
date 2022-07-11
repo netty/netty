@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.DefaultMessageSizeEstimator;
+import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -147,7 +148,7 @@ public class StreamBufferingEncoderTest {
         when(channel.config()).thenReturn(config);
         when(channel.isWritable()).thenReturn(true);
         when(channel.writableBytes()).thenReturn(Long.MAX_VALUE);
-        when(config.getWriteBufferHighWaterMark()).thenReturn(Integer.MAX_VALUE);
+        when(config.getWriteBufferWaterMark()).thenReturn(new WriteBufferWaterMark(1024, Integer.MAX_VALUE));
         when(config.getMessageSizeEstimator()).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
         ChannelMetadata metadata = new ChannelMetadata(false, 16);
         when(channel.metadata()).thenReturn(metadata);

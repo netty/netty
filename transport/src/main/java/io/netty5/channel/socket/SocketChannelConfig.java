@@ -171,11 +171,5 @@ public interface SocketChannelConfig extends ChannelConfig {
     SocketChannelConfig setBufferAllocator(BufferAllocator allocator);
 
     @Override
-    SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    @Override
-    SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
-
-    @Override
     SocketChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite);
 }

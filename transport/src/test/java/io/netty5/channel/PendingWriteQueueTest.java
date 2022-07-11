@@ -88,8 +88,7 @@ public class PendingWriteQueueTest {
     private static void assertWrite(ChannelHandler handler, int count) throws Exception {
         try (Buffer buffer = preferredAllocator().copyOf("Test", CharsetUtil.US_ASCII)) {
             final EmbeddedChannel channel = new EmbeddedChannel(handler);
-            channel.config().setWriteBufferLowWaterMark(1);
-            channel.config().setWriteBufferHighWaterMark(3);
+            channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(1, 3));
 
             Buffer[] buffers = new Buffer[count];
             for (int i = 0; i < buffers.length; i++) {

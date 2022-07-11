@@ -33,8 +33,6 @@ import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty5.channel.ChannelOption.RCVBUF_ALLOCATOR;
-import static io.netty5.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
-import static io.netty5.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
@@ -86,8 +84,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR,
-                WRITE_BUFFER_HIGH_WATER_MARK, WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK,
+                BUFFER_ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_WATER_MARK,
                 MESSAGE_SIZE_ESTIMATOR, MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
     }
 
@@ -143,12 +140,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == AUTO_CLOSE) {
             return (T) Boolean.valueOf(isAutoClose());
         }
-        if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
-            return (T) Integer.valueOf(getWriteBufferHighWaterMark());
-        }
-        if (option == WRITE_BUFFER_LOW_WATER_MARK) {
-            return (T) Integer.valueOf(getWriteBufferLowWaterMark());
-        }
         if (option == WRITE_BUFFER_WATER_MARK) {
             return (T) getWriteBufferWaterMark();
         }
@@ -184,10 +175,6 @@ public class DefaultChannelConfig implements ChannelConfig {
             setAutoRead((Boolean) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
-        } else if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
-            setWriteBufferHighWaterMark((Integer) value);
-        } else if (option == WRITE_BUFFER_LOW_WATER_MARK) {
-            setWriteBufferLowWaterMark((Integer) value);
         } else if (option == WRITE_BUFFER_WATER_MARK) {
             setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
@@ -363,52 +350,6 @@ public class DefaultChannelConfig implements ChannelConfig {
     public ChannelConfig setAutoClose(boolean autoClose) {
         this.autoClose = autoClose;
         return this;
-    }
-
-    @Override
-    public int getWriteBufferHighWaterMark() {
-        return writeBufferWaterMark.high();
-    }
-
-    @Override
-    public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        checkPositiveOrZero(writeBufferHighWaterMark, "writeBufferHighWaterMark");
-        for (;;) {
-            WriteBufferWaterMark waterMark = writeBufferWaterMark;
-            if (writeBufferHighWaterMark < waterMark.low()) {
-                throw new IllegalArgumentException(
-                        "writeBufferHighWaterMark cannot be less than " +
-                                "writeBufferLowWaterMark (" + waterMark.low() + "): " +
-                                writeBufferHighWaterMark);
-            }
-            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
-                    new WriteBufferWaterMark(waterMark.low(), writeBufferHighWaterMark, false))) {
-                return this;
-            }
-        }
-    }
-
-    @Override
-    public int getWriteBufferLowWaterMark() {
-        return writeBufferWaterMark.low();
-    }
-
-    @Override
-    public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        checkPositiveOrZero(writeBufferLowWaterMark, "writeBufferLowWaterMark");
-        for (;;) {
-            WriteBufferWaterMark waterMark = writeBufferWaterMark;
-            if (writeBufferLowWaterMark > waterMark.high()) {
-                throw new IllegalArgumentException(
-                        "writeBufferLowWaterMark cannot be greater than " +
-                                "writeBufferHighWaterMark (" + waterMark.high() + "): " +
-                                writeBufferLowWaterMark);
-            }
-            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
-                    new WriteBufferWaterMark(writeBufferLowWaterMark, waterMark.high(), false))) {
-                return this;
-            }
-        }
     }
 
     @Override
