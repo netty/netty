@@ -22,7 +22,6 @@ import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.internal.UnstableApi;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import static io.netty5.channel.kqueue.BsdSocket.newSocketStream;
@@ -30,7 +29,7 @@ import static io.netty5.channel.unix.NativeInetAddress.address;
 
 @UnstableApi
 public final class KQueueServerSocketChannel extends
-        AbstractKQueueServerChannel<UnixChannel, InetSocketAddress, InetSocketAddress> implements ServerSocketChannel {
+        AbstractKQueueServerChannel<UnixChannel, SocketAddress, SocketAddress> implements ServerSocketChannel {
     private final KQueueServerSocketChannelConfig config;
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
