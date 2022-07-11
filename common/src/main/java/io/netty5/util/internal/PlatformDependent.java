@@ -1504,6 +1504,9 @@ public final class PlatformDependent {
         if ("s390x".equals(value)) {
             return "s390_64";
         }
+        if ("loongarch64".equals(value)) {
+            return "loongarch_64";
+        }
 
         return "unknown";
     }
