@@ -17,10 +17,8 @@ package io.netty5.channel.socket;
 
 import io.netty5.channel.Channel;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
 /**
@@ -29,10 +27,6 @@ import java.net.NetworkInterface;
 public interface DatagramChannel extends Channel {
     @Override
     DatagramChannelConfig config();
-    @Override
-    InetSocketAddress localAddress();
-    @Override
-    InetSocketAddress remoteAddress();
 
     /**
      * Return {@code true} if the {@link DatagramChannel} is connected to the remote peer.
@@ -41,124 +35,83 @@ public interface DatagramChannel extends Channel {
 
     /**
      * Joins a multicast group and notifies the {@link Future} once the operation completes.
+     * <p>
+     * If the underlying implementation does not support this operation it will return a {@link Future} which
+     * is failed with an {@link UnsupportedOperationException}.
+     *
+     * @param multicastAddress  the multicast group address.
+     * @return                  a {@link Future} which is notified once the operation completes.
      */
     Future<Void> joinGroup(InetAddress multicastAddress);
 
     /**
-     * Joins a multicast group and notifies the {@link Future} once the operation completes.
-     *
-     * The given {@link Future} will be notified and also returned.
-     */
-    Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> future);
-
-    /**
-     * Joins the specified multicast group at the specified interface and notifies the {@link Future}
-     * once the operation completes.
-     */
-    Future<Void> joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
-
-    /**
      * Joins the specified multicast group at the specified interface and notifies the {@link Future}
      * once the operation completes.
      *
-     * The given {@link Future} will be notified and also returned.
-     */
-    Future<Void> joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface, Promise<Void> future);
-
-    /**
-     * Joins the specified multicast group at the specified interface and notifies the {@link Future}
-     * once the operation completes.
+     * <p>
+     * If the underlying implementation does not support this operation it will return a {@link Future} which
+     * is failed with an {@link UnsupportedOperationException}.
+     *
+     * @param multicastAddress  the multicast group address.
+     * @param networkInterface  the interface to use.
+     * @param source            the source address (might be {@code null}).
+     * @return                  a {@link Future} which is notified once the operation completes.
      */
     Future<Void> joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
 
     /**
-     * Joins the specified multicast group at the specified interface and notifies the {@link Future}
-     * once the operation completes.
-     *
-     * The given {@link Future} will be notified and also returned.
-     */
-    Future<Void> joinGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, Promise<Void> future);
-
-    /**
      * Leaves a multicast group and notifies the {@link Future} once the operation completes.
+     *
+     * <p>
+     * If the underlying implementation does not support this operation it will return a {@link Future} which
+     * is failed with an {@link UnsupportedOperationException}.
+     *
+     * @param multicastAddress  the multicast group address.
+     * @return                  a {@link Future} which is notified once the operation completes.
      */
     Future<Void> leaveGroup(InetAddress multicastAddress);
 
     /**
-     * Leaves a multicast group and notifies the {@link Future} once the operation completes.
-     *
-     * The given {@link Future} will be notified and also returned.
-     */
-    Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> future);
-
-    /**
-     * Leaves a multicast group on a specified local interface and notifies the {@link Future} once the
-     * operation completes.
-     */
-    Future<Void> leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
-
-    /**
-     * Leaves a multicast group on a specified local interface and notifies the {@link Future} once the
-     * operation completes.
-     *
-     * The given {@link Future} will be notified and also returned.
-     */
-    Future<Void> leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface, Promise<Void> future);
-
-    /**
-     * Leave the specified multicast group at the specified interface using the specified source and notifies
-     * the {@link Future} once the operation completes.
-     */
-    Future<Void> leaveGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
-
-    /**
      * Leave the specified multicast group at the specified interface using the specified source and notifies
      * the {@link Future} once the operation completes.
      *
-     * The given {@link Future} will be notified and also returned.
+     * <p>
+     * If the underlying implementation does not support this operation it will return a {@link Future} which
+     * is failed with an {@link UnsupportedOperationException}.
+     *
+     * @param multicastAddress  the multicast group address.
+     * @param networkInterface  the interface to use.
+     * @param source            the source address (might be {@code null}).
+     * @return                  a {@link Future} which is notified once the operation completes.
      */
-    Future<Void> leaveGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
-            Promise<Void> future);
+    Future<Void> leaveGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface and notifies
      * the {@link Future} once the operation completes.
      *
-     * The given {@link Future} will be notified and also returned.
-     */
-    Future<Void> block(
-            InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock);
-
-    /**
-     * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface and notifies
-     * the {@link Future} once the operation completes.
+     * <p>
+     * If the underlying implementation does not support this operation it will return a {@link Future} which
+     * is failed with an {@link UnsupportedOperationException}.
      *
-     * The given {@link Future} will be notified and also returned.
+     * @param multicastAddress  the multicast group address.
+     * @param networkInterface  the interface to use.
+     * @param sourceToBlock     the source address.
+     * @return                  a {@link Future} which is notified once the operation completes.
      */
-    Future<Void> block(
-            InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock, Promise<Void> future);
+    Future<Void> block(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress sourceToBlock);
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress and notifies the {@link Future} once
      * the operation completes.
      *
-     * The given {@link Future} will be notified and also returned.
+     * <p>
+     * If the underlying implementation does not support this operation it will return a {@link Future} which
+     * is failed with an {@link UnsupportedOperationException}.
+     *
+     * @param multicastAddress  the multicast group address.
+     * @param sourceToBlock     the source address.
+     * @return                  a {@link Future} which is notified once the operation completes.
      */
     Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock);
-
-    /**
-     * Block the given sourceToBlock address for the given multicastAddress and notifies the {@link Future} once
-     * the operation completes.
-     *
-     * The given {@link Future} will be notified and also returned.
-     */
-    Future<Void> block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future);
 }

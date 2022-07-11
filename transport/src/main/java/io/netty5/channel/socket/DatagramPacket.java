@@ -18,24 +18,24 @@ package io.netty5.channel.socket;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.BufferAddressedEnvelope;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public class DatagramPacket extends BufferAddressedEnvelope<InetSocketAddress, DatagramPacket> {
+public class DatagramPacket extends BufferAddressedEnvelope<SocketAddress, DatagramPacket> {
     /**
      * Create a new instance with the specified packet {@code data}, {@code recipient} address, and {@code sender}
      * address.
      */
-    public DatagramPacket(Buffer message, InetSocketAddress recipient, InetSocketAddress sender) {
+    public DatagramPacket(Buffer message, SocketAddress recipient, SocketAddress sender) {
         super(message, recipient, sender);
     }
 
     /**
      * Create a new instance with the specified packet {@code data} and {@code recipient} address.
      */
-    public DatagramPacket(Buffer message, InetSocketAddress recipient) {
+    public DatagramPacket(Buffer message, SocketAddress recipient) {
         super(message, recipient);
     }
 

@@ -50,6 +50,7 @@ import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
+import java.net.SocketException;
 
 import static io.netty5.channel.epoll.LinuxSocket.newSocketDgram;
 import static java.util.Objects.requireNonNull;
@@ -58,7 +59,7 @@ import static java.util.Objects.requireNonNull;
  * {@link DatagramChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
  * maximal performance.
  */
-public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel, InetSocketAddress, InetSocketAddress>
+public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel, SocketAddress, SocketAddress>
         implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
@@ -130,50 +131,34 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         return connected;
     }
 
-    @Override
-    public Future<Void> joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newPromise());
+    private NetworkInterface networkInterface() throws SocketException {
+        NetworkInterface iface = config.getNetworkInterface();
+        if (iface == null) {
+            SocketAddress localAddress = localAddress();
+            if (localAddress instanceof InetSocketAddress) {
+                return NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
+            }
+            throw new UnsupportedOperationException();
+        }
+        return iface;
     }
 
     @Override
-    public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
+    public Future<Void> joinGroup(InetAddress multicastAddress) {
         try {
-            NetworkInterface iface = config().getNetworkInterface();
-            if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
-            }
-            return joinGroup(multicastAddress, iface, null, promise);
-        } catch (IOException e) {
-            return promise.setFailure(e).asFuture();
+            return joinGroup(multicastAddress, networkInterface(), null);
+        } catch (IOException | UnsupportedOperationException e) {
+            return newFailedFuture(e);
         }
     }
 
     @Override
     public Future<Void> joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            Promise<Void> promise) {
-        return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
-    }
-
-    @Override
-    public Future<Void> joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return joinGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(
-            final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final Promise<Void> promise) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
+        Promise<Void> promise = newPromise();
         if (executor().inEventLoop()) {
             joinGroup0(multicastAddress, networkInterface, source, promise);
         } else {
@@ -182,60 +167,35 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         return promise.asFuture();
     }
 
-    private void joinGroup0(
-            final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final Promise<Void> promise) {
-        assert executor().inEventLoop();
+    private void joinGroup0(InetAddress multicastAddress, NetworkInterface networkInterface,
+                           InetAddress source, Promise<Void> promise) {
+        assertEventLoop();
 
         try {
             socket.joinGroup(multicastAddress, networkInterface, source);
-            promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
+            return;
         }
+        promise.setSuccess(null);
     }
 
     @Override
     public Future<Void> leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
-        } catch (IOException e) {
-            return promise.setFailure(e).asFuture();
+            return leaveGroup(multicastAddress, networkInterface(), null);
+        } catch (IOException | UnsupportedOperationException e) {
+            return newFailedFuture(e);
         }
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
-            InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, Promise<Void> promise) {
-        return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
     public Future<Void> leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
-            final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
-            final Promise<Void> promise) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
+        Promise<Void> promise = newPromise();
         if (executor().inEventLoop()) {
             leaveGroup0(multicastAddress, networkInterface, source, promise);
         } else {
@@ -251,47 +211,34 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
         try {
             socket.leaveGroup(multicastAddress, networkInterface, source);
-            promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
+            return;
         }
+        promise.setSuccess(null);
     }
 
     @Override
     public Future<Void> block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
-    }
-
-    @Override
-    public Future<Void> block(
-            final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress sourceToBlock, final Promise<Void> promise) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(sourceToBlock, "sourceToBlock");
         requireNonNull(networkInterface, "networkInterface");
-        promise.setFailure(new UnsupportedOperationException("Multicast block not supported"));
-        return promise.asFuture();
-    }
-
-    @Override
-    public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
+        return newFailedFuture(new UnsupportedOperationException("Multicast block not supported"));
     }
 
     @Override
     public Future<Void> block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
+            InetAddress multicastAddress, InetAddress sourceToBlock) {
         try {
             return block(
                     multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    sourceToBlock, promise);
-        } catch (Throwable e) {
-            promise.setFailure(e);
+                    networkInterface(),
+                    sourceToBlock);
+        } catch (IOException | UnsupportedOperationException e) {
+            return newFailedFuture(e);
         }
-        return promise.asFuture();
     }
 
     @Override
@@ -628,8 +575,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         if (packet instanceof SegmentedDatagramPacket) {
             try (SegmentedDatagramPacket segmentedDatagramPacket = (SegmentedDatagramPacket) packet) {
                 Buffer content = segmentedDatagramPacket.content();
-                InetSocketAddress recipient = segmentedDatagramPacket.recipient();
-                InetSocketAddress sender = segmentedDatagramPacket.sender();
+                SocketAddress recipient = segmentedDatagramPacket.recipient();
+                SocketAddress sender = segmentedDatagramPacket.sender();
                 int segmentSize = segmentedDatagramPacket.segmentSize();
                 do {
                     out.add(new DatagramPacket(content.readSplit(segmentSize), recipient, sender));
@@ -687,7 +634,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 return false;
             }
             buf.writerOffset(initialWriterOffset + bytesReceived);
-            InetSocketAddress local = localAddress();
+            InetSocketAddress local = (InetSocketAddress) localAddress();
             DatagramPacket packet = msg.newDatagramPacket(buf, local);
             if (!(packet instanceof SegmentedDatagramPacket)) {
                 processPacket(pipeline(), allocHandle, bytesReceived, packet);
@@ -735,7 +682,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             }
             int bytesReceived = received * datagramSize;
             buf.writerOffset(initialWriterOffset + bytesReceived);
-            InetSocketAddress local = localAddress();
+            InetSocketAddress local = (InetSocketAddress) localAddress();
             if (received == 1) {
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(buf, local);

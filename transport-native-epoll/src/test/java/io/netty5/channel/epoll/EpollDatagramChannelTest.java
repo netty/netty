@@ -62,7 +62,7 @@ public class EpollDatagramChannelTest {
         try {
             Socket socket = Socket.newSocketDgram();
             EpollDatagramChannel channel = new EpollDatagramChannel(group.next(), socket.intValue());
-            InetSocketAddress localAddress = channel.localAddress();
+            SocketAddress localAddress = channel.localAddress();
             assertTrue(channel.active);
             assertNotNull(localAddress);
             assertEquals(socket.localAddress(), localAddress);

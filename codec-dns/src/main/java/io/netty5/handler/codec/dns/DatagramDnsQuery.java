@@ -26,10 +26,10 @@ import java.net.SocketAddress;
  */
 @UnstableApi
 public class DatagramDnsQuery extends DefaultDnsQuery
-        implements AddressedEnvelope<DatagramDnsQuery, InetSocketAddress> {
+        implements AddressedEnvelope<DatagramDnsQuery, SocketAddress> {
 
-    private final InetSocketAddress sender;
-    private final InetSocketAddress recipient;
+    private final SocketAddress sender;
+    private final SocketAddress recipient;
 
     /**
      * Creates a new instance with the {@link DnsOpCode#QUERY} {@code opCode}.
@@ -52,7 +52,7 @@ public class DatagramDnsQuery extends DefaultDnsQuery
      * @param opCode the {@code opCode} of the DNS query
      */
     public DatagramDnsQuery(
-            InetSocketAddress sender, InetSocketAddress recipient, int id, DnsOpCode opCode) {
+            SocketAddress sender, SocketAddress recipient, int id, DnsOpCode opCode) {
         super(id, opCode);
 
         if (recipient == null && sender == null) {
@@ -69,12 +69,12 @@ public class DatagramDnsQuery extends DefaultDnsQuery
     }
 
     @Override
-    public InetSocketAddress sender() {
+    public SocketAddress sender() {
         return sender;
     }
 
     @Override
-    public InetSocketAddress recipient() {
+    public SocketAddress recipient() {
         return recipient;
     }
 

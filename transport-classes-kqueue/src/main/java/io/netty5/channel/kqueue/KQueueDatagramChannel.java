@@ -31,7 +31,6 @@ import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -45,7 +44,6 @@ import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 
 import static io.netty5.channel.kqueue.BsdSocket.newSocketDgram;
@@ -53,7 +51,7 @@ import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class KQueueDatagramChannel
-        extends AbstractKQueueDatagramChannel<UnixChannel, InetSocketAddress, InetSocketAddress>
+        extends AbstractKQueueDatagramChannel<UnixChannel, SocketAddress, SocketAddress>
         implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDatagramChannel.class);
     private static final String EXPECTED_TYPES =
@@ -94,133 +92,57 @@ public final class KQueueDatagramChannel
         return connected;
     }
 
+    private <V> Future<V> newMulticastNotSupportedFuture() {
+        return newFailedFuture(new UnsupportedOperationException("Multicast not supported"));
+    }
+
     @Override
     public Future<Void> joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
-        try {
-            NetworkInterface iface = config().getNetworkInterface();
-            if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
-            }
-            return joinGroup(multicastAddress, iface, null, promise);
-        } catch (SocketException e) {
-            return promise.setFailure(e).asFuture();
-        }
-    }
-
-    @Override
-    public Future<Void> joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            Promise<Void> promise) {
-        return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
     }
 
     @Override
     public Future<Void> joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return joinGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(
-            final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final Promise<Void> promise) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise.asFuture();
+        return newMulticastNotSupportedFuture();
     }
 
     @Override
     public Future<Void> leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
-        try {
-            return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
-        } catch (SocketException e) {
-            return promise.setFailure(e).asFuture();
-        }
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
-            InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, Promise<Void> promise) {
-        return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
     }
 
     @Override
     public Future<Void> leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
-            final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
-            final Promise<Void> promise) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise.asFuture();
+        return newMulticastNotSupportedFuture();
     }
 
     @Override
     public Future<Void> block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
-    }
-
-    @Override
-    public Future<Void> block(
-            final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress sourceToBlock, final Promise<Void> promise) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(sourceToBlock, "sourceToBlock");
         requireNonNull(networkInterface, "networkInterface");
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise.asFuture();
+
+        return newMulticastNotSupportedFuture();
     }
 
     @Override
     public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
-    }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
 
-    @Override
-    public Future<Void> block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
-        try {
-            return block(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    sourceToBlock, promise);
-        } catch (Throwable e) {
-            return promise.setFailure(e).asFuture();
-        }
+        return newMulticastNotSupportedFuture();
     }
 
     @Override
@@ -289,17 +211,15 @@ public final class KQueueDatagramChannel
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            Buffer content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                    new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
-        }
-
-        if (msg instanceof Buffer) {
+            if (packet.recipient() instanceof InetSocketAddress) {
+                Buffer content = packet.content();
+                return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
+                        new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
+            }
+        } else if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
-        }
-
-        if (msg instanceof AddressedEnvelope) {
+        } else if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
             SocketAddress recipient = e.recipient();

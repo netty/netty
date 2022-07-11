@@ -80,29 +80,30 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         assertEquals(iface, sc.config().getNetworkInterface());
         assertInterfaceAddress(iface, sc.config().getInterface());
 
-        InetSocketAddress addr = sc.localAddress();
+        InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
         cb.localAddress(addr.getPort());
 
         DatagramChannel cc = (DatagramChannel) cb.bind().asStage().get();
         assertEquals(iface, cc.config().getNetworkInterface());
         assertInterfaceAddress(iface, cc.config().getInterface());
 
-        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), addr.getPort());
+        InetAddress groupAddress = SocketUtils.addressByName(groupAddress());
+        cc.joinGroup(groupAddress, iface, null).asStage().sync();
 
-        cc.joinGroup(groupAddress, iface).asStage().sync();
+        InetSocketAddress destAddress = new InetSocketAddress(groupAddress, addr.getPort());
 
-        BufferAllocator allocator = sc.bufferAllocator();
-        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).asStage().sync();
+                BufferAllocator allocator = sc.bufferAllocator();
+        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), destAddress)).asStage().sync();
         assertTrue(mhandler.await());
 
         // leave the group
-        cc.leaveGroup(groupAddress, iface).asStage().sync();
+        cc.leaveGroup(groupAddress, iface, null).asStage().sync();
 
         // sleep a second to make sure we left the group
         Thread.sleep(1000);
 
         // we should not receive a message anymore as we left the group before
-        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), groupAddress)).asStage().sync();
+        sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), destAddress)).asStage().sync();
         mhandler.await();
 
         cc.config().setLoopbackModeDisabled(false);
