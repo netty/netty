@@ -163,7 +163,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelRegistered() {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelRegistered(this);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                    ((DefaultChannelPipeline.HeadContext) handler).channelRegistered(this);
+                } else if (handler instanceof DefaultChannelPipeline.TailContext) {
+                    ((DefaultChannelPipeline.TailContext) handler).channelRegistered(null);
+                } else {
+                    ((ChannelInboundHandler) handler).channelRegistered(this);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -195,7 +202,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelUnregistered() {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelUnregistered(this);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                    ((DefaultChannelPipeline.HeadContext) handler).channelUnregistered(this);
+                } else if (handler instanceof DefaultChannelPipeline.TailContext) {
+                    ((DefaultChannelPipeline.TailContext) handler).channelUnregistered(null);
+                } else {
+                    ((ChannelInboundHandler) handler).channelUnregistered(this);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -227,7 +241,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelActive() {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelActive(this);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                    ((DefaultChannelPipeline.HeadContext) handler).channelActive(this);
+                } else  if (handler instanceof DefaultChannelPipeline.TailContext) {
+                    ((DefaultChannelPipeline.TailContext) handler).channelActive(null);
+                } else {
+                    ((ChannelInboundHandler) handler).channelActive(this);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -259,7 +280,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelInactive() {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelInactive(this);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                    ((DefaultChannelPipeline.HeadContext) handler).channelInactive(this);
+                } else if (handler instanceof DefaultChannelPipeline.TailContext) {
+                    ((DefaultChannelPipeline.TailContext) handler).channelInactive(null);
+                } else {
+                    ((ChannelInboundHandler) handler).channelInactive(this);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -343,7 +371,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeUserEventTriggered(Object event) {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.TailContext) {
+                    ((DefaultChannelPipeline.TailContext) handler).userEventTriggered(null, event);
+                } else {
+                    ((ChannelInboundHandler) handler).userEventTriggered(this, event);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -376,7 +409,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelRead(Object msg) {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelRead(this, msg);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                    ((DefaultChannelPipeline.HeadContext) handler).channelRead(this, msg);
+                } else {
+                    ((ChannelInboundHandler) handler).channelRead(this, msg);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -407,7 +445,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelReadComplete() {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelReadComplete(this);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                    ((DefaultChannelPipeline.HeadContext) handler).channelReadComplete(this);
+                } else if (handler instanceof DefaultChannelPipeline.TailContext) {
+                    ((DefaultChannelPipeline.TailContext) handler).channelReadComplete(null);
+                } else {
+                    ((ChannelInboundHandler) handler).channelReadComplete(this);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -438,7 +483,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelWritabilityChanged() {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
+                final ChannelHandler handler = handler();
+                if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                    ((DefaultChannelPipeline.HeadContext) handler).channelWritabilityChanged(this);
+                } else if (handler instanceof DefaultChannelPipeline.TailContext) {
+                    ((DefaultChannelPipeline.TailContext) handler).channelWritabilityChanged(null);
+                } else {
+                    ((ChannelInboundHandler) handler).channelWritabilityChanged(this);
+                }
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -714,7 +766,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeWrite0(Object msg, ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) handler()).write(this, msg, promise);
+            final ChannelHandler handler = handler();
+            if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                ((DefaultChannelPipeline.HeadContext) handler).write(null, msg, promise);
+            } else {
+                ((ChannelOutboundHandler) handler).write(this, msg, promise);
+            }
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -747,7 +804,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeFlush0() {
         try {
-            ((ChannelOutboundHandler) handler()).flush(this);
+            final ChannelHandler handler = handler();
+            if (handler instanceof DefaultChannelPipeline.HeadContext) {
+                ((DefaultChannelPipeline.HeadContext) handler).flush(null);
+            } else {
+                ((ChannelOutboundHandler) handler).flush(this);
+            }
         } catch (Throwable t) {
             invokeExceptionCaught(t);
         }
