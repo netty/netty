@@ -413,8 +413,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     private static void setChannelOption(
             Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) {
         try {
-            if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
+            if (!channel.isOptionSupported(option)) {
                 logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
+            } else {
+                channel.setOption((ChannelOption<Object>) option, value);
             }
         } catch (Throwable t) {
             logger.warn(

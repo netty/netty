@@ -43,15 +43,15 @@ public class DefaultMaxMessagesRecvBufferAllocatorTest {
         RecvBufferAllocator.Handle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        handle.reset(channel.config());
+        handle.reset();
         handle.incMessagesRead(1);
-        assertFalse(handle.continueReading());
+        assertFalse(handle.continueReading(true));
 
-        handle.reset(channel.config());
+        handle.reset();
         handle.incMessagesRead(1);
         handle.attemptedBytesRead(1);
         handle.lastBytesRead(1);
-        assertTrue(handle.continueReading());
+        assertTrue(handle.continueReading(true));
         channel.finish();
     }
 
@@ -61,16 +61,16 @@ public class DefaultMaxMessagesRecvBufferAllocatorTest {
         RecvBufferAllocator.Handle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        handle.reset(channel.config());
+        handle.reset();
         handle.incMessagesRead(1);
-        assertTrue(handle.continueReading());
+        assertTrue(handle.continueReading(true));
         handle.incMessagesRead(1);
-        assertFalse(handle.continueReading());
+        assertFalse(handle.continueReading(true));
 
-        handle.reset(channel.config());
+        handle.reset();
         handle.attemptedBytesRead(0);
         handle.lastBytesRead(0);
-        assertTrue(handle.continueReading());
+        assertTrue(handle.continueReading(true));
         channel.finish();
     }
 }

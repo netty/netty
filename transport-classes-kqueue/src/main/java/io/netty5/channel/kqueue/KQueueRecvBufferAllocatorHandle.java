@@ -18,7 +18,6 @@ package io.netty5.channel.kqueue;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.RecvBufferAllocator.DelegatingHandle;
 import io.netty5.channel.RecvBufferAllocator.Handle;
 import io.netty5.util.UncheckedBooleanSupplier;
@@ -26,7 +25,7 @@ import io.netty5.util.UncheckedBooleanSupplier;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
+abstract class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
     private boolean overrideGuess;
     private boolean readEOF;
@@ -42,10 +41,12 @@ final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
     }
 
     @Override
-    public void reset(ChannelConfig config) {
-        overrideGuess = ((KQueueChannelConfig) config).getRcvAllocTransportProvidesGuess();
-        delegate().reset(config);
+    public void reset() {
+        overrideGuess = getRcvAllocTransportProvidesGuess();
+        delegate().reset();
     }
+
+    protected abstract boolean getRcvAllocTransportProvidesGuess();
 
     @Override
     public Buffer allocate(BufferAllocator alloc) {
@@ -66,9 +67,9 @@ final class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
     }
 
     @Override
-    public boolean continueReading() {
+    public boolean continueReading(boolean autoRead) {
         // We must override the supplier which determines if there maybe more data to read.
-        return continueReading(defaultMaybeMoreDataSupplier);
+        return continueReading(autoRead, defaultMaybeMoreDataSupplier);
     }
 
     void readEOF() {

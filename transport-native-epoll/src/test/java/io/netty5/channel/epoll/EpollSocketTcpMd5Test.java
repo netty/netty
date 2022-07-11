@@ -70,9 +70,9 @@ public class EpollSocketTcpMd5Test {
 
     @Test
     public void testServerSocketChannelOption() throws Exception {
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG,
+        server.setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.emptyMap());
+        server.setOption(EpollChannelOption.TCP_MD5SIG, Collections.emptyMap());
     }
 
     @Test
@@ -85,16 +85,16 @@ public class EpollSocketTcpMd5Test {
                 .bind(new InetSocketAddress(0))
                 .asStage().get();
 
-        ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
+        ch.setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
-        ch.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.emptyMap());
+        ch.setOption(EpollChannelOption.TCP_MD5SIG, Collections.emptyMap());
 
         ch.close().asStage().sync();
     }
 
     @Test
     public void testKeyMismatch() throws Throwable {
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG,
+        server.setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 
         ExecutionException completion = assertThrows(ExecutionException.class, () -> {
@@ -115,7 +115,7 @@ public class EpollSocketTcpMd5Test {
 
     @Test
     public void testKeyMatch() throws Exception {
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG,
+        server.setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 
         EpollSocketChannel client = (EpollSocketChannel) new Bootstrap()

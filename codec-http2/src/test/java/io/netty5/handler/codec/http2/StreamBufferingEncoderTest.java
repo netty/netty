@@ -16,9 +16,9 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultMessageSizeEstimator;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
@@ -88,9 +88,6 @@ public class StreamBufferingEncoderTest {
     private Channel channel;
 
     @Mock
-    private ChannelConfig config;
-
-    @Mock
     private EventExecutor executor;
 
     /**
@@ -145,11 +142,11 @@ public class StreamBufferingEncoderTest {
         when(ctx.executor()).thenReturn(executor);
         when(ctx.close()).thenReturn(newPromise().asFuture());
         when(channel.isActive()).thenReturn(false);
-        when(channel.config()).thenReturn(config);
         when(channel.isWritable()).thenReturn(true);
         when(channel.writableBytes()).thenReturn(Long.MAX_VALUE);
-        when(config.getWriteBufferWaterMark()).thenReturn(new WriteBufferWaterMark(1024, Integer.MAX_VALUE));
-        when(config.getMessageSizeEstimator()).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
+        when(channel.getOption(ChannelOption.WRITE_BUFFER_WATER_MARK)).thenReturn(
+                new WriteBufferWaterMark(1024, Integer.MAX_VALUE));
+        when(channel.getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR)).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
         ChannelMetadata metadata = new ChannelMetadata(false, 16);
         when(channel.metadata()).thenReturn(metadata);
         handler.handlerAdded(ctx);

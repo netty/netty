@@ -16,6 +16,7 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.channel.ChannelException;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.unix.Buffer;
@@ -37,10 +38,10 @@ public class EpollChannelConfigTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
-            channel.config().getSoLinger();
+            channel.getOption(ChannelOption.SO_LINGER);
             channel.fd().close();
             try {
-                channel.config().getSoLinger();
+                channel.getOption(ChannelOption.SO_LINGER);
                 fail();
             } catch (ChannelException e) {
                 // expected
@@ -56,10 +57,10 @@ public class EpollChannelConfigTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
-            channel.config().setKeepAlive(true);
+            channel.setOption(ChannelOption.SO_KEEPALIVE, true);
             channel.fd().close();
             try {
-                channel.config().setKeepAlive(true);
+                channel.setOption(ChannelOption.SO_KEEPALIVE, true);
                 fail();
             } catch (ChannelException e) {
                 // expected
@@ -77,9 +78,9 @@ public class EpollChannelConfigTest {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
             IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 1, 2);
             Integer zero = 0;
-            assertEquals(zero, channel.config().getOption(opt));
-            channel.config().setOption(opt, 1);
-            assertNotEquals(zero, channel.config().getOption(opt));
+            assertEquals(zero, channel.getOption(opt));
+            channel.setOption(opt, 1);
+            assertNotEquals(zero, channel.getOption(opt));
             channel.fd().close();
         } finally {
             group.shutdownGracefully();
@@ -98,13 +99,13 @@ public class EpollChannelConfigTest {
 
             ByteBuffer disabled = Buffer.allocateDirectWithNativeOrder(4);
             disabled.putInt(0).flip();
-            assertEquals(disabled, channel.config().getOption(opt));
+            assertEquals(disabled, channel.getOption(opt));
 
             ByteBuffer enabled = Buffer.allocateDirectWithNativeOrder(4);
             enabled.putInt(1).flip();
 
-            channel.config().setOption(opt, enabled);
-            assertNotEquals(disabled, channel.config().getOption(opt));
+            channel.setOption(opt, enabled);
+            assertNotEquals(disabled, channel.getOption(opt));
             channel.fd().close();
         } finally {
             group.shutdownGracefully();

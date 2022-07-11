@@ -16,7 +16,6 @@
 package io.netty5.bootstrap;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -233,7 +232,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             // not be able to load the class because of the file limit it already reached.
             //
             // See https://github.com/netty/netty/issues/1328
-            enableAutoReadTask = () -> channel.config().setAutoRead(true);
+            enableAutoReadTask = () -> channel.setOption(ChannelOption.AUTO_READ, true);
         }
 
         @Override
@@ -278,11 +277,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
         @Override
         public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            final ChannelConfig config = ctx.channel().config();
-            if (config.isAutoRead()) {
+            if (ctx.channel().getOption(ChannelOption.AUTO_READ)) {
                 // stop accept new connections for 1 second to allow the channel to recover
                 // See https://github.com/netty/netty/issues/1328
-                config.setAutoRead(false);
+                ctx.channel().setOption(ChannelOption.AUTO_READ, false);
                 ctx.channel().executor().schedule(enableAutoReadTask, 1, TimeUnit.SECONDS);
             }
             // still let the exceptionCaught event flow through the pipeline to give the user

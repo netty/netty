@@ -22,7 +22,7 @@ import io.netty5.util.UncheckedBooleanSupplier;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
 /**
- * Default implementation of {@link MaxMessagesRecvBufferAllocator} which respects {@link ChannelConfig#isAutoRead()}
+ * Default implementation of {@link MaxMessagesRecvBufferAllocator} which respects {@link ChannelOption#AUTO_READ}
  * and also prevents overflow.
  */
 public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessagesRecvBufferAllocator {
@@ -88,10 +88,9 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
     }
 
     /**
-     * Focuses on enforcing the maximum messages per read condition for {@link #continueReading()}.
+     * Focuses on enforcing the maximum messages per read condition for {@link #continueReading(boolean)}.
      */
     public abstract class MaxMessageHandle implements Handle {
-        private ChannelConfig config;
         private int maxMessagePerRead;
         private int totalMessages;
         private int totalBytesRead;
@@ -106,11 +105,10 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
         };
 
         /**
-         * Only {@link ChannelConfig#getMaxMessagesPerRead()} is used.
+         * Only {@link ChannelOption#MAX_MESSAGES_PER_READ} is used.
          */
         @Override
-        public void reset(ChannelConfig config) {
-            this.config = config;
+        public void reset() {
             maxMessagePerRead = maxMessagesPerRead();
             totalMessages = totalBytesRead = 0;
         }
@@ -139,13 +137,13 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
         }
 
         @Override
-        public boolean continueReading() {
-            return continueReading(defaultMaybeMoreSupplier);
+        public boolean continueReading(boolean autoRead) {
+            return continueReading(autoRead, defaultMaybeMoreSupplier);
         }
 
         @Override
-        public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-            return config.isAutoRead() &&
+        public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+            return autoRead &&
                    (!respectMaybeMoreData || maybeMoreDataSupplier.get()) &&
                    totalMessages < maxMessagePerRead && (ignoreBytesRead || totalBytesRead > 0);
         }

@@ -24,6 +24,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultChannelId;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -444,8 +445,8 @@ public class SslHandlerTest {
                         }
                     }
             );
-            ch.config().setAutoRead(false);
-            assertFalse(ch.config().isAutoRead());
+            ch.setOption(ChannelOption.AUTO_READ, false);
+            assertFalse(ch.getOption(ChannelOption.AUTO_READ));
 
             ch.register();
 

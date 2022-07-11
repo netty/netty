@@ -16,7 +16,6 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -24,6 +23,7 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
+import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.unix.UnixChannel;
 
 import java.net.SocketAddress;
@@ -51,7 +51,7 @@ public abstract class AbstractEpollServerChannel
 
     AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                Class<? extends Channel> childChannelType, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, fd, active);
+        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(), fd, active);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 
@@ -61,17 +61,9 @@ public abstract class AbstractEpollServerChannel
     }
 
     @Override
-    public final ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
     protected final R remoteAddress0() {
         return null;
     }
-
-    @Override
-    public abstract EpollServerChannelConfig config();
 
     @Override
     protected final void doWrite(ChannelOutboundBuffer in) {
@@ -88,15 +80,14 @@ public abstract class AbstractEpollServerChannel
     @Override
     final void epollInReady() {
         assert executor().inEventLoop();
-        final ChannelConfig config = config();
-        if (shouldBreakEpollInReady(config)) {
+        if (shouldBreakEpollInReady()) {
             clearEpollIn0();
             return;
         }
         final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
         final ChannelPipeline pipeline = pipeline();
-        allocHandle.reset(config);
+        allocHandle.reset();
         allocHandle.attemptedBytesRead(1);
         epollInBefore();
 
@@ -117,7 +108,7 @@ public abstract class AbstractEpollServerChannel
                     readPending = false;
                     pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
                                                              acceptedAddress[0]));
-                } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+                } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
             } catch (Throwable t) {
                 exception = t;
             }
@@ -129,7 +120,7 @@ public abstract class AbstractEpollServerChannel
             }
             readIfIsAutoRead();
         } finally {
-            epollInFinally(config);
+            epollInFinally();
         }
     }
 

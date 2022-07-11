@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http.websocketx;
 
 
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -83,7 +84,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     private static void readIfNeeded(ChannelHandlerContext ctx) {
-        if (!ctx.channel().config().isAutoRead()) {
+        if (!ctx.channel().getOption(ChannelOption.AUTO_READ)) {
             ctx.read();
         }
     }

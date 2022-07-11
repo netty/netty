@@ -17,7 +17,6 @@ package io.netty5.channel.epoll;
 
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
@@ -25,7 +24,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,33 +55,19 @@ public class EpollServerSocketChannelConfigTest {
 
     @Test
     public void testTcpDeferAccept() {
-        ch.config().setTcpDeferAccept(0);
-        assertEquals(0, ch.config().getTcpDeferAccept());
-        ch.config().setTcpDeferAccept(10);
+        ch.setOption(EpollChannelOption.TCP_DEFER_ACCEPT, 0);
+        assertEquals(0,  ch.getOption(EpollChannelOption.TCP_DEFER_ACCEPT));
+        ch.setOption(EpollChannelOption.TCP_DEFER_ACCEPT, 10);
         // The returned value may be bigger then what we set.
         // See https://www.spinics.net/lists/netdev/msg117330.html
-        assertTrue(10 <= ch.config().getTcpDeferAccept());
-    }
-
-    @Test
-    public void testReusePort() {
-        ch.config().setReusePort(false);
-        assertFalse(ch.config().isReusePort());
-        ch.config().setReusePort(true);
-        assertTrue(ch.config().isReusePort());
+        assertTrue(10 <= ch.getOption(EpollChannelOption.TCP_DEFER_ACCEPT));
     }
 
     @Test
     public void testFreeBind() {
-        ch.config().setFreeBind(false);
-        assertFalse(ch.config().isFreeBind());
-        ch.config().setFreeBind(true);
-        assertTrue(ch.config().isFreeBind());
-    }
-
-    @Test
-    public void getGetOptions() {
-        Map<ChannelOption<?>, Object> map = ch.config().getOptions();
-        assertFalse(map.isEmpty());
+        ch.setOption(EpollChannelOption.IP_FREEBIND, false);
+        assertFalse(ch.getOption(EpollChannelOption.IP_FREEBIND));
+        ch.setOption(EpollChannelOption.IP_FREEBIND, true);
+        assertTrue(ch.getOption(EpollChannelOption.IP_FREEBIND));
     }
 }

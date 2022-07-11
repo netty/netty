@@ -201,15 +201,8 @@ public class AbstractChannelTest {
     private static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
         private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
 
-        private final ChannelConfig config = new DefaultChannelConfig(this);
-
         TestChannel(EventLoop eventLoop) {
-            super(null, eventLoop);
-        }
-
-        @Override
-        public ChannelConfig config() {
-            return config;
+            super(null, eventLoop, TEST_METADATA);
         }
 
         @Override
@@ -220,11 +213,6 @@ public class AbstractChannelTest {
         @Override
         public boolean isActive() {
             return true;
-        }
-
-        @Override
-        public ChannelMetadata metadata() {
-            return TEST_METADATA;
         }
 
         @Override

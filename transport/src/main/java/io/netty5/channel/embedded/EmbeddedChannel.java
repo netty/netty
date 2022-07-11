@@ -17,11 +17,11 @@ package io.netty5.channel.embedded;
 
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
+import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelId;
@@ -29,7 +29,6 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.util.ReferenceCountUtil;
@@ -65,9 +64,6 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
     private final FutureListener<Void> recordExceptionListener = this::recordException;
-
-    private final ChannelMetadata metadata;
-    private final ChannelConfig config;
 
     private Queue<Object> inboundMessages;
     private Queue<Object> outboundMessages;
@@ -179,28 +175,8 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, new EmbeddedEventLoop(), channelId);
-        metadata = metadata(hasDisconnect);
-        config = new DefaultChannelConfig(this);
+        super(parent, new EmbeddedEventLoop(), metadata(hasDisconnect), new AdaptiveRecvBufferAllocator(), channelId);
         setup(register, handlers);
-    }
-
-    /**
-     * Create a new instance with the channel ID set to the given ID and the pipeline
-     * initialized with the specified handlers.
-     *
-     * @param channelId the {@link ChannelId} that will be used to identify this channel
-     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@link false} otherwise.
-     * @param config the {@link ChannelConfig} which will be returned by {@link #config()}.
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
-     */
-    public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
-                           final ChannelHandler... handlers) {
-        super(null, new EmbeddedEventLoop(), channelId);
-        metadata = metadata(hasDisconnect);
-        this.config = requireNonNull(config, "config");
-        setup(true, handlers);
     }
 
     private static ChannelMetadata metadata(boolean hasDisconnect) {
@@ -242,16 +218,6 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     @Override
     protected final DefaultChannelPipeline newChannelPipeline() {
         return new EmbeddedChannelPipeline(this);
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return metadata;
-    }
-
-    @Override
-    public ChannelConfig config() {
-        return config;
     }
 
     @Override
@@ -556,7 +522,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     @Override
     public final Future<Void> disconnect() {
         Future<Void> future = super.disconnect();
-        finishPendingTasks(!metadata.hasDisconnect());
+        finishPendingTasks(!metadata().hasDisconnect());
         return future;
     }
 
@@ -759,7 +725,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
 
     @Override
     protected void doDisconnect() throws Exception {
-        if (!metadata.hasDisconnect()) {
+        if (!metadata().hasDisconnect()) {
             doClose();
         }
     }

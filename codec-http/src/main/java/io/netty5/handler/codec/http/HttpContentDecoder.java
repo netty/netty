@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 import io.netty5.handler.codec.compression.Decompressor;
@@ -207,7 +208,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         try {
             ctx.fireChannelReadComplete();
         } finally {
-            if (needRead && !ctx.channel().config().isAutoRead()) {
+            if (needRead && !ctx.channel().getOption(ChannelOption.AUTO_READ)) {
                 ctx.read();
             }
         }

@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +47,7 @@ public class HttpContentDecompressorTest {
             }
         });
 
-        channel.config().setAutoRead(false);
+        channel.setOption(ChannelOption.AUTO_READ, false);
 
         readCalled.set(0);
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);

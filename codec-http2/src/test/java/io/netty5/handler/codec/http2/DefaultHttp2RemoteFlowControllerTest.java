@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -74,9 +74,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private Channel channel;
 
     @Mock
-    private ChannelConfig config;
-
-    @Mock
     private EventExecutor executor;
 
     @Mock
@@ -94,8 +91,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         when(ctx.<Void>newPromise()).thenReturn(promise);
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
         setChannelWritability(true);
-        when(config.getWriteBufferWaterMark()).thenReturn(new WriteBufferWaterMark(0, 0));
-        when(channel.config()).thenReturn(config);
+        when(channel.getOption(ChannelOption.WRITE_BUFFER_WATER_MARK)).thenReturn(new WriteBufferWaterMark(512, 1024));
         when(executor.inEventLoop()).thenReturn(true);
 
         initConnectionAndController();

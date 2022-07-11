@@ -40,18 +40,18 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
      */
     protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     Class<? extends Channel> childChannelType) {
-        super(null, eventLoop);
+        this(eventLoop, childEventLoopGroup, METADATA, childChannelType);
+    }
+
+    protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ChannelMetadata metadata,
+                                    Class<? extends Channel> childChannelType) {
+        super(null, eventLoop, metadata, new ServerChannelRecvBufferAllocator());
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 
     @Override
     public final EventLoopGroup childEventLoopGroup() {
         return childEventLoopGroup;
-    }
-
-    @Override
-    public final ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

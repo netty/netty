@@ -17,10 +17,9 @@ package io.netty5.channel.local;
 
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.AbstractServerChannel;
-import io.netty5.channel.ChannelConfig;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.RecvBufferAllocator;
@@ -37,8 +36,6 @@ import java.util.Queue;
 public class LocalServerChannel extends AbstractServerChannel<LocalChannel, LocalAddress, LocalAddress>
         implements LocalChannelUnsafe {
 
-    private final ChannelConfig config =
-            new DefaultChannelConfig(this, new ServerChannelRecvBufferAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<>();
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
@@ -46,12 +43,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
 
     public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         super(eventLoop, childEventLoopGroup, LocalChannel.class);
-        config().setBufferAllocator(DefaultBufferAllocators.onHeapAllocator());
-    }
-
-    @Override
-    public ChannelConfig config() {
-        return config;
+        setOption(ChannelOption.BUFFER_ALLOCATOR, DefaultBufferAllocators.onHeapAllocator());
     }
 
     @Override
@@ -114,7 +106,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
 
     private void readInbound() {
         RecvBufferAllocator.Handle handle = recvBufAllocHandle();
-        handle.reset(config());
+        handle.reset();
         ChannelPipeline pipeline = pipeline();
         do {
             Object m = inboundBuffer.poll();
@@ -122,7 +114,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
                 break;
             }
             pipeline.fireChannelRead(m);
-        } while (handle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+        } while (handle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
         pipeline.fireChannelReadComplete();
         readIfIsAutoRead();

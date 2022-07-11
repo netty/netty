@@ -19,6 +19,7 @@ package io.netty5.handler.codec.http.websocketx;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.flow.FlowControlHandler;
 import io.netty5.util.Resource;
@@ -67,7 +68,7 @@ public class WebSocketProtocolHandlerTest {
         String text4 = "Hello, world #4";
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.config().setAutoRead(false);
+        channel.setOption(ChannelOption.AUTO_READ, false);
         channel.pipeline().addLast(new FlowControlHandler());
         channel.pipeline().addLast(new WebSocketProtocolHandler() { });
 

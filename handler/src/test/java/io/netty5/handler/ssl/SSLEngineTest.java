@@ -24,6 +24,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -717,7 +718,7 @@ public abstract class SSLEngineTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
 
                 ChannelPipeline p = ch.pipeline();
                 SslHandler handler = !param.delegate ? serverSslCtx.newHandler(ch.bufferAllocator()) :
@@ -764,7 +765,7 @@ public abstract class SSLEngineTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
                 ChannelPipeline p = ch.pipeline();
 
                 SslHandler handler = !param.delegate ? clientSslCtx.newHandler(ch.bufferAllocator()) :
@@ -892,7 +893,7 @@ public abstract class SSLEngineTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
                 ChannelPipeline p = ch.pipeline();
 
                 SslHandler handler = !param.delegate ? serverSslCtx.newHandler(ch.bufferAllocator()) :
@@ -937,7 +938,7 @@ public abstract class SSLEngineTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
                 ChannelPipeline p = ch.pipeline();
 
                 SslHandler sslHandler = !param.delegate ?
@@ -1083,7 +1084,7 @@ public abstract class SSLEngineTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
 
                 ChannelPipeline p = ch.pipeline();
                 final SSLEngine engine = wrapEngine(serverSslCtx.newEngine(ch.bufferAllocator()));
@@ -1126,7 +1127,7 @@ public abstract class SSLEngineTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
 
                 final SslHandler handler = !param.delegate ?
                         clientSslCtx.newHandler(ch.bufferAllocator()) :
@@ -1373,7 +1374,7 @@ public abstract class SSLEngineTest {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
-                        ch.config().setBufferAllocator(new TestBufferAllocator(param.type));
+                        ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
 
                         ChannelPipeline p = ch.pipeline();
 
@@ -1431,7 +1432,7 @@ public abstract class SSLEngineTest {
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
-                        ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
+                        ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
 
                         ChannelPipeline p = ch.pipeline();
 
@@ -1733,7 +1734,7 @@ public abstract class SSLEngineTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(type));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(type));
 
                 ChannelPipeline p = ch.pipeline();
 
@@ -1763,7 +1764,7 @@ public abstract class SSLEngineTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(type));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(type));
 
                 ChannelPipeline p = ch.pipeline();
 
@@ -1821,7 +1822,7 @@ public abstract class SSLEngineTest {
         serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
 
                 SslHandler sslHandler = !param.delegate?
                         serverSslCtx.newHandler(ch.bufferAllocator()) :
@@ -1900,7 +1901,7 @@ public abstract class SSLEngineTest {
         clientChannel = cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
+                ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
                 ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.bufferAllocator()))));
             }
 
@@ -3928,7 +3929,7 @@ public abstract class SSLEngineTest {
             serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.config().setBufferAllocator(new TestBufferAllocator(param.type()));
+                    ch.setOption(ChannelOption.BUFFER_ALLOCATOR, new TestBufferAllocator(param.type()));
 
                     SslHandler sslHandler = !param.delegate()?
                             serverSslCtx.newHandler(ch.bufferAllocator()) :

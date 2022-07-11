@@ -17,9 +17,9 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ServerChannel;
@@ -57,7 +57,7 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
  *
  * <p>Outbound streams are supported via the {@link Http2StreamChannelBootstrap}.
  *
- * <p>{@link ChannelConfig#setMaxMessagesPerRead(int)} and {@link ChannelConfig#setAutoRead(boolean)} are supported.
+ * <p>{@link ChannelOption#MAX_MESSAGES_PER_READ} and {@link ChannelOption#AUTO_READ} are supported.
  *
  * <h3>Resources</h3>
  *

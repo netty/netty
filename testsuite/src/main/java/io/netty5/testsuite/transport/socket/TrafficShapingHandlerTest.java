@@ -18,6 +18,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.handler.traffic.AbstractTrafficShapingHandler;
@@ -502,7 +503,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                 if (autoRead != null && isAutoRead != 2) {
                     if (isAutoRead != 0) {
                         loggerServer.info("Step: " + step + " Set AutoRead: " + (isAutoRead > 0));
-                        channel.config().setAutoRead(isAutoRead > 0);
+                        channel.setOption(ChannelOption.AUTO_READ, isAutoRead > 0);
                     } else {
                         loggerServer.info("Step: " + step + " AutoRead: NO");
                     }
@@ -525,7 +526,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                         }
                         executor.schedule(() -> {
                             loggerServer.info("Step: " + exactStep + " Reset AutoRead");
-                            channel.config().setAutoRead(true);
+                            channel.setOption(ChannelOption.AUTO_READ, true);
                         }, wait, TimeUnit.MILLISECONDS);
                     } else {
                         if (isAutoRead > 1) {
@@ -533,7 +534,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                             final int exactStep = step;
                             executor.schedule(() -> {
                                 loggerServer.info("Step: " + exactStep + " Set AutoRead: True");
-                                channel.config().setAutoRead(true);
+                                channel.setOption(ChannelOption.AUTO_READ, true);
                             }, stepms + minimalms, TimeUnit.MILLISECONDS);
                         }
                     }

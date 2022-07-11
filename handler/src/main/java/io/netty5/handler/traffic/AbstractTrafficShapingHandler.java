@@ -17,9 +17,9 @@ package io.netty5.handler.traffic;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.FileRegion;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
@@ -421,36 +421,35 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
         @Override
         public void run() {
             Channel channel = ctx.channel();
-            ChannelConfig config = channel.config();
-            if (!config.isAutoRead() && isHandlerActive(ctx)) {
+            if (!channel.getOption(ChannelOption.AUTO_READ) && isHandlerActive(ctx)) {
                 // If AutoRead is False and Active is True, user make a direct setAutoRead(false)
                 // Then Just reset the status
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Not unsuspend: " + config.isAutoRead() + ':' +
+                    logger.debug("Not unsuspend: " + channel.getOption(ChannelOption.AUTO_READ) + ':' +
                             isHandlerActive(ctx));
                 }
                 channel.attr(READ_SUSPENDED).set(false);
             } else {
                 // Anything else allows the handler to reset the AutoRead
                 if (logger.isDebugEnabled()) {
-                    if (config.isAutoRead() && !isHandlerActive(ctx)) {
+                    if (channel.getOption(ChannelOption.AUTO_READ) && !isHandlerActive(ctx)) {
                         if (logger.isDebugEnabled()) {
-                            logger.debug("Unsuspend: " + config.isAutoRead() + ':' +
+                            logger.debug("Unsuspend: " + channel.getOption(ChannelOption.AUTO_READ) + ':' +
                                     isHandlerActive(ctx));
                         }
                     } else {
                         if (logger.isDebugEnabled()) {
-                            logger.debug("Normal unsuspend: " + config.isAutoRead() + ':'
+                            logger.debug("Normal unsuspend: " + channel.getOption(ChannelOption.AUTO_READ) + ':'
                                     + isHandlerActive(ctx));
                         }
                     }
                 }
                 channel.attr(READ_SUSPENDED).set(false);
-                config.setAutoRead(true);
+                channel.setOption(ChannelOption.AUTO_READ, true);
                 channel.read();
             }
             if (logger.isDebugEnabled()) {
-                logger.debug("Unsuspend final status => " + config.isAutoRead() + ':'
+                logger.debug("Unsuspend final status => " + channel.getOption(ChannelOption.AUTO_READ) + ':'
                         + isHandlerActive(ctx));
             }
         }
@@ -462,7 +461,7 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     void releaseReadSuspended(ChannelHandlerContext ctx) {
         Channel channel = ctx.channel();
         channel.attr(READ_SUSPENDED).set(false);
-        channel.config().setAutoRead(true);
+        channel.setOption(ChannelOption.AUTO_READ, true);
     }
 
     @Override
@@ -477,13 +476,12 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
                 Channel channel = ctx.channel();
-                ChannelConfig config = channel.config();
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Read suspend: " + wait + ':' + config.isAutoRead() + ':'
+                    logger.debug("Read suspend: " + wait + ':' + channel.getOption(ChannelOption.AUTO_READ) + ':'
                             + isHandlerActive(ctx));
                 }
-                if (config.isAutoRead() && isHandlerActive(ctx)) {
-                    config.setAutoRead(false);
+                if (channel.getOption(ChannelOption.AUTO_READ) && isHandlerActive(ctx)) {
+                    channel.setOption(ChannelOption.AUTO_READ, false);
                     channel.attr(READ_SUSPENDED).set(true);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
@@ -495,7 +493,7 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
                     }
                     ctx.executor().schedule(reopenTask, wait, TimeUnit.MILLISECONDS);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Suspend final status => " + config.isAutoRead() + ':'
+                        logger.debug("Suspend final status => " + channel.getOption(ChannelOption.AUTO_READ) + ':'
                                 + isHandlerActive(ctx) + " will reopened at: " + wait);
                     }
                 }
@@ -556,7 +554,8 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
             long wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime, now);
             if (wait >= MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Write suspend: " + wait + ':' + ctx.channel().config().isAutoRead() + ':'
+                    logger.debug("Write suspend: " + wait + ':'
+                            + ctx.channel().getOption(ChannelOption.AUTO_READ) + ':'
                             + isHandlerActive(ctx));
                 }
                 submitWrite(ctx, msg, size, wait, now, promise);

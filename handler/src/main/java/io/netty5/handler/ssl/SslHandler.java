@@ -24,7 +24,6 @@ import io.netty5.util.Resource;
 import io.netty5.buffer.api.StandardAllocationTypes;
 import io.netty5.channel.AbstractCoalescingBufferQueue;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -179,7 +178,7 @@ public class SslHandler extends ByteToMessageDecoder {
     private static final int STATE_PROCESS_TASK = 1 << 7;
     /**
      * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
-     * when {@link ChannelConfig#isAutoRead()} is {@code false}.
+     * when {@link ChannelOption#AUTO_READ} is {@code false}.
      */
     private static final int STATE_FIRE_CHANNEL_READ = 1 << 8;
     private static final int STATE_UNWRAP_REENTRY = 1 << 9;
@@ -1139,7 +1138,7 @@ public class SslHandler extends ByteToMessageDecoder {
 
     private void readIfNeeded(ChannelHandlerContext ctx) {
         // If handshake is not finished yet, we need more data.
-        if (!ctx.channel().config().isAutoRead() &&
+        if (!ctx.channel().getOption(ChannelOption.AUTO_READ) &&
                 (!isStateSet(STATE_FIRE_CHANNEL_READ) || !handshakePromise.isDone())) {
             // No auto-read used and no message passed through the ChannelPipeline or the handshake was not complete
             // yet, which means we need to trigger the read to ensure we not encounter any stalls.
@@ -1645,7 +1644,7 @@ public class SslHandler extends ByteToMessageDecoder {
         }
         if (isStateSet(STATE_READ_DURING_HANDSHAKE)) {
             clearState(STATE_READ_DURING_HANDSHAKE);
-            if (!ctx.channel().config().isAutoRead()) {
+            if (!ctx.channel().getOption(ChannelOption.AUTO_READ)) {
                 ctx.read();
             }
         }
@@ -1784,7 +1783,8 @@ public class SslHandler extends ByteToMessageDecoder {
         pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(16);
 
         setOpensslEngineSocketFd(channel);
-        boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
+        boolean fastOpen = channel.isOptionSupported(ChannelOption.TCP_FASTOPEN_CONNECT) &&
+                Boolean.TRUE.equals(channel.getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
         boolean active = channel.isActive();
         if (active || fastOpen) {
             // Explicitly flush the handshake only if the channel is already active.

@@ -18,6 +18,7 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
@@ -73,8 +74,8 @@ public class KQueueSocketChannelConfigTest {
         final int expected = Math.min(BSD_SND_LOW_AT_MAX, Math.abs(rand.nextInt()));
         final int actual;
         try {
-            ch.config().setSndLowAt(expected);
-            actual = ch.config().getSndLowAt();
+            ch.setOption(KQueueChannelOption.SO_SNDLOWAT, expected);
+            actual = ch.getOption(KQueueChannelOption.SO_SNDLOWAT);
         } catch (RuntimeException e) {
             throw new TestAbortedException("assumeNoException", e);
         }
@@ -84,7 +85,7 @@ public class KQueueSocketChannelConfigTest {
     @Test
     public void testInvalidHighSndLowAt() {
         try {
-            ch.config().setSndLowAt(Integer.MIN_VALUE);
+            ch.setOption(KQueueChannelOption.SO_SNDLOWAT, Integer.MIN_VALUE);
         } catch (ChannelException e) {
             return;
         } catch (RuntimeException e) {
@@ -95,17 +96,17 @@ public class KQueueSocketChannelConfigTest {
 
     @Test
     public void testTcpNoPush() {
-        ch.config().setTcpNoPush(false);
-        assertFalse(ch.config().isTcpNoPush());
-        ch.config().setTcpNoPush(true);
-        assertTrue(ch.config().isTcpNoPush());
+        ch.setOption(KQueueChannelOption.TCP_NOPUSH, false);
+        assertFalse(ch.getOption(KQueueChannelOption.TCP_NOPUSH));
+        ch.setOption(KQueueChannelOption.TCP_NOPUSH, true);
+        assertTrue(ch.getOption(KQueueChannelOption.TCP_NOPUSH));
     }
 
     @Test
     public void testSetOptionWhenClosed() throws Exception {
         ch.close().asStage().sync();
         try {
-            ch.config().setSoLinger(0);
+            ch.setOption(ChannelOption.SO_LINGER, 0);
             fail();
         } catch (ChannelException e) {
             assertTrue(e.getCause() instanceof ClosedChannelException);
@@ -116,7 +117,7 @@ public class KQueueSocketChannelConfigTest {
     public void testGetOptionWhenClosed() throws Exception {
         ch.close().asStage().sync();
         try {
-        ch.config().getSoLinger();
+        ch.getOption(ChannelOption.SO_LINGER);
             fail();
         } catch (ChannelException e) {
             assertTrue(e.getCause() instanceof ClosedChannelException);

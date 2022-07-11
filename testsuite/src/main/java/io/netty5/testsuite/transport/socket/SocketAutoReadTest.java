@@ -22,7 +22,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -137,7 +136,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                 Resource.dispose(msg);
             }
             if (count.incrementAndGet() == 1) {
-                ctx.channel().config().setAutoRead(false);
+                ctx.channel().setOption(ChannelOption.AUTO_READ, false);
             }
             if (callRead) {
                 // Test calling read in the EventLoop thread to ensure a read is eventually done.
@@ -169,7 +168,6 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         @Override
         public Handle newHandle() {
             return new Handle() {
-                private ChannelConfig config;
                 private int attemptedBytesRead;
                 private int lastBytesRead;
 
@@ -184,8 +182,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public void reset(ChannelConfig config) {
-                    this.config = config;
+                public void reset() {
                 }
 
                 @Override
@@ -214,13 +211,13 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading() {
-                    return config.isAutoRead();
+                public boolean continueReading(boolean autoRead) {
+                    return autoRead;
                 }
 
                 @Override
-                public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-                    return config.isAutoRead();
+                public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+                    return autoRead;
                 }
 
                 @Override

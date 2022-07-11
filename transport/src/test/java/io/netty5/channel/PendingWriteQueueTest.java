@@ -88,7 +88,7 @@ public class PendingWriteQueueTest {
     private static void assertWrite(ChannelHandler handler, int count) throws Exception {
         try (Buffer buffer = preferredAllocator().copyOf("Test", CharsetUtil.US_ASCII)) {
             final EmbeddedChannel channel = new EmbeddedChannel(handler);
-            channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(1, 3));
+            channel.setOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1, 3));
 
             Buffer[] buffers = new Buffer[count];
             for (int i = 0; i < buffers.length; i++) {
@@ -147,7 +147,7 @@ public class PendingWriteQueueTest {
     public void testRemoveAndFailAllReentrantFailAll() {
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext().executor(),
-                channel.config().getMessageSizeEstimator().newHandle());
+                channel.getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR).newHandle());
 
         Promise<Void> promise = channel.newPromise();
         promise.asFuture().addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
@@ -178,7 +178,7 @@ public class PendingWriteQueueTest {
 
         final ChannelHandlerContext lastCtx = channel.pipeline().lastContext();
         final PendingWriteQueue queue = new PendingWriteQueue(lastCtx.executor(),
-                channel.config().getMessageSizeEstimator().newHandle());
+                channel.getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR).newHandle());
 
         Promise<Void> promise = channel.newPromise();
         final Promise<Void> promise3 = channel.newPromise();
@@ -218,7 +218,7 @@ public class PendingWriteQueueTest {
         EmbeddedChannel channel = newChannel();
         final ChannelHandlerContext firstCtx = channel.pipeline().firstContext();
         final PendingWriteQueue queue = new PendingWriteQueue(firstCtx.executor(),
-                firstCtx.channel().config().getMessageSizeEstimator().newHandle());
+                firstCtx.channel().getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR).newHandle());
 
         Promise<Void> promise = channel.newPromise();
         final Promise<Void> promise3 = channel.newPromise();
@@ -252,7 +252,7 @@ public class PendingWriteQueueTest {
         EmbeddedChannel channel = newChannel();
         final ChannelHandlerContext firstCtx = channel.pipeline().firstContext();
         final PendingWriteQueue queue = new PendingWriteQueue(firstCtx.executor(),
-                firstCtx.channel().config().getMessageSizeEstimator().newHandle());
+                firstCtx.channel().getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR).newHandle());
 
         Promise<Void> promise = channel.newPromise();
         promise.asFuture().addListener(future -> queue.removeAndTransferAll(firstCtx::write));
@@ -284,7 +284,7 @@ public class PendingWriteQueueTest {
         channel.close().asStage().sync();
 
         final PendingWriteQueue queue = new PendingWriteQueue(context.executor(),
-                channel.config().getMessageSizeEstimator().newHandle());
+                channel.getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR).newHandle());
 
         IllegalStateException ex = new IllegalStateException();
         Promise<Void> promise = channel.newPromise();
@@ -319,7 +319,7 @@ public class PendingWriteQueueTest {
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
             queue = new PendingWriteQueue(ctx.executor(),
-                    ctx.channel().config().getMessageSizeEstimator().newHandle());
+                    ctx.channel().getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR).newHandle());
         }
     }
 

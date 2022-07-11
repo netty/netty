@@ -18,16 +18,18 @@ package io.netty5.channel.kqueue;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
+import io.netty5.channel.ChannelException;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.DatagramChannelConfig;
 import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.UnixChannel;
+import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
@@ -45,32 +47,56 @@ import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Set;
 
+import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
+import static io.netty5.channel.ChannelOption.IP_TOS;
+import static io.netty5.channel.ChannelOption.SO_BROADCAST;
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.kqueue.BsdSocket.newSocketDgram;
+import static io.netty5.channel.unix.UnixChannelOption.SO_REUSEPORT;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * {@link DatagramChannel} implementation that uses KQueue.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link DatagramChannel} and {@link UnixChannel},
+ * {@link KQueueDatagramChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link UnixChannelOption#SO_REUSEPORT}</td>
+ * </tr><tr>
+ * <td>{@link KQueueChannelOption#RCV_ALLOC_TRANSPORT_PROVIDES_GUESS}</td>
+ * </tr>
+ * </table>
+ */
 @UnstableApi
 public final class KQueueDatagramChannel
         extends AbstractKQueueDatagramChannel<UnixChannel, SocketAddress, SocketAddress>
         implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDatagramChannel.class);
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
                     StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
                     StringUtil.simpleClassName(Buffer.class) + ')';
-
     private volatile boolean connected;
-    private final KQueueDatagramChannelConfig config;
-
+    private boolean activeOnOpen;
     public KQueueDatagramChannel(EventLoop eventLoop) {
         this(eventLoop, null);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
         super(null, eventLoop, newSocketDgram(protocolFamily), false);
-        config = new KQueueDatagramChannelConfig(this);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, int fd) {
@@ -79,12 +105,191 @@ public final class KQueueDatagramChannel
 
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
         super(null, eventLoop, socket, active);
-        config = new KQueueDatagramChannelConfig(this);
+    }
+
+    @SuppressWarnings({ "unchecked", "deprecation" })
+    @Override
+    protected  <T> T getExtendedOption(ChannelOption<T> option) {
+        if (option == SO_BROADCAST) {
+            return (T) Boolean.valueOf(isBroadcast());
+        }
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == IP_TOS) {
+            return (T) Integer.valueOf(getTrafficClass());
+        }
+        if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
+            return (T) Boolean.valueOf(activeOnOpen);
+        }
+        if (option == SO_REUSEPORT) {
+            return (T) Boolean.valueOf(isReusePort());
+        }
+        return super.getExtendedOption(option);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    protected  <T> void setExtendedOption(ChannelOption<T> option, T value) {
+        if (option == SO_BROADCAST) {
+            setBroadcast((Boolean) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == IP_TOS) {
+            setTrafficClass((Integer) value);
+        } else if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
+            setActiveOnOpen((Boolean) value);
+        } else if (option == SO_REUSEPORT) {
+            setReusePort((Boolean) value);
+        } else {
+            super.setExtendedOption(option, value);
+        }
+    }
+
+    @Override
+    protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
+        if (SUPPORTED_OPTIONS.contains(option)) {
+            return true;
+        }
+        return super.isExtendedOptionSupported(option);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static Set<ChannelOption<?>> supportedOptions() {
+        return newSupportedIdentityOptionsSet(SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_TOS,
+                DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_REUSEPORT);
+    }
+
+    private void setActiveOnOpen(boolean activeOnOpen) {
+        if (isRegistered()) {
+            throw new IllegalStateException("Can only changed before channel was registered");
+        }
+        this.activeOnOpen = activeOnOpen;
+    }
+
+    private boolean getActiveOnOpen() {
+        return activeOnOpen;
+    }
+
+    /**
+     * Returns {@code true} if the SO_REUSEPORT option is set.
+     */
+    private boolean isReusePort() {
+        try {
+            return socket.isReusePort();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
+     * {@link KQueueSocketChannel}s to the same port and so accept connections with multiple threads.
+     *
+     * Be aware this method needs be called before {@link KQueueDatagramChannel#bind(java.net.SocketAddress)} to have
+     * any affect.
+     */
+    private void setReusePort(boolean reusePort) {
+        try {
+            socket.setReusePort(reusePort);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getSendBufferSize() {
+        try {
+            return socket.getSendBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    public void setSendBufferSize(int sendBufferSize) {
+        try {
+            socket.setSendBufferSize(sendBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getReceiveBufferSize() {
+        try {
+            return socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            socket.setReceiveBufferSize(receiveBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getTrafficClass() {
+        try {
+            return socket.getTrafficClass();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setTrafficClass(int trafficClass) {
+        try {
+            socket.setTrafficClass(trafficClass);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isReuseAddress() {
+        try {
+            return socket.isReuseAddress();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setReuseAddress(boolean reuseAddress) {
+        try {
+            socket.setReuseAddress(reuseAddress);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isBroadcast() {
+        try {
+            return socket.isBroadcast();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setBroadcast(boolean broadcast) {
+        try {
+            socket.setBroadcast(broadcast);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public boolean isActive() {
-        return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
+        return socket.isOpen() && (getActiveOnOpen() && isRegistered() || active);
     }
 
     @Override
@@ -244,11 +449,6 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    public KQueueDatagramChannelConfig config() {
-        return config;
-    }
-
-    @Override
     protected void doDisconnect() throws Exception {
         socket.disconnect();
         connected = active = false;
@@ -273,14 +473,13 @@ public final class KQueueDatagramChannel
     @Override
     void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
         assert executor().inEventLoop();
-        final DatagramChannelConfig config = config();
-        if (shouldBreakReadReady(config)) {
+        if (shouldBreakReadReady()) {
             clearReadFilter0();
             return;
         }
         final ChannelPipeline pipeline = pipeline();
-        final BufferAllocator allocator = config.getBufferAllocator();
-        allocHandle.reset(config);
+        final BufferAllocator allocator = bufferAllocator();
+        allocHandle.reset();
         readReadyBefore();
 
         Throwable exception = null;
@@ -352,7 +551,7 @@ public final class KQueueDatagramChannel
 
                 // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
                 // as we read anything).
-                } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+                } while (allocHandle.continueReading(isAutoRead(), UncheckedBooleanSupplier.TRUE_SUPPLIER));
             } catch (Throwable t) {
                 if (buffer != null) {
                     buffer.close();
@@ -369,7 +568,7 @@ public final class KQueueDatagramChannel
                 readIfIsAutoRead();
             }
         } finally {
-            readReadyFinally(config);
+            readReadyFinally();
         }
     }
 }

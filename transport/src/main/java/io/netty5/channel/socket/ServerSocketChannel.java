@@ -15,12 +15,30 @@
  */
 package io.netty5.channel.socket;
 
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ServerChannel;
 
 /**
- * A {@link ServerChannel} which accepts incoming TCP/IP connections.
+ * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link ServerChannel},
+ * {@link ServerSocketChannel} allows the following options in the
+ * option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_BACKLOG}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * </tr>
+ * </table>
  */
 public interface ServerSocketChannel extends ServerChannel {
-    @Override
-    ServerSocketChannelConfig config();
+   // Marker interface
 }

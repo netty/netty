@@ -167,7 +167,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             }
 
             // Enable autoread now which also triggers a read, this should cause scattering reads (recvmmsg) to happen.
-            sc.config().setAutoRead(true);
+            sc.setOption(ChannelOption.AUTO_READ, true);
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();

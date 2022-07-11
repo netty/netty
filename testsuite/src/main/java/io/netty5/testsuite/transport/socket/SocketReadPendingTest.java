@@ -21,7 +21,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -160,7 +159,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public void reset(ChannelConfig config) {
+                public void reset() {
                     numMessagesRead = 0;
                 }
 
@@ -190,13 +189,13 @@ public class SocketReadPendingTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading() {
+                public boolean continueReading(boolean autoRead) {
                     return numMessagesRead < numReads;
                 }
 
                 @Override
-                public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-                    return continueReading();
+                public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+                    return continueReading(autoRead);
                 }
 
                 @Override

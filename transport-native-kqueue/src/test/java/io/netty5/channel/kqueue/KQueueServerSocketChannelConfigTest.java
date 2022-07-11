@@ -56,27 +56,20 @@ public class KQueueServerSocketChannelConfigTest {
 
     @Test
     public void testReusePort() {
-        ch.config().setReusePort(false);
-        assertFalse(ch.config().isReusePort());
-        ch.config().setReusePort(true);
-        assertTrue(ch.config().isReusePort());
+        ch.setOption(KQueueChannelOption.SO_REUSEPORT, false);
+        assertFalse(ch.getOption(KQueueChannelOption.SO_REUSEPORT));
+        ch.setOption(KQueueChannelOption.SO_REUSEPORT, true);
+        assertTrue(ch.getOption(KQueueChannelOption.SO_REUSEPORT));
     }
 
     @Test
     public void testAcceptFilter() {
-        AcceptFilter currentFilter = ch.config().getAcceptFilter();
+        AcceptFilter currentFilter = ch.getOption(KQueueChannelOption.SO_ACCEPTFILTER);
         // Not all platforms support this option (e.g. MacOS doesn't) so test if we support the option first.
         assumeTrue(currentFilter != AcceptFilter.PLATFORM_UNSUPPORTED);
 
         AcceptFilter af = new AcceptFilter("test", "foo");
-        ch.config().setAcceptFilter(af);
-        assertEquals(af, ch.config().getAcceptFilter());
-    }
-
-    @Test
-    public void testOptionsDoesNotThrow() {
-        // If there are some options that are not fully supported they shouldn't throw but instead return some "default"
-        // object.
-        assertFalse(ch.config().getOptions().isEmpty());
+        ch.setOption(KQueueChannelOption.SO_ACCEPTFILTER, af);
+        assertEquals(af, ch.getOption(KQueueChannelOption.SO_ACCEPTFILTER));
     }
 }

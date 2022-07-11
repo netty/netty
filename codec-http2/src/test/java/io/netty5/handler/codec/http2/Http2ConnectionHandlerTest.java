@@ -18,8 +18,8 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty5.util.Resource;
@@ -143,9 +143,6 @@ public class Http2ConnectionHandlerTest {
         promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
         when(channel.metadata()).thenReturn(new ChannelMetadata(false));
-        DefaultChannelConfig config = new DefaultChannelConfig(channel);
-        when(channel.config()).thenReturn(config);
-
         Throwable fakeException = new RuntimeException("Fake exception");
         when(encoder.connection()).thenReturn(connection);
         when(decoder.connection()).thenReturn(connection);
@@ -170,6 +167,7 @@ public class Http2ConnectionHandlerTest {
         when(channel.isActive()).thenReturn(true);
         when(future.isFailed()).thenReturn(true);
         when(channel.pipeline()).thenReturn(pipeline);
+        when(channel.getOption(ChannelOption.AUTO_READ)).thenReturn(true);
         when(connection.remote()).thenReturn(remote);
         when(remote.flowController()).thenReturn(remoteFlowController);
         when(connection.local()).thenReturn(local);
@@ -668,7 +666,7 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void channelReadCompleteCallsReadWhenAutoReadFalse() throws Exception {
-        channel.config().setAutoRead(false);
+        when(channel.getOption(ChannelOption.AUTO_READ)).thenReturn(false);
         handler = newHandler();
         handler.channelReadComplete(ctx);
         verify(ctx, times(1)).read();

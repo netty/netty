@@ -16,24 +16,60 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.ChannelException;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.unix.IovArray;
+import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.UnstableApi;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
+import static io.netty5.channel.ChannelOption.IP_TOS;
+import static io.netty5.channel.ChannelOption.SO_KEEPALIVE;
+import static io.netty5.channel.ChannelOption.SO_LINGER;
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
+import static io.netty5.channel.ChannelOption.TCP_NODELAY;
+import static io.netty5.channel.kqueue.KQueueChannelOption.SO_SNDLOWAT;
+import static io.netty5.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
+
+/**
+ * {@link SocketChannel} implementation that uses KQueue.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link SocketChannel} and {@link UnixChannel},
+ * {@link KQueueSocketChannel} allows the following options in the option map:
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link KQueueChannelOption#SO_SNDLOWAT}</td>
+ * </tr><tr>
+ * <td>{@link KQueueChannelOption#TCP_NOPUSH}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#TCP_FASTOPEN_CONNECT}</td>
+ * </tr>
+ * </table>
+ */
 @UnstableApi
 public final class KQueueSocketChannel
         extends AbstractKQueueStreamChannel<KQueueServerSocketChannel, SocketAddress, SocketAddress>
         implements SocketChannel {
-    private final KQueueSocketChannelConfig config;
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
+    private volatile boolean tcpFastopen;
 
     public KQueueSocketChannel(EventLoop eventLoop) {
         this(eventLoop, null);
@@ -41,28 +77,275 @@ public final class KQueueSocketChannel
 
     public KQueueSocketChannel(EventLoop eventLoop, ProtocolFamily protocol) {
         super(null, eventLoop, BsdSocket.newSocketStream(protocol), false);
-        config = new KQueueSocketChannelConfig(this);
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            setTcpNoDelay(true);
+        }
+        calculateMaxBytesPerGatheringWrite();
     }
 
     public KQueueSocketChannel(EventLoop eventLoop, int fd) {
         super(eventLoop, new BsdSocket(fd));
-        config = new KQueueSocketChannelConfig(this);
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            setTcpNoDelay(true);
+        }
+        calculateMaxBytesPerGatheringWrite();
     }
 
     KQueueSocketChannel(KQueueServerSocketChannel parent, EventLoop eventLoop,
                         BsdSocket fd, InetSocketAddress remoteAddress) {
         super(parent, eventLoop, fd, remoteAddress);
-        config = new KQueueSocketChannelConfig(this);
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            setTcpNoDelay(true);
+        }
+        calculateMaxBytesPerGatheringWrite();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected <T> T getExtendedOption(ChannelOption<T> option) {
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == TCP_NODELAY) {
+            return (T) Boolean.valueOf(isTcpNoDelay());
+        }
+        if (option == SO_KEEPALIVE) {
+            return (T) Boolean.valueOf(isKeepAlive());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == SO_LINGER) {
+            return (T) Integer.valueOf(getSoLinger());
+        }
+        if (option == IP_TOS) {
+            return (T) Integer.valueOf(getTrafficClass());
+        }
+        if (option == SO_SNDLOWAT) {
+            return (T) Integer.valueOf(getSndLowAt());
+        }
+        if (option == TCP_NOPUSH) {
+            return (T) Boolean.valueOf(isTcpNoPush());
+        }
+        if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
+            return (T) Boolean.valueOf(isTcpFastOpenConnect());
+        }
+        return super.getExtendedOption(option);
     }
 
     @Override
-    public KQueueSocketChannelConfig config() {
-        return config;
+    protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
+        if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == TCP_NODELAY) {
+            setTcpNoDelay((Boolean) value);
+        } else if (option == SO_KEEPALIVE) {
+            setKeepAlive((Boolean) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == SO_LINGER) {
+            setSoLinger((Integer) value);
+        } else if (option == IP_TOS) {
+            setTrafficClass((Integer) value);
+        } else if (option == SO_SNDLOWAT) {
+            setSndLowAt((Integer) value);
+        } else if (option == TCP_NOPUSH) {
+            setTcpNoPush((Boolean) value);
+        } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
+            setTcpFastOpenConnect((Boolean) value);
+        } else {
+            super.setExtendedOption(option, value);
+        }
     }
 
+    @Override
+    protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
+        if (SUPPORTED_OPTIONS.contains(option)) {
+            return true;
+        }
+        return super.isExtendedOptionSupported(option);
+    }
+
+    private static Set<ChannelOption<?>> supportedOptions() {
+        return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_SNDBUF, TCP_NODELAY,
+                SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS, SO_SNDLOWAT, TCP_NOPUSH,
+                ChannelOption.TCP_FASTOPEN_CONNECT);
+    }
+
+    private int getReceiveBufferSize() {
+        try {
+            return socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getSendBufferSize() {
+        try {
+            return socket.getSendBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getSoLinger() {
+        try {
+            return socket.getSoLinger();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getTrafficClass() {
+        try {
+            return socket.getTrafficClass();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isKeepAlive() {
+        try {
+            return socket.isKeepAlive();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isReuseAddress() {
+        try {
+            return socket.isReuseAddress();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isTcpNoDelay() {
+        try {
+            return socket.isTcpNoDelay();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getSndLowAt() {
+        try {
+            return socket.getSndLowAt();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setSndLowAt(int sndLowAt)  {
+        try {
+            socket.setSndLowAt(sndLowAt);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isTcpNoPush() {
+        try {
+            return socket.isTcpNoPush();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setTcpNoPush(boolean tcpNoPush)  {
+        try {
+            socket.setTcpNoPush(tcpNoPush);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setKeepAlive(boolean keepAlive) {
+        try {
+            socket.setKeepAlive(keepAlive);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            socket.setReceiveBufferSize(receiveBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setReuseAddress(boolean reuseAddress) {
+        try {
+            socket.setReuseAddress(reuseAddress);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setSendBufferSize(int sendBufferSize) {
+        try {
+            socket.setSendBufferSize(sendBufferSize);
+            calculateMaxBytesPerGatheringWrite();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setSoLinger(int soLinger) {
+        try {
+            socket.setSoLinger(soLinger);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setTcpNoDelay(boolean tcpNoDelay) {
+        try {
+            socket.setTcpNoDelay(tcpNoDelay);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setTrafficClass(int trafficClass) {
+        try {
+            socket.setTrafficClass(trafficClass);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Enables client TCP fast open, if available.
+     */
+    private void setTcpFastOpenConnect(boolean fastOpenConnect) {
+        tcpFastopen = fastOpenConnect;
+    }
+
+    /**
+     * Returns {@code true} if TCP fast open is enabled, {@code false} otherwise.
+     */
+    private boolean isTcpFastOpenConnect() {
+        return tcpFastopen;
+    }
+
+    private void calculateMaxBytesPerGatheringWrite() {
+        // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
+        int newSendBufferSize = getSendBufferSize() << 1;
+        if (newSendBufferSize > 0) {
+            setMaxBytesPerGatheringWrite(getSendBufferSize() << 1);
+        }
+    }
     @Override
     protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        if (config.isTcpFastOpenConnect()) {
+        if (isTcpFastOpenConnect()) {
             ChannelOutboundBuffer outbound = outboundBuffer();
             outbound.addFlush();
             Object curr;
@@ -94,7 +377,7 @@ public final class KQueueSocketChannel
         try {
             // Check isOpen() first as otherwise it will throw a RuntimeException
             // when call getSoLinger() as the fd is not valid anymore.
-            if (isOpen() && config().getSoLinger() > 0) {
+            if (isOpen() && getSoLinger() > 0) {
                 // We need to cancel this key of the channel so we may not end up in a eventloop spin
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.
