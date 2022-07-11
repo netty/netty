@@ -1032,7 +1032,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         assert delta > 0;
         long pending = TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.addAndGet(this, delta);
         if (pending < 0) {
-            closeTransport(newPromise());
+            forceCloseTransport();
             throw new IllegalStateException("pendingOutboundBytes overflowed, force closed transport.");
         }
         pendingOutboundBytesUpdated(pending);
@@ -1047,7 +1047,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         assert delta > 0;
         long pending = TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.addAndGet(this, -delta);
         if (pending < 0) {
-            closeTransport(newPromise());
+            forceCloseTransport();
             throw new IllegalStateException("pendingOutboundBytes underflowed, force closed transport.");
         }
         pendingOutboundBytesUpdated(pending);
@@ -1254,6 +1254,16 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
                 safeExecute(executor, () -> pipeline.sendOutboundEventTransport(event, promise), promise, event);
             }
             return promise.asFuture();
+        }
+    }
+
+    final void forceCloseTransport() {
+        EventExecutor executor = transportExecutor();
+        Promise<Void> promise = executor.newPromise();
+        if (executor.inEventLoop()) {
+            closeTransport(promise);
+        } else {
+            safeExecute(executor, () -> closeTransport(promise), promise, null);
         }
     }
 

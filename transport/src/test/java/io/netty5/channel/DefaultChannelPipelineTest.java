@@ -1089,6 +1089,55 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testPendingOutboundBytesWhenHandlerAddedAndRemoved() throws InterruptedException {
+        Channel channel = newLocalChannel();
+        CountDownLatch addedLatch = new CountDownLatch(1);
+        CountDownLatch removedLatch = new CountDownLatch(1);
+
+        assertEquals(0, channel.pipeline().pendingOutboundBytes());
+
+        ChannelHandler handler = new ChannelHandler() {
+
+            private boolean added;
+            private boolean removed;
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                if (removed) {
+                    return Integer.MAX_VALUE;
+                }
+                if (added) {
+                    return Long.MAX_VALUE;
+                }
+                return 0;
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                removed = true;
+                removedLatch.countDown();
+            }
+
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                added = true;
+                addedLatch.countDown();
+            }
+        };
+        channel.pipeline().addLast(handler);
+        addedLatch.await();
+        assertEquals(Long.MAX_VALUE, channel.executor().submit(() -> channel.pipeline().pendingOutboundBytes())
+                .asStage().sync().getNow());
+
+        channel.pipeline().remove(handler);
+        removedLatch.await();
+
+        assertEquals(Long.MAX_VALUE - Integer.MAX_VALUE,
+                channel.executor().submit(() -> channel.pipeline().pendingOutboundBytes())
+                .asStage().sync().getNow());
+        channel.close().asStage().sync();
+    }
+
+    @Test
     public void testNullName() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addLast(newHandler());
