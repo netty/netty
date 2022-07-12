@@ -32,13 +32,12 @@ import java.net.NetworkInterface;
 import java.util.Map;
 
 public final class EpollDatagramChannelConfig extends EpollChannelConfig implements DatagramChannelConfig {
-    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
     private boolean activeOnOpen;
     private volatile int maxDatagramSize;
 
     EpollDatagramChannelConfig(EpollDatagramChannel channel) {
         super(channel);
-        setRecvByteBufAllocator(DEFAULT_RCVBUF_ALLOCATOR);
+        setRecvByteBufAllocator(new FixedRecvByteBufAllocator(2048));
     }
 
     @Override
