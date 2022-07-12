@@ -15,6 +15,8 @@
  */
 package io.netty.util;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * A handle associated with a {@link TimerTask} that is returned by a
  * {@link Timer}.
@@ -30,6 +32,17 @@ public interface Timeout {
      * Returns the {@link TimerTask} which is associated with this handle.
      */
     TimerTask task();
+
+    /**
+     * The remaining time until the timeout expires.
+     *
+     * <p>Given <code>unit</code>, produce the time remaining until this
+     * timeout will expire represented as the given time unit.</p>
+     *
+     * @param unit time unit resolution of result.
+     * @return Number of remaining time units.
+     */
+    long remaining(TimeUnit unit);
 
     /**
      * Returns {@code true} if and only if the {@link TimerTask} associated

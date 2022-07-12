@@ -45,6 +45,7 @@ public class HashedWheelTimerTest {
         }, 10, TimeUnit.SECONDS);
         assertFalse(barrier.await(3, TimeUnit.SECONDS));
         assertFalse(timeout.isExpired(), "timer should not expire");
+        assertTrue(timeout.remaining(TimeUnit.NANOSECONDS) > 0, "has time remaining");
         timer.stop();
     }
 
@@ -60,6 +61,7 @@ public class HashedWheelTimerTest {
         }, 2, TimeUnit.SECONDS);
         assertTrue(barrier.await(3, TimeUnit.SECONDS));
         assertTrue(timeout.isExpired(), "timer should expire");
+        assertTrue(timeout.remaining(TimeUnit.NANOSECONDS) < 0, "has negative time remaining");
         timer.stop();
     }
 

@@ -645,6 +645,11 @@ public class HashedWheelTimer implements Timer {
         }
 
         @Override
+        public long remaining(TimeUnit unit) {
+            return unit.convert(deadline - System.nanoTime() + timer.startTime, TimeUnit.NANOSECONDS);
+        }
+
+        @Override
         public Timer timer() {
             return timer;
         }
@@ -723,7 +728,7 @@ public class HashedWheelTimer implements Timer {
         @Override
         public String toString() {
             final long currentTime = System.nanoTime();
-            long remaining = deadline - currentTime + timer.startTime;
+            long remaining = remaining(TimeUnit.NANOSECONDS);
 
             StringBuilder buf = new StringBuilder(192)
                .append(simpleClassName(this))
