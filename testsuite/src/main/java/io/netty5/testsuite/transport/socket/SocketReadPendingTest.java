@@ -58,14 +58,14 @@ public class SocketReadPendingTest extends AbstractSocketTest {
               .option(ChannelOption.AUTO_READ, true)
               .childOption(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
-              .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
+              .childOption(ChannelOption.RCVBUFFER_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
               .childHandler(serverInitializer);
 
             serverChannel = sb.bind().asStage().get();
 
             cb.option(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
-              .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
+              .option(ChannelOption.RCVBUFFER_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
               .handler(clientInitializer);
             clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
 

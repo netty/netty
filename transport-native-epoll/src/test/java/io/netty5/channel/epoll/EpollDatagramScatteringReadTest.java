@@ -96,7 +96,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
         int packetSize = 512;
         int numPackets = 4;
 
-        sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvBufferAllocator(
+        sb.option(ChannelOption.RCVBUFFER_ALLOCATOR, new AdaptiveRecvBufferAllocator(
                 packetSize, packetSize * (partial ? numPackets / 2 : numPackets), 64 * 1024));
         sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, packetSize);
 
@@ -207,7 +207,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     private void testScatteringReadWithSmallBuffer0(Bootstrap sb, Bootstrap cb, boolean connected) throws Throwable {
         int packetSize = 16;
 
-        sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvBufferAllocator(1400, 1400, 64 * 1024));
+        sb.option(ChannelOption.RCVBUFFER_ALLOCATOR, new AdaptiveRecvBufferAllocator(1400, 1400, 64 * 1024));
         sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, 1400);
 
         Channel sc = null;

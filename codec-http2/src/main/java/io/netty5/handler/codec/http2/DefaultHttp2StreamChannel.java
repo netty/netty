@@ -62,7 +62,7 @@ import static io.netty5.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
-import static io.netty5.channel.ChannelOption.RCVBUF_ALLOCATOR;
+import static io.netty5.channel.ChannelOption.RCVBUFFER_ALLOCATOR;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
@@ -1013,7 +1013,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         if (option == BUFFER_ALLOCATOR) {
             return (T) getBufferAllocator();
         }
-        if (option == RCVBUF_ALLOCATOR) {
+        if (option == RCVBUFFER_ALLOCATOR) {
             return getRecvBufferAllocator();
         }
         if (option == AUTO_CLOSE) {
@@ -1049,7 +1049,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             setWriteSpinCount((Integer) value);
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
-        } else if (option == RCVBUF_ALLOCATOR) {
+        } else if (option == RCVBUFFER_ALLOCATOR) {
             setRecvBufferAllocator((RecvBufferAllocator) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
@@ -1067,7 +1067,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     public boolean isOptionSupported(ChannelOption<?> option) {
         return option == AUTO_READ || option == WRITE_BUFFER_WATER_MARK || option == CONNECT_TIMEOUT_MILLIS ||
                 option == MAX_MESSAGES_PER_READ || option == WRITE_SPIN_COUNT || option == BUFFER_ALLOCATOR ||
-                option == RCVBUF_ALLOCATOR || option == AUTO_CLOSE || option == MESSAGE_SIZE_ESTIMATOR ||
+                option == RCVBUFFER_ALLOCATOR || option == AUTO_CLOSE || option == MESSAGE_SIZE_ESTIMATOR ||
                 option == MAX_MESSAGES_PER_WRITE || option == ALLOW_HALF_CLOSURE;
     }
 
