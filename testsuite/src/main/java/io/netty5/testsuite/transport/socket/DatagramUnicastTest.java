@@ -24,6 +24,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
+import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -33,9 +34,11 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -261,8 +264,19 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             assertNotNull(cc.remoteAddress());
 
             if (supportDisconnect()) {
+                try {
+                    // Test what happens when we call disconnect()
+                    cc.disconnect().asStage().sync();
+                } catch (CompletionException e) {
+                    if (e.getCause() instanceof SocketException) {
+                        if (disconnectMightFail((DatagramChannel) cc)) {
+                            return;
+                        }
+                    }
+                    throw e;
+                }
+
                 // Test what happens when we call disconnect()
-                cc.disconnect().asStage().sync();
                 assertFalse(isConnected(cc));
                 assertNotNull(cc.localAddress());
                 assertNull(cc.remoteAddress());
@@ -286,6 +300,10 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                                                   boolean echo) throws Throwable;
 
     protected abstract boolean supportDisconnect();
+
+    protected boolean disconnectMightFail(DatagramChannel channel) {
+        return false;
+    }
 
     protected abstract Future<Void> write(Channel cc, Buffer buf, SocketAddress remote);
 
