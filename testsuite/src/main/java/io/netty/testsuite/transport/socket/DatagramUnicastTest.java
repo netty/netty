@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -32,6 +33,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayList;
 import java.util.List;
@@ -302,8 +304,17 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             assertNotNull(cc.remoteAddress());
 
             if (supportDisconnect()) {
-                // Test what happens when we call disconnect()
-                cc.disconnect().syncUninterruptibly();
+                try {
+                    // Test what happens when we call disconnect()
+                    cc.disconnect().syncUninterruptibly();
+                } catch (Throwable e) {
+                    if (e instanceof SocketException) {
+                        if (disconnectMightFail((DatagramChannel) cc)) {
+                            return;
+                        }
+                    }
+                    throw e;
+                }
                 assertFalse(isConnected(cc));
                 assertNotNull(cc.localAddress());
                 assertNull(cc.remoteAddress());
@@ -347,6 +358,10 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                                                   boolean echo) throws Throwable;
 
     protected abstract boolean supportDisconnect();
+
+    protected boolean disconnectMightFail(DatagramChannel channel) {
+        return false;
+    }
 
     protected abstract ChannelFuture write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType);
 
