@@ -230,7 +230,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        if (!firedChannelRead && ctx.channel().getOption(ChannelOption.AUTO_READ)) {
+        if (!firedChannelRead && !ctx.channel().getOption(ChannelOption.AUTO_READ)) {
             ctx.read();
         }
         firedChannelRead = false;
