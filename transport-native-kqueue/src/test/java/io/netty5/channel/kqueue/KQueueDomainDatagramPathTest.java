@@ -18,7 +18,7 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
-import io.netty5.channel.unix.DomainDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.AbstractClientSocketTest;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
             try {
                 Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
                                       .bind(KQueueSocketTestPermutation.newSocketAddress()).asStage().get();
-                ch.writeAndFlush(new DomainDatagramPacket(
+                ch.writeAndFlush(new DatagramPacket(
                                 ch.bufferAllocator().copyOf("test", US_ASCII),
                                 KQueueSocketTestPermutation.newSocketAddress())).asStage().sync();
                 fail("Expected FileNotFoundException");

@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.unix.Errors.NativeIoException;
 import io.netty5.channel.unix.Socket;
 import org.junit.jupiter.api.Assertions;

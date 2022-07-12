@@ -16,6 +16,7 @@
 package io.netty5.channel.unix;
 
 import io.netty5.channel.ChannelException;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 

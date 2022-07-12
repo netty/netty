@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.tests.SocketTest;
 import io.netty5.channel.unix.tests.UnixTestUtils;

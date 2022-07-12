@@ -20,10 +20,10 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.unix.DomainSocketAddress;
-import io.netty5.channel.unix.ServerDomainSocketChannel;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannel;
+import io.netty5.channel.unix.UnixServerSocketChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -40,12 +40,12 @@ import static io.netty5.channel.epoll.LinuxSocket.newSocketDomain;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
- * {@link ServerDomainSocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
+ * {@link UnixServerSocketChannel} implementation for Unix Domain Sockets that uses linux EPOLL Edge-Triggered Mode for
  * maximal performance.
  *
  * <h3>Available options</h3>
  *
- * In addition to the options provided by {@link ServerDomainSocketChannel},
+ * In addition to the options provided by {@link UnixServerSocketChannel},
  * {@link EpollServerDomainSocketChannel} allows the following options in the option map:
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
@@ -59,7 +59,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 public final class EpollServerDomainSocketChannel
         extends AbstractEpollServerChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
-        implements ServerDomainSocketChannel {
+        implements UnixServerSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             EpollServerDomainSocketChannel.class);
 

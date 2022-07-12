@@ -28,16 +28,17 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedRecvBufferAllocator;
-import io.netty5.channel.unix.DomainDatagramChannel;
-import io.netty5.channel.unix.DomainDatagramPacket;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -45,6 +46,8 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.util.Set;
 
@@ -52,15 +55,16 @@ import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTR
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.epoll.LinuxSocket.newSocketDomainDgram;
 import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 /**
- * {@link DomainDatagramChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
+ * {@link DatagramChannel} implementation for Unix Domain Sockets that uses linux EPOLL Edge-Triggered Mode for
  * maximal performance.
  *
  * <h3>Available options</h3>
  *
- * In addition to the options provided by {@link DomainDatagramChannel} and {@link UnixChannel},
- * {@link EpollDomainDatagramChannel} allows the following options in the option map:
+ * In addition to the options provided by {@link DatagramChannel} and {@link UnixChannel},
+ * {@link DatagramChannel} allows the following options in the option map:
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Name</th>
@@ -74,14 +78,14 @@ import static io.netty5.util.CharsetUtil.UTF_8;
 @UnstableApi
 public final class EpollDomainDatagramChannel
         extends AbstractEpollChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
-        implements DomainDatagramChannel {
+        implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDomainDatagramChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final String EXPECTED_TYPES =
             " (expected: " +
-                    StringUtil.simpleClassName(DomainDatagramPacket.class) + ", " +
+                    StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
                     StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
@@ -104,6 +108,59 @@ public final class EpollDomainDatagramChannel
 
     private EpollDomainDatagramChannel(EventLoop eventLoop, LinuxSocket socket, boolean active) {
         super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, active);
+    }
+
+    private <V> Future<V> newMulticastNotSupportedFuture() {
+        return newFailedFuture(new UnsupportedOperationException("Multicast not supported"));
+    }
+
+    @Override
+    public Future<Void> joinGroup(InetAddress multicastAddress) {
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public Future<Void> joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public Future<Void> leaveGroup(InetAddress multicastAddress) {
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public Future<Void> leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public Future<Void> block(
+            InetAddress multicastAddress, NetworkInterface networkInterface,
+            InetAddress sourceToBlock) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+
+        return newMulticastNotSupportedFuture();
     }
 
     @Override
@@ -334,19 +391,17 @@ public final class EpollDomainDatagramChannel
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof DomainDatagramPacket) {
-            DomainDatagramPacket packet = (DomainDatagramPacket) msg;
-            Buffer content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                    new DomainDatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
-        }
-
-        if (msg instanceof Buffer) {
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            if (packet.recipient() == null || packet.recipient() instanceof DomainSocketAddress) {
+                Buffer content = packet.content();
+                return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
+                        new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
+            }
+        } else if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf) ? newDirectBuffer(buf) : buf;
-        }
-
-        if (msg instanceof AddressedEnvelope) {
+        } else if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
             SocketAddress recipient = e.recipient();
@@ -438,7 +493,7 @@ public final class EpollDomainDatagramChannel
                 buf = allocHandle.allocate(allocator);
                 allocHandle.attemptedBytesRead(buf.writableBytes());
 
-                final DomainDatagramPacket packet;
+                final DatagramPacket packet;
                 if (connected) {
                     doReadBytes(buf);
                     if (allocHandle.lastBytesRead() <= 0) {
@@ -446,8 +501,7 @@ public final class EpollDomainDatagramChannel
                         buf.close();
                         break;
                     }
-                    packet = new DomainDatagramPacket(buf, (DomainSocketAddress) localAddress(),
-                                                      (DomainSocketAddress) remoteAddress());
+                    packet = new DatagramPacket(buf, localAddress(), remoteAddress());
                 } else {
                     final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
                     buf.forEachWritable(0, recvFrom);
@@ -465,7 +519,7 @@ public final class EpollDomainDatagramChannel
                     allocHandle.lastBytesRead(remoteAddress.receivedAmount());
                     buf.skipWritableBytes(allocHandle.lastBytesRead());
 
-                    packet = new DomainDatagramPacket(buf, localAddress, remoteAddress);
+                    packet = new DatagramPacket(buf, localAddress, remoteAddress);
                 }
 
                 allocHandle.incMessagesRead(1);
