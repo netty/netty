@@ -62,7 +62,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
                 sockets.add(s);
             }
 
-            sc.config().setAutoRead(true);
+            sc.setOption(ChannelOption.AUTO_READ, true);
 
             counter.latch.await();
 

@@ -19,7 +19,7 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
+import java.nio.channels.NetworkChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,37 +46,21 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         return new NioChannelOption<>(option);
     }
 
-    // It's important to not use java.nio.channels.NetworkChannel as otherwise the classes that sometimes call this
-    // method may not be used on Java 6, as method linking can happen eagerly even if this method was not actually
-    // called at runtime.
-    //
-    // See https://github.com/netty/netty/issues/8166
-
     // Internal helper methods to remove code duplication between Nio*Channel implementations.
-    static <T> boolean setOption(Channel jdkChannel, NioChannelOption<T> option, T value) {
-        java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
-        if (!channel.supportedOptions().contains(option.option)) {
-            return false;
-        }
+    static <T> void setOption(NetworkChannel channel, NioChannelOption<T> option, T value) {
         if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
             // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
-            return false;
+            return;
         }
         try {
             channel.setOption(option.option, value);
-            return true;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    static <T> T getOption(Channel jdkChannel, NioChannelOption<T> option) {
-        java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
-
-        if (!channel.supportedOptions().contains(option.option)) {
-            return null;
-        }
+    static <T> T getOption(NetworkChannel channel, NioChannelOption<T> option) {
         if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
             // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
@@ -89,9 +73,12 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
     }
 
+    static boolean isSupported(NetworkChannel channel, NioChannelOption<?> option) {
+        return channel.supportedOptions().contains(option.option);
+    }
+
     @SuppressWarnings("unchecked")
-    static ChannelOption[] getOptions(Channel jdkChannel) {
-        java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
+    static ChannelOption[] getOptions(NetworkChannel channel) {
         Set<java.net.SocketOption<?>> supportedOpts = channel.supportedOptions();
 
         if (channel instanceof ServerSocketChannel) {

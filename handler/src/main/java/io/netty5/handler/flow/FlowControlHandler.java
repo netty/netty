@@ -15,8 +15,10 @@
  */
 package io.netty5.handler.flow;
 
+import io.netty5.channel.ChannelOption;
+import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.MessageToByteEncoder;
 import io.netty5.util.Resource;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.ObjectPool;
@@ -49,7 +51,7 @@ import java.util.Queue;
  *   @Override
  *   public void channelRead(ChannelHandlerContext ctx, Object msg) {
  *     if (msg instanceof HttpRequest) {
- *       ctx.channel().config().setAutoRead(false);
+ *       ctx.channel().setChannelOption(ChannelOption.AUTO_READ, false);
  *
  *       // The FlowControlHandler will hold any subsequent events that
  *       // were emitted by HttpObjectDecoder until auto reading is turned
@@ -59,7 +61,7 @@ import java.util.Queue;
  * }
  * }</pre>
  *
- * @see ChannelConfig#setAutoRead(boolean)
+ * @see ChannelOption#AUTO_READ)
  */
 public class FlowControlHandler implements ChannelHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FlowControlHandler.class);
@@ -67,8 +69,6 @@ public class FlowControlHandler implements ChannelHandler {
     private final boolean releaseMessages;
 
     private RecyclableArrayDeque queue;
-
-    private ChannelConfig config;
 
     private boolean shouldConsume;
 
@@ -112,11 +112,6 @@ public class FlowControlHandler implements ChannelHandler {
             queue.recycle();
             queue = null;
         }
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        config = ctx.channel().config();
     }
 
     @Override
@@ -189,7 +184,7 @@ public class FlowControlHandler implements ChannelHandler {
 
         // fireChannelRead(...) may call ctx.read() and so this method may reentrance. Because of this we need to
         // check if queue was set to null in the meantime and if so break the loop.
-        while (queue != null && (consumed < minConsume || config.isAutoRead())) {
+        while (queue != null && (consumed < minConsume || ctx.channel().getOption(ChannelOption.AUTO_READ))) {
             Object msg = queue.poll();
             if (msg == null) {
                 break;

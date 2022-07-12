@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -242,7 +243,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         // an "adequate" amount of connection window before allocation is attempted. This is not foolproof as if the
         // number of streams is >= this minimal number then we may still have the issue, but the idea is to narrow the
         // circumstances in which this can happen without rewriting the allocation algorithm.
-        return max(ctx.channel().config().getWriteBufferWaterMark().low(), MIN_WRITABLE_CHUNK);
+        return max(ctx.channel().getOption(ChannelOption.WRITE_BUFFER_WATER_MARK).low(), MIN_WRITABLE_CHUNK);
     }
 
     private int maxUsableChannelBytes() {

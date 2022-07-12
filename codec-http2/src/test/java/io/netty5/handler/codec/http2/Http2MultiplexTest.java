@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -139,7 +140,6 @@ public class Http2MultiplexTest {
     // TODO(buchgr): Flush from child channel
     // TODO(buchgr): ChildChannel.childReadComplete()
     // TODO(buchgr): GOAWAY Logic
-    // TODO(buchgr): Test ChannelConfig.setMaxMessagesPerRead
 
     @Test
     public void writeUnknownFrame() throws Exception {
@@ -444,11 +444,11 @@ public class Http2MultiplexTest {
     public void channelReadShouldRespectAutoRead() throws Exception {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        assertTrue(childChannel.config().isAutoRead());
+        assertTrue(childChannel.getOption(ChannelOption.AUTO_READ));
         Http2HeadersFrame headersFrame = inboundHandler.readInbound();
         assertNotNull(headersFrame);
 
-        childChannel.config().setAutoRead(false);
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("hello world"), 0, false);
         Http2DataFrame dataFrame0 = inboundHandler.readInbound();
@@ -460,7 +460,7 @@ public class Http2MultiplexTest {
 
         assertNull(inboundHandler.readInbound());
 
-        childChannel.config().setAutoRead(true);
+        childChannel.setOption(ChannelOption.AUTO_READ, true);
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
     }
 
@@ -468,11 +468,11 @@ public class Http2MultiplexTest {
     public void channelReadShouldRespectAutoReadAndNotProduceNPE() throws Exception {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        assertTrue(childChannel.config().isAutoRead());
+        assertTrue(childChannel.getOption(ChannelOption.AUTO_READ));
         Http2HeadersFrame headersFrame = inboundHandler.readInbound();
         assertNotNull(headersFrame);
 
-        childChannel.config().setAutoRead(false);
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
         childChannel.pipeline().addFirst(new ChannelHandler() {
             private int count;
             @Override
@@ -495,7 +495,7 @@ public class Http2MultiplexTest {
 
         assertNull(inboundHandler.readInbound());
 
-        childChannel.config().setAutoRead(true);
+        childChannel.setOption(ChannelOption.AUTO_READ, true);
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 3);
         inboundHandler.checkException();
     }
@@ -513,9 +513,9 @@ public class Http2MultiplexTest {
     private void useReadWithoutAutoRead(final boolean readComplete) throws Exception {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        assertTrue(childChannel.config().isAutoRead());
-        childChannel.config().setAutoRead(false);
-        assertFalse(childChannel.config().isAutoRead());
+        assertTrue(childChannel.getOption(ChannelOption.AUTO_READ));
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
+        assertFalse(childChannel.getOption(ChannelOption.AUTO_READ));
 
         Http2HeadersFrame headersFrame = inboundHandler.readInbound();
         assertNotNull(headersFrame);
@@ -853,10 +853,11 @@ public class Http2MultiplexTest {
         AttributeKey<String> key = AttributeKey.newInstance(UUID.randomUUID().toString());
 
         Channel childChannel = newOutboundStream(new ChannelHandler() { });
-        childChannel.config().setAutoRead(false).setWriteSpinCount(1000);
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
+        childChannel.setOption(ChannelOption.WRITE_SPIN_COUNT, 1000);
         childChannel.attr(key).set("bar");
-        assertFalse(childChannel.config().isAutoRead());
-        assertEquals(1000, childChannel.config().getWriteSpinCount());
+        assertFalse(childChannel.getOption(ChannelOption.AUTO_READ));
+        assertEquals(1000, childChannel.getOption(ChannelOption.WRITE_SPIN_COUNT));
         assertEquals("bar", childChannel.attr(key).get());
     }
 
@@ -870,7 +871,8 @@ public class Http2MultiplexTest {
         parentChannel.flush();
 
         // Test for initial window size
-        assertTrue(initialRemoteStreamWindow < childChannel.config().getWriteBufferWaterMark().high());
+        assertTrue(initialRemoteStreamWindow <
+                childChannel.getOption(ChannelOption.WRITE_BUFFER_WATER_MARK).high());
 
         assertTrue(childChannel.isWritable());
         int size = 16 * 1024 * 1024;
@@ -883,8 +885,8 @@ public class Http2MultiplexTest {
     @Test
     public void writabilityOfParentIsRespected() throws Exception {
         Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() { });
-        childChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(2048, 4096));
-        parentChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(256, 512));
+        childChannel.setOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(2048, 4096));
+        parentChannel.setOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(256, 512));
         assertTrue(childChannel.isWritable());
         assertTrue(parentChannel.isActive());
 
@@ -1007,12 +1009,12 @@ public class Http2MultiplexTest {
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
         Consumer<ChannelHandlerContext> ctxConsumer = obj -> {
             if (shouldDisableAutoRead.get()) {
-                obj.channel().config().setAutoRead(false);
+                obj.channel().setOption(ChannelOption.AUTO_READ, false);
             }
         };
         LastInboundHandler inboundHandler = new LastInboundHandler(ctxConsumer);
         Http2StreamChannel childChannel = newInboundStream(3, false, numReads, inboundHandler);
-        childChannel.config().setAutoRead(false);
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
 
         Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1").send()).stream(childChannel.stream());
         Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2").send()).stream(childChannel.stream());
@@ -1039,7 +1041,7 @@ public class Http2MultiplexTest {
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("4"), 0, false);
 
         shouldDisableAutoRead.set(true);
-        childChannel.config().setAutoRead(true);
+        childChannel.setOption(ChannelOption.AUTO_READ, true);
         numReads.set(1);
 
         frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), Http2Error.NO_ERROR.code());
@@ -1108,12 +1110,12 @@ public class Http2MultiplexTest {
         Consumer<ChannelHandlerContext> ctxConsumer = obj -> {
             channelReadCompleteCount.incrementAndGet();
             if (shouldDisableAutoRead.get()) {
-                obj.channel().config().setAutoRead(false);
+                obj.channel().setOption(ChannelOption.AUTO_READ, false);
             }
         };
         LastInboundHandler inboundHandler = new LastInboundHandler(ctxConsumer);
         Http2StreamChannel childChannel = newInboundStream(3, false, numReads, inboundHandler);
-        childChannel.config().setAutoRead(false);
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
 
         Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1").send()).stream(childChannel.stream());
         Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2").send()).stream(childChannel.stream());
@@ -1140,7 +1142,7 @@ public class Http2MultiplexTest {
 
         numReads.set(10);
         shouldDisableAutoRead.set(true);
-        childChannel.config().setAutoRead(true);
+        childChannel.setOption(ChannelOption.AUTO_READ, true);
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("3"), 0, false);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("4"), 0, false);
@@ -1168,12 +1170,12 @@ public class Http2MultiplexTest {
         Consumer<ChannelHandlerContext> ctxConsumer = obj -> {
             channelReadCompleteCount.incrementAndGet();
             if (shouldDisableAutoRead.get()) {
-                obj.channel().config().setAutoRead(false);
+                obj.channel().setOption(ChannelOption.AUTO_READ, false);
             }
         };
         final LastInboundHandler inboundHandler = new LastInboundHandler(ctxConsumer);
         Http2StreamChannel childChannel = newInboundStream(3, false, numReads, inboundHandler);
-        childChannel.config().setAutoRead(false);
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
 
         Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1").send()).stream(childChannel.stream());
         Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2").send()).stream(childChannel.stream());
@@ -1242,9 +1244,9 @@ public class Http2MultiplexTest {
     private void useReadWithoutAutoReadBuffered(final boolean triggerOnReadComplete) throws Exception {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        assertTrue(childChannel.config().isAutoRead());
-        childChannel.config().setAutoRead(false);
-        assertFalse(childChannel.config().isAutoRead());
+        assertTrue(childChannel.getOption(ChannelOption.AUTO_READ));
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
+        assertFalse(childChannel.getOption(ChannelOption.AUTO_READ));
 
         Http2HeadersFrame headersFrame = inboundHandler.readInbound();
         assertNotNull(headersFrame);
@@ -1312,9 +1314,9 @@ public class Http2MultiplexTest {
         parentChannel.pipeline().addFirst(flushSniffer);
 
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        assertTrue(childChannel.config().isAutoRead());
-        childChannel.config().setAutoRead(false);
-        assertFalse(childChannel.config().isAutoRead());
+        assertTrue(childChannel.getOption(ChannelOption.AUTO_READ));
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
+        assertFalse(childChannel.getOption(ChannelOption.AUTO_READ));
 
         Http2HeadersFrame headersFrame = inboundHandler.readInbound();
         assertNotNull(headersFrame);

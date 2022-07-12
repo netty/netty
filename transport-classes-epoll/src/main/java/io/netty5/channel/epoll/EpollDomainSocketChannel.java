@@ -15,13 +15,14 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty5.channel.ChannelConfig;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.channel.unix.DomainSocketChannel;
+import io.netty5.channel.unix.DomainSocketReadMode;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.UnixChannel;
@@ -29,14 +30,36 @@ import io.netty5.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Set;
 
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.epoll.LinuxSocket.newSocketDomain;
+import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
+import static java.util.Objects.requireNonNull;
 
+/**
+ * {@link DomainSocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
+ * maximal performance.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link DomainSocketChannel},
+ * {@link EpollDomainSocketChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#DOMAIN_SOCKET_READ_MODE}</td>
+ * </tr>
+ * </table>
+ */
 public final class EpollDomainSocketChannel
         extends AbstractEpollStreamChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
         implements DomainSocketChannel {
-    private final EpollDomainSocketChannelConfig config = new EpollDomainSocketChannelConfig(this);
 
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private volatile DomainSocketAddress local;
     private volatile DomainSocketAddress remote;
 
@@ -60,6 +83,88 @@ public final class EpollDomainSocketChannel
         super(eventLoop, new LinuxSocket(fd), active);
     }
 
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected <T> T getExtendedOption(ChannelOption<T> option) {
+        if (option == DOMAIN_SOCKET_READ_MODE) {
+            return (T) getReadMode();
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        return super.getExtendedOption(option);
+    }
+
+    @Override
+    protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
+        if (option == DOMAIN_SOCKET_READ_MODE) {
+            setReadMode((DomainSocketReadMode) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else {
+            super.setExtendedOption(option, value);
+        }
+    }
+
+    @Override
+    protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
+        if (SUPPORTED_OPTIONS.contains(option)) {
+            return true;
+        }
+        return super.isExtendedOptionSupported(option);
+    }
+
+    private static Set<ChannelOption<?>> supportedOptions() {
+        return newSupportedIdentityOptionsSet(DOMAIN_SOCKET_READ_MODE, SO_SNDBUF, SO_RCVBUF);
+    }
+
+    private void setReadMode(DomainSocketReadMode mode) {
+        requireNonNull(mode, "mode");
+        this.mode = mode;
+    }
+
+    private DomainSocketReadMode getReadMode() {
+        return mode;
+    }
+
+    private int getSendBufferSize() {
+        try {
+            return socket.getSendBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setSendBufferSize(int sendBufferSize) {
+        try {
+            socket.setSendBufferSize(sendBufferSize);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private int getReceiveBufferSize() {
+        try {
+            return socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            socket.setReceiveBufferSize(receiveBufferSize);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     @Override
     protected DomainSocketAddress localAddress0() {
         return local;
@@ -74,11 +179,6 @@ public final class EpollDomainSocketChannel
     protected void doBind(SocketAddress localAddress) throws Exception {
         socket.bind(localAddress);
         local = (DomainSocketAddress) localAddress;
-    }
-
-    @Override
-    public EpollDomainSocketChannelConfig config() {
-        return config;
     }
 
     @Override
@@ -121,7 +221,7 @@ public final class EpollDomainSocketChannel
 
     @Override
     void epollInReady() {
-        switch (config().getReadMode()) {
+        switch (getReadMode()) {
             case BYTES:
                 super.epollInReady();
                 break;
@@ -138,11 +238,10 @@ public final class EpollDomainSocketChannel
             clearEpollIn0();
             return;
         }
-        final ChannelConfig config = config();
         final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
         final ChannelPipeline pipeline = pipeline();
-        allocHandle.reset(config);
+        allocHandle.reset();
         epollInBefore();
 
         try {
@@ -163,7 +262,7 @@ public final class EpollDomainSocketChannel
                     pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
                     break;
                 }
-            } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -173,7 +272,7 @@ public final class EpollDomainSocketChannel
             pipeline.fireChannelExceptionCaught(t);
         } finally {
             readIfIsAutoRead();
-            epollInFinally(config);
+            epollInFinally();
         }
     }
 }

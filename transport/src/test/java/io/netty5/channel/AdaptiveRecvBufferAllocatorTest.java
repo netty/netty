@@ -20,24 +20,18 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.RecvBufferAllocator.Handle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class AdaptiveRecvBufferAllocatorTest {
-    @Mock
-    private ChannelConfig config;
+
     private Handle handle;
 
     @BeforeEach
     public void setup() {
-        config = mock(ChannelConfig.class);
-        when(config.isAutoRead()).thenReturn(true);
         AdaptiveRecvBufferAllocator recvBufferAllocator = new AdaptiveRecvBufferAllocator(64, 512, 1024 * 1024 * 10);
         handle = recvBufferAllocator.newHandle();
-        handle.reset(config);
+        handle.reset();
     }
 
     @Test
@@ -50,7 +44,7 @@ public class AdaptiveRecvBufferAllocatorTest {
             allocReadExpected(handle, alloc, 2097152);
             handle.readComplete();
 
-            handle.reset(config);
+            handle.reset();
             allocReadExpected(handle, alloc, 8388608);
         }
     }
@@ -70,7 +64,7 @@ public class AdaptiveRecvBufferAllocatorTest {
 
     private void computingNext(long expectedSize, int actualReadBytes) {
         assertEquals(expectedSize, handle.guess());
-        handle.reset(config);
+        handle.reset();
         handle.lastBytesRead(actualReadBytes);
         handle.readComplete();
     }
@@ -84,7 +78,7 @@ public class AdaptiveRecvBufferAllocatorTest {
             allocRead(handle, alloc, 8192, 1);
             handle.readComplete();
 
-            handle.reset(config);
+            handle.reset();
             allocReadExpected(handle, alloc, 8192);
         }
     }
@@ -98,7 +92,7 @@ public class AdaptiveRecvBufferAllocatorTest {
             allocRead(handle, alloc, 8192, 8191);
             handle.readComplete();
 
-            handle.reset(config);
+            handle.reset();
             allocReadExpected(handle, alloc, 131072);
         }
     }

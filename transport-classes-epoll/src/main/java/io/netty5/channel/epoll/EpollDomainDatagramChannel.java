@@ -19,14 +19,16 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.AddressedEnvelope;
+import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.unix.DomainDatagramChannel;
-import io.netty5.channel.unix.DomainDatagramChannelConfig;
 import io.netty5.channel.unix.DomainDatagramPacket;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
 import io.netty5.channel.unix.DomainSocketAddress;
@@ -44,16 +46,39 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Set;
 
+import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.epoll.LinuxSocket.newSocketDomainDgram;
 import static io.netty5.util.CharsetUtil.UTF_8;
 
+/**
+ * {@link DomainDatagramChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
+ * maximal performance.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link DomainDatagramChannel} and {@link UnixChannel},
+ * {@link EpollDomainDatagramChannel} allows the following options in the option map:
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link io.netty5.channel.unix.RawUnixChannelOption}</td>
+ * </tr><tr>
+ * <td>{@link io.netty5.channel.unix.IntegerUnixChannelOption}</td>
+ * </tr>
+ * </table>
+ */
 @UnstableApi
 public final class EpollDomainDatagramChannel
         extends AbstractEpollChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
         implements DomainDatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDomainDatagramChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final String EXPECTED_TYPES =
             " (expected: " +
                     StringUtil.simpleClassName(DomainDatagramPacket.class) + ", " +
@@ -67,8 +92,7 @@ public final class EpollDomainDatagramChannel
     private volatile DomainSocketAddress remote;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
-
-    private final EpollDomainDatagramChannelConfig config;
+    private volatile boolean activeOnOpen;
 
     public EpollDomainDatagramChannel(EventLoop eventLoop) {
         this(eventLoop, newSocketDomainDgram(), false);
@@ -79,13 +103,72 @@ public final class EpollDomainDatagramChannel
     }
 
     private EpollDomainDatagramChannel(EventLoop eventLoop, LinuxSocket socket, boolean active) {
-        super(null, eventLoop, socket, active);
-        config = new EpollDomainDatagramChannelConfig(this);
+        super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, active);
     }
 
     @Override
-    public EpollDomainDatagramChannelConfig config() {
-        return config;
+    @SuppressWarnings({"unchecked", "deprecation"})
+    protected <T> T getExtendedOption(ChannelOption<T> option) {
+        if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
+            return (T) Boolean.valueOf(activeOnOpen);
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        return super.getExtendedOption(option);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
+        if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
+            setActiveOnOpen((Boolean) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else {
+            super.setExtendedOption(option, value);
+        }
+    }
+
+    @Override
+    protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
+        if (SUPPORTED_OPTIONS.contains(option)) {
+            return true;
+        }
+        return super.isExtendedOptionSupported(option);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static Set<ChannelOption<?>> supportedOptions() {
+        return newSupportedIdentityOptionsSet(
+                DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_SNDBUF);
+    }
+
+    private void setActiveOnOpen(boolean activeOnOpen) {
+        if (isRegistered()) {
+            throw new IllegalStateException("Can only changed before channel was registered");
+        }
+        this.activeOnOpen = activeOnOpen;
+    }
+
+    private boolean getActiveOnOpen() {
+        return activeOnOpen;
+    }
+
+    private void setSendBufferSize(int sendBufferSize) {
+        try {
+            socket.setSendBufferSize(sendBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getSendBufferSize() {
+        try {
+            return socket.getSendBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -152,7 +235,7 @@ public final class EpollDomainDatagramChannel
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int maxMessagesPerWrite = config().getMaxMessagesPerWrite();
+        int maxMessagesPerWrite = getMaxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {
@@ -161,7 +244,7 @@ public final class EpollDomainDatagramChannel
 
             try {
                 boolean done = false;
-                for (int i = config().getWriteSpinCount(); i > 0; --i) {
+                for (int i = getWriteSpinCount(); i > 0; --i) {
                     if (doWriteMessage(msg)) {
                         done = true;
                         break;
@@ -289,7 +372,7 @@ public final class EpollDomainDatagramChannel
 
     @Override
     public boolean isActive() {
-        return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
+        return socket.isOpen() && (getActiveOnOpen() && isRegistered() || active);
     }
 
     @Override
@@ -300,11 +383,6 @@ public final class EpollDomainDatagramChannel
     @Override
     protected DomainSocketAddress localAddress0() {
         return local;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     /**
@@ -323,15 +401,14 @@ public final class EpollDomainDatagramChannel
     @Override
     void epollInReady() {
         assert executor().inEventLoop();
-        final DomainDatagramChannelConfig config = config();
-        if (shouldBreakEpollInReady(config)) {
+        if (shouldBreakEpollInReady()) {
             clearEpollIn0();
             return;
         }
         final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
 
         final ChannelPipeline pipeline = pipeline();
-        allocHandle.reset(config);
+        allocHandle.reset();
         epollInBefore();
 
         try {
@@ -345,12 +422,12 @@ public final class EpollDomainDatagramChannel
             }
             readIfIsAutoRead();
         } finally {
-            epollInFinally(config);
+            epollInFinally();
         }
     }
 
     private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle, ChannelPipeline pipeline) {
-        BufferAllocator allocator = config().getBufferAllocator();
+        BufferAllocator allocator = bufferAllocator();
         if (!allocator.getAllocationType().isDirect()) {
             allocator = DefaultBufferAllocators.offHeapAllocator();
         }
@@ -400,7 +477,7 @@ public final class EpollDomainDatagramChannel
 
                 // We use the TRUE_SUPPLIER as it is also ok to read less than what we did try to read (as long
                 // as we read anything).
-            } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+            } while (allocHandle.continueReading(isAutoRead(), UncheckedBooleanSupplier.TRUE_SUPPLIER));
         } catch (Throwable t) {
             if (buf != null) {
                 buf.close();

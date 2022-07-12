@@ -159,7 +159,7 @@ public class ServerBootstrapTest {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     protected void initChannel(LocalChannel ch) throws Exception {
-                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        Integer option = ch.getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
                         assertEquals(4242, (int) option);
                         assertEquals("value", ch.attr(key).get());
                         requestServed.set(true);

@@ -16,15 +16,38 @@
 package io.netty5.channel.socket;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelOption;
 
 
 /**
- * A socket {@link Channel}.
+ * A TCP/IP socket {@link Channel}.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link Channel},
+ * {@link SocketChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_KEEPALIVE}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_LINGER}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#TCP_NODELAY}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_TOS}</td>
+ * </tr>
+ * </table>
  */
 public interface SocketChannel extends Channel {
     @Override
     ServerSocketChannel parent();
-
-    @Override
-    SocketChannelConfig config();
 }

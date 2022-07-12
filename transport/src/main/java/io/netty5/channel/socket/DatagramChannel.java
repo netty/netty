@@ -16,6 +16,7 @@
 package io.netty5.channel.socket;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelOption;
 import io.netty5.util.concurrent.Future;
 
 import java.net.InetAddress;
@@ -23,10 +24,37 @@ import java.net.NetworkInterface;
 
 /**
  * A UDP/IP {@link Channel}.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link Channel},
+ * {@link DatagramChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_BROADCAST}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_ADDR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_LOOP_DISABLED}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_IF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_TTL}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_TOS}</td>
+ * </tr>
+ * </table>
  */
 public interface DatagramChannel extends Channel {
-    @Override
-    DatagramChannelConfig config();
 
     /**
      * Return {@code true} if the {@link DatagramChannel} is connected to the remote peer.

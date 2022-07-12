@@ -17,11 +17,9 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
 import io.netty5.util.concurrent.Future;
@@ -116,8 +114,6 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(channel.isActive()).thenReturn(true);
         when(channel.pipeline()).thenReturn(pipeline);
         when(channel.metadata()).thenReturn(metadata);
-        ChannelConfig config = new DefaultChannelConfig(channel);
-        when(channel.config()).thenReturn(config);
 
         when(writer.configuration()).thenReturn(writerConfig);
         when(writerConfig.frameSizePolicy()).thenReturn(frameSizePolicy);

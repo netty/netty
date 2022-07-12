@@ -55,7 +55,7 @@ public class DefaultMaxBytesRecvBufferAllocator implements MaxBytesRecvBufferAll
         }
 
         @Override
-        public void reset(ChannelConfig config) {
+        public void reset() {
             bytesToRead = maxBytesPerRead();
             individualReadMax = maxBytesPerIndividualRead();
         }
@@ -78,12 +78,12 @@ public class DefaultMaxBytesRecvBufferAllocator implements MaxBytesRecvBufferAll
         }
 
         @Override
-        public boolean continueReading() {
-            return continueReading(defaultMaybeMoreSupplier);
+        public boolean continueReading(boolean autoRead) {
+            return continueReading(autoRead, defaultMaybeMoreSupplier);
         }
 
         @Override
-        public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
+        public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
             // Keep reading if we are allowed to read more bytes, and our last read filled up the buffer we provided.
             return bytesToRead > 0 && maybeMoreDataSupplier.get();
         }

@@ -17,10 +17,10 @@ package io.netty5.channel.kqueue;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.Resource;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -58,23 +58,15 @@ public abstract class AbstractKQueueStreamChannel
     private final Runnable flushTask = this::writeFlushed;
 
     AbstractKQueueStreamChannel(P parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
-        super(parent, eventLoop, fd, active);
+        super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, active);
     }
 
     AbstractKQueueStreamChannel(P parent, EventLoop eventLoop, BsdSocket fd, R remote) {
-        super(parent, eventLoop, fd, remote);
+        super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, remote);
     }
 
     AbstractKQueueStreamChannel(EventLoop eventLoop, BsdSocket fd) {
         this(null, eventLoop, fd, isSoErrorZero(fd));
-    }
-
-    @Override
-    public abstract KQueueChannelConfig config();
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     /**
@@ -82,7 +74,7 @@ public abstract class AbstractKQueueStreamChannel
      * @param in the collection which contains objects to write.
      * @param buf the {@link Buffer} from which the bytes should be written
      * @return The value that should be decremented from the write-quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -108,7 +100,7 @@ public abstract class AbstractKQueueStreamChannel
             return true;
         });
         return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
-                                  config().getMaxBytesPerGatheringWrite());
+                                 getMaxBytesPerGatheringWrite());
     }
 
     private void adjustMaxBytesPerGatheringWrite(long attempted, long written, long oldMaxBytesPerGatheringWrite) {
@@ -117,10 +109,10 @@ public abstract class AbstractKQueueStreamChannel
         // make a best effort to adjust as OS behavior changes.
         if (attempted == written) {
             if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
-                config().setMaxBytesPerGatheringWrite(attempted << 1);
+                setMaxBytesPerGatheringWrite(attempted << 1);
             }
         } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
-            config().setMaxBytesPerGatheringWrite(attempted >>> 1);
+            setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
     }
 
@@ -129,7 +121,7 @@ public abstract class AbstractKQueueStreamChannel
      * @param in the collection which contains objects to write.
      * @param array The array which contains the content to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -162,7 +154,7 @@ public abstract class AbstractKQueueStreamChannel
      * @param expectedWrittenBytes The number of bytes we expect to write.
      * @param maxBytesPerGatheringWrite The maximum number of bytes we should attempt to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -194,7 +186,7 @@ public abstract class AbstractKQueueStreamChannel
      * @param in the collection which contains objects to write.
      * @param region the {@link DefaultFileRegion} from which the bytes should be written
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -231,7 +223,7 @@ public abstract class AbstractKQueueStreamChannel
      * @param in the collection which contains objects to write.
      * @param region the {@link FileRegion} from which the bytes should be written
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -262,7 +254,7 @@ public abstract class AbstractKQueueStreamChannel
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int writeSpinCount = config().getWriteSpinCount();
+        int writeSpinCount = getWriteSpinCount();
         do {
             final int msgCount = in.size();
             // Do gathering write if the outbound buffer entries start with more than one Buffer.
@@ -302,7 +294,7 @@ public abstract class AbstractKQueueStreamChannel
      * Attempt to write a single object.
      * @param in the collection which contains objects to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -331,7 +323,7 @@ public abstract class AbstractKQueueStreamChannel
      * Attempt to write multiple {@link Buffer} objects.
      * @param in the collection which contains objects to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -342,7 +334,7 @@ public abstract class AbstractKQueueStreamChannel
      * @throws Exception If an I/O error occurs.
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
-        final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
+        final long maxBytesPerGatheringWrite = getMaxBytesPerGatheringWrite();
         IovArray array = registration().cleanArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
@@ -406,14 +398,13 @@ public abstract class AbstractKQueueStreamChannel
 
     @Override
     void readReady(final KQueueRecvBufferAllocatorHandle allocHandle) {
-        final ChannelConfig config = config();
-        if (shouldBreakReadReady(config)) {
+        if (shouldBreakReadReady()) {
             clearReadFilter0();
             return;
         }
         final ChannelPipeline pipeline = pipeline();
-        final BufferAllocator bufferAllocator = config.getBufferAllocator();
-        allocHandle.reset(config);
+        final BufferAllocator bufferAllocator = bufferAllocator();
+        allocHandle.reset();
         readReadyBefore();
 
         Buffer buffer = null;
@@ -440,7 +431,7 @@ public abstract class AbstractKQueueStreamChannel
                 pipeline.fireChannelRead(buffer);
                 buffer = null;
 
-                if (shouldBreakReadReady(config)) {
+                if (shouldBreakReadReady()) {
                     // We need to do this for two reasons:
                     //
                     // - If the input was shutdown in between (which may be the case when the user did it in the
@@ -454,7 +445,7 @@ public abstract class AbstractKQueueStreamChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -467,7 +458,7 @@ public abstract class AbstractKQueueStreamChannel
         } catch (Throwable t) {
             handleReadException(pipeline, buffer, t, close, allocHandle);
         } finally {
-            readReadyFinally(config);
+            readReadyFinally();
         }
     }
 

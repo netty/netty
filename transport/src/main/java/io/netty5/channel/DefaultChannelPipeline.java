@@ -97,7 +97,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     final MessageSizeEstimator.Handle estimatorHandle() {
         MessageSizeEstimator.Handle handle = estimatorHandle;
         if (handle == null) {
-            handle = channel.config().getMessageSizeEstimator().newHandle();
+            handle = channel.getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR).newHandle();
             if (!ESTIMATOR.compareAndSet(this, null, handle)) {
                 handle = estimatorHandle;
             }

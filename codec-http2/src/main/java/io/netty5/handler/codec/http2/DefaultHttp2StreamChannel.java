@@ -15,16 +15,19 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.AdaptiveRecvBufferAllocator;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutputShutdownException;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.MaxMessagesRecvBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.MessageSizeEstimator;
@@ -49,9 +52,24 @@ import java.util.Queue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
+import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
+import static io.netty5.channel.ChannelOption.AUTO_READ;
+import static io.netty5.channel.ChannelOption.BUFFER_ALLOCATOR;
+import static io.netty5.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
+import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_READ;
+import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
+import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
+import static io.netty5.channel.ChannelOption.RCVBUF_ALLOCATOR;
+import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
+import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Http2StreamChannel {
 
@@ -131,8 +149,25 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         REQUESTED
     }
 
+    private static final AtomicIntegerFieldUpdater<DefaultHttp2StreamChannel> AUTOREAD_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultHttp2StreamChannel.class, "autoRead");
+    private static final AtomicReferenceFieldUpdater<DefaultHttp2StreamChannel, WriteBufferWaterMark>
+            WATERMARK_UPDATER = AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultHttp2StreamChannel.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
+
+    private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
+    private volatile RecvBufferAllocator rcvBufAllocator = new AdaptiveRecvBufferAllocator();
+
+    private volatile int connectTimeoutMillis = 30000;
+    private volatile int writeSpinCount = 16;
+    private volatile int maxMessagesPerWrite = Integer.MAX_VALUE;
+
+    @SuppressWarnings("FieldMayBeFinal")
+    private volatile int autoRead = 1;
+    private volatile boolean autoClose = true;
+    private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
+    private volatile boolean allowHalfClosure;
     private final Http2MultiplexHandler handler;
-    private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
     private final ChannelId channelId;
     private final ChannelPipeline pipeline;
     private final DefaultHttp2FrameStream stream;
@@ -190,7 +225,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > config().getWriteBufferWaterMark().high()) {
+        if (newWriteBufferSize > writeBufferWaterMark.high()) {
             setUnwritable(invokeLater);
         }
     }
@@ -206,7 +241,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         // prevent excessive buffering in the parent outbound buffer. If the parent is not writable
         // we will mark the child channel as writable once the parent becomes writable by calling
         // trySetWritable() later.
-        if (newWriteBufferSize < config().getWriteBufferWaterMark().low() && parent().isWritable()) {
+        if (newWriteBufferSize < writeBufferWaterMark.low() && parent().isWritable()) {
             setWritable(invokeLater);
         }
     }
@@ -216,7 +251,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         // Lets try to set the child channel writable to match the state of the parent channel
         // if (and only if) the totalPendingSize is smaller then the low water-mark.
         // If this is not the case we will try again later once we drop under it.
-        if (totalPendingSize < config().getWriteBufferWaterMark().low()) {
+        if (totalPendingSize < writeBufferWaterMark.low()) {
             setWritable(false);
         }
     }
@@ -281,11 +316,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     @Override
-    public ChannelConfig config() {
-        return config;
-    }
-
-    @Override
     public boolean isOpen() {
         return !closePromise.isDone();
     }
@@ -347,7 +377,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     @Override
     public long writableBytes() {
-        long bytes = config().getWriteBufferWaterMark().high() - totalPendingSize - pipeline.pendingOutboundBytes();
+        long bytes = writeBufferWaterMark.high()
+                - totalPendingSize - pipeline.pendingOutboundBytes();
         // If bytes is negative we know we are not writable.
         if (bytes > 0) {
             return unwritable == 0 ? bytes : 0;
@@ -402,7 +433,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
             // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
             // cost of additional readComplete notifications on the rare path.
-            if (allocHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound)) {
+            if (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound)) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
                 notifyReadComplete(allocHandle, true);
@@ -431,8 +462,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     private RecvBufferAllocator.Handle recvBufAllocHandle() {
         if (recvHandle == null) {
-            recvHandle = config().getRecvBufferAllocator().newHandle();
-            recvHandle.reset(config());
+            recvHandle = rcvBufAllocator.newHandle();
+            recvHandle.reset();
         }
         return recvHandle;
     }
@@ -453,7 +484,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         pipeline().fireChannelRegistered();
         if (isActive()) {
             pipeline().fireChannelActive();
-            if (config().isAutoRead()) {
+            if (isAutoRead()) {
                 read();
             }
         }
@@ -681,11 +712,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
                 break;
             }
             final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config());
+            allocHandle.reset();
             boolean continueReading = false;
             do {
                 doRead0((Http2Frame) message, allocHandle);
-            } while ((readEOS || (continueReading = allocHandle.continueReading()))
+            } while ((readEOS || (continueReading = allocHandle.continueReading(isAutoRead())))
                     && (message = pollQueuedMessage()) != null);
 
             if (continueReading && handler.isParentReadInProgress() && !readEOS) {
@@ -742,7 +773,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
         allocHandle.readComplete();
         pipeline().fireChannelReadComplete();
-        if (config().isAutoRead()) {
+        if (isAutoRead()) {
             read();
         }
 
@@ -900,7 +931,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             Throwable error = wrapStreamClosedError(cause);
             // To make it more consistent with AbstractChannel we handle all IOExceptions here.
             if (error instanceof IOException) {
-                if (config.isAutoClose()) {
+                if (isAutoClose()) {
                     // Close channel if needed.
                     closeForcibly();
                 } else {
@@ -950,25 +981,287 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         promise.setSuccess(null);
     }
 
+    @Override
+    public BufferAllocator bufferAllocator() {
+        return bufferAllocator;
+    }
+
+    private <T> void validate(ChannelOption<T> option, T value) {
+        requireNonNull(option, "option");
+        option.validate(value);
+    }
+
+    @Override
+    @SuppressWarnings({ "unchecked", "deprecation" })
+    public <T> T getOption(ChannelOption<T> option) {
+        requireNonNull(option, "option");
+        if (option == AUTO_READ) {
+            return (T) Boolean.valueOf(isAutoRead());
+        }
+        if (option == WRITE_BUFFER_WATER_MARK) {
+            return (T) getWriteBufferWaterMark();
+        }
+        if (option == CONNECT_TIMEOUT_MILLIS) {
+            return (T) Integer.valueOf(getConnectTimeoutMillis());
+        }
+        if (option == MAX_MESSAGES_PER_READ) {
+            return (T) Integer.valueOf(getMaxMessagesPerRead());
+        }
+        if (option == WRITE_SPIN_COUNT) {
+            return (T) Integer.valueOf(getWriteSpinCount());
+        }
+        if (option == BUFFER_ALLOCATOR) {
+            return (T) getBufferAllocator();
+        }
+        if (option == RCVBUF_ALLOCATOR) {
+            return getRecvBufferAllocator();
+        }
+        if (option == AUTO_CLOSE) {
+            return (T) Boolean.valueOf(isAutoClose());
+        }
+        if (option == MESSAGE_SIZE_ESTIMATOR) {
+            return (T) getMessageSizeEstimator();
+        }
+        if (option == MAX_MESSAGES_PER_WRITE) {
+            return (T) Integer.valueOf(getMaxMessagesPerWrite());
+        }
+        if (option == ALLOW_HALF_CLOSURE) {
+            return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
+
+        return null;
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public <T> Channel setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+
+        if (option == AUTO_READ) {
+            setAutoRead((Boolean) value);
+        } else if (option == WRITE_BUFFER_WATER_MARK) {
+            setWriteBufferWaterMark((WriteBufferWaterMark) value);
+        } else if (option == CONNECT_TIMEOUT_MILLIS) {
+            setConnectTimeoutMillis((Integer) value);
+        } else if (option == MAX_MESSAGES_PER_READ) {
+            setMaxMessagesPerRead((Integer) value);
+        } else if (option == WRITE_SPIN_COUNT) {
+            setWriteSpinCount((Integer) value);
+        } else if (option == BUFFER_ALLOCATOR) {
+            setBufferAllocator((BufferAllocator) value);
+        } else if (option == RCVBUF_ALLOCATOR) {
+            setRecvBufferAllocator((RecvBufferAllocator) value);
+        } else if (option == AUTO_CLOSE) {
+            setAutoClose((Boolean) value);
+        } else if (option == MESSAGE_SIZE_ESTIMATOR) {
+            return this;
+        } else if (option == MAX_MESSAGES_PER_WRITE) {
+            setMaxMessagesPerWrite((Integer) value);
+        } else if (option == ALLOW_HALF_CLOSURE) {
+            setAllowHalfClosure((Boolean) value);
+        }
+        return this;
+    }
+
+    @Override
+    public boolean isOptionSupported(ChannelOption<?> option) {
+        return option == AUTO_READ || option == WRITE_BUFFER_WATER_MARK || option == CONNECT_TIMEOUT_MILLIS ||
+                option == MAX_MESSAGES_PER_READ || option == WRITE_SPIN_COUNT || option == BUFFER_ALLOCATOR ||
+                option == RCVBUF_ALLOCATOR || option == AUTO_CLOSE || option == MESSAGE_SIZE_ESTIMATOR ||
+                option == MAX_MESSAGES_PER_WRITE || option == ALLOW_HALF_CLOSURE;
+    }
+
+    private int getConnectTimeoutMillis() {
+        return connectTimeoutMillis;
+    }
+
+    private void setConnectTimeoutMillis(int connectTimeoutMillis) {
+        checkPositiveOrZero(connectTimeoutMillis, "connectTimeoutMillis");
+        this.connectTimeoutMillis = connectTimeoutMillis;
+    }
+
     /**
-     * {@link ChannelConfig} so that the high and low writebuffer watermarks can reflect the outbound flow control
-     * window, without having to create a new {@link WriteBufferWaterMark} object whenever the flow control window
-     * changes.
+     * @throws IllegalStateException if {@link #getRecvBufferAllocator()} does not return an object of type
+     * {@link MaxMessagesRecvBufferAllocator}.
      */
-    private static final class Http2StreamChannelConfig extends DefaultChannelConfig {
-        Http2StreamChannelConfig(Channel channel) {
-            super(channel);
+    @Deprecated
+    private int getMaxMessagesPerRead() {
+        try {
+            MaxMessagesRecvBufferAllocator allocator = getRecvBufferAllocator();
+            return allocator.maxMessagesPerRead();
+        } catch (ClassCastException e) {
+            throw new IllegalStateException("getRecvBufferAllocator() must return an object of type " +
+                    "MaxMessagesRecvBufferAllocator", e);
         }
+    }
 
-        @Override
-        public MessageSizeEstimator getMessageSizeEstimator() {
-            return FlowControlledFrameSizeEstimator.INSTANCE;
+    /**
+     * @throws IllegalStateException if {@link #getRecvBufferAllocator()} does not return an object of type
+     * {@link MaxMessagesRecvBufferAllocator}.
+     */
+    @Deprecated
+    private void setMaxMessagesPerRead(int maxMessagesPerRead) {
+        try {
+            MaxMessagesRecvBufferAllocator allocator = getRecvBufferAllocator();
+            allocator.maxMessagesPerRead(maxMessagesPerRead);
+        } catch (ClassCastException e) {
+            throw new IllegalStateException("getRecvBufferAllocator() must return an object of type " +
+                    "MaxMessagesRecvBufferAllocator", e);
         }
+    }
 
-        @Override
-        public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            throw new UnsupportedOperationException();
+    /**
+     * Get the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    private int getMaxMessagesPerWrite() {
+        return maxMessagesPerWrite;
+    }
+
+    /**
+     * Set the maximum number of message to write per eventloop run. Once this limit is
+     * reached we will continue to process other events before trying to write the remaining messages.
+     */
+    private void setMaxMessagesPerWrite(int maxMessagesPerWrite) {
+        this.maxMessagesPerWrite = checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
+    }
+
+    private int getWriteSpinCount() {
+        return writeSpinCount;
+    }
+
+    private void setWriteSpinCount(int writeSpinCount) {
+        checkPositive(writeSpinCount, "writeSpinCount");
+        // Integer.MAX_VALUE is used as a special value in the channel implementations to indicate the channel cannot
+        // accept any more data, and results in the writeOp being set on the selector (or execute a runnable which tries
+        // to flush later because the writeSpinCount quantum has been exhausted). This strategy prevents additional
+        // conditional logic in the channel implementations, and shouldn't be noticeable in practice.
+        if (writeSpinCount == Integer.MAX_VALUE) {
+            --writeSpinCount;
         }
+        this.writeSpinCount = writeSpinCount;
+    }
+
+    private BufferAllocator getBufferAllocator() {
+        return bufferAllocator;
+    }
+
+    public void setBufferAllocator(BufferAllocator bufferAllocator) {
+        requireNonNull(bufferAllocator, "bufferAllocator");
+        this.bufferAllocator = bufferAllocator;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends RecvBufferAllocator> T getRecvBufferAllocator() {
+        return (T) rcvBufAllocator;
+    }
+
+    private void setRecvBufferAllocator(RecvBufferAllocator allocator) {
+        rcvBufAllocator = requireNonNull(allocator, "allocator");
+    }
+
+    /**
+     * Set the {@link RecvBufferAllocator} which is used for the channel to allocate receive buffers.
+     * @param allocator the allocator to set.
+     * @param metadata Used to set the {@link ChannelMetadata#defaultMaxMessagesPerRead()} if {@code allocator}
+     * is of type {@link MaxMessagesRecvBufferAllocator}.
+     */
+    private void setRecvBufferAllocator(RecvBufferAllocator allocator, ChannelMetadata metadata) {
+        requireNonNull(allocator, "allocator");
+        requireNonNull(metadata, "metadata");
+        if (allocator instanceof MaxMessagesRecvBufferAllocator) {
+            ((MaxMessagesRecvBufferAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
+        }
+        setRecvBufferAllocator(allocator);
+    }
+
+    private boolean isAutoRead() {
+        return autoRead == 1;
+    }
+
+    private void setAutoRead(boolean autoRead) {
+        boolean oldAutoRead = AUTOREAD_UPDATER.getAndSet(this, autoRead ? 1 : 0) == 1;
+        if (autoRead && !oldAutoRead) {
+            read();
+        } else if (!autoRead && oldAutoRead) {
+            autoReadCleared();
+        }
+    }
+
+    /**
+     * Is called once {@link #setAutoRead(boolean)} is called with {@code false} and {@link #isAutoRead()} was
+     * {@code true} before.
+     */
+    protected void autoReadCleared() { }
+
+    private WriteBufferWaterMark getWriteBufferWaterMark() {
+        return writeBufferWaterMark;
+    }
+
+    private boolean isAutoClose() {
+        return autoClose;
+    }
+
+    private void setAutoClose(boolean autoClose) {
+        this.autoClose = autoClose;
+    }
+
+    private int getWriteBufferHighWaterMark() {
+        return writeBufferWaterMark.high();
+    }
+
+    private void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        checkPositiveOrZero(writeBufferHighWaterMark, "writeBufferHighWaterMark");
+        for (;;) {
+            WriteBufferWaterMark waterMark = writeBufferWaterMark;
+            if (writeBufferHighWaterMark < waterMark.low()) {
+                throw new IllegalArgumentException(
+                        "writeBufferHighWaterMark cannot be less than " +
+                                "writeBufferLowWaterMark (" + waterMark.low() + "): " +
+                                writeBufferHighWaterMark);
+            }
+            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
+                    new WriteBufferWaterMark(waterMark.low(), writeBufferHighWaterMark))) {
+                return;
+            }
+        }
+    }
+
+    private int getWriteBufferLowWaterMark() {
+        return writeBufferWaterMark.low();
+    }
+
+    private void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        checkPositiveOrZero(writeBufferLowWaterMark, "writeBufferLowWaterMark");
+        for (;;) {
+            WriteBufferWaterMark waterMark = writeBufferWaterMark;
+            if (writeBufferLowWaterMark > waterMark.high()) {
+                throw new IllegalArgumentException(
+                        "writeBufferLowWaterMark cannot be greater than " +
+                                "writeBufferHighWaterMark (" + waterMark.high() + "): " +
+                                writeBufferLowWaterMark);
+            }
+            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
+                    new WriteBufferWaterMark(writeBufferLowWaterMark, waterMark.high()))) {
+                return;
+            }
+        }
+    }
+
+    private void setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+        this.writeBufferWaterMark = requireNonNull(writeBufferWaterMark, "writeBufferWaterMark");
+    }
+
+    private MessageSizeEstimator getMessageSizeEstimator() {
+        return FlowControlledFrameSizeEstimator.INSTANCE;
+    }
+
+    private boolean isAllowHalfClosure() {
+        return allowHalfClosure;
+    }
+
+    private void setAllowHalfClosure(boolean allowHalfClosure) {
+        this.allowHalfClosure = allowHalfClosure;
     }
 
     private void maybeAddChannelToReadCompletePendingQueue() {

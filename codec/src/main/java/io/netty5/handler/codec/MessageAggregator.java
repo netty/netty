@@ -18,6 +18,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
@@ -349,7 +350,7 @@ public abstract class MessageAggregator<I, S, C extends AutoCloseable, A extends
         // We might need keep reading the channel until the full message is aggregated.
         //
         // See https://github.com/netty/netty/issues/6583
-        if (currentMessage != null && !ctx.channel().config().isAutoRead()) {
+        if (currentMessage != null && !ctx.channel().getOption(ChannelOption.AUTO_READ)) {
             ctx.read();
         }
         ctx.fireChannelReadComplete();

@@ -20,7 +20,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
@@ -127,7 +127,7 @@ public class LoggingHandlerTest {
     public void shouldLogChannelWritabilityChanged() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         // this is used to switch the channel to become unwritable
-        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(5, 10));
+        channel.setOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(5, 10));
         channel.write("hello");
 
         // This is expected to be called 3 times:
@@ -310,12 +310,7 @@ public class LoggingHandlerTest {
     private static final class DisconnectingEmbeddedChannel extends EmbeddedChannel {
 
         private DisconnectingEmbeddedChannel(ChannelHandler... handlers) {
-            super(handlers);
-        }
-
-        @Override
-        public ChannelMetadata metadata() {
-            return new ChannelMetadata(true);
+            super(true, handlers);
         }
     }
 }

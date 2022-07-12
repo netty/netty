@@ -28,7 +28,6 @@ import io.netty5.util.concurrent.Future;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-
 /**
  * A nexus to a network socket or a component which is capable of I/O
  * operations such as read, write, connect, and bind.
@@ -36,7 +35,7 @@ import java.net.SocketAddress;
  * A channel provides a user:
  * <ul>
  * <li>the current state of the channel (e.g. is it open? is it connected?),</li>
- * <li>the {@linkplain ChannelConfig configuration parameters} of the channel (e.g. receive buffer size),</li>
+ * <li>the configuration parameters of the channel (e.g. receive buffer size),</li>
  * <li>the I/O operations that the channel supports (e.g. read, write, connect, and bind), and</li>
  * <li>the {@link ChannelPipeline} which handles all I/O events and requests
  *     associated with the channel.</li>
@@ -83,6 +82,40 @@ import java.net.SocketAddress;
  * It is important to call {@link #close()} to release all
  * resources once you are done with the {@link Channel}. This ensures all resources are
  * released in a proper way, i.e. filehandles.
+ *
+ * <h3>Configuration / Option map</h3>
+ *
+ * An option map property is a dynamic write-only property which allows
+ * the configuration of a {@link Channel} without down-casting.
+ * To update an option map, please call {@link #setOption(ChannelOption, Object)}.
+ * <p>
+ * All {@link Channel} types have the following options:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#CONNECT_TIMEOUT_MILLIS}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#WRITE_SPIN_COUNT}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#WRITE_BUFFER_WATER_MARK}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#BUFFER_ALLOCATOR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#AUTO_READ}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#ALLOW_HALF_CLOSURE}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#MAX_MESSAGES_PER_WRITE}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#ALLOW_HALF_CLOSURE}</td>
+ * </tr>
+ * </table>
+ * <p>
+ * More options are available in the sub-types of {@link Channel}. For
+ * example, you can configure the parameters which are specific to a TCP/IP
+ * socket as explained in {@link SocketChannel}.
  */
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparable<Channel> {
 
@@ -106,9 +139,38 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     Channel parent();
 
     /**
-     * Returns the configuration of this channel.
+     * Return the value of the given {@link ChannelOption}
+     *
+     * @param option                            the {@link ChannelOption}.
+     * @return                                  the value for the {@link ChannelOption}
+     * @param <T>                               the type of the value.
+     * @throws ChannelException                 thrown on error.
+     * @throws UnsupportedOperationException    if the {@link ChannelOption} is not supported.
      */
-    ChannelConfig config();
+    <T> T getOption(ChannelOption<T> option);
+
+    /**
+     * Sets a configuration property with the specified name and value.
+     *
+     * @param option                            the {@link ChannelOption}.
+     * @param value                             the value for the {@link ChannelOption}
+     * @return                                  itself.
+     * @param <T>                               the type of the value.
+     * @throws ChannelException                 thrown on error.
+     * @throws UnsupportedOperationException    if the {@link ChannelOption} is not supported.
+     */
+    <T> Channel setOption(ChannelOption<T> option, T value);
+
+    /**
+     * Returns {@code true} if the given {@link ChannelOption} is supported by this {@link Channel} implementation.
+     * If this methods returns {@code false}, calls to {@link #setOption(ChannelOption, Object)}
+     * and {@link #getOption(ChannelOption)} with the {@link ChannelOption} will throw an
+     * {@link UnsupportedOperationException}.
+     *
+     * @param option    the option.
+     * @return          {@code} true if supported, {@code false} otherwise.
+     */
+    boolean isOptionSupported(ChannelOption<?> option);
 
     /**
      * Returns {@code true} if the {@link Channel} is open and may get active later
@@ -195,9 +257,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     /**
      * Return the assigned {@link BufferAllocator} which will be used to allocate {@link Buffer}s.
      */
-    default BufferAllocator bufferAllocator() {
-        return config().getBufferAllocator();
-    }
+    BufferAllocator bufferAllocator();
 
     @Override
     default Channel read() {

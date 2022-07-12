@@ -51,12 +51,11 @@ public interface RecvBufferAllocator {
          * Reset any counters that have accumulated and recommend how many messages/bytes should be read for the next
          * read loop.
          * <p>
-         * This may be used by {@link #continueReading()} to determine if the read operation should complete.
+         * This may be used by {@link #continueReading(boolean)} to determine if the read operation should complete.
          * </p>
          * This is only ever a hint and may be ignored by the implementation.
-         * @param config The channel configuration which may impact this object's behavior.
          */
-        void reset(ChannelConfig config);
+        void reset();
 
         /**
          * Increment the number of messages that have been read for the current read loop.
@@ -70,7 +69,7 @@ public interface RecvBufferAllocator {
          * @param bytes The number of bytes from the previous read operation. This may be negative if an read error
          * occurs. If a negative value is seen it is expected to be return on the next call to
          * {@link #lastBytesRead()}. A negative value will signal a termination condition enforced externally
-         * to this class and is not required to be enforced in {@link #continueReading()}.
+         * to this class and is not required to be enforced in {@link #continueReading(boolean)}.
          */
         void lastBytesRead(int bytes);
 
@@ -94,15 +93,20 @@ public interface RecvBufferAllocator {
 
         /**
          * Determine if the current read loop should continue.
-         * @return {@code true} if the read loop should continue reading. {@code false} if the read loop is complete.
+         * @param autoRead              {@çode true} if autoread is used, {@code false} otherwise.
+         * @return                      {@code true} if the read loop should continue reading. {@code false}
+         *                              if the read loop is complete.
          */
-        boolean continueReading();
+        boolean continueReading(boolean autoRead);
 
         /**
-         * Same as {@link Handle#continueReading()} except "more data" is determined by the supplier parameter.
+         * Same as {@link Handle#continueReading(boolean)} except "more data" is determined by the supplier parameter.
+         * @param autoRead              {@çode true} if autoread is used, {@code false} otherwise.
          * @param maybeMoreDataSupplier A supplier that determines if there maybe more data to read.
+         * @return                      {@code true} if the read loop should continue reading. {@code false} if the
+         * read loop is complete.
          */
-        boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier);
+        boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier);
 
         /**
          * The read has completed.
@@ -139,8 +143,8 @@ public interface RecvBufferAllocator {
         }
 
         @Override
-        public void reset(ChannelConfig config) {
-            delegate.reset(config);
+        public void reset() {
+            delegate.reset();
         }
 
         @Override
@@ -159,13 +163,13 @@ public interface RecvBufferAllocator {
         }
 
         @Override
-        public boolean continueReading() {
-            return delegate.continueReading();
+        public boolean continueReading(boolean autoRead) {
+            return delegate.continueReading(autoRead);
         }
 
         @Override
-        public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-            return delegate.continueReading(maybeMoreDataSupplier);
+        public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+            return delegate.continueReading(autoRead, maybeMoreDataSupplier);
         }
 
         @Override

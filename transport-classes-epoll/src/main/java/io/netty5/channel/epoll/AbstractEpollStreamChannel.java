@@ -17,10 +17,10 @@ package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.Resource;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -42,6 +42,7 @@ import java.nio.channels.WritableByteChannel;
 
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
+import static io.netty5.channel.unix.Limits.SSIZE_MAX;
 
 public abstract class AbstractEpollStreamChannel
         <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
@@ -55,6 +56,7 @@ public abstract class AbstractEpollStreamChannel
     private final Runnable flushTask = this::writeFlushed;
 
     private WritableByteChannel byteChannel;
+    private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
     protected AbstractEpollStreamChannel(P parent, EventLoop eventLoop, int fd) {
         this(parent, eventLoop, new LinuxSocket(fd));
@@ -69,29 +71,21 @@ public abstract class AbstractEpollStreamChannel
     }
 
     AbstractEpollStreamChannel(P parent, EventLoop eventLoop, LinuxSocket fd) {
-        super(parent, eventLoop, fd, true);
+        super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
     AbstractEpollStreamChannel(P parent, EventLoop eventLoop, LinuxSocket fd, R remote) {
-        super(parent, eventLoop, fd, remote);
+        super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
     protected AbstractEpollStreamChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, fd, active);
+        super(null, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
-    }
-
-    @Override
-    public abstract EpollChannelConfig config();
-
-    @Override
-    public final ChannelMetadata metadata() {
-        return METADATA;
     }
 
     /**
@@ -99,7 +93,7 @@ public abstract class AbstractEpollStreamChannel
      * @param in the collection which contains objects to write.
      * @param buf the {@link Buffer} from which the bytes should be written
      * @return The value that should be decremented from the write-quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -125,8 +119,16 @@ public abstract class AbstractEpollStreamChannel
                 return true;
             });
             return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
-                    config().getMaxBytesPerGatheringWrite());
+                    getMaxBytesPerGatheringWrite());
         }
+    }
+
+    final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
+        this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
+    }
+
+    final long getMaxBytesPerGatheringWrite() {
+        return maxBytesPerGatheringWrite;
     }
 
     private void adjustMaxBytesPerGatheringWrite(long attempted, long written, long oldMaxBytesPerGatheringWrite) {
@@ -135,10 +137,10 @@ public abstract class AbstractEpollStreamChannel
         // make a best effort to adjust as OS behavior changes.
         if (attempted == written) {
             if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
-                config().setMaxBytesPerGatheringWrite(attempted << 1);
+                setMaxBytesPerGatheringWrite(attempted << 1);
             }
         } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
-            config().setMaxBytesPerGatheringWrite(attempted >>> 1);
+            setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
     }
 
@@ -147,7 +149,7 @@ public abstract class AbstractEpollStreamChannel
      * @param in the collection which contains objects to write.
      * @param array The array which contains the content to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -180,7 +182,7 @@ public abstract class AbstractEpollStreamChannel
      * @param expectedWrittenBytes The number of bytes we expect to write.
      * @param maxBytesPerGatheringWrite The maximum number of bytes we should attempt to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -212,7 +214,7 @@ public abstract class AbstractEpollStreamChannel
      * @param in the collection which contains objects to write.
      * @param region the {@link DefaultFileRegion} from which the bytes should be written
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -248,7 +250,7 @@ public abstract class AbstractEpollStreamChannel
      * @param in the collection which contains objects to write.
      * @param region the {@link FileRegion} from which the bytes should be written
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -279,7 +281,7 @@ public abstract class AbstractEpollStreamChannel
 
     @Override
     protected final void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int writeSpinCount = config().getWriteSpinCount();
+        int writeSpinCount = getWriteSpinCount();
         do {
             final int msgCount = in.size();
             // Do gathering write if the outbound buffer entries start with more than one Buffer.
@@ -319,7 +321,7 @@ public abstract class AbstractEpollStreamChannel
      * Attempt to write a single object.
      * @param in the collection which contains objects to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -348,7 +350,7 @@ public abstract class AbstractEpollStreamChannel
      * Attempt to write multiple {@link Buffer} objects.
      * @param in the collection which contains objects to write.
      * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
@@ -359,7 +361,7 @@ public abstract class AbstractEpollStreamChannel
      * @throws Exception If an I/O error occurs.
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
-        final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
+        final long maxBytesPerGatheringWrite = getMaxBytesPerGatheringWrite();
         IovArray array = registration().cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
@@ -449,16 +451,15 @@ public abstract class AbstractEpollStreamChannel
 
     @Override
     void epollInReady() {
-        final ChannelConfig config = config();
-        if (shouldBreakEpollInReady(config)) {
+        if (shouldBreakEpollInReady()) {
             clearEpollIn0();
             return;
         }
         final EpollRecvBufferAllocatorHandle recvAlloc = recvBufAllocHandle();
 
         final ChannelPipeline pipeline = pipeline();
-        final BufferAllocator bufferAllocator = config.getBufferAllocator();
-        recvAlloc.reset(config);
+        final BufferAllocator bufferAllocator = bufferAllocator();
+        recvAlloc.reset();
         epollInBefore();
 
         Buffer buffer = null;
@@ -485,7 +486,7 @@ public abstract class AbstractEpollStreamChannel
                 pipeline.fireChannelRead(buffer);
                 buffer = null;
 
-                if (shouldBreakEpollInReady(config)) {
+                if (shouldBreakEpollInReady()) {
                     // We need to do this for two reasons:
                     //
                     // - If the input was shutdown in between (which may be the case when the user did it in the
@@ -499,7 +500,7 @@ public abstract class AbstractEpollStreamChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (recvAlloc.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (recvAlloc.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
             recvAlloc.readComplete();
             pipeline.fireChannelReadComplete();
@@ -512,7 +513,7 @@ public abstract class AbstractEpollStreamChannel
         } catch (Throwable t) {
             handleReadException(pipeline, buffer, t, close, recvAlloc);
         } finally {
-            epollInFinally(config);
+            epollInFinally();
         }
     }
 

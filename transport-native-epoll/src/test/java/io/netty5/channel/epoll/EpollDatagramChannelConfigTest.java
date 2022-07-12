@@ -30,8 +30,8 @@ public class EpollDatagramChannelConfigTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             EpollDatagramChannel channel = new EpollDatagramChannel(group.next());
-            assertTrue(channel.config().setOption(EpollChannelOption.IP_FREEBIND, true));
-            assertTrue(channel.config().getOption(EpollChannelOption.IP_FREEBIND));
+            channel.setOption(EpollChannelOption.IP_FREEBIND, true);
+            assertTrue(channel.getOption(EpollChannelOption.IP_FREEBIND));
             channel.fd().close();
         } finally {
             group.shutdownGracefully();

@@ -25,24 +25,30 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioByteChannel;
-import io.netty5.channel.socket.DefaultSocketChannelConfig;
-import io.netty5.channel.socket.SocketChannelConfig;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
-import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
+import static io.netty5.channel.ChannelOption.IP_TOS;
+import static io.netty5.channel.ChannelOption.SO_KEEPALIVE;
+import static io.netty5.channel.ChannelOption.SO_LINGER;
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty5.channel.ChannelOption.SO_SNDBUF;
+import static io.netty5.channel.ChannelOption.TCP_NODELAY;
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 
 /**
@@ -56,6 +62,8 @@ public class NioSocketChannel
     private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
             SelectorProviderUtil.findOpenMethod("openSocketChannel");
 
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
+
     private static SocketChannel newChannel(SelectorProvider provider, ProtocolFamily family) {
         try {
             SocketChannel channel = SelectorProviderUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
@@ -64,8 +72,6 @@ public class NioSocketChannel
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
-
-    private final SocketChannelConfig config;
 
     /**
      * Create a new instance
@@ -104,12 +110,14 @@ public class NioSocketChannel
      */
     public NioSocketChannel(NioServerSocketChannel parent, EventLoop eventLoop, SocketChannel socket) {
         super(parent, eventLoop, socket);
-        config = new NioSocketChannelConfig(this, socket.socket());
-    }
-
-    @Override
-    public SocketChannelConfig config() {
-        return config;
+        // Enable TCP_NODELAY by default if possible.
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            try {
+                setTcpNoDelay(true);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
     }
 
     @Override
@@ -227,17 +235,17 @@ public class NioSocketChannel
         // make a best effort to adjust as OS behavior changes.
         if (attempted == written) {
             if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
-                ((NioSocketChannelConfig) config).setMaxBytesPerGatheringWrite(attempted << 1);
+                setMaxBytesPerGatheringWrite(attempted << 1);
             }
         } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
-            ((NioSocketChannelConfig) config).setMaxBytesPerGatheringWrite(attempted >>> 1);
+            setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
     }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         SocketChannel ch = javaChannel();
-        int writeSpinCount = config().getWriteSpinCount();
+        int writeSpinCount = getWriteSpinCount();
         do {
             if (in.isEmpty()) {
                 // All written so clear OP_WRITE
@@ -247,7 +255,7 @@ public class NioSocketChannel
             }
 
             // Ensure the pending writes are made of ByteBufs only.
-            int maxBytesPerGatheringWrite = ((NioSocketChannelConfig) config).getMaxBytesPerGatheringWrite();
+            int maxBytesPerGatheringWrite = getMaxBytesPerGatheringWrite();
             ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
             int nioBufferCnt = in.nioBufferCount();
 
@@ -300,7 +308,7 @@ public class NioSocketChannel
     @Override
     protected Future<Executor> prepareToClose() {
         try {
-            if (javaChannel().isOpen() && config().getSoLinger() > 0) {
+            if (javaChannel().isOpen() && getOption(ChannelOption.SO_LINGER) > 0) {
                 // We need to cancel this key of the channel so we may not end up in a eventloop spin
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.
@@ -315,64 +323,214 @@ public class NioSocketChannel
         return null;
     }
 
-    private final class NioSocketChannelConfig extends DefaultSocketChannelConfig {
-        private volatile int maxBytesPerGatheringWrite = Integer.MAX_VALUE;
-        private NioSocketChannelConfig(NioSocketChannel channel, Socket javaSocket) {
-            super(channel, javaSocket);
-            calculateMaxBytesPerGatheringWrite();
+    @SuppressWarnings("unchecked")
+    @Override
+    protected <T> T getExtendedOption(ChannelOption<T> option) {
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
         }
-
-        @Override
-        protected void autoReadCleared() {
-            clearReadPending();
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
         }
-
-        @Override
-        public NioSocketChannelConfig setSendBufferSize(int sendBufferSize) {
-            super.setSendBufferSize(sendBufferSize);
-            calculateMaxBytesPerGatheringWrite();
-            return this;
+        if (option == TCP_NODELAY) {
+            return (T) Boolean.valueOf(isTcpNoDelay());
         }
-
-        @Override
-        public <T> boolean setOption(ChannelOption<T> option, T value) {
-            if (option instanceof NioChannelOption) {
-                return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
-            }
-            return super.setOption(option, value);
+        if (option == SO_KEEPALIVE) {
+            return (T) Boolean.valueOf(isKeepAlive());
         }
-
-        @Override
-        public <T> T getOption(ChannelOption<T> option) {
-            if (option instanceof NioChannelOption) {
-                return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
-            }
-            return super.getOption(option);
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
         }
-
-        @Override
-        public Map<ChannelOption<?>, Object> getOptions() {
-            return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
+        if (option == SO_LINGER) {
+            return (T) Integer.valueOf(getSoLinger());
         }
-
-        void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {
-            this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
+        if (option == IP_TOS) {
+            return (T) Integer.valueOf(getTrafficClass());
         }
-
-        int getMaxBytesPerGatheringWrite() {
-            return maxBytesPerGatheringWrite;
+        if (option instanceof NioChannelOption) {
+            return NioChannelOption.getOption(javaChannel(), (NioChannelOption<T>) option);
         }
+        return super.getExtendedOption(option);
+    }
 
-        private void calculateMaxBytesPerGatheringWrite() {
-            // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
-            int newSendBufferSize = getSendBufferSize() << 1;
-            if (newSendBufferSize > 0) {
-                setMaxBytesPerGatheringWrite(newSendBufferSize);
-            }
+    @Override
+    protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
+        if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == TCP_NODELAY) {
+            setTcpNoDelay((Boolean) value);
+        } else if (option == SO_KEEPALIVE) {
+            setKeepAlive((Boolean) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == SO_LINGER) {
+            setSoLinger((Integer) value);
+        } else if (option == IP_TOS) {
+            setTrafficClass((Integer) value);
+        } else if (option instanceof NioChannelOption) {
+            NioChannelOption.setOption(javaChannel(), (NioChannelOption<T>) option, value);
+        } else {
+            super.setExtendedOption(option, value);
         }
+    }
 
-        private SocketChannel jdkChannel() {
-            return ((NioSocketChannel) channel).javaChannel();
+    @Override
+    protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
+        if (option instanceof NioChannelOption) {
+            return NioChannelOption.isSupported(javaChannel(), (NioChannelOption<?>) option);
+        }
+        if (SUPPORTED_OPTIONS.contains(option)) {
+            return true;
+        }
+        return super.isExtendedOptionSupported(option);
+    }
+
+    private static Set<ChannelOption<?>> supportedOptions() {
+        return newSupportedIdentityOptionsSet(
+                ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF, ChannelOption.TCP_NODELAY,
+                ChannelOption.SO_KEEPALIVE, ChannelOption.SO_REUSEADDR, ChannelOption.SO_LINGER,
+                ChannelOption.IP_TOS);
+    }
+
+    private int getReceiveBufferSize() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.SO_RCVBUF);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getSendBufferSize() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.SO_SNDBUF);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getSoLinger() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.SO_LINGER);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getTrafficClass() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.IP_TOS);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isKeepAlive() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.SO_KEEPALIVE);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isReuseAddress() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.SO_REUSEADDR);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private boolean isTcpNoDelay() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.TCP_NODELAY);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setKeepAlive(boolean keepAlive) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.SO_KEEPALIVE, keepAlive);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setPerformancePreferences(
+            int connectionTime, int latency, int bandwidth) {
+        javaChannel().socket().setPerformancePreferences(connectionTime, latency, bandwidth);
+    }
+
+    private void setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setReuseAddress(boolean reuseAddress) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setSendBufferSize(int sendBufferSize) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    public void setSoLinger(int soLinger) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.SO_LINGER, soLinger);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    public void setTcpNoDelay(boolean tcpNoDelay) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    public void setTrafficClass(int trafficClass) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.IP_TOS, trafficClass);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    protected void autoReadCleared() {
+        clearReadPending();
+    }
+
+    private volatile int maxBytesPerGatheringWrite = Integer.MAX_VALUE;
+
+    void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {
+        this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
+    }
+
+    int getMaxBytesPerGatheringWrite() {
+        return maxBytesPerGatheringWrite;
+    }
+
+    private void calculateMaxBytesPerGatheringWrite() {
+        // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
+        int newSendBufferSize = getSendBufferSize() << 1;
+        if (newSendBufferSize > 0) {
+            setMaxBytesPerGatheringWrite(newSendBufferSize);
         }
     }
 }

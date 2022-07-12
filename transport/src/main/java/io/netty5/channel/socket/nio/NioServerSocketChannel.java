@@ -23,9 +23,9 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
-import io.netty5.channel.socket.DefaultServerSocketChannelConfig;
-import io.netty5.channel.socket.ServerSocketChannelConfig;
+import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -33,14 +33,19 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
-import java.net.ServerSocket;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
+
+import static io.netty5.channel.ChannelOption.SO_BACKLOG;
+import static io.netty5.channel.ChannelOption.SO_RCVBUF;
+import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * A {@link io.netty5.channel.socket.ServerSocketChannel} implementation which uses
@@ -51,6 +56,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
@@ -67,8 +73,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
         }
     }
 
-    private final ServerSocketChannelConfig config;
     private final EventLoopGroup childEventLoopGroup;
+
+    private volatile int backlog = NetUtil.SOMAXCONN;
 
     /**
      * Create a new instance
@@ -97,10 +104,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
      */
     public NioServerSocketChannel(
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ServerSocketChannel channel) {
-        super(null, eventLoop, channel, SelectionKey.OP_ACCEPT);
+        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
+                channel, SelectionKey.OP_ACCEPT);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", NioSocketChannel.class);
-        config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
     @Override
@@ -109,20 +116,104 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
-    public ServerSocketChannelConfig config() {
-        return config;
-    }
-
-    @Override
     public boolean isActive() {
         // As java.nio.ServerSocketChannel.isBound() will continue to return true even after the channel was closed
         // we will also need to check if it is open.
         return isOpen() && javaChannel().socket().isBound();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected <T> T getExtendedOption(ChannelOption<T> option) {
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == SO_BACKLOG) {
+            return (T) Integer.valueOf(getBacklog());
+        }
+        if (option instanceof NioChannelOption) {
+            return NioChannelOption.getOption(javaChannel(), (NioChannelOption<T>) option);
+        }
+        return super.getExtendedOption(option);
+    }
+
+    @Override
+    protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
+        if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == SO_BACKLOG) {
+            setBacklog((Integer) value);
+        } else if (option instanceof NioChannelOption) {
+            NioChannelOption.setOption(javaChannel(), (NioChannelOption<T>) option, value);
+        } else {
+            super.setExtendedOption(option, value);
+        }
+    }
+
+    @Override
+    protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
+        if (option instanceof NioChannelOption) {
+            return NioChannelOption.isSupported(javaChannel(), (NioChannelOption<?>) option);
+        }
+        if (SUPPORTED_OPTIONS.contains(option)) {
+            return true;
+        }
+        return super.isExtendedOptionSupported(option);
+    }
+
+    private static Set<ChannelOption<?>> supportedOptions() {
+        return newSupportedIdentityOptionsSet(
+                SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG);
+    }
+
+    private boolean isReuseAddress() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.SO_REUSEADDR);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setReuseAddress(boolean reuseAddress) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private int getReceiveBufferSize() {
+        try {
+            return javaChannel().getOption(StandardSocketOptions.SO_RCVBUF);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            javaChannel().setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+        javaChannel().socket().setPerformancePreferences(connectionTime, latency, bandwidth);
+    }
+
+    private int getBacklog() {
+        return backlog;
+    }
+
+    private void setBacklog(int backlog) {
+        checkPositiveOrZero(backlog, "backlog");
+        this.backlog = backlog;
     }
 
     @Override
@@ -147,7 +238,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress, config.getBacklog());
+        javaChannel().bind(localAddress, getBacklog());
     }
 
     @Override
@@ -204,40 +295,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
         throw new UnsupportedOperationException();
     }
 
-    private final class NioServerSocketChannelConfig extends DefaultServerSocketChannelConfig {
-        private NioServerSocketChannelConfig(NioServerSocketChannel channel, ServerSocket javaSocket) {
-            super(channel, javaSocket);
-        }
-
-        @Override
-        protected void autoReadCleared() {
-            clearReadPending();
-        }
-
-        @Override
-        public <T> boolean setOption(ChannelOption<T> option, T value) {
-            if (option instanceof NioChannelOption) {
-                return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
-            }
-            return super.setOption(option, value);
-        }
-
-        @Override
-        public <T> T getOption(ChannelOption<T> option) {
-            if (option instanceof NioChannelOption) {
-                return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
-            }
-            return super.getOption(option);
-        }
-
-        @Override
-        public Map<ChannelOption<?>, Object> getOptions() {
-            return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
-        }
-
-        private ServerSocketChannel jdkChannel() {
-            return ((NioServerSocketChannel) channel).javaChannel();
-        }
+    @Override
+    protected void autoReadCleared() {
+        clearReadPending();
     }
 
     // Override just to to be able to call directly via unit tests.

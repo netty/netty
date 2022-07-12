@@ -19,6 +19,7 @@ import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
@@ -193,8 +194,8 @@ public class JdkZlibTest {
             Data data, BufferType inBuf, BufferType outBuf, ZlibWrapper inWrap, ZlibWrapper outWrap) {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(inWrap));
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(outWrap));
-        chEncoder.config().setBufferAllocator(inBuf.allocator());
-        chDecoder.config().setBufferAllocator(outBuf.allocator());
+        chEncoder.setOption(ChannelOption.BUFFER_ALLOCATOR, inBuf.allocator());
+        chDecoder.setOption(ChannelOption.BUFFER_ALLOCATOR, outBuf.allocator());
 
         try {
             if (data != Data.NONE) {

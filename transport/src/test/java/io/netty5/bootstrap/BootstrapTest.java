@@ -17,14 +17,10 @@
 package io.netty5.bootstrap;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
-import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.DefaultChannelConfig;
-import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
@@ -112,7 +108,7 @@ public class BootstrapTest {
                 .handler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     protected void initChannel(LocalChannel ch) throws Exception {
-                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        Integer option = ch.getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
                         assertEquals(4242, (int) option);
                         assertEquals("value", ch.attr(key).get());
                     }
@@ -344,56 +340,6 @@ public class BootstrapTest {
         // Should fail with the RuntimeException.
         assertTrue(connectFuture.asStage().await(10000, TimeUnit.MILLISECONDS));
         assertSame(connectFuture.cause(), exception);
-    }
-
-    @Test
-    public void testChannelOptionOrderPreserve() throws InterruptedException {
-        final BlockingQueue<ChannelOption<?>> options = new LinkedBlockingQueue<>();
-        class ChannelConfigValidator extends DefaultChannelConfig {
-            ChannelConfigValidator(Channel channel) {
-                super(channel);
-            }
-
-            @Override
-            public <T> boolean setOption(ChannelOption<T> option, T value) {
-                options.add(option);
-                return super.setOption(option, value);
-            }
-        }
-        final CountDownLatch latch = new CountDownLatch(1);
-        final Bootstrap bootstrap = new Bootstrap()
-                .handler(new ChannelInitializer<Channel>() {
-                    @Override
-                    protected void initChannel(Channel ch) {
-                        latch.countDown();
-                    }
-                })
-                .group(groupA)
-                .channelFactory(new ChannelFactory<Channel>() {
-                    @Override
-                    public Channel newChannel(EventLoop eventLoop) {
-                        return new LocalChannel(eventLoop) {
-                            private ChannelConfigValidator config;
-                            @Override
-                            public synchronized ChannelConfig config() {
-                                if (config == null) {
-                                    config = new ChannelConfigValidator(this);
-                                }
-                                return config;
-                            }
-                        };
-                    }
-                })
-                .option(ChannelOption.MAX_MESSAGES_PER_WRITE, 1)
-                .option(ChannelOption.WRITE_SPIN_COUNT, 2);
-
-        bootstrap.register().asStage().sync();
-
-        latch.await();
-
-        // Check the order is the same as what we defined before.
-        assertSame(ChannelOption.MAX_MESSAGES_PER_WRITE, options.take());
-        assertSame(ChannelOption.WRITE_SPIN_COUNT, options.take());
     }
 
     private static final class LateRegisterHandler implements ChannelHandler {

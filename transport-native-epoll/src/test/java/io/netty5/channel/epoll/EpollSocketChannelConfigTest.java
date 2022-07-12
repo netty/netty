@@ -32,7 +32,6 @@ import org.opentest4j.TestAbortedException;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.Map;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -91,8 +90,8 @@ public class EpollSocketChannelConfigTest {
         final long expected = randLong(0, 0xFFFFFFFFL);
         final long actual;
         try {
-            ch.config().setTcpNotSentLowAt(expected);
-            actual = ch.config().getTcpNotSentLowAt();
+            ch.setOption(EpollChannelOption.TCP_NOTSENT_LOWAT, expected);
+            actual = ch.getOption(EpollChannelOption.TCP_NOTSENT_LOWAT);
         } catch (RuntimeException e) {
             throw new TestAbortedException("assumeNoException", e);
         }
@@ -103,7 +102,7 @@ public class EpollSocketChannelConfigTest {
     public void testInvalidHighTcpNotSentLowAt() {
         try {
             final long value = 0xFFFFFFFFL + 1;
-            ch.config().setTcpNotSentLowAt(value);
+            ch.setOption(EpollChannelOption.TCP_NOTSENT_LOWAT, value);
         } catch (IllegalArgumentException e) {
             return;
         } catch (RuntimeException e) {
@@ -116,7 +115,7 @@ public class EpollSocketChannelConfigTest {
     public void testInvalidLowTcpNotSentLowAt() {
         try {
             final long value = -1;
-            ch.config().setTcpNotSentLowAt(value);
+            ch.setOption(EpollChannelOption.TCP_NOTSENT_LOWAT, value);
         } catch (IllegalArgumentException e) {
             return;
         } catch (RuntimeException e) {
@@ -127,18 +126,18 @@ public class EpollSocketChannelConfigTest {
 
     @Test
     public void testTcpCork() {
-        ch.config().setTcpCork(false);
-        assertFalse(ch.config().isTcpCork());
-        ch.config().setTcpCork(true);
-        assertTrue(ch.config().isTcpCork());
+        ch.setOption(EpollChannelOption.TCP_CORK, false);
+        assertFalse(ch.getOption(EpollChannelOption.TCP_CORK));
+        ch.setOption(EpollChannelOption.TCP_CORK, true);
+        assertTrue(ch.getOption(EpollChannelOption.TCP_CORK));
     }
 
     @Test
     public void testTcpQickAck() {
-        ch.config().setTcpQuickAck(false);
-        assertFalse(ch.config().isTcpQuickAck());
-        ch.config().setTcpQuickAck(true);
-        assertTrue(ch.config().isTcpQuickAck());
+        ch.setOption(EpollChannelOption.TCP_QUICKACK, false);
+        assertFalse(ch.getOption(EpollChannelOption.TCP_QUICKACK));
+        ch.setOption(EpollChannelOption.TCP_QUICKACK, true);
+        assertTrue(ch.getOption(EpollChannelOption.TCP_QUICKACK));
     }
 
     // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
@@ -150,7 +149,7 @@ public class EpollSocketChannelConfigTest {
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                ch.config().setSoLinger(0);
+                ch.setOption(ChannelOption.SO_LINGER, 0);
             }
         });
         assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
@@ -165,15 +164,9 @@ public class EpollSocketChannelConfigTest {
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                ch.config().getSoLinger();
+                ch.getOption(ChannelOption.SO_LINGER);
             }
         });
         assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
-    }
-
-    @Test
-    public void getGetOptions() {
-        Map<ChannelOption<?>, Object> map = ch.config().getOptions();
-        assertFalse(map.isEmpty());
     }
 }

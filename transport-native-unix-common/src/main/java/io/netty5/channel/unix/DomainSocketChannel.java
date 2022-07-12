@@ -15,9 +15,27 @@
  */
 package io.netty5.channel.unix;
 
+import io.netty5.channel.ChannelOption;
+
 /**
  * A {@link UnixChannel} that supports communication via
  * <a href="https://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link UnixChannel},
+ * {@link DomainSocketChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * </tr>
+ * </table>
+
  */
 public interface DomainSocketChannel extends UnixChannel {
     @Override
@@ -25,7 +43,4 @@ public interface DomainSocketChannel extends UnixChannel {
 
     @Override
     DomainSocketAddress localAddress();
-
-    @Override
-    DomainSocketChannelConfig config();
 }

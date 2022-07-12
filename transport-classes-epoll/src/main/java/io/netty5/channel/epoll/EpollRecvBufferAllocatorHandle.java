@@ -61,8 +61,8 @@ class EpollRecvBufferAllocatorHandle extends DelegatingHandle {
     }
 
     @Override
-    public final boolean continueReading() {
+    public final boolean continueReading(boolean autoRead) {
         // We must override the supplier which determines if there maybe more data to read.
-        return continueReading(defaultMaybeMoreDataSupplier);
+        return continueReading(autoRead, defaultMaybeMoreDataSupplier);
     }
 }

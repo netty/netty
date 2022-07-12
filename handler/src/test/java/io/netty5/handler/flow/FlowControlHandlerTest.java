@@ -21,7 +21,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -130,7 +129,7 @@ public class FlowControlHandlerTest {
                 Resource.dispose(msg);
                 // We're turning off auto reading in the hope that no
                 // new messages are being sent but that is not true.
-                ctx.channel().config().setAutoRead(false);
+                ctx.channel().setOption(ChannelOption.AUTO_READ, false);
 
                 latch.countDown();
             }
@@ -247,7 +246,7 @@ public class FlowControlHandlerTest {
 
     /**
      * The {@link FlowControlHandler} will pass down messages one by one
-     * if {@link ChannelConfig#setAutoRead(boolean)} is being toggled.
+     * if {@link ChannelOption#AUTO_READ} {@code false} is used.
      */
     @Test
     public void testFlowToggleAutoRead() throws Exception {
@@ -272,7 +271,7 @@ public class FlowControlHandlerTest {
                 Resource.dispose(msg);
 
                 // Disable auto reading after each message
-                ctx.channel().config().setAutoRead(false);
+                ctx.channel().setOption(ChannelOption.AUTO_READ, false);
 
                 if (msgRcvCount++ != expectedMsgCount) {
                     return;
@@ -310,12 +309,13 @@ public class FlowControlHandlerTest {
             assertTrue(msgRcvLatch1.await(1L, SECONDS));
 
             // channelRead(2)
-            peer.config().setAutoRead(true);
+            peer.setOption(ChannelOption.AUTO_READ, true);
+
             setAutoReadLatch1.countDown();
             assertTrue(msgRcvLatch1.await(1L, SECONDS));
 
             // channelRead(3)
-            peer.config().setAutoRead(true);
+            peer.setOption(ChannelOption.AUTO_READ, true);
             setAutoReadLatch2.countDown();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
@@ -468,8 +468,8 @@ public class FlowControlHandlerTest {
             }
         );
 
-        channel.config().setAutoRead(false);
-        assertFalse(channel.config().isAutoRead());
+        channel.setOption(ChannelOption.AUTO_READ, false);
+        assertFalse(channel.getOption(ChannelOption.AUTO_READ));
 
         channel.register();
 

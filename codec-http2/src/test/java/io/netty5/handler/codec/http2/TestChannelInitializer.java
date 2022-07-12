@@ -18,9 +18,9 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.UncheckedBooleanSupplier;
 
@@ -45,7 +45,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
             handler = null;
         }
         if (maxReads != null) {
-            channel.config().setRecvBufferAllocator(new TestNumReadsRecvBufferAllocator(maxReads));
+            channel.setOption(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(maxReads));
         }
     }
 
@@ -76,7 +76,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 }
 
                 @Override
-                public void reset(ChannelConfig config) {
+                public void reset() {
                     numMessagesRead = 0;
                 }
 
@@ -106,13 +106,13 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 }
 
                 @Override
-                public boolean continueReading() {
+                public boolean continueReading(boolean autoRead) {
                     return numMessagesRead < numReads.get();
                 }
 
                 @Override
-                public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-                    return continueReading();
+                public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+                    return continueReading(autoRead);
                 }
 
                 @Override

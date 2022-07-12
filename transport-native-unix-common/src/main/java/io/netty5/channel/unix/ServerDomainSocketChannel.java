@@ -15,11 +15,33 @@
  */
 package io.netty5.channel.unix;
 
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ServerChannel;
 
 /**
  * {@link ServerChannel} that accepts {@link DomainSocketChannel}'s via
  * <a href="https://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link ServerChannel},
+ * {@link ServerDomainSocketChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_BACKLOG}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty5.channel.unix.RawUnixChannelOption}</td>
+ * </tr><tr>
+ * <td>{@link io.netty5.channel.unix.IntegerUnixChannelOption}</td>
+ * </tr>
+ * </table>
  */
 public interface ServerDomainSocketChannel extends ServerChannel, UnixChannel {
     @Override

@@ -18,6 +18,7 @@ import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2Exception.CompositeStreamException;
@@ -526,7 +527,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Ensure we never stall the HTTP/2 Channel. Flow-control is enforced by HTTP/2.
         //
         // See https://tools.ietf.org/html/rfc7540#section-5.2.2
-        if (!ctx.channel().config().isAutoRead()) {
+        if (!ctx.channel().getOption(ChannelOption.AUTO_READ)) {
             ctx.read();
         }
 

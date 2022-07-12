@@ -77,15 +77,15 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cb.option(ChannelOption.SO_REUSEADDR, true);
 
         DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).asStage().get();
-        assertEquals(iface, sc.config().getNetworkInterface());
-        assertInterfaceAddress(iface, sc.config().getInterface());
+        assertEquals(iface, sc.getOption(ChannelOption.IP_MULTICAST_IF));
+        assertInterfaceAddress(iface, sc.getOption(ChannelOption.IP_MULTICAST_ADDR));
 
         InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
         cb.localAddress(addr.getPort());
 
         DatagramChannel cc = (DatagramChannel) cb.bind().asStage().get();
-        assertEquals(iface, cc.config().getNetworkInterface());
-        assertInterfaceAddress(iface, cc.config().getInterface());
+        assertEquals(iface, cc.getOption(ChannelOption.IP_MULTICAST_IF));
+        assertInterfaceAddress(iface, cc.getOption(ChannelOption.IP_MULTICAST_ADDR));
 
         InetAddress groupAddress = SocketUtils.addressByName(groupAddress());
         cc.joinGroup(groupAddress, iface, null).asStage().sync();
@@ -106,17 +106,17 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         sc.writeAndFlush(new DatagramPacket(allocator.allocate(4).writeInt(1), destAddress)).asStage().sync();
         mhandler.await();
 
-        cc.config().setLoopbackModeDisabled(false);
-        sc.config().setLoopbackModeDisabled(false);
+        cc.setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, false);
+        sc.setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, false);
 
-        assertFalse(cc.config().isLoopbackModeDisabled());
-        assertFalse(sc.config().isLoopbackModeDisabled());
+        assertFalse(cc.getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+        assertFalse(sc.getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
 
-        cc.config().setLoopbackModeDisabled(true);
-        sc.config().setLoopbackModeDisabled(true);
+        cc.setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, true);
+        sc.setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, true);
 
-        assertTrue(cc.config().isLoopbackModeDisabled());
-        assertTrue(sc.config().isLoopbackModeDisabled());
+        assertTrue(cc.getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+        assertTrue(sc.getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
 
         sc.close().asStage().await();
         cc.close().asStage().await();

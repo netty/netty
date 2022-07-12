@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferStub;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder.Cumulator;
@@ -485,7 +486,7 @@ public class ByteToMessageDecoderTest {
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.config().setAutoRead(false);
+        channel.setOption(ChannelOption.AUTO_READ, false);
         channel.pipeline().addLast(interceptor, new FixedLengthFrameDecoder(3, cumulator));
         assertEquals(0, interceptor.readsTriggered);
 

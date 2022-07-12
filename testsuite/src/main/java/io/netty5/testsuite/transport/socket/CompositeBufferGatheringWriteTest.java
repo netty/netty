@@ -22,7 +22,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -174,7 +173,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                           @Override
                           public void channelActive(ChannelHandlerContext ctx) throws Exception {
                               compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(
-                                      ctx.channel().config(), soSndBuf);
+                                      ctx.channel(), soSndBuf);
                               Buffer contents = expectedContent.copy();
                               // First single write
                               ctx.write(contents.readSplit(soSndBuf - 100));
@@ -283,7 +282,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         }
     }
 
-    protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ChannelConfig config,
+    protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(Channel channel,
                                                                                  int soSndBuf) {
     }
 

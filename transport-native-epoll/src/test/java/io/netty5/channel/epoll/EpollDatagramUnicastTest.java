@@ -156,7 +156,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 return;
             }
             if (sc instanceof EpollDatagramChannel) {
-                assertEquals(gro, sc.config().getOption(EpollChannelOption.UDP_GRO));
+                assertEquals(gro, sc.getOption(EpollChannelOption.UDP_GRO));
             }
             InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
             final Buffer buffer;

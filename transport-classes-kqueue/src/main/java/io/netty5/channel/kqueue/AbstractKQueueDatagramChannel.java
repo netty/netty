@@ -19,6 +19,7 @@ import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;
@@ -31,19 +32,14 @@ abstract class AbstractKQueueDatagramChannel<P extends UnixChannel, L extends So
     private volatile boolean outputShutdown;
 
     AbstractKQueueDatagramChannel(P parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
-        super(parent, eventLoop, fd, active);
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
+        super(parent, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), fd, active);
     }
 
     protected abstract boolean doWriteMessage(Object msg) throws Exception;
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int maxMessagesPerWrite = config().getMaxMessagesPerWrite();
+        int maxMessagesPerWrite = getMaxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {
@@ -52,7 +48,7 @@ abstract class AbstractKQueueDatagramChannel<P extends UnixChannel, L extends So
 
             try {
                 boolean done = false;
-                for (int i = config().getWriteSpinCount(); i > 0; --i) {
+                for (int i = getWriteSpinCount(); i > 0; --i) {
                     if (doWriteMessage(msg)) {
                         done = true;
                         break;

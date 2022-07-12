@@ -16,6 +16,7 @@
 package io.netty5.channel.local;
 
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
@@ -23,11 +24,9 @@ import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.DefaultChannelConfig;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
@@ -59,7 +58,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
-    private final ChannelConfig config = new DefaultChannelConfig(this);
     // To further optimize this we could write our own SPSC queue.
     final Queue<Object> inboundBuffer = PlatformDependent.newSpscQueue();
     private final Runnable readTask = () -> {
@@ -80,26 +78,19 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     private volatile boolean outputShutdown;
 
     public LocalChannel(EventLoop eventLoop) {
-        super(null, eventLoop);
-        config().setBufferAllocator(DefaultBufferAllocators.onHeapAllocator());
+        this(null, eventLoop, null);
     }
 
     protected LocalChannel(LocalServerChannel parent, EventLoop eventLoop, LocalChannel peer) {
-        super(parent, eventLoop);
-        config().setBufferAllocator(DefaultBufferAllocators.onHeapAllocator());
+        super(parent, eventLoop, METADATA);
         this.peer = peer;
-        localAddress = parent.localAddress();
-        remoteAddress = peer.localAddress();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
-    public ChannelConfig config() {
-        return config;
+        if (parent != null) {
+            localAddress = parent.localAddress();
+        }
+        if (peer != null) {
+            remoteAddress = peer.localAddress();
+        }
+        setOption(ChannelOption.BUFFER_ALLOCATOR, DefaultBufferAllocators.onHeapAllocator());
     }
 
     @Override
@@ -231,7 +222,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
     private void readInbound() {
         RecvBufferAllocator.Handle handle = recvBufAllocHandle();
-        handle.reset(config());
+        handle.reset();
         ChannelPipeline pipeline = pipeline();
         do {
             Object received = inboundBuffer.poll();
@@ -239,7 +230,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                 break;
             }
             pipeline.fireChannelRead(received);
-        } while (handle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+        } while (handle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
         pipeline.fireChannelReadComplete();
         readIfIsAutoRead();

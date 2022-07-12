@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
@@ -128,7 +129,7 @@ public class MessageAggregatorTest {
             ReadCounter counter = new ReadCounter();
             MockMessageAggregator agg = new MockMessageAggregator(first.copy(), last.copy());
             EmbeddedChannel embedded = new EmbeddedChannel(counter, agg);
-            embedded.config().setAutoRead(false);
+            embedded.setOption(ChannelOption.AUTO_READ, false);
 
             assertFalse(embedded.writeInbound(first.copy()));
             assertFalse(embedded.writeInbound(chunk.copy()));

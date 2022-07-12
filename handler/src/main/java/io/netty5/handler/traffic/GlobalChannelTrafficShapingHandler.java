@@ -16,8 +16,8 @@
 package io.netty5.handler.traffic;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.util.Attribute;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
@@ -549,13 +549,12 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
                 Channel channel = ctx.channel();
-                ChannelConfig config = channel.config();
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Read Suspend: " + wait + ':' + config.isAutoRead() + ':'
+                    logger.debug("Read Suspend: " + wait + ':' + channel.getOption(ChannelOption.AUTO_READ) + ':'
                             + isHandlerActive(ctx));
                 }
-                if (config.isAutoRead() && isHandlerActive(ctx)) {
-                    config.setAutoRead(false);
+                if (channel.getOption(ChannelOption.AUTO_READ) && isHandlerActive(ctx)) {
+                    channel.setOption(ChannelOption.AUTO_READ, false);
                     channel.attr(READ_SUSPENDED).set(true);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
@@ -567,7 +566,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     }
                     ctx.executor().schedule(reopenTask, wait, TimeUnit.MILLISECONDS);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Suspend final status => " + config.isAutoRead() + ':'
+                        logger.debug("Suspend final status => " + channel.getOption(ChannelOption.AUTO_READ) + ':'
                                 + isHandlerActive(ctx) + " will reopened at: " + wait);
                     }
                 }
@@ -686,7 +685,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
             }
             if (wait >= MINIMAL_WAIT) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Write suspend: " + wait + ':' + ctx.channel().config().isAutoRead() + ':'
+                    logger.debug("Write suspend: " + wait + ':' + ctx.channel().getOption(ChannelOption.AUTO_READ) + ':'
                             + isHandlerActive(ctx));
                 }
                 Promise<Void> promise = ctx.newPromise();
