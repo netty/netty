@@ -121,7 +121,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 // Enable GRO and also ensure we can read everything with one read as otherwise
                 // we will drop things on the floor.
                 sb.option(EpollChannelOption.UDP_GRO, true);
-                sb.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(bufferCapacity));
+                sb.option(ChannelOption.RCVBUFFER_ALLOCATOR, new FixedRecvBufferAllocator(bufferCapacity));
             }
             sc = sb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override

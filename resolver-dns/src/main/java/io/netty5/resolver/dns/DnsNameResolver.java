@@ -473,7 +473,7 @@ public class DnsNameResolver extends InetNameResolver {
                 });
             }
         });
-        b.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvBufferAllocator(maxPayloadSize));
+        b.option(ChannelOption.RCVBUFFER_ALLOCATOR, new FixedRecvBufferAllocator(maxPayloadSize));
 
         try {
             Future<Void> future;

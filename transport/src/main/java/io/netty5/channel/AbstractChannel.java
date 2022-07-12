@@ -55,7 +55,7 @@ import static io.netty5.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
-import static io.netty5.channel.ChannelOption.RCVBUF_ALLOCATOR;
+import static io.netty5.channel.ChannelOption.RCVBUFFER_ALLOCATOR;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
@@ -1315,7 +1315,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (option == BUFFER_ALLOCATOR) {
             return (T) getBufferAllocator();
         }
-        if (option == RCVBUF_ALLOCATOR) {
+        if (option == RCVBUFFER_ALLOCATOR) {
             return getRecvBufferAllocator();
         }
         if (option == AUTO_CLOSE) {
@@ -1364,7 +1364,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             setWriteSpinCount((Integer) value);
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
-        } else if (option == RCVBUF_ALLOCATOR) {
+        } else if (option == RCVBUFFER_ALLOCATOR) {
             setRecvBufferAllocator((RecvBufferAllocator) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
@@ -1415,7 +1415,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(
                 AUTO_READ, WRITE_BUFFER_WATER_MARK, CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ,
-                WRITE_SPIN_COUNT, BUFFER_ALLOCATOR, RCVBUF_ALLOCATOR, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
+                WRITE_SPIN_COUNT, BUFFER_ALLOCATOR, RCVBUFFER_ALLOCATOR, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
                 MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
     }
 

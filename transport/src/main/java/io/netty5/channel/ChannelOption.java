@@ -77,7 +77,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     }
 
     public static final ChannelOption<BufferAllocator> BUFFER_ALLOCATOR = valueOf("BUFFER_ALLOCATOR");
-    public static final ChannelOption<RecvBufferAllocator> RCVBUF_ALLOCATOR = valueOf("RCVBUF_ALLOCATOR");
+    public static final ChannelOption<RecvBufferAllocator> RCVBUFFER_ALLOCATOR = valueOf("RCVBUFFER_ALLOCATOR");
     public static final ChannelOption<MessageSizeEstimator> MESSAGE_SIZE_ESTIMATOR = valueOf("MESSAGE_SIZE_ESTIMATOR");
 
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS = valueOf("CONNECT_TIMEOUT_MILLIS");
@@ -129,7 +129,6 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
      */
     public static final ChannelOption<Integer> TCP_FASTOPEN = valueOf(ChannelOption.class, "TCP_FASTOPEN");
 
-    @Deprecated
     public static final ChannelOption<Boolean> DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION =
             valueOf("DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION");
 

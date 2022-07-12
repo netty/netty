@@ -45,7 +45,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
             handler = null;
         }
         if (maxReads != null) {
-            channel.setOption(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvBufferAllocator(maxReads));
+            channel.setOption(ChannelOption.RCVBUFFER_ALLOCATOR, new TestNumReadsRecvBufferAllocator(maxReads));
         }
     }
 
