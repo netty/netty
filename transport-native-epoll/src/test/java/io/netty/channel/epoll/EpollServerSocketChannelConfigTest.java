@@ -23,12 +23,14 @@ import io.netty.channel.EventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EpollServerSocketChannelConfigTest {
@@ -85,5 +87,17 @@ public class EpollServerSocketChannelConfigTest {
     public void getGetOptions() {
         Map<ChannelOption<?>, Object> map = ch.config().getOptions();
         assertFalse(map.isEmpty());
+    }
+
+    @Test
+    public void testFastOpen() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.config().setTcpFastopen(-1);
+            }
+        });
+        ch.config().setTcpFastopen(10);
+        assertEquals(10, ch.config().getTcpFastopen());
     }
 }

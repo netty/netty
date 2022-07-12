@@ -153,8 +153,8 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
     public EpollServerChannelConfig setTcpFastopen(int pendingFastOpenRequestsThreshold) {
-        checkPositiveOrZero(this.pendingFastOpenRequestsThreshold, "pendingFastOpenRequestsThreshold");
-        this.pendingFastOpenRequestsThreshold = pendingFastOpenRequestsThreshold;
+        this.pendingFastOpenRequestsThreshold = checkPositiveOrZero(pendingFastOpenRequestsThreshold,
+                "pendingFastOpenRequestsThreshold");
         return this;
     }
 
