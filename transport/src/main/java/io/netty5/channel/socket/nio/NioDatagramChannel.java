@@ -58,16 +58,15 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 import static io.netty5.channel.ChannelOption.IP_MULTICAST_ADDR;
 import static io.netty5.channel.ChannelOption.IP_MULTICAST_IF;
 import static io.netty5.channel.ChannelOption.IP_MULTICAST_LOOP_DISABLED;
-import static io.netty5.channel.ChannelOption.IP_MULTICAST_TTL;
 import static io.netty5.channel.ChannelOption.IP_TOS;
 import static io.netty5.channel.ChannelOption.SO_BROADCAST;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
@@ -88,7 +87,8 @@ public final class NioDatagramChannel
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
-    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
+    private static final Map<ChannelOption<?>, ChannelOptionMapping<NioDatagramChannel, ?>> SUPPORTED_OPTIONS =
+            supportedOptions();
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -168,35 +168,10 @@ public final class NioDatagramChannel
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == SO_BROADCAST) {
-            return (T) Boolean.valueOf(isBroadcast());
-        }
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
-        }
-        if (option == SO_SNDBUF) {
-            return (T) Integer.valueOf(getSendBufferSize());
-        }
-        if (option == SO_REUSEADDR) {
-            return (T) Boolean.valueOf(isReuseAddress());
-        }
-        if (option == IP_MULTICAST_LOOP_DISABLED) {
-            return (T) Boolean.valueOf(isLoopbackModeDisabled());
-        }
-        if (option == IP_MULTICAST_ADDR) {
-            return (T) getInterface();
-        }
-        if (option == IP_MULTICAST_IF) {
-            return (T) getNetworkInterface();
-        }
-        if (option == IP_MULTICAST_TTL) {
-            return (T) Integer.valueOf(getTimeToLive());
-        }
-        if (option == IP_TOS) {
-            return (T) Integer.valueOf(getTrafficClass());
-        }
-        if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
-            return (T) Boolean.valueOf(activeOnOpen);
+        ChannelOptionMapping<NioDatagramChannel, T> mapping =
+                (ChannelOptionMapping<NioDatagramChannel, T>) SUPPORTED_OPTIONS.get(option);
+        if (mapping != null) {
+            return mapping.getValue(this);
         }
         if (option instanceof NioChannelOption) {
             return NioChannelOption.getOption(javaChannel(), (NioChannelOption<T>) option);
@@ -204,28 +179,13 @@ public final class NioDatagramChannel
         return super.getExtendedOption(option);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == SO_BROADCAST) {
-            setBroadcast((Boolean) value);
-        } else if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
-        } else if (option == SO_SNDBUF) {
-            setSendBufferSize((Integer) value);
-        } else if (option == SO_REUSEADDR) {
-            setReuseAddress((Boolean) value);
-        } else if (option == IP_MULTICAST_LOOP_DISABLED) {
-            setLoopbackModeDisabled((Boolean) value);
-        } else if (option == IP_MULTICAST_ADDR) {
-            setInterface((InetAddress) value);
-        } else if (option == IP_MULTICAST_IF) {
-            setNetworkInterface((NetworkInterface) value);
-        } else if (option == IP_MULTICAST_TTL) {
-            setTimeToLive((Integer) value);
-        } else if (option == IP_TOS) {
-            setTrafficClass((Integer) value);
-        } else if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
-            setActiveOnOpen((Boolean) value);
+        ChannelOptionMapping<NioDatagramChannel, T> mapping =
+                (ChannelOptionMapping<NioDatagramChannel, T>) SUPPORTED_OPTIONS.get(option);
+        if (mapping != null) {
+            mapping.setValue(this, value);
         } else if (option instanceof NioChannelOption) {
             NioChannelOption.setOption(javaChannel(), (NioChannelOption<T>) option, value);
         } else {
@@ -235,16 +195,33 @@ public final class NioDatagramChannel
 
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (SUPPORTED_OPTIONS.contains(option)) {
+        if (SUPPORTED_OPTIONS.containsKey(option)) {
             return true;
         }
         return super.isExtendedOptionSupported(option);
     }
 
-    private static Set<ChannelOption<?>> supportedOptions() {
-        return newSupportedIdentityOptionsSet(
-                SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_MULTICAST_LOOP_DISABLED, IP_MULTICAST_ADDR,
-                IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS, DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION);
+    private static Map<ChannelOption<?>, ChannelOptionMapping<NioDatagramChannel, ?>> supportedOptions() {
+        Map<ChannelOption<?>, ChannelOptionMapping<NioDatagramChannel, ?>> mappingMap = new IdentityHashMap<>();
+        mappingMap.put(SO_BROADCAST,
+                newMapping(NioDatagramChannel::isBroadcast, NioDatagramChannel::setBroadcast));
+        mappingMap.put(SO_RCVBUF,
+                newMapping(NioDatagramChannel::getReceiveBufferSize, NioDatagramChannel::setReceiveBufferSize));
+        mappingMap.put(SO_SNDBUF,
+                newMapping(NioDatagramChannel::getSendBufferSize, NioDatagramChannel::setSendBufferSize));
+        mappingMap.put(SO_REUSEADDR,
+                newMapping(NioDatagramChannel::isReuseAddress, NioDatagramChannel::setReuseAddress));
+        mappingMap.put(IP_MULTICAST_LOOP_DISABLED,
+                newMapping(NioDatagramChannel::isLoopbackModeDisabled, NioDatagramChannel::setLoopbackModeDisabled));
+        mappingMap.put(IP_MULTICAST_ADDR,
+                newMapping(NioDatagramChannel::getInterface, NioDatagramChannel::setInterface));
+        mappingMap.put(IP_MULTICAST_IF,
+                newMapping(NioDatagramChannel::getNetworkInterface, NioDatagramChannel::setNetworkInterface));
+        mappingMap.put(IP_TOS,
+                newMapping(NioDatagramChannel::getTrafficClass, NioDatagramChannel::setTrafficClass));
+        mappingMap.put(DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
+                newMapping(NioDatagramChannel::isActiveOnOpen, NioDatagramChannel::setActiveOnOpen));
+        return mappingMap;
     }
 
     private DatagramSocket socket() {
@@ -256,6 +233,10 @@ public final class NioDatagramChannel
             throw new IllegalStateException("Can only changed before channel was registered");
         }
         this.activeOnOpen = activeOnOpen;
+    }
+
+    private boolean isActiveOnOpen() {
+        return activeOnOpen;
     }
 
     private boolean isBroadcast() {

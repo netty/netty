@@ -39,6 +39,7 @@ import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -46,6 +47,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
@@ -73,7 +76,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
-    private static final Set<ChannelOption<?>> SUPPORTED_CHANNEL_OPTIONS = supportedOptions();
+    private static final Map<ChannelOption<?>, ChannelOptionMapping<AbstractChannel<?, ?, ?>, ?>>
+            SUPPORTED_CHANNEL_OPTIONS = supportedMappings();
 
     private final P parent;
     private final ChannelId id;
@@ -1294,43 +1298,14 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     @Override
-    @SuppressWarnings({ "unchecked", "deprecation" })
+    @SuppressWarnings("unchecked")
     public final <T> T getOption(ChannelOption<T> option) {
         requireNonNull(option, "option");
-        if (option == AUTO_READ) {
-            return (T) Boolean.valueOf(isAutoRead());
+        ChannelOptionMapping<AbstractChannel<?, ?, ?>, T> mapping =
+                (ChannelOptionMapping<AbstractChannel<?, ?, ?>, T>) SUPPORTED_CHANNEL_OPTIONS.get(option);
+        if (mapping != null) {
+            return mapping.getValue(this);
         }
-        if (option == WRITE_BUFFER_WATER_MARK) {
-            return (T) getWriteBufferWaterMark();
-        }
-        if (option == CONNECT_TIMEOUT_MILLIS) {
-            return (T) Integer.valueOf(getConnectTimeoutMillis());
-        }
-        if (option == MAX_MESSAGES_PER_READ) {
-            return (T) Integer.valueOf(getMaxMessagesPerRead());
-        }
-        if (option == WRITE_SPIN_COUNT) {
-            return (T) Integer.valueOf(getWriteSpinCount());
-        }
-        if (option == BUFFER_ALLOCATOR) {
-            return (T) getBufferAllocator();
-        }
-        if (option == RCVBUF_ALLOCATOR) {
-            return getRecvBufferAllocator();
-        }
-        if (option == AUTO_CLOSE) {
-            return (T) Boolean.valueOf(isAutoClose());
-        }
-        if (option == MESSAGE_SIZE_ESTIMATOR) {
-            return (T) getMessageSizeEstimator();
-        }
-        if (option == MAX_MESSAGES_PER_WRITE) {
-            return (T) Integer.valueOf(getMaxMessagesPerWrite());
-        }
-        if (option == ALLOW_HALF_CLOSURE) {
-            return (T) Boolean.valueOf(isAllowHalfClosure());
-        }
-
         return getExtendedOption(option);
     }
 
@@ -1343,41 +1318,21 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * @param <T>       the value type.
      * @throws UnsupportedOperationException    if the {@link ChannelOption} is not supported.
      */
-    protected  <T> T getExtendedOption(ChannelOption<T> option) {
+    protected <T> T getExtendedOption(ChannelOption<T> option) {
         throw new UnsupportedOperationException("ChannelOption not supported: " + option);
     }
 
     @Override
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings("unchecked")
     public final <T> Channel setOption(ChannelOption<T> option, T value) {
         validate(option, value);
-
-        if (option == AUTO_READ) {
-            setAutoRead((Boolean) value);
-        } else if (option == WRITE_BUFFER_WATER_MARK) {
-            setWriteBufferWaterMark((WriteBufferWaterMark) value);
-        } else if (option == CONNECT_TIMEOUT_MILLIS) {
-            setConnectTimeoutMillis((Integer) value);
-        } else if (option == MAX_MESSAGES_PER_READ) {
-            setMaxMessagesPerRead((Integer) value);
-        } else if (option == WRITE_SPIN_COUNT) {
-            setWriteSpinCount((Integer) value);
-        } else if (option == BUFFER_ALLOCATOR) {
-            setBufferAllocator((BufferAllocator) value);
-        } else if (option == RCVBUF_ALLOCATOR) {
-            setRecvBufferAllocator((RecvBufferAllocator) value);
-        } else if (option == AUTO_CLOSE) {
-            setAutoClose((Boolean) value);
-        } else if (option == MESSAGE_SIZE_ESTIMATOR) {
-            setMessageSizeEstimator((MessageSizeEstimator) value);
-        } else if (option == MAX_MESSAGES_PER_WRITE) {
-            setMaxMessagesPerWrite((Integer) value);
-        } else if (option == ALLOW_HALF_CLOSURE) {
-            setAllowHalfClosure((Boolean) value);
+        ChannelOptionMapping<AbstractChannel<?, ?, ?>, T> mapping =
+                (ChannelOptionMapping<AbstractChannel<?, ?, ?>, T>) SUPPORTED_CHANNEL_OPTIONS.get(option);
+        if (mapping != null) {
+            mapping.setValue(this, value);
         } else {
             setExtendedOption(option, value);
         }
-
         return this;
     }
 
@@ -1395,7 +1350,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     @Override
     public final boolean isOptionSupported(ChannelOption<?> option) {
-        if (SUPPORTED_CHANNEL_OPTIONS.contains(option)) {
+        if (SUPPORTED_CHANNEL_OPTIONS.containsKey(option)) {
             return true;
         }
         return isExtendedOptionSupported(option);
@@ -1412,11 +1367,36 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return false;
     }
 
-    private static Set<ChannelOption<?>> supportedOptions() {
-        return newSupportedIdentityOptionsSet(
-                AUTO_READ, WRITE_BUFFER_WATER_MARK, CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ,
-                WRITE_SPIN_COUNT, BUFFER_ALLOCATOR, RCVBUF_ALLOCATOR, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
-                MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
+    private static Map<ChannelOption<?>, ChannelOptionMapping<AbstractChannel<?, ?, ?>, ?>> supportedMappings() {
+        Map<ChannelOption<?>, ChannelOptionMapping<AbstractChannel<?, ?, ?>, ?>> mappingMap = new IdentityHashMap<>();
+        mappingMap.put(AUTO_READ, newMapping(AbstractChannel::isAutoRead, AbstractChannel::setAutoRead));
+        mappingMap.put(WRITE_BUFFER_WATER_MARK,
+                newMapping(AbstractChannel::getWriteBufferWaterMark, AbstractChannel::setWriteBufferWaterMark));
+        mappingMap.put(CONNECT_TIMEOUT_MILLIS,
+                newMapping(AbstractChannel::getConnectTimeoutMillis, AbstractChannel::setConnectTimeoutMillis));
+        mappingMap.put(MAX_MESSAGES_PER_READ,
+                newMapping(AbstractChannel::getMaxMessagesPerRead, AbstractChannel::setMaxMessagesPerRead));
+        mappingMap.put(WRITE_SPIN_COUNT,
+                newMapping(AbstractChannel::getWriteSpinCount, AbstractChannel::setWriteSpinCount));
+        mappingMap.put(BUFFER_ALLOCATOR,
+                newMapping(AbstractChannel::getBufferAllocator, AbstractChannel::setBufferAllocator));
+        mappingMap.put(RCVBUF_ALLOCATOR, newMapping(c -> c.getRecvBufferAllocator(),
+                (c, v) -> c.setRecvBufferAllocator((RecvBufferAllocator) v)));
+        mappingMap.put(AUTO_CLOSE,
+                newMapping(AbstractChannel::isAutoClose, AbstractChannel::setAutoClose));
+        mappingMap.put(MESSAGE_SIZE_ESTIMATOR,
+                newMapping(AbstractChannel::getMessageSizeEstimator, AbstractChannel::setMessageSizeEstimator));
+        mappingMap.put(MAX_MESSAGES_PER_WRITE,
+                newMapping(AbstractChannel::getMaxMessagesPerWrite, AbstractChannel::setMaxMessagesPerWrite));
+        mappingMap.put(ALLOW_HALF_CLOSURE,
+                newMapping(AbstractChannel::isAllowHalfClosure, AbstractChannel::setAllowHalfClosure));
+
+        return mappingMap;
+    }
+
+    protected static <C extends AbstractChannel<?, ?, ?>, T>  ChannelOptionMapping<C, T> newMapping(
+            Function<C, T> getFunc, BiConsumer<C, T> setFunc) {
+        return new DefaultChannelOptionMapping<>(getFunc, setFunc);
     }
 
     protected static Set<ChannelOption<?>> newSupportedIdentityOptionsSet(ChannelOption<?>... options) {
@@ -1756,6 +1736,34 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.sendOutboundEventTransport(event, promise);
             channel.runAfterTransportAction();
+        }
+    }
+
+    protected interface ChannelOptionMapping<C extends AbstractChannel<?, ?, ?>, T> {
+
+        T getValue(C channel);
+
+        void setValue(C channel, T value);
+    }
+
+    private static final class DefaultChannelOptionMapping<C extends AbstractChannel<?, ?, ?>, T>
+            implements ChannelOptionMapping<C, T> {
+
+        private final Function<C, T> getFunc;
+        private final BiConsumer<C, T> setFunc;
+
+        DefaultChannelOptionMapping(Function<C, T> getFunc, BiConsumer<C, T> setFunc) {
+            this.getFunc = getFunc;
+            this.setFunc = setFunc;
+        }
+        @Override
+        public T getValue(C channel) {
+            return getFunc.apply(channel);
+        }
+
+        @Override
+        public void setValue(C channel, T value) {
+            setFunc.accept(channel, value);
         }
     }
 }
