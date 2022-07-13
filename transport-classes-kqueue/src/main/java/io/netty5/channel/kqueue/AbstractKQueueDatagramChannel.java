@@ -20,13 +20,19 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.unix.UnixChannel;
+import io.netty5.util.concurrent.Future;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.SocketAddress;
 
+import static java.util.Objects.requireNonNull;
+
 abstract class AbstractKQueueDatagramChannel<P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
-        extends AbstractKQueueChannel<P, L, R> {
+        extends AbstractKQueueChannel<P, L, R> implements DatagramChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
@@ -36,6 +42,59 @@ abstract class AbstractKQueueDatagramChannel<P extends UnixChannel, L extends So
     }
 
     protected abstract boolean doWriteMessage(Object msg) throws Exception;
+
+    private <V> Future<V> newMulticastNotSupportedFuture() {
+        return newFailedFuture(new UnsupportedOperationException("Multicast not supported"));
+    }
+
+    @Override
+    public final Future<Void> joinGroup(InetAddress multicastAddress) {
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> leaveGroup(InetAddress multicastAddress) {
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> block(
+            InetAddress multicastAddress, NetworkInterface networkInterface,
+            InetAddress sourceToBlock) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+
+        return newMulticastNotSupportedFuture();
+    }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {

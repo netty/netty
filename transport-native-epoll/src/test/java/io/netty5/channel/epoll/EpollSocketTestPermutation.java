@@ -26,7 +26,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.unix.tests.UnixTestUtils;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;

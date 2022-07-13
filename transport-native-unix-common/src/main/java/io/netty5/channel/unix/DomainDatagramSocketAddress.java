@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.unix;
 
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.util.CharsetUtil;
 
 /**

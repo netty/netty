@@ -20,12 +20,12 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.unix.DomainSocketAddress;
-import io.netty5.channel.unix.DomainSocketChannel;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.unix.DomainSocketReadMode;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.PeerCredentials;
-import io.netty5.channel.unix.UnixChannel;
+import io.netty5.channel.unix.UnixServerSocketChannel;
+import io.netty5.channel.unix.UnixSocketChannel;
 import io.netty5.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -39,11 +39,11 @@ import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 import static java.util.Objects.requireNonNull;
 
 /**
- * {@link DomainSocketChannel} implementation that uses Kqueue.
+ * {@link UnixSocketChannel} implementation for Unix Domain Sockets that uses Kqueue.
  *
  * <h3>Available options</h3>
  *
- * In addition to the options provided by {@link DomainSocketChannel},
+ * In addition to the options provided by {@link UnixSocketChannel},
  * {@link KQueueDomainSocketChannel} allows the following options in the option map:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
@@ -58,8 +58,8 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public final class KQueueDomainSocketChannel
-        extends AbstractKQueueStreamChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
-        implements DomainSocketChannel {
+        extends AbstractKQueueStreamChannel<UnixServerSocketChannel, DomainSocketAddress, DomainSocketAddress>
+        implements UnixSocketChannel {
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private volatile DomainSocketAddress local;
@@ -74,7 +74,7 @@ public final class KQueueDomainSocketChannel
         this(null, eventLoop, new BsdSocket(fd));
     }
 
-    KQueueDomainSocketChannel(UnixChannel parent, EventLoop eventLoop, BsdSocket fd) {
+    KQueueDomainSocketChannel(UnixServerSocketChannel parent, EventLoop eventLoop, BsdSocket fd) {
         super(parent, eventLoop, fd, true);
     }
 

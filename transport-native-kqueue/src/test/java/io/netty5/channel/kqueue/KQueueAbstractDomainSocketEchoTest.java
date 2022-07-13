@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 
 import java.net.SocketAddress;
 import java.util.UUID;

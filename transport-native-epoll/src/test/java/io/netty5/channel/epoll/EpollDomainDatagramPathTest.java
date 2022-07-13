@@ -18,7 +18,7 @@ package io.netty5.channel.epoll;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
-import io.netty5.channel.unix.DomainDatagramPacket;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.AbstractClientSocketTest;
 import io.netty5.util.CharsetUtil;
@@ -52,7 +52,7 @@ class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
             try {
                 Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
                                       .bind(EpollSocketTestPermutation.newDomainSocketAddress()).asStage().get();
-                ch.writeAndFlush(new DomainDatagramPacket(
+                ch.writeAndFlush(new DatagramPacket(
                                 ch.bufferAllocator().copyOf("test", CharsetUtil.US_ASCII),
                                 EpollSocketTestPermutation.newDomainSocketAddress())).asStage().sync();
                 fail("Expected FileNotFoundException");

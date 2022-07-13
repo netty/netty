@@ -22,9 +22,9 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.unix.DomainDatagramPacket;
-import io.netty5.channel.unix.DomainDatagramChannel;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.DatagramUnicastTest;
 import io.netty5.util.concurrent.Future;
@@ -66,7 +66,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
 
     @Override
     protected boolean isConnected(Channel channel) {
-        return ((DomainDatagramChannel) channel).isConnected();
+        return ((DatagramChannel) channel).isConnected();
     }
 
     @Override
@@ -82,9 +82,9 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
     @Override
     protected Channel setupClientChannel(Bootstrap cb, final byte[] bytes, final CountDownLatch latch,
                                          final AtomicReference<Throwable> errorRef) throws Throwable {
-        cb.handler(new SimpleChannelInboundHandler<DomainDatagramPacket>() {
+        cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, DomainDatagramPacket msg) {
+            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
                 try {
                     Buffer buf = msg.content();
                     assertEquals(bytes.length, buf.readableBytes());
@@ -114,9 +114,9 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
 
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new SimpleChannelInboundHandler<DomainDatagramPacket>() {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
                     @Override
-                    public void messageReceived(ChannelHandlerContext ctx, DomainDatagramPacket msg) {
+                    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
                         try {
                             if (sender == null) {
                                 assertNotNull(msg.sender());
@@ -133,7 +133,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
                             assertEquals(ctx.channel().localAddress(), msg.recipient());
 
                             if (echo) {
-                                ctx.writeAndFlush(new DomainDatagramPacket(
+                                ctx.writeAndFlush(new DatagramPacket(
                                         buf.split(), msg.sender()));
                             }
                         } finally {
@@ -153,6 +153,6 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
 
     @Override
     protected Future<Void> write(Channel cc, Buffer buf, SocketAddress remote) {
-        return cc.write(new DomainDatagramPacket(buf, (DomainSocketAddress) remote));
+        return cc.write(new DatagramPacket(buf, (DomainSocketAddress) remote));
     }
 }

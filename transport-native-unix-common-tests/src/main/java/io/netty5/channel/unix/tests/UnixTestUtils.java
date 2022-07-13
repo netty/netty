@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.unix.tests;
 
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.util.internal.PlatformDependent;
 
 import java.io.File;

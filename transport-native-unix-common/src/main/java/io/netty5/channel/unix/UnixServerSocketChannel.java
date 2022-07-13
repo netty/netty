@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.channel.epoll;
+package io.netty5.channel.unix;
 
-import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.ServerSocketChannel;
 
-import java.net.SocketAddress;
-import java.util.UUID;
+public interface UnixServerSocketChannel extends UnixChannel, ServerSocketChannel {
 
-public class EpollAbstractDomainSocketEchoTest extends EpollDomainSocketEchoTest {
-    @Override
-    protected SocketAddress newSocketAddress() {
-        // these don't actually show up in the file system so creating a temp file isn't reliable
-        return new DomainSocketAddress("\0" + System.getProperty("java.io.tmpdir") + UUID.randomUUID());
-    }
 }
