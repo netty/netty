@@ -16,51 +16,12 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelHandlerAdapter;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.AbstractClientSocketTest;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import io.netty5.testsuite.transport.socket.DomainDatagramPathTest;
 
-import java.io.FileNotFoundException;
 import java.util.List;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
-class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
-
-    @Test
-    void testConnectPathDoesNotExist(TestInfo testInfo) throws Throwable {
-        run(testInfo, bootstrap -> {
-            try {
-                bootstrap.handler(new ChannelHandlerAdapter() { })
-                         .connect(KQueueSocketTestPermutation.newSocketAddress()).asStage().get();
-                fail("Expected FileNotFoundException");
-            } catch (Exception e) {
-                assertTrue(e.getCause() instanceof FileNotFoundException);
-            }
-        });
-    }
-
-    @Test
-    void testWriteReceiverPathDoesNotExist(TestInfo testInfo) throws Throwable {
-        run(testInfo, bootstrap -> {
-            try {
-                Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
-                                      .bind(KQueueSocketTestPermutation.newSocketAddress()).asStage().get();
-                ch.writeAndFlush(new DatagramPacket(
-                                ch.bufferAllocator().copyOf("test", US_ASCII),
-                                KQueueSocketTestPermutation.newSocketAddress())).asStage().sync();
-                fail("Expected FileNotFoundException");
-            } catch (Exception e) {
-                assertTrue(e.getCause() instanceof FileNotFoundException);
-            }
-        });
-    }
+class KQueueDomainDatagramPathTest extends DomainDatagramPathTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {

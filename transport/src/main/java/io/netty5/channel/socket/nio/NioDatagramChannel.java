@@ -42,7 +42,6 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -73,6 +72,9 @@ import static io.netty5.channel.ChannelOption.SO_BROADCAST;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
 import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
+import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -97,12 +99,15 @@ public final class NioDatagramChannel
             StringUtil.simpleClassName(SocketAddress.class) + ">, " +
             StringUtil.simpleClassName(Buffer.class) + ')';
 
+    private final ProtocolFamily family;
+
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
     private Map<InetAddress, List<MembershipKey>> memberships;
 
     private volatile boolean activeOnOpen;
+    private volatile boolean bound;
 
     private static DatagramChannel newSocket(SelectorProvider provider) {
         try {
@@ -130,7 +135,7 @@ public final class NioDatagramChannel
      * Create a new instance which will use the Operation Systems default {@link ProtocolFamily}.
      */
     public NioDatagramChannel(EventLoop eventLoop) {
-        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER));
+        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER), null);
     }
 
     /**
@@ -138,7 +143,7 @@ public final class NioDatagramChannel
      * which will use the Operation Systems default {@link ProtocolFamily}.
      */
     public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider) {
-        this(eventLoop, newSocket(provider));
+        this(eventLoop, newSocket(provider), null);
     }
 
     /**
@@ -146,7 +151,7 @@ public final class NioDatagramChannel
      * on the Operation Systems default which will be chosen.
      */
     public NioDatagramChannel(EventLoop eventLoop, ProtocolFamily family) {
-        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, family));
+        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, family), family);
     }
 
     /**
@@ -155,14 +160,15 @@ public final class NioDatagramChannel
      * which will be chosen.
      */
     public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
-        this(eventLoop, newSocket(provider, family));
+        this(eventLoop, newSocket(provider, family), family);
     }
 
     /**
      * Create a new instance from the given {@link DatagramChannel}.
      */
-    public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket) {
+    public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket, ProtocolFamily family) {
         super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, SelectionKey.OP_READ);
+        this.family = family;
     }
 
     @SuppressWarnings("unchecked")
@@ -247,10 +253,6 @@ public final class NioDatagramChannel
                 IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS, DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION);
     }
 
-    private DatagramSocket socket() {
-        return javaChannel().socket();
-    }
-
     private void setActiveOnOpen(boolean activeOnOpen) {
         if (isRegistered()) {
             throw new IllegalStateException("Can only changed before channel was registered");
@@ -260,8 +262,8 @@ public final class NioDatagramChannel
 
     private boolean isBroadcast() {
         try {
-            return socket().getBroadcast();
-        } catch (SocketException e) {
+            return javaChannel().getOption(StandardSocketOptions.SO_BROADCAST);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -270,7 +272,7 @@ public final class NioDatagramChannel
         try {
             // See: https://github.com/netty/netty/issues/576
             if (broadcast &&
-                    !socket().getLocalAddress().isAnyLocalAddress() &&
+                    !isAnyLocalAddress() &&
                     !PlatformDependent.isWindows() && !PlatformDependent.maybeSuperUser()) {
                 // Warn a user about the fact that a non-root user can't receive a
                 // broadcast packet on *nix if the socket is bound on non-wildcard address.
@@ -278,13 +280,18 @@ public final class NioDatagramChannel
                         "A non-root user can't receive a broadcast packet if the socket " +
                                 "is not bound to a wildcard address; setting the SO_BROADCAST flag " +
                                 "anyway as requested on the socket which is bound to " +
-                                socket().getLocalSocketAddress() + '.');
+                                javaChannel().getLocalAddress() + '.');
             }
 
-            socket().setBroadcast(broadcast);
-        } catch (SocketException e) {
+            javaChannel().setOption(StandardSocketOptions.SO_BROADCAST, broadcast);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
+    }
+
+    private boolean isAnyLocalAddress() throws IOException {
+        SocketAddress address = javaChannel().getLocalAddress();
+        return address instanceof InetSocketAddress && ((InetSocketAddress) address).getAddress().isAnyLocalAddress();
     }
 
     private int getTimeToLive() {
@@ -356,64 +363,64 @@ public final class NioDatagramChannel
 
     private boolean isReuseAddress() {
         try {
-            return socket().getReuseAddress();
-        } catch (SocketException e) {
+            return javaChannel().getOption(StandardSocketOptions.SO_REUSEADDR);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     public void setReuseAddress(boolean reuseAddress) {
         try {
-            socket().setReuseAddress(reuseAddress);
-        } catch (SocketException e) {
+            javaChannel().setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     public int getReceiveBufferSize() {
         try {
-            return socket().getReceiveBufferSize();
-        } catch (SocketException e) {
+            return javaChannel().getOption(StandardSocketOptions.SO_RCVBUF);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     private void setReceiveBufferSize(int receiveBufferSize) {
         try {
-            socket().setReceiveBufferSize(receiveBufferSize);
-        } catch (SocketException e) {
+            javaChannel().setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     private int getSendBufferSize() {
         try {
-            return socket().getSendBufferSize();
-        } catch (SocketException e) {
+            return javaChannel().getOption(StandardSocketOptions.SO_SNDBUF);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     private void setSendBufferSize(int sendBufferSize) {
         try {
-            socket().setSendBufferSize(sendBufferSize);
-        } catch (SocketException e) {
+            javaChannel().setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     private int getTrafficClass() {
         try {
-            return socket().getTrafficClass();
-        } catch (SocketException e) {
+            return javaChannel().getOption(StandardSocketOptions.IP_TOS);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     private void setTrafficClass(int trafficClass) {
         try {
-            socket().setTrafficClass(trafficClass);
-        } catch (SocketException e) {
+            javaChannel().setOption(StandardSocketOptions.IP_TOS, trafficClass);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -452,7 +459,7 @@ public final class NioDatagramChannel
     public boolean isActive() {
         DatagramChannel ch = javaChannel();
         return ch.isOpen() && (getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
-                || ch.socket().isBound());
+                || bound);
     }
 
     @Override
@@ -467,12 +474,30 @@ public final class NioDatagramChannel
 
     @Override
     protected SocketAddress localAddress0() {
-        return javaChannel().socket().getLocalSocketAddress();
+        try {
+            SocketAddress address = javaChannel().getLocalAddress();
+            if (isDomainSocket(family)) {
+                return toDomainSocketAddress(address);
+            }
+            return address;
+        } catch (IOException e) {
+            // Just return null
+            return null;
+        }
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return javaChannel().socket().getRemoteSocketAddress();
+        try {
+            SocketAddress address = javaChannel().getRemoteAddress();
+            if (isDomainSocket(family)) {
+                return toDomainSocketAddress(address);
+            }
+            return address;
+        } catch (IOException e) {
+            // Just return null
+            return null;
+        }
     }
 
     @Override
@@ -481,7 +506,11 @@ public final class NioDatagramChannel
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
+        if (isDomainSocket(family)) {
+            localAddress = toUnixDomainSocketAddress(localAddress);
+        }
         SocketUtils.bind(javaChannel(), localAddress);
+        bound = true;
     }
 
     @Override

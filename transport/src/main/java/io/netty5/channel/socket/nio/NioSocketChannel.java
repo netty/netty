@@ -50,6 +50,9 @@ import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.ChannelOption.TCP_NODELAY;
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
+import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 
 /**
  * {@link io.netty5.channel.socket.SocketChannel} which uses NIO selector based implementation.
@@ -60,18 +63,22 @@ public class NioSocketChannel
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
-            SelectorProviderUtil.findOpenMethod("openSocketChannel");
+            NioChannelUtil.findOpenMethod("openSocketChannel");
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static SocketChannel newChannel(SelectorProvider provider, ProtocolFamily family) {
         try {
-            SocketChannel channel = SelectorProviderUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
+            SocketChannel channel = NioChannelUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
             return channel == null ? provider.openSocketChannel() : channel;
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
+
+    private final ProtocolFamily family;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     /**
      * Create a new instance
@@ -91,14 +98,14 @@ public class NioSocketChannel
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
     public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
-        this(eventLoop, newChannel(provider, family));
+        this(null, eventLoop, newChannel(provider, family), family);
     }
 
     /**
      * Create a new instance using the given {@link SocketChannel}.
      */
     public NioSocketChannel(EventLoop eventLoop, SocketChannel socket) {
-        this(null, eventLoop, socket);
+        this(null, eventLoop, socket, null);
     }
 
     /**
@@ -109,7 +116,21 @@ public class NioSocketChannel
      * @param socket    the {@link SocketChannel} which will be used
      */
     public NioSocketChannel(NioServerSocketChannel parent, EventLoop eventLoop, SocketChannel socket) {
+        this(parent, eventLoop, socket, null);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
+     * @param eventLoop the {@link EventLoop} to use for IO.
+     * @param socket    the {@link SocketChannel} which will be used
+     * @param family    the {@link ProtocolFamily} that was used to create th {@link SocketChannel}
+     */
+    public NioSocketChannel(NioServerSocketChannel parent, EventLoop eventLoop, SocketChannel socket,
+                            ProtocolFamily family) {
         super(parent, eventLoop, socket);
+        this.family = family;
         // Enable TCP_NODELAY by default if possible.
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             try {
@@ -138,9 +159,9 @@ public class NioSocketChannel
         }
         switch (direction) {
             case Outbound:
-                return javaChannel().socket().isOutputShutdown();
+                return outputShutdown;
             case Inbound:
-                return javaChannel().socket().isInputShutdown();
+                return inputShutdown;
             default:
                 throw new AssertionError();
         }
@@ -151,9 +172,11 @@ public class NioSocketChannel
         switch (direction) {
             case Inbound:
                 javaChannel().shutdownInput();
+                outputShutdown = true;
                 break;
             case Outbound:
                 javaChannel().shutdownOutput();
+                inputShutdown = true;
                 break;
             default:
                 throw new AssertionError();
@@ -162,12 +185,30 @@ public class NioSocketChannel
 
     @Override
     protected SocketAddress localAddress0() {
-        return javaChannel().socket().getLocalSocketAddress();
+        try {
+            SocketAddress address = javaChannel().getLocalAddress();
+            if (isDomainSocket(family)) {
+                return toDomainSocketAddress(address);
+            }
+            return address;
+        } catch (IOException e) {
+            // Just return null
+            return null;
+        }
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return javaChannel().socket().getRemoteSocketAddress();
+        try {
+            SocketAddress address = javaChannel().getRemoteAddress();
+            if (isDomainSocket(family)) {
+                return toDomainSocketAddress(address);
+            }
+            return address;
+        } catch (IOException e) {
+            // Just return null
+            return null;
+        }
     }
 
     @Override
@@ -176,6 +217,9 @@ public class NioSocketChannel
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
+        if (isDomainSocket(family)) {
+            localAddress = toUnixDomainSocketAddress(localAddress);
+        }
         SocketUtils.bind(javaChannel(), localAddress);
     }
 
@@ -187,6 +231,9 @@ public class NioSocketChannel
 
         boolean success = false;
         try {
+            if (isDomainSocket(family)) {
+                remoteAddress = toUnixDomainSocketAddress(remoteAddress);
+            }
             boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
@@ -457,12 +504,6 @@ public class NioSocketChannel
             throw new ChannelException(e);
         }
     }
-
-    private void setPerformancePreferences(
-            int connectionTime, int latency, int bandwidth) {
-        javaChannel().socket().setPerformancePreferences(connectionTime, latency, bandwidth);
-    }
-
     private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             javaChannel().setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);

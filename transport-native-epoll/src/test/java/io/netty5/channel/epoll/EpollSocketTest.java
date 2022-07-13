@@ -47,7 +47,7 @@ public class EpollSocketTest extends SocketTest<LinuxSocket> {
         LinuxSocket s2 = LinuxSocket.newSocketDomain();
 
         try {
-            DomainSocketAddress dsa = UnixTestUtils.newDomainSocketAddress();
+            DomainSocketAddress dsa = EpollSocketTestPermutation.newDomainSocketAddress();
             s1.bind(dsa);
             s1.listen(1);
 

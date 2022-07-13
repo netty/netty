@@ -26,8 +26,6 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.channel.socket.DomainSocketAddress;
-import io.netty5.channel.unix.tests.UnixTestUtils;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.testsuite.transport.socket.SocketTestPermutation;
@@ -122,21 +120,46 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         return combo(bfs, bfs);
     }
 
+    @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
         return combo(serverDomainSocket(), clientDomainSocket());
     }
 
-    public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
+    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> kqueueDomainSocket() {
+        return combo(kqueueServerDomainSocket(), kqueueClientDomainSocket());
+    }
+
+    public List<BootstrapFactory<ServerBootstrap>> kqueueServerDomainSocket() {
         return Collections.singletonList(
                 () -> new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
                         .channel(KQueueServerDomainSocketChannel.class)
         );
     }
 
-    public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
+    public List<BootstrapFactory<Bootstrap>> kqueueClientDomainSocket() {
         return Collections.singletonList(
                 () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainSocketChannel.class)
         );
+    }
+
+    @Override
+    public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
+        List<BootstrapFactory<ServerBootstrap>> bootstraps = new ArrayList<>();
+        if (isJdkDomainSocketSupported()) {
+            bootstraps.addAll(super.serverDomainSocket());
+        }
+        bootstraps.addAll(kqueueServerDomainSocket());
+        return bootstraps;
+    }
+
+    @Override
+    public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
+        List<BootstrapFactory<Bootstrap>> bootstraps = new ArrayList<>();
+        if (isJdkDomainSocketSupported()) {
+            bootstraps.addAll(super.clientDomainSocket());
+        }
+        bootstraps.addAll(kqueueClientDomainSocket());
+        return bootstraps;
     }
 
     @Override
@@ -146,15 +169,25 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
-    public static DomainSocketAddress newSocketAddress() {
-        return UnixTestUtils.newDomainSocketAddress();
-    }
-
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> domainDatagram() {
         return combo(domainDatagramSocket(), domainDatagramSocket());
     }
 
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> kqueueDomainDatagram() {
+        return combo(kqueueDomainDatagramSocket(), kqueueDomainDatagramSocket());
+    }
+
+    @Override
     public List<BootstrapFactory<Bootstrap>> domainDatagramSocket() {
+        List<BootstrapFactory<Bootstrap>> bootstraps = new ArrayList<>();
+        if (isJdkDomainDatagramSupported()) {
+            bootstraps.addAll(super.domainDatagramSocket());
+        }
+        bootstraps.addAll(kqueueDomainDatagramSocket());
+        return bootstraps;
+    }
+
+    public List<BootstrapFactory<Bootstrap>> kqueueDomainDatagramSocket() {
         return Collections.singletonList(
                 () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainDatagramChannel.class)
         );

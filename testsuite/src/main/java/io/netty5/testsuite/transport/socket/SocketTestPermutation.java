@@ -24,16 +24,20 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.util.concurrent.DefaultThreadFactory;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.ProtocolFamily;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -100,6 +104,17 @@ public class SocketTestPermutation {
         return combo(sbfs, cbfs);
     }
 
+    public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
+        // Make the list of ServerBootstrap factories.
+        List<BootstrapFactory<ServerBootstrap>> sbfs = serverDomainSocket();
+
+        // Make the list of Bootstrap factories.
+        List<BootstrapFactory<Bootstrap>> cbfs = clientDomainSocket();
+
+        // Populate the combinations
+        return combo(sbfs, cbfs);
+    }
+
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socketWithFastOpen() {
         // Make the list of ServerBootstrap factories.
         List<BootstrapFactory<ServerBootstrap>> sbfs = serverSocket();
@@ -117,23 +132,39 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final ProtocolFamily family) {
+        final ChannelFactory<?> channelFactory;
+        if (NioDomainSocketTestUtil.isDomainSocketFamily(family)) {
+            channelFactory = NioDomainSocketTestUtil.newDomainSocketDatagramChannelFactory();
+        } else {
+            channelFactory = new ChannelFactory<>() {
+                @Override
+                public Channel newChannel(EventLoop eventLoop) {
+                    return new NioDatagramChannel(eventLoop, family);
+                }
+
+                @Override
+                public String toString() {
+                    return NioDatagramChannel.class.getSimpleName() + ".class";
+                }
+            };
+        }
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Collections.singletonList(
-                () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<>() {
-                    @Override
-                    public Channel newChannel(EventLoop eventLoop) {
-                        return new NioDatagramChannel(eventLoop, family);
-                    }
-
-                    @Override
-                    public String toString() {
-                        return NioDatagramChannel.class.getSimpleName() + ".class";
-                    }
-                })
+                () -> new Bootstrap().group(nioWorkerGroup).channelFactory(channelFactory)
         );
 
         // Populare the combinations.
         return combo(bfs, bfs);
+    }
+
+    public List<BootstrapFactory<Bootstrap>> domainDatagramSocket() {
+        if (!NioDomainSocketTestUtil.isDatagramSupported()) {
+            throw new UnsupportedOperationException();
+        }
+        return Collections.singletonList(
+                () -> new Bootstrap().group(nioWorkerGroup)
+                        .channelFactory(NioDomainSocketTestUtil.newDomainSocketDatagramChannelFactory())
+        );
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
@@ -149,6 +180,20 @@ public class SocketTestPermutation {
         );
     }
 
+    public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
+        return Collections.singletonList(
+                () -> new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                        .channelFactory(NioDomainSocketTestUtil.newDomainSocketServerChannelFactory())
+        );
+    }
+
+    public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
+        return Collections.singletonList(
+                () -> new Bootstrap().group(nioWorkerGroup)
+                        .channelFactory(NioDomainSocketTestUtil.newDomainSocketChannelFactory())
+        );
+    }
+
     public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
         return clientSocket();
     }
@@ -157,5 +202,27 @@ public class SocketTestPermutation {
         return Collections.singletonList(
                 () -> new Bootstrap().group(nioWorkerGroup).channel(NioDatagramChannel.class)
         );
+    }
+    public static DomainSocketAddress newDomainSocketAddress() {
+        try {
+            File file;
+            do {
+                file = PlatformDependent.createTempFile("NETTY", "UDS", null);
+                if (!file.delete()) {
+                    throw new IOException("failed to delete: " + file);
+                }
+            } while (file.getAbsolutePath().length() > 128);
+            return new DomainSocketAddress(file);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public static boolean isJdkDomainSocketSupported() {
+        return NioDomainSocketTestUtil.isSocketSupported();
+    }
+
+    public static boolean isJdkDomainDatagramSupported() {
+        return NioDomainSocketTestUtil.isSocketSupported();
     }
 }

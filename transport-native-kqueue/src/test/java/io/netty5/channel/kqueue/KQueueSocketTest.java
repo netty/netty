@@ -40,7 +40,7 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
         BsdSocket s2 = BsdSocket.newSocketDomain();
 
         try {
-            DomainSocketAddress dsa = UnixTestUtils.newDomainSocketAddress();
+            DomainSocketAddress dsa = KQueueSocketTestPermutation.newDomainSocketAddress();
             s1.bind(dsa);
             s1.listen(1);
 
@@ -61,7 +61,7 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
         BsdSocket s2 = BsdSocket.newSocketDomain();
 
         try {
-            DomainSocketAddress dsa = UnixTestUtils.newDomainSocketAddress();
+            DomainSocketAddress dsa = KQueueSocketTestPermutation.newDomainSocketAddress();
             s1.bind(dsa);
             s1.listen(1);
 

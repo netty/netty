@@ -18,16 +18,11 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.SocketSslEchoTest;
+import io.netty5.testsuite.transport.socket.DomainSocketSslEchoTest;
 
-import java.net.SocketAddress;
 import java.util.List;
 
-public class KQueueDomainSocketSslEchoTest extends SocketSslEchoTest {
-    @Override
-    protected SocketAddress newSocketAddress() {
-        return KQueueSocketTestPermutation.newSocketAddress();
-    }
+public class KQueueDomainSocketSslEchoTest extends DomainSocketSslEchoTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {

@@ -18,16 +18,11 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.SocketDataReadInitialStateTest;
+import io.netty5.testsuite.transport.socket.DomainSocketDataReadInitialStateTest;
 
-import java.net.SocketAddress;
 import java.util.List;
 
-public class KQueueDomainSocketDataReadInitialStateTest extends SocketDataReadInitialStateTest {
-    @Override
-    protected SocketAddress newSocketAddress() {
-        return KQueueSocketTestPermutation.newSocketAddress();
-    }
+public class KQueueDomainSocketDataReadInitialStateTest extends DomainSocketDataReadInitialStateTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {

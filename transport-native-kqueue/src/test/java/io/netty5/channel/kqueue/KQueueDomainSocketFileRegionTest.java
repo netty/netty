@@ -18,15 +18,11 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
+import io.netty5.testsuite.transport.socket.DomainSocketFileRegionTest;
 
-import java.net.SocketAddress;
 import java.util.List;
 
-public class KQueueDomainSocketFileRegionTest extends KQueueSocketFileRegionTest {
-    @Override
-    protected SocketAddress newSocketAddress() {
-        return KQueueSocketTestPermutation.newSocketAddress();
-    }
+public class KQueueDomainSocketFileRegionTest extends DomainSocketFileRegionTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {

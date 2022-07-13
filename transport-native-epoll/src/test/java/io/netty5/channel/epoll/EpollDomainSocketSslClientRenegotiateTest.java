@@ -18,19 +18,13 @@ package io.netty5.channel.epoll;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.SocketSslClientRenegotiateTest;
+import io.netty5.testsuite.transport.socket.DomainSocketSslClientRenegotiateTest;
 
-import java.net.SocketAddress;
 import java.util.List;
 
-public class EpollDomainSocketSslClientRenegotiateTest extends SocketSslClientRenegotiateTest {
+public class EpollDomainSocketSslClientRenegotiateTest extends DomainSocketSslClientRenegotiateTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.domainSocket();
-    }
-
-    @Override
-    protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 }

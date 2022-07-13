@@ -19,6 +19,7 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.unix.Buffer;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.testsuite.transport.socket.AbstractSocketShutdownOutputByPeerTest;
+import io.netty5.testsuite.transport.socket.SocketTestPermutation;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -29,12 +30,12 @@ public class KQueueDomainSocketShutdownOutputByPeerTest extends AbstractSocketSh
 
     @Override
     protected List<BootstrapFactory<ServerBootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.serverDomainSocket();
+        return KQueueSocketTestPermutation.INSTANCE.kqueueServerDomainSocket();
     }
 
     @Override
     protected SocketAddress newSocketAddress() {
-        return KQueueSocketTestPermutation.newSocketAddress();
+        return SocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override

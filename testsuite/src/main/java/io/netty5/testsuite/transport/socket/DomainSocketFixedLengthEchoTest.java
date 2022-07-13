@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,19 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.channel.kqueue;
+package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.DomainSocketStartTlsTest;
+import org.junit.jupiter.api.condition.EnabledIf;
 
+import java.net.SocketAddress;
 import java.util.List;
 
-public class KQueueDomainSocketStartTlsTest extends DomainSocketStartTlsTest {
+@EnabledIf("isSupported")
+public class DomainSocketFixedLengthEchoTest extends SocketFixedLengthEchoTest {
+
+    static boolean isSupported() {
+        return NioDomainSocketTestUtil.isSocketSupported();
+    }
+
+    @Override
+    protected final SocketAddress newSocketAddress() {
+        return SocketTestPermutation.newDomainSocketAddress();
+    }
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.domainSocket();
+        return SocketTestPermutation.INSTANCE.domainSocket();
     }
 }

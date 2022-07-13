@@ -45,6 +45,9 @@ import java.util.Set;
 import static io.netty5.channel.ChannelOption.SO_BACKLOG;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
 import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -61,21 +64,25 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
     private static final Method OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY =
-            SelectorProviderUtil.findOpenMethod("openServerSocketChannel");
+            NioChannelUtil.findOpenMethod("openServerSocketChannel");
 
     private static ServerSocketChannel newChannel(SelectorProvider provider, ProtocolFamily family) {
         try {
             ServerSocketChannel channel =
-                    SelectorProviderUtil.newChannel(OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
+                    NioChannelUtil.newChannel(OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
             return channel == null ? provider.openServerSocketChannel() : channel;
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
 
+    private final ProtocolFamily family;
+
     private final EventLoopGroup childEventLoopGroup;
 
     private volatile int backlog = NetUtil.SOMAXCONN;
+
+    private volatile boolean bound;
 
     /**
      * Create a new instance
@@ -96,7 +103,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                   SelectorProvider provider, ProtocolFamily protocolFamily) {
-        this(eventLoop, childEventLoopGroup, newChannel(provider, protocolFamily));
+        this(eventLoop, childEventLoopGroup, newChannel(provider, protocolFamily), protocolFamily);
     }
 
     /**
@@ -104,8 +111,18 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
      */
     public NioServerSocketChannel(
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ServerSocketChannel channel) {
+        this(eventLoop, childEventLoopGroup, channel, null);
+    }
+
+    /**
+     * Create a new instance using the given {@link ServerSocketChannel}.
+     */
+    public NioServerSocketChannel(
+            EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+            ServerSocketChannel channel, ProtocolFamily family) {
         super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
                 channel, SelectionKey.OP_ACCEPT);
+        this.family = family;
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", NioSocketChannel.class);
     }
@@ -119,7 +136,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     public boolean isActive() {
         // As java.nio.ServerSocketChannel.isBound() will continue to return true even after the channel was closed
         // we will also need to check if it is open.
-        return isOpen() && javaChannel().socket().isBound();
+        return isOpen() && bound;
     }
 
     @SuppressWarnings("unchecked")
@@ -203,10 +220,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
         }
     }
 
-    private void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        javaChannel().socket().setPerformancePreferences(connectionTime, latency, bandwidth);
-    }
-
     private int getBacklog() {
         return backlog;
     }
@@ -223,7 +236,16 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
     @Override
     protected SocketAddress localAddress0() {
-        return SocketUtils.localSocketAddress(javaChannel().socket());
+        try {
+            SocketAddress address = javaChannel().getLocalAddress();
+            if (isDomainSocket(family)) {
+                address = toDomainSocketAddress(address);
+            }
+            return address;
+        } catch (IOException e) {
+            // Just return null
+            return null;
+        }
     }
 
     @Override
@@ -238,7 +260,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
+        if (isDomainSocket(family)) {
+            localAddress = toUnixDomainSocketAddress(localAddress);
+        }
         javaChannel().bind(localAddress, getBacklog());
+        bound = true;
     }
 
     @Override
@@ -247,7 +273,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch));
+                buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch, family));
                 return 1;
             }
         } catch (Throwable t) {

@@ -20,6 +20,7 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.unix.Buffer;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.testsuite.transport.socket.AbstractSocketShutdownOutputByPeerTest;
+import io.netty5.testsuite.transport.socket.SocketTestPermutation;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -35,7 +36,7 @@ public class EpollDomainSocketShutdownOutputByPeerTest extends AbstractSocketShu
 
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newDomainSocketAddress();
+        return SocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override

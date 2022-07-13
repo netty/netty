@@ -18,16 +18,11 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.AbstractSocketReuseFdTest;
+import io.netty5.testsuite.transport.socket.DomainSocketReuseFdTest;
 
-import java.net.SocketAddress;
 import java.util.List;
 
-public class KQueueDomainSocketReuseFdTest extends AbstractSocketReuseFdTest {
-    @Override
-    protected SocketAddress newSocketAddress() {
-        return KQueueSocketTestPermutation.newSocketAddress();
-    }
+public class KQueueDomainSocketReuseFdTest extends DomainSocketReuseFdTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
