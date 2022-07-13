@@ -19,9 +19,11 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.SocketReadPendingTest;
+import org.junit.jupiter.api.Disabled;
 
 import java.util.List;
 
+@Disabled("Need investigation")
 public class EpollSocketReadPendingTest extends SocketReadPendingTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
