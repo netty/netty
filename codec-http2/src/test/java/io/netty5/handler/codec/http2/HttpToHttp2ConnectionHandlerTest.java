@@ -70,6 +70,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyShort;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -508,12 +509,16 @@ public class HttpToHttp2ConnectionHandlerTest {
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0),
+        verify(serverListener, atLeastOnce()).onDataRead(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0),
                 eq(false));
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2TrailingHeaders), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(true));
-        assertEquals(1, receivedBuffers.size());
-        assertEquals(text + text2, receivedBuffers.get(0));
+        assertFalse(receivedBuffers.isEmpty());
+        StringBuilder sb = new StringBuilder();
+        for (String received : receivedBuffers) {
+            sb.append(received);
+        }
+        assertEquals(text + text2, sb.toString());
     }
 
     private void bootstrapEnv(int requestCountDown, int serverSettingsAckCount, int trailersCount) throws Exception {
