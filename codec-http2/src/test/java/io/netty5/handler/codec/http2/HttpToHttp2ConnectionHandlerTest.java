@@ -509,8 +509,8 @@ public class HttpToHttp2ConnectionHandlerTest {
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverListener, atLeastOnce()).onDataRead(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0),
-                eq(false));
+        verify(serverListener, atLeastOnce())
+                .onDataRead(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0), eq(false));
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2TrailingHeaders), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(true));
         assertFalse(receivedBuffers.isEmpty());
