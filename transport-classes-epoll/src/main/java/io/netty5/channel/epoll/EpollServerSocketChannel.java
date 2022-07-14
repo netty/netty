@@ -293,10 +293,13 @@ public final class EpollServerSocketChannel
     }
 
     private void setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
-        try {
-            tcpMd5SigAddresses = TcpMd5Util.newTcpMd5Sigs(this, tcpMd5SigAddresses, keys);
-        } catch (IOException e) {
-            throw new ChannelException(e);
+        // Add synchronized as newTcpMp5Sigs might do multiple operations on the socket itself.
+        synchronized (this) {
+            try {
+                tcpMd5SigAddresses = TcpMd5Util.newTcpMd5Sigs(this, tcpMd5SigAddresses, keys);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
         }
     }
 }
