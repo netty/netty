@@ -338,6 +338,8 @@ public final class NioDatagramChannel
         boolean success = false;
         try {
             javaChannel().connect(remoteAddress);
+            // When connected we are also bound
+            bound = true;
             success = true;
             return true;
         } finally {
