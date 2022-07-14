@@ -1,7 +1,12 @@
 [
 {
-  "condition":{"typeReachable":"io.netty.util.internal.PlatformDependent0"},
-  "name":"java.nio.DirectByteBuffer",
-  "methods":[{"name":"<init>","parameterTypes":["long","int"] }]
+  "condition": {"typeReachable": "io.netty.util.internal.PlatformDependent0"},
+  "name": "java.nio.DirectByteBuffer",
+  "methods": [{"name": "<init>", "parameterTypes": ["long","int"]}]
+},
+{
+  "condition": {"typeReachable": "io.netty.channel.socket.nio.NioServerSocketChannel"},
+  "name": "io.netty.channel.socket.nio.NioServerSocketChannel",
+  "methods": [{"name": "<init>", "parameterTypes": []}]
 }
 ]
