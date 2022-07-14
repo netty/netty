@@ -172,11 +172,11 @@ public class NioSocketChannel
         switch (direction) {
             case Inbound:
                 javaChannel().shutdownInput();
-                outputShutdown = true;
+                inputShutdown = true;
                 break;
             case Outbound:
                 javaChannel().shutdownOutput();
-                inputShutdown = true;
+                outputShutdown = true;
                 break;
             default:
                 throw new AssertionError();
