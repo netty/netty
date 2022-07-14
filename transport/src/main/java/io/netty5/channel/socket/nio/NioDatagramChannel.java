@@ -48,6 +48,7 @@ import java.net.NetworkInterface;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -55,23 +56,13 @@ import java.nio.channels.MembershipKey;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
-import static io.netty5.channel.ChannelOption.IP_MULTICAST_ADDR;
-import static io.netty5.channel.ChannelOption.IP_MULTICAST_IF;
-import static io.netty5.channel.ChannelOption.IP_MULTICAST_LOOP_DISABLED;
-import static io.netty5.channel.ChannelOption.IP_MULTICAST_TTL;
-import static io.netty5.channel.ChannelOption.IP_TOS;
-import static io.netty5.channel.ChannelOption.SO_BROADCAST;
-import static io.netty5.channel.ChannelOption.SO_RCVBUF;
-import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
-import static io.netty5.channel.ChannelOption.SO_SNDBUF;
+
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
@@ -90,7 +81,6 @@ public final class NioDatagramChannel
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
-    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -174,83 +164,60 @@ public final class NioDatagramChannel
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == SO_BROADCAST) {
-            return (T) Boolean.valueOf(isBroadcast());
-        }
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
-        }
-        if (option == SO_SNDBUF) {
-            return (T) Integer.valueOf(getSendBufferSize());
-        }
-        if (option == SO_REUSEADDR) {
-            return (T) Boolean.valueOf(isReuseAddress());
-        }
-        if (option == IP_MULTICAST_LOOP_DISABLED) {
-            return (T) Boolean.valueOf(isLoopbackModeDisabled());
-        }
-        if (option == IP_MULTICAST_ADDR) {
-            return (T) getInterface();
-        }
-        if (option == IP_MULTICAST_IF) {
-            return (T) getNetworkInterface();
-        }
-        if (option == IP_MULTICAST_TTL) {
-            return (T) Integer.valueOf(getTimeToLive());
-        }
-        if (option == IP_TOS) {
-            return (T) Integer.valueOf(getTrafficClass());
-        }
         if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
-            return (T) Boolean.valueOf(activeOnOpen);
+            return (T) Boolean.valueOf(isActiveOnOpen());
         }
-        if (option instanceof NioChannelOption) {
-            return NioChannelOption.getOption(javaChannel(), (NioChannelOption<T>) option);
+        SocketOption<T> socketOption = NioChannelOption.toSocketOption(option);
+        if (socketOption != null) {
+            return NioChannelOption.getOption(javaChannel(), socketOption);
         }
         return super.getExtendedOption(option);
     }
 
     @Override
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == SO_BROADCAST) {
-            setBroadcast((Boolean) value);
-        } else if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
-        } else if (option == SO_SNDBUF) {
-            setSendBufferSize((Integer) value);
-        } else if (option == SO_REUSEADDR) {
-            setReuseAddress((Boolean) value);
-        } else if (option == IP_MULTICAST_LOOP_DISABLED) {
-            setLoopbackModeDisabled((Boolean) value);
-        } else if (option == IP_MULTICAST_ADDR) {
-            setInterface((InetAddress) value);
-        } else if (option == IP_MULTICAST_IF) {
-            setNetworkInterface((NetworkInterface) value);
-        } else if (option == IP_MULTICAST_TTL) {
-            setTimeToLive((Integer) value);
-        } else if (option == IP_TOS) {
-            setTrafficClass((Integer) value);
-        } else if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
+        if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             setActiveOnOpen((Boolean) value);
-        } else if (option instanceof NioChannelOption) {
-            NioChannelOption.setOption(javaChannel(), (NioChannelOption<T>) option, value);
         } else {
-            super.setExtendedOption(option, value);
+            SocketOption<T> socketOption = NioChannelOption.toSocketOption(option);
+            if (socketOption != null) {
+                try {
+                    // See: https://github.com/netty/netty/issues/576
+                    if (socketOption == StandardSocketOptions.SO_BROADCAST &&
+                            !isAnyLocalAddress() &&
+                            !PlatformDependent.isWindows() && !PlatformDependent.maybeSuperUser()) {
+                        // Warn a user about the fact that a non-root user can't receive a
+                        // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                        logger.warn(
+                                "A non-root user can't receive a broadcast packet if the socket " +
+                                        "is not bound to a wildcard address; setting the SO_BROADCAST flag " +
+                                        "anyway as requested on the socket which is bound to " +
+                                        javaChannel().getLocalAddress() + '.');
+                    }
+                    NioChannelOption.setOption(javaChannel(), socketOption, value);
+                } catch (IOException e) {
+                    throw new ChannelException(e);
+                }
+            } else {
+                super.setExtendedOption(option, value);
+            }
         }
     }
 
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (SUPPORTED_OPTIONS.contains(option)) {
+        if (option == DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
             return true;
+        }
+        SocketOption<?> socketOption = NioChannelOption.toSocketOption(option);
+        if (socketOption != null) {
+            return NioChannelOption.isOptionSupported(javaChannel(), socketOption);
         }
         return super.isExtendedOptionSupported(option);
     }
 
-    private static Set<ChannelOption<?>> supportedOptions() {
-        return newSupportedIdentityOptionsSet(
-                SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_MULTICAST_LOOP_DISABLED, IP_MULTICAST_ADDR,
-                IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS, DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION);
+    private boolean isActiveOnOpen() {
+        return activeOnOpen;
     }
 
     private void setActiveOnOpen(boolean activeOnOpen) {
@@ -260,166 +227,14 @@ public final class NioDatagramChannel
         this.activeOnOpen = activeOnOpen;
     }
 
-    private boolean isBroadcast() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_BROADCAST);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setBroadcast(boolean broadcast) {
-        try {
-            // See: https://github.com/netty/netty/issues/576
-            if (broadcast &&
-                    !isAnyLocalAddress() &&
-                    !PlatformDependent.isWindows() && !PlatformDependent.maybeSuperUser()) {
-                // Warn a user about the fact that a non-root user can't receive a
-                // broadcast packet on *nix if the socket is bound on non-wildcard address.
-                logger.warn(
-                        "A non-root user can't receive a broadcast packet if the socket " +
-                                "is not bound to a wildcard address; setting the SO_BROADCAST flag " +
-                                "anyway as requested on the socket which is bound to " +
-                                javaChannel().getLocalAddress() + '.');
-            }
-
-            javaChannel().setOption(StandardSocketOptions.SO_BROADCAST, broadcast);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
     private boolean isAnyLocalAddress() throws IOException {
         SocketAddress address = javaChannel().getLocalAddress();
         return address instanceof InetSocketAddress && ((InetSocketAddress) address).getAddress().isAnyLocalAddress();
     }
 
-    private int getTimeToLive() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.IP_MULTICAST_TTL);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setTimeToLive(int ttl) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.IP_MULTICAST_TTL, ttl);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private InetAddress getInterface() {
-        NetworkInterface inf = getNetworkInterface();
-        if (inf != null) {
-            Enumeration<InetAddress> addresses = SocketUtils.addressesFromNetworkInterface(inf);
-            if (addresses.hasMoreElements()) {
-                return addresses.nextElement();
-            }
-        }
-        return null;
-    }
-
-    private void setInterface(InetAddress interfaceAddress) {
-        try {
-            setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
-        } catch (SocketException e) {
-            throw new ChannelException(e);
-        }
-    }
-
     private NetworkInterface getNetworkInterface() {
         try {
             return javaChannel().getOption(StandardSocketOptions.IP_MULTICAST_IF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setNetworkInterface(NetworkInterface networkInterface) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private boolean isLoopbackModeDisabled() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private boolean isReuseAddress() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_REUSEADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    public void setReuseAddress(boolean reuseAddress) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    public int getReceiveBufferSize() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_RCVBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setReceiveBufferSize(int receiveBufferSize) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private int getSendBufferSize() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_SNDBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setSendBufferSize(int sendBufferSize) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private int getTrafficClass() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.IP_TOS);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setTrafficClass(int trafficClass) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.IP_TOS, trafficClass);
         } catch (IOException e) {
             throw new ChannelException(e);
         }

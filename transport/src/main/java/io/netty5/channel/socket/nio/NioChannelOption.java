@@ -19,11 +19,12 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 import java.nio.channels.ServerSocketChannel;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Provides {@link ChannelOption} over a given {@link java.net.SocketOption} which is then passed through the underlying
@@ -47,59 +48,74 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
     }
 
     // Internal helper methods to remove code duplication between Nio*Channel implementations.
-    static <T> void setOption(NetworkChannel channel, NioChannelOption<T> option, T value) {
-        if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
+    static <T> void setOption(NetworkChannel channel, SocketOption<T> option, T value) {
+        if (channel instanceof ServerSocketChannel && option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
             // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return;
         }
         try {
-            channel.setOption(option.option, value);
+            channel.setOption(option, value);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    static <T> T getOption(NetworkChannel channel, NioChannelOption<T> option) {
-        if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
+    static <T> T getOption(NetworkChannel channel, SocketOption<T> option) {
+        if (channel instanceof ServerSocketChannel && option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
             // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return null;
         }
         try {
-            return channel.getOption(option.option);
+            return channel.getOption(option);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    static boolean isSupported(NetworkChannel channel, NioChannelOption<?> option) {
-        return channel.supportedOptions().contains(option.option);
+    static boolean isOptionSupported(NetworkChannel channel, SocketOption<?> option) {
+        return channel.supportedOptions().contains(option);
     }
 
     @SuppressWarnings("unchecked")
-    static ChannelOption[] getOptions(NetworkChannel channel) {
-        Set<java.net.SocketOption<?>> supportedOpts = channel.supportedOptions();
-
-        if (channel instanceof ServerSocketChannel) {
-            List<ChannelOption<?>> extraOpts = new ArrayList<>(supportedOpts.size());
-            for (java.net.SocketOption<?> opt : supportedOpts) {
-                if (opt == java.net.StandardSocketOptions.IP_TOS) {
-                    // Skip IP_TOS as a workaround for a JDK bug:
-                    // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
-                    continue;
-                }
-                extraOpts.add(new NioChannelOption(opt));
-            }
-            return extraOpts.toArray(new ChannelOption[0]);
-        } else {
-            ChannelOption<?>[] extraOpts = new ChannelOption[supportedOpts.size()];
-
-            int i = 0;
-            for (java.net.SocketOption<?> opt : supportedOpts) {
-                extraOpts[i++] = new NioChannelOption(opt);
-            }
-            return extraOpts;
+    static <T> SocketOption<T> toSocketOption(ChannelOption<T> option) {
+        if (option instanceof NioChannelOption<?>) {
+            return ((NioChannelOption<T>) option).option;
         }
+        if (option == SO_RCVBUF) {
+            return (SocketOption<T>) StandardSocketOptions.SO_RCVBUF;
+        }
+        if (option == SO_SNDBUF) {
+            return (SocketOption<T>) StandardSocketOptions.SO_SNDBUF;
+        }
+        if (option == TCP_NODELAY) {
+            return (SocketOption<T>) StandardSocketOptions.TCP_NODELAY;
+        }
+        if (option == SO_KEEPALIVE) {
+            return (SocketOption<T>) StandardSocketOptions.SO_KEEPALIVE;
+        }
+        if (option == SO_REUSEADDR) {
+            return (SocketOption<T>) StandardSocketOptions.SO_REUSEADDR;
+        }
+        if (option == SO_LINGER) {
+            return (SocketOption<T>) StandardSocketOptions.SO_LINGER;
+        }
+        if (option == SO_BROADCAST) {
+            return (SocketOption<T>) StandardSocketOptions.SO_BROADCAST;
+        }
+        if (option == IP_MULTICAST_LOOP_DISABLED) {
+            return (SocketOption<T>) StandardSocketOptions.IP_MULTICAST_LOOP;
+        }
+        if (option == IP_MULTICAST_IF) {
+            return (SocketOption<T>) StandardSocketOptions.IP_MULTICAST_IF;
+        }
+        if (option == IP_MULTICAST_TTL) {
+            return (SocketOption<T>) StandardSocketOptions.IP_MULTICAST_TTL;
+        }
+        if (option == IP_TOS) {
+            return (SocketOption<T>) StandardSocketOptions.IP_TOS;
+        }
+        return null;
     }
 }

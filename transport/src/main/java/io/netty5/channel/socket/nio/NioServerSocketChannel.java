@@ -34,17 +34,14 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
-import java.net.StandardSocketOptions;
+import java.net.SocketOption;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
-import java.util.Set;
 
 import static io.netty5.channel.ChannelOption.SO_BACKLOG;
-import static io.netty5.channel.ChannelOption.SO_RCVBUF;
-import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
@@ -59,7 +56,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
-    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
@@ -142,82 +138,40 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
-        }
-        if (option == SO_REUSEADDR) {
-            return (T) Boolean.valueOf(isReuseAddress());
-        }
         if (option == SO_BACKLOG) {
             return (T) Integer.valueOf(getBacklog());
         }
-        if (option instanceof NioChannelOption) {
-            return NioChannelOption.getOption(javaChannel(), (NioChannelOption<T>) option);
+        SocketOption<T> socketOption = NioChannelOption.toSocketOption(option);
+        if (socketOption != null) {
+            return NioChannelOption.getOption(javaChannel(), socketOption);
         }
         return super.getExtendedOption(option);
     }
 
     @Override
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
-        } else if (option == SO_REUSEADDR) {
-            setReuseAddress((Boolean) value);
-        } else if (option == SO_BACKLOG) {
+        if (option == SO_BACKLOG) {
             setBacklog((Integer) value);
-        } else if (option instanceof NioChannelOption) {
-            NioChannelOption.setOption(javaChannel(), (NioChannelOption<T>) option, value);
         } else {
-            super.setExtendedOption(option, value);
+            SocketOption<T> socketOption = NioChannelOption.toSocketOption(option);
+            if (socketOption != null) {
+                NioChannelOption.setOption(javaChannel(), socketOption, value);
+            } else {
+                super.setExtendedOption(option, value);
+            }
         }
     }
 
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (option instanceof NioChannelOption) {
-            return NioChannelOption.isSupported(javaChannel(), (NioChannelOption<?>) option);
-        }
-        if (SUPPORTED_OPTIONS.contains(option)) {
+        if (option == SO_BACKLOG) {
             return true;
         }
+        SocketOption<?> socketOption = NioChannelOption.toSocketOption(option);
+        if (socketOption != null) {
+            return NioChannelOption.isOptionSupported(javaChannel(), socketOption);
+        }
         return super.isExtendedOptionSupported(option);
-    }
-
-    private static Set<ChannelOption<?>> supportedOptions() {
-        return newSupportedIdentityOptionsSet(
-                SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG);
-    }
-
-    private boolean isReuseAddress() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_REUSEADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setReuseAddress(boolean reuseAddress) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private int getReceiveBufferSize() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_RCVBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setReceiveBufferSize(int receiveBufferSize) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
     }
 
     private int getBacklog() {
