@@ -107,6 +107,9 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     }
 
     void setTcpMd5Sig(Map<InetAddress, byte[]> keys) throws IOException {
-        tcpMd5SigAddresses = TcpMd5Util.newTcpMd5Sigs(this, tcpMd5SigAddresses, keys);
+        // Add synchronized as newTcpMp5Sigs might do multiple operations on the socket itself.
+        synchronized (this) {
+            tcpMd5SigAddresses = TcpMd5Util.newTcpMd5Sigs(this, tcpMd5SigAddresses, keys);
+        }
     }
 }
