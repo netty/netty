@@ -47,7 +47,6 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
     }
 
     public void testShutdownOutput(ServerBootstrap sb) throws Throwable {
-        System.out.println("sb = " + sb);
         TestHandler h = new TestHandler();
         Socket s = newSocket();
         Channel sc = null;

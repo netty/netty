@@ -36,8 +36,6 @@ import java.net.NetworkInterface;
  * </tr><tr>
  * <td>{@link ChannelOption#SO_BROADCAST}</td>
  * </tr><tr>
- * <td>{@link ChannelOption#IP_MULTICAST_ADDR}</td>
- * </tr><tr>
  * <td>{@link ChannelOption#IP_MULTICAST_LOOP_DISABLED}</td>
  * </tr><tr>
  * <td>{@link ChannelOption#IP_MULTICAST_IF}</td>

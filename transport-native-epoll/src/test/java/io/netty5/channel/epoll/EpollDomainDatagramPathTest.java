@@ -16,51 +16,12 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelHandlerAdapter;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.AbstractClientSocketTest;
-import io.netty5.util.CharsetUtil;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import io.netty5.testsuite.transport.socket.DomainDatagramPathTest;
 
-import java.io.FileNotFoundException;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
-class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
-
-    @Test
-    void testConnectPathDoesNotExist(TestInfo testInfo) throws Throwable {
-        run(testInfo, bootstrap -> {
-            try {
-                bootstrap.handler(new ChannelHandlerAdapter() { })
-                         .connect(EpollSocketTestPermutation.newDomainSocketAddress()).asStage().get();
-                fail("Expected FileNotFoundException");
-            } catch (Exception e) {
-                assertTrue(e.getCause() instanceof FileNotFoundException);
-            }
-        });
-    }
-
-    @Test
-    void testWriteReceiverPathDoesNotExist(TestInfo testInfo) throws Throwable {
-        run(testInfo, bootstrap -> {
-            try {
-                Channel ch = bootstrap.handler(new ChannelHandlerAdapter() { })
-                                      .bind(EpollSocketTestPermutation.newDomainSocketAddress()).asStage().get();
-                ch.writeAndFlush(new DatagramPacket(
-                                ch.bufferAllocator().copyOf("test", CharsetUtil.US_ASCII),
-                                EpollSocketTestPermutation.newDomainSocketAddress())).asStage().sync();
-                fail("Expected FileNotFoundException");
-            } catch (Exception e) {
-                assertTrue(e.getCause() instanceof FileNotFoundException);
-            }
-        });
-    }
+class EpollDomainDatagramPathTest extends DomainDatagramPathTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {

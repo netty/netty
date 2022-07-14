@@ -25,6 +25,7 @@ import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.AbstractSocketTest;
+import io.netty5.testsuite.transport.socket.SocketTestPermutation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -42,12 +43,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class KQueueDomainSocketFdTest extends AbstractSocketTest {
     @Override
     protected SocketAddress newSocketAddress() {
-        return KQueueSocketTestPermutation.newSocketAddress();
+        return SocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.domainSocket();
+        return KQueueSocketTestPermutation.INSTANCE.kqueueDomainSocket();
     }
 
     @Test

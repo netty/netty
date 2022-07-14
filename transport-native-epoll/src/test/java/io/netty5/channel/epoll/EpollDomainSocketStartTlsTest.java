@@ -18,16 +18,11 @@ package io.netty5.channel.epoll;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.testsuite.transport.socket.SocketStartTlsTest;
+import io.netty5.testsuite.transport.socket.DomainSocketStartTlsTest;
 
-import java.net.SocketAddress;
 import java.util.List;
 
-public class EpollDomainSocketStartTlsTest extends SocketStartTlsTest {
-    @Override
-    protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newDomainSocketAddress();
-    }
+public class EpollDomainSocketStartTlsTest extends DomainSocketStartTlsTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {

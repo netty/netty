@@ -34,22 +34,18 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.Set;
 import java.util.concurrent.Executor;
 
-import static io.netty5.channel.ChannelOption.IP_TOS;
-import static io.netty5.channel.ChannelOption.SO_KEEPALIVE;
-import static io.netty5.channel.ChannelOption.SO_LINGER;
-import static io.netty5.channel.ChannelOption.SO_RCVBUF;
-import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
-import static io.netty5.channel.ChannelOption.SO_SNDBUF;
-import static io.netty5.channel.ChannelOption.TCP_NODELAY;
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
+import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 
 /**
  * {@link io.netty5.channel.socket.SocketChannel} which uses NIO selector based implementation.
@@ -60,18 +56,20 @@ public class NioSocketChannel
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
-            SelectorProviderUtil.findOpenMethod("openSocketChannel");
-
-    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
+            NioChannelUtil.findOpenMethod("openSocketChannel");
 
     private static SocketChannel newChannel(SelectorProvider provider, ProtocolFamily family) {
         try {
-            SocketChannel channel = SelectorProviderUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
+            SocketChannel channel = NioChannelUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
             return channel == null ? provider.openSocketChannel() : channel;
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
+
+    private final ProtocolFamily family;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
     /**
      * Create a new instance
@@ -91,14 +89,14 @@ public class NioSocketChannel
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
     public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
-        this(eventLoop, newChannel(provider, family));
+        this(null, eventLoop, newChannel(provider, family), family);
     }
 
     /**
      * Create a new instance using the given {@link SocketChannel}.
      */
     public NioSocketChannel(EventLoop eventLoop, SocketChannel socket) {
-        this(null, eventLoop, socket);
+        this(null, eventLoop, socket, null);
     }
 
     /**
@@ -109,11 +107,25 @@ public class NioSocketChannel
      * @param socket    the {@link SocketChannel} which will be used
      */
     public NioSocketChannel(NioServerSocketChannel parent, EventLoop eventLoop, SocketChannel socket) {
+        this(parent, eventLoop, socket, null);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
+     * @param eventLoop the {@link EventLoop} to use for IO.
+     * @param socket    the {@link SocketChannel} which will be used
+     * @param family    the {@link ProtocolFamily} that was used to create th {@link SocketChannel}
+     */
+    public NioSocketChannel(NioServerSocketChannel parent, EventLoop eventLoop, SocketChannel socket,
+                            ProtocolFamily family) {
         super(parent, eventLoop, socket);
+        this.family = family;
         // Enable TCP_NODELAY by default if possible.
-        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+        if (!isDomainSocket(family) && PlatformDependent.canEnableTcpNoDelayByDefault()) {
             try {
-                setTcpNoDelay(true);
+                javaChannel().setOption(StandardSocketOptions.TCP_NODELAY, true);
             } catch (Exception e) {
                 // Ignore.
             }
@@ -138,9 +150,9 @@ public class NioSocketChannel
         }
         switch (direction) {
             case Outbound:
-                return javaChannel().socket().isOutputShutdown();
+                return outputShutdown;
             case Inbound:
-                return javaChannel().socket().isInputShutdown();
+                return inputShutdown;
             default:
                 throw new AssertionError();
         }
@@ -151,9 +163,11 @@ public class NioSocketChannel
         switch (direction) {
             case Inbound:
                 javaChannel().shutdownInput();
+                inputShutdown = true;
                 break;
             case Outbound:
                 javaChannel().shutdownOutput();
+                outputShutdown = true;
                 break;
             default:
                 throw new AssertionError();
@@ -162,12 +176,30 @@ public class NioSocketChannel
 
     @Override
     protected SocketAddress localAddress0() {
-        return javaChannel().socket().getLocalSocketAddress();
+        try {
+            SocketAddress address = javaChannel().getLocalAddress();
+            if (isDomainSocket(family)) {
+                return toDomainSocketAddress(address);
+            }
+            return address;
+        } catch (IOException e) {
+            // Just return null
+            return null;
+        }
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return javaChannel().socket().getRemoteSocketAddress();
+        try {
+            SocketAddress address = javaChannel().getRemoteAddress();
+            if (isDomainSocket(family)) {
+                return toDomainSocketAddress(address);
+            }
+            return address;
+        } catch (IOException e) {
+            // Just return null
+            return null;
+        }
     }
 
     @Override
@@ -176,6 +208,9 @@ public class NioSocketChannel
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
+        if (isDomainSocket(family)) {
+            localAddress = toUnixDomainSocketAddress(localAddress);
+        }
         SocketUtils.bind(javaChannel(), localAddress);
     }
 
@@ -187,6 +222,9 @@ public class NioSocketChannel
 
         boolean success = false;
         try {
+            if (isDomainSocket(family)) {
+                remoteAddress = toUnixDomainSocketAddress(remoteAddress);
+            }
             boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
@@ -307,18 +345,20 @@ public class NioSocketChannel
 
     @Override
     protected Future<Executor> prepareToClose() {
-        try {
-            if (javaChannel().isOpen() && getOption(ChannelOption.SO_LINGER) > 0) {
-                // We need to cancel this key of the channel so we may not end up in a eventloop spin
-                // because we try to read or write until the actual close happens which may be later due
-                // SO_LINGER handling.
+        if (!isDomainSocket(family)) {
+            try {
+                if (javaChannel().isOpen() && getOption(ChannelOption.SO_LINGER) > 0) {
+                    // We need to cancel this key of the channel so we may not end up in a eventloop spin
+                    // because we try to read or write until the actual close happens which may be later due
+                    // SO_LINGER handling.
+                    // See https://github.com/netty/netty/issues/4449
+                    return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
+                }
+            } catch (Throwable ignore) {
+                // Ignore the error as the underlying channel may be closed in the meantime and so
+                // getSoLinger() may produce an exception. In this case we just return null.
                 // See https://github.com/netty/netty/issues/4449
-                return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
             }
-        } catch (Throwable ignore) {
-            // Ignore the error as the underlying channel may be closed in the meantime and so
-            // getSoLinger() may produce an exception. In this case we just return null.
-            // See https://github.com/netty/netty/issues/4449
         }
         return null;
     }
@@ -326,51 +366,19 @@ public class NioSocketChannel
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
+        SocketOption<T> socketOption = NioChannelOption.toSocketOption(option);
+        if (socketOption != null) {
+            return NioChannelOption.getOption(javaChannel(), socketOption);
+        } else {
+            return super.getExtendedOption(option);
         }
-        if (option == SO_SNDBUF) {
-            return (T) Integer.valueOf(getSendBufferSize());
-        }
-        if (option == TCP_NODELAY) {
-            return (T) Boolean.valueOf(isTcpNoDelay());
-        }
-        if (option == SO_KEEPALIVE) {
-            return (T) Boolean.valueOf(isKeepAlive());
-        }
-        if (option == SO_REUSEADDR) {
-            return (T) Boolean.valueOf(isReuseAddress());
-        }
-        if (option == SO_LINGER) {
-            return (T) Integer.valueOf(getSoLinger());
-        }
-        if (option == IP_TOS) {
-            return (T) Integer.valueOf(getTrafficClass());
-        }
-        if (option instanceof NioChannelOption) {
-            return NioChannelOption.getOption(javaChannel(), (NioChannelOption<T>) option);
-        }
-        return super.getExtendedOption(option);
     }
 
     @Override
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
-        } else if (option == SO_SNDBUF) {
-            setSendBufferSize((Integer) value);
-        } else if (option == TCP_NODELAY) {
-            setTcpNoDelay((Boolean) value);
-        } else if (option == SO_KEEPALIVE) {
-            setKeepAlive((Boolean) value);
-        } else if (option == SO_REUSEADDR) {
-            setReuseAddress((Boolean) value);
-        } else if (option == SO_LINGER) {
-            setSoLinger((Integer) value);
-        } else if (option == IP_TOS) {
-            setTrafficClass((Integer) value);
-        } else if (option instanceof NioChannelOption) {
-            NioChannelOption.setOption(javaChannel(), (NioChannelOption<T>) option, value);
+        SocketOption<T> socketOption = NioChannelOption.toSocketOption(option);
+        if (socketOption != null) {
+            NioChannelOption.setOption(javaChannel(), socketOption, value);
         } else {
             super.setExtendedOption(option, value);
         }
@@ -378,137 +386,11 @@ public class NioSocketChannel
 
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (option instanceof NioChannelOption) {
-            return NioChannelOption.isSupported(javaChannel(), (NioChannelOption<?>) option);
-        }
-        if (SUPPORTED_OPTIONS.contains(option)) {
-            return true;
+        SocketOption<?> socketOption = NioChannelOption.toSocketOption(option);
+        if (socketOption != null) {
+            return NioChannelOption.isOptionSupported(javaChannel(), socketOption);
         }
         return super.isExtendedOptionSupported(option);
-    }
-
-    private static Set<ChannelOption<?>> supportedOptions() {
-        return newSupportedIdentityOptionsSet(
-                ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF, ChannelOption.TCP_NODELAY,
-                ChannelOption.SO_KEEPALIVE, ChannelOption.SO_REUSEADDR, ChannelOption.SO_LINGER,
-                ChannelOption.IP_TOS);
-    }
-
-    private int getReceiveBufferSize() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_RCVBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private int getSendBufferSize() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_SNDBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private int getSoLinger() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_LINGER);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private int getTrafficClass() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.IP_TOS);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private boolean isKeepAlive() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_KEEPALIVE);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private boolean isReuseAddress() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.SO_REUSEADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private boolean isTcpNoDelay() {
-        try {
-            return javaChannel().getOption(StandardSocketOptions.TCP_NODELAY);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setKeepAlive(boolean keepAlive) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_KEEPALIVE, keepAlive);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setPerformancePreferences(
-            int connectionTime, int latency, int bandwidth) {
-        javaChannel().socket().setPerformancePreferences(connectionTime, latency, bandwidth);
-    }
-
-    private void setReceiveBufferSize(int receiveBufferSize) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setReuseAddress(boolean reuseAddress) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    private void setSendBufferSize(int sendBufferSize) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    public void setSoLinger(int soLinger) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.SO_LINGER, soLinger);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    public void setTcpNoDelay(boolean tcpNoDelay) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    public void setTrafficClass(int trafficClass) {
-        try {
-            javaChannel().setOption(StandardSocketOptions.IP_TOS, trafficClass);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
     }
 
     @Override
@@ -527,10 +409,14 @@ public class NioSocketChannel
     }
 
     private void calculateMaxBytesPerGatheringWrite() {
-        // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
-        int newSendBufferSize = getSendBufferSize() << 1;
-        if (newSendBufferSize > 0) {
-            setMaxBytesPerGatheringWrite(newSendBufferSize);
+        try {
+            // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
+            int newSendBufferSize = javaChannel().getOption(StandardSocketOptions.SO_SNDBUF) << 1;
+            if (newSendBufferSize > 0) {
+                setMaxBytesPerGatheringWrite(newSendBufferSize);
+            }
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
     }
 }

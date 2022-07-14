@@ -54,7 +54,6 @@ import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.kqueue.BsdSocket.newSocketDgram;
 import static io.netty5.channel.unix.UnixChannelOption.SO_REUSEPORT;
-import static java.util.Objects.requireNonNull;
 
 /**
  * {@link DatagramChannel} implementation that uses KQueue.

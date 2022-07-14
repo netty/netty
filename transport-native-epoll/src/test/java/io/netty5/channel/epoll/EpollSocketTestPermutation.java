@@ -26,8 +26,6 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.channel.socket.DomainSocketAddress;
-import io.netty5.channel.unix.tests.UnixTestUtils;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.testsuite.transport.socket.SocketTestPermutation;
@@ -182,10 +180,6 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         return Collections.singletonList(
                 () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class)
         );
-    }
-
-    public static DomainSocketAddress newDomainSocketAddress() {
-        return UnixTestUtils.newDomainSocketAddress();
     }
 
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> domainDatagram() {

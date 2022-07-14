@@ -15,11 +15,7 @@
  */
 package io.netty5.channel.unix.tests;
 
-import io.netty5.channel.socket.DomainSocketAddress;
-import io.netty5.util.internal.PlatformDependent;
 
-import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -30,29 +26,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public final class UnixTestUtils {
     private static final Object INET_LOOPBACK_UNAVAILABLE = new Object();
     private static volatile Object inetLoopbackCache;
-
-    /**
-     * @deprecated Use {@link #newDomainSocketAddress()} instead.
-     */
-    @Deprecated
-    public static DomainSocketAddress newSocketAddress() {
-        return newDomainSocketAddress();
-    }
-
-    public static DomainSocketAddress newDomainSocketAddress() {
-        try {
-            File file;
-            do {
-                file = PlatformDependent.createTempFile("NETTY", "UDS", null);
-                if (!file.delete()) {
-                    throw new IOException("failed to delete: " + file);
-                }
-            } while (file.getAbsolutePath().length() > 128);
-            return new DomainSocketAddress(file);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 
     /**
      * The JDK method may produce IPv4 loopback addresses where {@link io.netty5.util.NetUtil#LOCALHOST} might be an

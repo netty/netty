@@ -78,14 +78,12 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).asStage().get();
         assertEquals(iface, sc.getOption(ChannelOption.IP_MULTICAST_IF));
-        assertInterfaceAddress(iface, sc.getOption(ChannelOption.IP_MULTICAST_ADDR));
 
         InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
         cb.localAddress(addr.getPort());
 
         DatagramChannel cc = (DatagramChannel) cb.bind().asStage().get();
         assertEquals(iface, cc.getOption(ChannelOption.IP_MULTICAST_IF));
-        assertInterfaceAddress(iface, cc.getOption(ChannelOption.IP_MULTICAST_ADDR));
 
         InetAddress groupAddress = SocketUtils.addressByName(groupAddress());
         cc.joinGroup(groupAddress, iface, null).asStage().sync();
@@ -120,16 +118,6 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sc.close().asStage().await();
         cc.close().asStage().await();
-    }
-
-    private static void assertInterfaceAddress(NetworkInterface networkInterface, InetAddress expected) {
-        Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
-        while (addresses.hasMoreElements()) {
-            if (expected.equals(addresses.nextElement())) {
-                return;
-            }
-        }
-        fail();
     }
 
     private static final class MulticastTestHandler extends SimpleChannelInboundHandler<DatagramPacket> {
