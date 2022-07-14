@@ -19,8 +19,6 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
