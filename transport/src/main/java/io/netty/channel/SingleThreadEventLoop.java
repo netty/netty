@@ -22,6 +22,9 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -153,5 +156,55 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @UnstableApi
     public int registeredChannels() {
         return -1;
+    }
+
+    public Iterator<Channel> registeredChannelsIterator() {
+        throw new UnsupportedOperationException("registeredChannelsIterator");
+    }
+
+    protected static class ChannelsReadOnlyIterator<T extends Channel> implements Iterator<Channel> {
+        private final Iterator<T> channelIterator;
+
+        public ChannelsReadOnlyIterator(Iterable<T> channelIterable) {
+            this.channelIterator =
+                    ObjectUtil.checkNotNull(channelIterable, "channelIterable").iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return channelIterator.hasNext();
+        }
+
+        @Override
+        public Channel next() {
+            return channelIterator.next();
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("remove");
+        }
+
+        @SuppressWarnings("unchecked")
+        public static <T> Iterator<T> empty() {
+            return (Iterator<T>) EMPTY;
+        }
+
+        private static final Iterator<Object> EMPTY = new Iterator<Object>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public Object next() {
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("remove");
+            }
+        };
     }
 }

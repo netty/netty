@@ -34,6 +34,7 @@ import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -41,7 +42,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -54,8 +59,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioEventLoopTest extends AbstractEventLoopTest {
@@ -300,6 +307,87 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 Thread.sleep(50);
             }
             assertEquals(1, registered);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelsIteratorEmpty() throws Exception {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        final NioEventLoop loop = (NioEventLoop) group.next();
+        try {
+            final Iterator<Channel> iterator = loop.registeredChannelsIterator();
+            assertFalse(iterator.hasNext());
+            assertThrows(NoSuchElementException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    iterator.next();
+                }
+            });
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelsIterator() throws Exception {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        final NioEventLoop loop = (NioEventLoop) group.next();
+        try {
+            final Channel ch1 = new NioServerSocketChannel();
+            final Channel ch2 = new NioServerSocketChannel();
+            loop.register(ch1).syncUninterruptibly();
+            loop.register(ch2).syncUninterruptibly();
+            assertEquals(2, registeredChannels(loop));
+
+            final Iterator<Channel> iterator = loop.registeredChannelsIterator();
+
+            assertTrue(iterator.hasNext());
+            Channel actualCh1 = iterator.next();
+            assertNotNull(actualCh1);
+
+            assertTrue(iterator.hasNext());
+            Channel actualCh2 = iterator.next();
+            assertNotNull(actualCh2);
+
+            Set<Channel> expected = new HashSet<Channel>(4);
+            expected.add(ch1);
+            expected.add(ch2);
+            expected.remove(actualCh1);
+            expected.remove(actualCh2);
+            assertTrue(expected.isEmpty());
+
+            assertFalse(iterator.hasNext());
+            assertThrows(NoSuchElementException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    iterator.next();
+                }
+            });
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelsIteratorRemoveThrows() throws Exception {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        final NioEventLoop loop = (NioEventLoop) group.next();
+
+        try {
+            final Channel ch = new NioServerSocketChannel();
+            loop.register(ch).syncUninterruptibly();
+            assertEquals(1, registeredChannels(loop));
+            assertThrows(UnsupportedOperationException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    loop.registeredChannelsIterator().remove();
+                }
+            });
         } finally {
             group.shutdownGracefully();
         }
