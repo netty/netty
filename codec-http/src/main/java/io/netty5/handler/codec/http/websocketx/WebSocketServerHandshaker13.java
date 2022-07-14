@@ -133,7 +133,19 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     @Override
     protected FullHttpResponse newHandshakeResponse(BufferAllocator allocator, FullHttpRequest req,
                                                     HttpHeaders headers) {
-        String key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
+        HttpHeaders reqHeaders = req.headers();
+        if (!reqHeaders.contains(HttpHeaderNames.CONNECTION) ||
+            !reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+            throw new WebSocketServerHandshakeException(
+                    "not a WebSocket request: a |Connection| header must includes a token 'Upgrade'", req);
+        }
+
+        if (!reqHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true)) {
+            throw new WebSocketServerHandshakeException(
+                    "not a WebSocket request: a |Upgrade| header must containing the value 'websocket'", req);
+        }
+
+        String key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
@@ -149,7 +161,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                      .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                      .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
-        String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+        String subprotocols = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {

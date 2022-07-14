@@ -280,6 +280,12 @@ public final class HttpHeaderNames {
      * {@code "sec-websocket-key"}
      */
     public static final AsciiString SEC_WEBSOCKET_KEY = AsciiString.cached("sec-websocket-key");
+
+    /**
+     * {@code "Sec-WebSocket-Origin"}
+     */
+    public static final AsciiString SEC_WEBSOCKET_ORIGIN = AsciiString.cached("Sec-WebSocket-Origin");
+
     /**
      * {@code "sec-websocket-accept"}
      */
