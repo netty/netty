@@ -33,6 +33,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -351,6 +352,11 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     @Override
     public int registeredChannels() {
         return channels.size();
+    }
+
+    @Override
+    public Iterator<AbstractKQueueChannel> registeredChannelsIterator() {
+        return channels.values().iterator();
     }
 
     @Override

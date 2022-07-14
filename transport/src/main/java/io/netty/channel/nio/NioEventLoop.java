@@ -44,6 +44,7 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -370,6 +371,21 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     public int registeredChannels() {
         return selector.keys().size() - cancelledKeys;
+    }
+
+    @Override
+    public Iterator<AbstractNioChannel> registeredChannelsIterator() {
+        List<AbstractNioChannel> nioChannelList = new ArrayList<AbstractNioChannel>();
+        for (SelectionKey key: selector.keys()) {
+            if (!key.isValid()) {
+                continue;
+            }
+            Object o = key.attachment();
+            if (o instanceof AbstractNioChannel) {
+                nioChannelList.add((AbstractNioChannel) o);
+            }
+        }
+        return nioChannelList.iterator();
     }
 
     private void rebuildSelector0() {

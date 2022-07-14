@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -153,5 +154,12 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @UnstableApi
     public int registeredChannels() {
         return -1;
+    }
+
+    /**
+     * Returns the read-only iterator of {@link Channel}s registered with this {@link EventLoop}.
+     */
+    public Iterator<? extends Channel> registeredChannelsIterator() {
+        throw new UnsupportedOperationException();
     }
 }
