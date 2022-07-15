@@ -32,23 +32,28 @@ import java.net.NetworkInterface;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_BROADCAST}</td>
+ * <td>{@link ChannelOption#DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#IP_MULTICAST_LOOP_DISABLED}</td>
+ * <td>{@link ChannelOption#SO_BROADCAST}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#IP_MULTICAST_IF}</td>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_SNDBUF}</td>
+ * <td>{@link ChannelOption#IP_MULTICAST_LOOP_DISABLED}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#IP_MULTICAST_TTL}</td>
+ * <td>{@link ChannelOption#IP_MULTICAST_IF}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#IP_TOS}</td>
+ * <td>{@link ChannelOption#IP_MULTICAST_TTL}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_TOS}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */

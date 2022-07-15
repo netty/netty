@@ -26,6 +26,8 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
@@ -76,17 +78,24 @@ import static java.util.Objects.requireNonNull;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX</th>
  * </tr><tr>
- * <td>{@link UnixChannelOption#SO_REUSEPORT}</td>
+ * <td>{@link IntegerUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#IP_FREEBIND}</td>
+ * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#IP_RECVORIGDSTADDR}</td>
+ * <td>{@link UnixChannelOption#SO_REUSEPORT}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#MAX_DATAGRAM_PAYLOAD_SIZE}</td>
+ * <td>{@link EpollChannelOption#IP_FREEBIND}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#UDP_GRO}</td>
+ * <td>{@link EpollChannelOption#IP_RECVORIGDSTADDR}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#MAX_DATAGRAM_PAYLOAD_SIZE}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#UDP_GRO}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */

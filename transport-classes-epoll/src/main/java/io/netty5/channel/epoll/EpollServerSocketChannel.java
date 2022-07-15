@@ -28,6 +28,8 @@ import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.NetUtil;
@@ -48,7 +50,6 @@ import static io.netty5.channel.ChannelOption.SO_BACKLOG;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
 import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.TCP_FASTOPEN;
-import static io.netty5.channel.epoll.LinuxSocket.newSocketStream;
 import static io.netty5.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
 import static io.netty5.channel.unix.NativeInetAddress.address;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -64,15 +65,22 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link UnixChannelOption#SO_REUSEPORT}</td>
+ * <td>{@link IntegerUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#IP_FREEBIND}</td>
+ * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_DEFER_ACCEPT}</td>
+ * <td>{@link UnixChannelOption#SO_REUSEPORT}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#TCP_FASTOPEN}</td>
+ * <td>{@link EpollChannelOption#IP_FREEBIND}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#TCP_DEFER_ACCEPT}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#TCP_FASTOPEN}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */

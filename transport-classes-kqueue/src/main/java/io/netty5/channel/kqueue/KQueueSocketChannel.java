@@ -32,10 +32,13 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainSocketReadMode;
 import io.netty5.channel.unix.FileDescriptor;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.SocketWritableByteChannel;
 import io.netty5.channel.unix.UnixChannel;
+import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -77,13 +80,20 @@ import static java.util.Objects.requireNonNull;
  * {@link KQueueSocketChannel} allows the following options in the option map:
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link KQueueChannelOption#SO_SNDLOWAT}</td>
+ * <td>{@link IntegerUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link KQueueChannelOption#TCP_NOPUSH}</td>
+ * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link ChannelOption#TCP_FASTOPEN_CONNECT}</td>
+ * <td>{@link KQueueChannelOption#SO_SNDLOWAT}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link KQueueChannelOption#TCP_NOPUSH}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#TCP_FASTOPEN_CONNECT}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */
@@ -178,6 +188,9 @@ public final class KQueueSocketChannel
             if (option == DOMAIN_SOCKET_READ_MODE) {
                 return (T) getReadMode();
             }
+            if (option == UnixChannelOption.SO_PEERCRED) {
+                return (T) getPeerCredentials();
+            }
         }
         return super.getExtendedOption(option);
     }
@@ -207,6 +220,8 @@ public final class KQueueSocketChannel
                 setTcpFastOpenConnect((Boolean) value);
             } else if (option == DOMAIN_SOCKET_READ_MODE) {
                 setReadMode((DomainSocketReadMode) value);
+            } else if (option == UnixChannelOption.SO_PEERCRED) {
+                throw new UnsupportedOperationException("read-only option: " + option);
             }
         } else {
             super.setExtendedOption(option, value);
@@ -232,7 +247,8 @@ public final class KQueueSocketChannel
     }
 
     private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
-        return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_SNDBUF, DOMAIN_SOCKET_READ_MODE);
+        return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_SNDBUF, DOMAIN_SOCKET_READ_MODE,
+                UnixChannelOption.SO_PEERCRED);
     }
 
     private void setReadMode(DomainSocketReadMode mode) {
@@ -536,16 +552,12 @@ public final class KQueueSocketChannel
         }
     }
 
-    /**
-     * Returns the unix credentials (uid, gid, pid) of the peer
-     * <a href=https://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
-     */
-    @UnstableApi
-    public PeerCredentials peerCredentials() throws IOException {
-        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-            throw new UnsupportedOperationException();
+    private PeerCredentials getPeerCredentials() {
+        try {
+            return socket.getPeerCredentials();
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
-        return socket.getPeerCredentials();
     }
 
     /**

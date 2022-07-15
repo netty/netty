@@ -33,16 +33,18 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainSocketReadMode;
 import io.netty5.channel.unix.FileDescriptor;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.SocketWritableByteChannel;
 import io.netty5.channel.unix.UnixChannel;
+import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -81,27 +83,40 @@ import static java.util.Objects.requireNonNull;
  * {@link EpollSocketChannel} allows the following options in the option map:
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_CORK}</td>
+ * <td>{@link IntegerUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_NOTSENT_LOWAT}</td>
+ * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_KEEPCNT}</td>
+ * <td>{@link EpollChannelOption#TCP_CORK}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_KEEPIDLE}</td>
+ * <td>{@link EpollChannelOption#TCP_NOTSENT_LOWAT}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_KEEPINTVL}</td>
+ * <td>{@link EpollChannelOption#TCP_KEEPCNT}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_MD5SIG}</td>
+ * <td>{@link EpollChannelOption#TCP_KEEPIDLE}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#TCP_QUICKACK}</td>
+ * <td>{@link EpollChannelOption#TCP_KEEPINTVL}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#IP_TRANSPARENT}</td>
+ * <td>{@link EpollChannelOption#TCP_MD5SIG}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#SO_BUSY_POLL}</td>
+ * <td>{@link EpollChannelOption#TCP_QUICKACK}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#TCP_FASTOPEN_CONNECT}</td>
+ * <td>{@link EpollChannelOption#TCP_INFO}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#TCP_FASTOPEN_CONNECT}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#IP_TRANSPARENT}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#SO_BUSY_POLL}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link UnixChannelOption#SO_PEERCRED}</td><td></td><td></td><td>X</td>
+ * </tr><tr>
+ * <td>{@link UnixChannelOption#DOMAIN_SOCKET_READ_MODE}</td><td></td><td></td><td>X</td>
  * </tr>
  * </table>
  */
@@ -675,6 +690,12 @@ public final class EpollSocketChannel
             if (option == DOMAIN_SOCKET_READ_MODE) {
                 return (T) getReadMode();
             }
+            if (option == EpollChannelOption.TCP_INFO) {
+                return (T) getTcpInfo();
+            }
+            if (option == UnixChannelOption.SO_PEERCRED) {
+                return (T) getPeerCredentials();
+            }
         }
         return super.getExtendedOption(option);
     }
@@ -723,6 +744,10 @@ public final class EpollSocketChannel
                 setSoBusyPoll((Integer) value);
             } else if (option == DOMAIN_SOCKET_READ_MODE) {
                 setReadMode((DomainSocketReadMode) value);
+            } else if (option == EpollChannelOption.TCP_INFO) {
+                throw new UnsupportedOperationException("read-only option: " + option);
+            } else if (option == UnixChannelOption.SO_PEERCRED) {
+                throw new UnsupportedOperationException("read-only option: " + option);
             }
         } else {
             super.setExtendedOption(option, value);
@@ -747,11 +772,12 @@ public final class EpollSocketChannel
                 EpollChannelOption.TCP_KEEPINTVL, EpollChannelOption.TCP_USER_TIMEOUT,
                 EpollChannelOption.IP_TRANSPARENT, EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK,
                 ChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL,
-                EpollChannelOption.TCP_NOTSENT_LOWAT);
+                EpollChannelOption.TCP_NOTSENT_LOWAT, EpollChannelOption.TCP_INFO);
     }
 
     private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
-        return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_SNDBUF, DOMAIN_SOCKET_READ_MODE);
+        return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_SNDBUF, DOMAIN_SOCKET_READ_MODE,
+                UnixChannelOption.SO_PEERCRED);
     }
 
     private int getReceiveBufferSize() {
@@ -1105,23 +1131,14 @@ public final class EpollSocketChannel
             setMaxBytesPerGatheringWrite(newSendBufferSize);
         }
     }
-    /**
-     * Returns the {@code TCP_INFO} for the current socket.
-     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
-     */
-    public EpollTcpInfo tcpInfo() {
-        return tcpInfo(new EpollTcpInfo());
-    }
 
     /**
      * Updates and returns the {@code TCP_INFO} for the current socket.
      * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
      */
-    public EpollTcpInfo tcpInfo(EpollTcpInfo info) {
-        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-            throw new UnsupportedOperationException();
-        }
+    private EpollTcpInfo getTcpInfo() {
         try {
+            EpollTcpInfo info = new EpollTcpInfo();
             socket.getTcpInfo(info);
             return info;
         } catch (IOException e) {
@@ -1191,16 +1208,12 @@ public final class EpollSocketChannel
         }
     }
 
-    /**
-     * Returns the unix credentials (uid, gid, pid) of the peer
-     * <a href=https://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
-     */
-    @UnstableApi
-    public PeerCredentials peerCredentials() throws IOException {
-        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-            throw new UnsupportedOperationException();
+    private PeerCredentials getPeerCredentials() {
+        try {
+            return socket.getPeerCredentials();
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
-        return socket.getPeerCredentials();
     }
 
     private void epollInReadFd() {

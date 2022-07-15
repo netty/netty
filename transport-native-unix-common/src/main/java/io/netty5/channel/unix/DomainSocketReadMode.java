@@ -18,17 +18,17 @@ package io.netty5.channel.unix;
 import io.netty5.buffer.api.Buffer;
 
 /**
- * Different modes of reading from a {@link UnixSocketChannel} that uses Unix Domain Sockets.
+ * Different modes of reading from a {@link UnixChannel} that uses Unix Domain Sockets.
  */
 public enum DomainSocketReadMode {
 
     /**
-     * Read {@link Buffer}s from the {@link UnixSocketChannel}.
+     * Read {@link Buffer}s from the {@link UnixChannel}.
      */
     BYTES,
 
     /**
-     * Read {@link FileDescriptor}s from the {@link UnixSocketChannel}.
+     * Read {@link FileDescriptor}s from the {@link UnixChannel}.
      */
     FILE_DESCRIPTORS
 }

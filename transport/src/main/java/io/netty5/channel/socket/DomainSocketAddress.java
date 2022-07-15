@@ -21,7 +21,7 @@ import java.net.SocketAddress;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A address for a
+ * An address for a
  * <a href="https://en.wikipedia.org/wiki/Unix_domain_socket">Unix Domain Socket</a>.
  */
 public class DomainSocketAddress extends SocketAddress {

@@ -25,6 +25,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -51,6 +52,22 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 /**
  * A {@link io.netty5.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link io.netty5.channel.socket.SocketChannel},
+ * {@link NioSocketChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX</th>
+ * </tr><tr>
+ * <td>{@link NioChannelOption}</td><td>X</td><td>X</td><td>X</td>
+ * </tr>
+ * </table>
  */
 public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, SocketAddress, SocketAddress>
                              implements io.netty5.channel.socket.ServerSocketChannel {

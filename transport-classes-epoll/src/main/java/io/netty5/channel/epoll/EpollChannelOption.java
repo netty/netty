@@ -52,6 +52,12 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
     public static final ChannelOption<Boolean> UDP_GRO = valueOf("UDP_GRO");
 
+    /**
+     * Returns the {@code TCP_INFO} for the current socket.
+     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
+     */
+    public static final ChannelOption<EpollTcpInfo> TCP_INFO = valueOf("TCP_INFO");
+
     @SuppressWarnings({ "unused", "deprecation" })
     private EpollChannelOption() {
     }

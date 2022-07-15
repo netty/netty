@@ -21,6 +21,11 @@ public class UnixChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<Boolean> SO_REUSEPORT = valueOf(UnixChannelOption.class, "SO_REUSEPORT");
     public static final ChannelOption<DomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
             ChannelOption.valueOf(UnixChannelOption.class, "DOMAIN_SOCKET_READ_MODE");
+    /**
+     * Returns the unix credentials (uid, gid, pid) of the peer
+     * <a href=https://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
+     */
+    public static final ChannelOption<PeerCredentials> SO_PEERCRED = valueOf(UnixChannelOption.class, "SO_PEERCRED");
 
     @SuppressWarnings({ "unused", "deprecation" })
     protected UnixChannelOption() {

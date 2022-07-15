@@ -28,6 +28,8 @@ import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -60,15 +62,22 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link ChannelOption#TCP_FASTOPEN}</td>
+ * <td>{@link IntegerUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link KQueueChannelOption#RCV_ALLOC_TRANSPORT_PROVIDES_GUESS}</td>
+ * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link KQueueChannelOption#SO_ACCEPTFILTER}</td>
+ * <td>{@link ChannelOption#TCP_FASTOPEN}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link io.netty5.channel.unix.UnixChannelOption#SO_REUSEPORT}</td>
+ * <td>{@link KQueueChannelOption#RCV_ALLOC_TRANSPORT_PROVIDES_GUESS}</td><td>X</td><td>X</td><td>X</td>
+ * </tr><tr>
+ * <td>{@link KQueueChannelOption#SO_ACCEPTFILTER}</td><td>X</td><td>X</td><td>X</td>
+ * </tr><tr>
+ * <td>{@link io.netty5.channel.unix.UnixChannelOption#SO_REUSEPORT}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */

@@ -18,6 +18,7 @@ package io.netty5.channel.socket.nio;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
@@ -70,11 +71,28 @@ import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddr
 import static java.util.Objects.requireNonNull;
 
 /**
- * An NIO datagram {@link Channel} that sends and receives an
+ * An NIO {@link io.netty5.channel.socket.DatagramChannel} that sends and receives an
  * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
  *
  * @see AddressedEnvelope
  * @see DatagramPacket
+ *
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link io.netty5.channel.socket.DatagramChannel},
+ * {@link NioDatagramChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX</th>
+ * </tr><tr>
+ * <td>{@link NioChannelOption}</td><td>X</td><td>X</td><td>X</td>
+ * </tr>
+ * </table>
  */
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel<Channel, SocketAddress, SocketAddress>

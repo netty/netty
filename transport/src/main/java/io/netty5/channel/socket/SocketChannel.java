@@ -20,7 +20,7 @@ import io.netty5.channel.ChannelOption;
 
 
 /**
- * A TCP/IP socket {@link Channel}.
+ * A Socket {@link Channel}.
  *
  * <h3>Available options</h3>
  *
@@ -29,21 +29,24 @@ import io.netty5.channel.ChannelOption;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_KEEPALIVE}</td>
+ * <td>{@link ChannelOption#SO_KEEPALIVE}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_LINGER}</td>
+ * <td>{@link ChannelOption#SO_LINGER}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#TCP_NODELAY}</td>
+ * <td>{@link ChannelOption#TCP_NODELAY}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_SNDBUF}</td>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link ChannelOption#IP_TOS}</td>
+ * <td>{@link ChannelOption#IP_TOS}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */
