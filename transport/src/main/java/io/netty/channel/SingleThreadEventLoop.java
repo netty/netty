@@ -172,7 +172,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     protected static final class ChannelsReadOnlyIterator<T extends Channel> implements Iterator<Channel> {
         private final Iterator<T> channelIterator;
 
-        public ChannelsReadOnlyIterator(Iterable<T> channelIterable) {
+        protected ChannelsReadOnlyIterator(Iterable<T> channelIterable) {
             this.channelIterator =
                     ObjectUtil.checkNotNull(channelIterable, "channelIterable").iterator();
         }
