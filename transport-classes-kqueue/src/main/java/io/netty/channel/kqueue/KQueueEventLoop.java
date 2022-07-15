@@ -357,6 +357,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
 
     @Override
     public Iterator<Channel> registeredChannelsIterator() {
+        assert inEventLoop();
         IntObjectMap<AbstractKQueueChannel> ch = channels;
         if (ch.isEmpty()) {
             return ChannelsReadOnlyIterator.empty();

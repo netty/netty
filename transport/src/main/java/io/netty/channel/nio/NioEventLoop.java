@@ -375,6 +375,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     @Override
     public Iterator<Channel> registeredChannelsIterator() {
+        assert inEventLoop();
         final Set<SelectionKey> keys = selector.keys();
         if (keys.isEmpty()) {
             return ChannelsReadOnlyIterator.empty();

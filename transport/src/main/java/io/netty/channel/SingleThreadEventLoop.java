@@ -161,7 +161,8 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     /**
      * @return read-only iterator of active {@link Channel}s registered with this {@link EventLoop}.
      *         The returned value is not guaranteed to be exact accurate and
-     *         should be viewed as a best effort.
+     *         should be viewed as a best effort. This method is expected to be called from within
+     *         event loop.
      * @throws UnsupportedOperationException if operation is not supported by implementation.
      */
     @UnstableApi

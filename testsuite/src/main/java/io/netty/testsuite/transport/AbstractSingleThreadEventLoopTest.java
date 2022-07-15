@@ -27,6 +27,7 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -171,12 +172,18 @@ public abstract class AbstractSingleThreadEventLoopTest {
         EventLoopGroup group = newEventLoopGroup();
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
         try {
-            final Iterator<Channel> iterator = loop.registeredChannelsIterator();
-            assertFalse(iterator.hasNext());
-            assertThrows(NoSuchElementException.class, new Executable() {
+            runBlockingOn(loop, new Runnable() {
                 @Override
-                public void execute() throws Throwable {
-                    iterator.next();
+                public void run() {
+                    final Iterator<Channel> iterator = loop.registeredChannelsIterator();
+
+                    assertFalse(iterator.hasNext());
+                    assertThrows(NoSuchElementException.class, new Executable() {
+                        @Override
+                        public void execute() {
+                            iterator.next();
+                        }
+                    });
                 }
             });
         } finally {
@@ -197,28 +204,33 @@ public abstract class AbstractSingleThreadEventLoopTest {
             loop.register(ch2).syncUninterruptibly();
             assertEquals(2, registeredChannels(loop));
 
-            final Iterator<Channel> iterator = loop.registeredChannelsIterator();
-
-            assertTrue(iterator.hasNext());
-            Channel actualCh1 = iterator.next();
-            assertNotNull(actualCh1);
-
-            assertTrue(iterator.hasNext());
-            Channel actualCh2 = iterator.next();
-            assertNotNull(actualCh2);
-
-            Set<Channel> expected = new HashSet<Channel>(4);
-            expected.add(ch1);
-            expected.add(ch2);
-            expected.remove(actualCh1);
-            expected.remove(actualCh2);
-            assertTrue(expected.isEmpty());
-
-            assertFalse(iterator.hasNext());
-            assertThrows(NoSuchElementException.class, new Executable() {
+            runBlockingOn(loop, new Runnable() {
                 @Override
-                public void execute() throws Throwable {
-                    iterator.next();
+                public void run() {
+                    final Iterator<Channel> iterator = loop.registeredChannelsIterator();
+
+                    assertTrue(iterator.hasNext());
+                    Channel actualCh1 = iterator.next();
+                    assertNotNull(actualCh1);
+
+                    assertTrue(iterator.hasNext());
+                    Channel actualCh2 = iterator.next();
+                    assertNotNull(actualCh2);
+
+                    Set<Channel> expected = new HashSet<Channel>(4);
+                    expected.add(ch1);
+                    expected.add(ch2);
+                    expected.remove(actualCh1);
+                    expected.remove(actualCh2);
+                    assertTrue(expected.isEmpty());
+
+                    assertFalse(iterator.hasNext());
+                    assertThrows(NoSuchElementException.class, new Executable() {
+                        @Override
+                        public void execute() {
+                            iterator.next();
+                        }
+                    });
                 }
             });
         } finally {
@@ -237,14 +249,47 @@ public abstract class AbstractSingleThreadEventLoopTest {
             final Channel ch = newChannel();
             loop.register(ch).syncUninterruptibly();
             assertEquals(1, registeredChannels(loop));
-            assertThrows(UnsupportedOperationException.class, new Executable() {
+
+            runBlockingOn(loop, new Runnable() {
                 @Override
-                public void execute() throws Throwable {
-                    loop.registeredChannelsIterator().remove();
+                public void run() {
+                    assertThrows(UnsupportedOperationException.class, new Executable() {
+                        @Override
+                        public void execute() {
+                            loop.registeredChannelsIterator().remove();
+                        }
+                    });
                 }
             });
         } finally {
             group.shutdownGracefully();
+        }
+    }
+
+    private static void runBlockingOn(EventLoop eventLoop, final Runnable action) {
+        final Promise<Void> promise = eventLoop.newPromise();
+            eventLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        action.run();
+                        promise.setSuccess(null);
+                    } catch (Throwable t) {
+                        promise.tryFailure(t);
+                    }
+                }
+            });
+        try {
+            promise.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        Throwable cause = promise.cause();
+        if (cause != null) {
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            throw new RuntimeException(cause);
         }
     }
 

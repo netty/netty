@@ -283,6 +283,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     @Override
     public Iterator<Channel> registeredChannelsIterator() {
+        assert inEventLoop();
         IntObjectMap<AbstractEpollChannel> ch = channels;
         if (ch.isEmpty()) {
             return ChannelsReadOnlyIterator.empty();
