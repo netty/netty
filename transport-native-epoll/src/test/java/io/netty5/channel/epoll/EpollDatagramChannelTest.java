@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.Socket;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
 
 import static io.netty5.util.NetUtil.LOCALHOST;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,8 +49,8 @@ public class EpollDatagramChannelTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next()));
-            checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next(), StandardProtocolFamily.INET));
-            checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next(), StandardProtocolFamily.INET6));
+            checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next(), SocketProtocolFamily.INET));
+            checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next(), SocketProtocolFamily.INET6));
         } finally {
             group.shutdownGracefully();
         }
@@ -61,7 +61,8 @@ public class EpollDatagramChannelTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             Socket socket = Socket.newSocketDgram();
-            EpollDatagramChannel channel = new EpollDatagramChannel(group.next(), socket.intValue());
+            EpollDatagramChannel channel = new EpollDatagramChannel(
+                    group.next(), socket.intValue(), socket.protocolFamily());
             SocketAddress localAddress = channel.localAddress();
             assertTrue(channel.active);
             assertNotNull(localAddress);

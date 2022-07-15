@@ -17,14 +17,24 @@ package io.netty5.channel.epoll;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
+import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ServerChannelRecvBufferAllocator;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.NetUtil;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ProtocolFamily;
@@ -67,10 +77,21 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * </table>
  */
 public final class EpollServerSocketChannel
-        extends AbstractEpollServerChannel<UnixChannel, SocketAddress, SocketAddress>
+        extends AbstractEpollChannel<UnixChannel>
         implements ServerSocketChannel {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
+            EpollServerSocketChannel.class);
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+
+    private final EventLoopGroup childEventLoopGroup;
+    // Will hold the remote address after accept(...) was successful.
+    // We need 24 bytes for the address as maximum + 1 byte for storing the length.
+    // So use 26 bytes as it's a power of two.
+    private final byte[] acceptedAddress = new byte[26];
 
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile int pendingFastOpenRequestsThreshold;
@@ -78,85 +99,116 @@ public final class EpollServerSocketChannel
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        this(eventLoop, childEventLoopGroup, (ProtocolFamily) null);
+        super(eventLoop, METADATA, new ServerChannelRecvBufferAllocator(), LinuxSocket.newSocketStream());
+        this.childEventLoopGroup = validateEventLoopGroup(
+                childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     ProtocolFamily protocolFamily) {
-        super(eventLoop, childEventLoopGroup, EpollSocketChannel.class, newSocketStream(protocolFamily), false);
+        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
+                LinuxSocket.newSocket(protocolFamily), false);
+        this.childEventLoopGroup = validateEventLoopGroup(
+                childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
     }
 
-    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd,
+                                    ProtocolFamily protocolFamily) {
+        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd, SocketProtocolFamily.of(protocolFamily)));
+    }
+
+    private EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(eventLoop, childEventLoopGroup, EpollSocketChannel.class, new LinuxSocket(fd));
+        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
+                EpollSocketChannel.class);
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
+        if (isOptionSupported(socket.protocolFamily(), option)) {
+            if (option == SO_RCVBUF) {
+                return (T) Integer.valueOf(getReceiveBufferSize());
+            }
+            if (option == SO_REUSEADDR) {
+                return (T) Boolean.valueOf(isReuseAddress());
+            }
+            if (option == SO_BACKLOG) {
+                return (T) Integer.valueOf(getBacklog());
+            }
+            if (option == TCP_FASTOPEN) {
+                return (T) Integer.valueOf(getTcpFastopen());
+            }
+            if (option == EpollChannelOption.IP_FREEBIND) {
+                return (T) Boolean.valueOf(isIpFreebind());
+            }
+            if (option == EpollChannelOption.TCP_DEFER_ACCEPT) {
+                return (T) Integer.valueOf(getTcpDeferAccept());
+            }
+            if (option == UnixChannelOption.SO_REUSEPORT) {
+                return (T) Boolean.valueOf(isReusePort());
+            }
+            if (option == EpollChannelOption.TCP_MD5SIG) {
+                return null;
+            }
         }
-        if (option == SO_REUSEADDR) {
-            return (T) Boolean.valueOf(isReuseAddress());
-        }
-        if (option == SO_BACKLOG) {
-            return (T) Integer.valueOf(getBacklog());
-        }
-        if (option == TCP_FASTOPEN) {
-            return (T) Integer.valueOf(getTcpFastopen());
-        }
-        if (option == EpollChannelOption.IP_FREEBIND) {
-            return (T) Boolean.valueOf(isIpFreebind());
-        }
-        if (option == EpollChannelOption.TCP_DEFER_ACCEPT) {
-            return (T) Integer.valueOf(getTcpDeferAccept());
-        }
-        if (option == UnixChannelOption.SO_REUSEPORT) {
-            return (T) Boolean.valueOf(isReusePort());
-        }
-        if (option == EpollChannelOption.TCP_MD5SIG) {
-            return null;
-        }
+
         return super.getExtendedOption(option);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
-        } else if (option == SO_REUSEADDR) {
-            setReuseAddress((Boolean) value);
-        } else if (option == SO_BACKLOG) {
-            setBacklog((Integer) value);
-        } else if (option == TCP_FASTOPEN) {
-            setTcpFastopen((Integer) value);
-        } else if (option == EpollChannelOption.IP_FREEBIND) {
-            setIpFreebind((Boolean) value);
-        } else if (option == EpollChannelOption.TCP_DEFER_ACCEPT) {
-            setTcpDeferAccept((Integer) value);
-        } else if (option == UnixChannelOption.SO_REUSEPORT) {
-            setReusePort((Boolean) value);
-        } else if (option == EpollChannelOption.TCP_MD5SIG) {
-            setTcpMd5Sig((Map<InetAddress, byte[]>) value);
+        if (isOptionSupported(socket.protocolFamily(), option)) {
+            if (option == SO_RCVBUF) {
+                setReceiveBufferSize((Integer) value);
+            } else if (option == SO_REUSEADDR) {
+                setReuseAddress((Boolean) value);
+            } else if (option == SO_BACKLOG) {
+                setBacklog((Integer) value);
+            } else if (option == TCP_FASTOPEN) {
+                setTcpFastopen((Integer) value);
+            } else if (option == EpollChannelOption.IP_FREEBIND) {
+                setIpFreebind((Boolean) value);
+            } else if (option == EpollChannelOption.TCP_DEFER_ACCEPT) {
+                setTcpDeferAccept((Integer) value);
+            } else if (option == UnixChannelOption.SO_REUSEPORT) {
+                setReusePort((Boolean) value);
+            } else if (option == EpollChannelOption.TCP_MD5SIG) {
+                setTcpMd5Sig((Map<InetAddress, byte[]>) value);
+            }
         } else {
             super.setExtendedOption(option, value);
         }
     }
 
+    private static boolean isOptionSupported(SocketProtocolFamily family, ChannelOption<?> option) {
+        if (family == SocketProtocolFamily.UNIX) {
+            return SUPPORTED_OPTIONS_DOMAIN_SOCKET.contains(option);
+        }
+        return SUPPORTED_OPTIONS.contains(option);
+    }
+
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (SUPPORTED_OPTIONS.contains(option)) {
-            return true;
-        }
-        return super.isExtendedOptionSupported(option);
+        return isOptionSupported(socket.protocolFamily(), option) || super.isExtendedOptionSupported(option);
     }
 
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG, TCP_FASTOPEN,
-                EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND, EpollChannelOption.TCP_DEFER_ACCEPT);
+                EpollChannelOption.TCP_MD5SIG, EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND,
+                EpollChannelOption.TCP_DEFER_ACCEPT);
+    }
+
+    private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
+        return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG);
     }
 
     private boolean isReuseAddress() {
@@ -275,7 +327,8 @@ public final class EpollServerSocketChannel
     protected void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
         final int tcpFastopen;
-        if (IS_SUPPORTING_TCP_FASTOPEN_SERVER && (tcpFastopen = getTcpFastopen()) > 0) {
+        if (socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                IS_SUPPORTING_TCP_FASTOPEN_SERVER && (tcpFastopen = getTcpFastopen()) > 0) {
             socket.setTcpFastOpen(tcpFastopen);
         }
         socket.listen(getBacklog());
@@ -283,9 +336,111 @@ public final class EpollServerSocketChannel
     }
 
     @Override
-    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
-        return new EpollSocketChannel(this, childEventLoopGroup().next(), new LinuxSocket(fd),
-                                      address(address, offset, len));
+    protected void doWrite(ChannelOutboundBuffer in) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    void epollInReady() {
+        assert executor().inEventLoop();
+        if (shouldBreakEpollInReady()) {
+            clearEpollIn0();
+            return;
+        }
+        final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
+
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset();
+        allocHandle.attemptedBytesRead(1);
+        epollInBefore();
+
+        Throwable exception = null;
+        try {
+            try {
+                do {
+                    // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
+                    // EpollRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
+                    // enabled.
+                    allocHandle.lastBytesRead(socket.accept(acceptedAddress));
+                    if (allocHandle.lastBytesRead() == -1) {
+                        // this means everything was handled for now
+                        break;
+                    }
+                    allocHandle.incMessagesRead(1);
+
+                    readPending = false;
+                    pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
+                            acceptedAddress[0]));
+                } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } catch (Throwable t) {
+                exception = t;
+            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireChannelExceptionCaught(exception);
+            }
+            readIfIsAutoRead();
+        } finally {
+            epollInFinally();
+        }
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        return !isActive();
+    }
+
+    @Override
+    protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) {
+        // Connect not supported by ServerChannel implementations
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        throw new UnsupportedOperationException();
+    }
+
+    private Channel newChildChannel(int fd, byte[] address, int offset, int len) {
+        final SocketAddress remote;
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            remote = null;
+        } else {
+            remote = address(address, offset, len);
+        }
+        return new EpollSocketChannel(this, childEventLoopGroup().next(),
+                new LinuxSocket(fd, socket.protocolFamily()), remote);
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        try {
+            super.doClose();
+        } finally {
+            if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                DomainSocketAddress local = (DomainSocketAddress) localAddress();
+                if (local != null) {
+                    // Delete the socket file if possible.
+                    File socketFile = new File(local.path());
+                    boolean success = socketFile.delete();
+                    if (!success && logger.isDebugEnabled()) {
+                        logger.debug("Failed to delete a domain socket file: {}", local.path());
+                    }
+                }
+            }
+        }
     }
 
     Collection<InetAddress> tcpMd5SigAddresses() {

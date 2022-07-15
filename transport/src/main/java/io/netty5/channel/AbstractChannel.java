@@ -34,6 +34,7 @@ import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
@@ -268,6 +269,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             }
         }
         return remoteAddress;
+    }
+
+    protected final void cacheAddresses(L localAddress, R  remoteAddress) {
+        this.localAddress = localAddress;
+        this.remoteAddress = remoteAddress;
     }
 
     @Override
@@ -1174,6 +1180,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         try {
             if (connectPromise != null) {
                 throw new ConnectionPendingException();
+            }
+
+            if (remoteAddress() != null) {
+                // Already connected to a remote host.
+                throw new AlreadyConnectedException();
             }
 
             boolean wasActive = isActive();

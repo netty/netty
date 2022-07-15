@@ -65,6 +65,7 @@ import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTR
 
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toJdkFamily;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 import static java.util.Objects.requireNonNull;
 
@@ -141,7 +142,7 @@ public final class NioDatagramChannel
      * on the Operation Systems default which will be chosen.
      */
     public NioDatagramChannel(EventLoop eventLoop, ProtocolFamily family) {
-        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, family), family);
+        this(eventLoop, DEFAULT_SELECTOR_PROVIDER, family);
     }
 
     /**
@@ -150,7 +151,7 @@ public final class NioDatagramChannel
      * which will be chosen.
      */
     public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
-        this(eventLoop, newSocket(provider, family), family);
+        this(eventLoop, newSocket(provider, toJdkFamily(family)), family);
     }
 
     /**
@@ -158,7 +159,7 @@ public final class NioDatagramChannel
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket, ProtocolFamily family) {
         super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, SelectionKey.OP_READ);
-        this.family = family;
+        this.family = toJdkFamily(family);
     }
 
     @SuppressWarnings("unchecked")

@@ -23,6 +23,9 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.ServerChannel;
+import io.netty5.channel.ServerChannelFactory;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -165,13 +168,37 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
         return Collections.singletonList(
                 () -> new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
-                        .channel(EpollServerDomainSocketChannel.class)
+                        .channelFactory(new ServerChannelFactory<>() {
+                            @Override
+                            public ServerChannel newChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+                                return new EpollServerSocketChannel(eventLoop, childEventLoopGroup,
+                                        SocketProtocolFamily.UNIX);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return EpollServerSocketChannel.class.getSimpleName()
+                                        + "(..., " + SocketProtocolFamily.UNIX;
+                            }
+                        })
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
         return Collections.singletonList(
-                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDomainSocketChannel.class)
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP)
+                        .channelFactory(new ChannelFactory<>() {
+                            @Override
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new EpollSocketChannel(eventLoop, SocketProtocolFamily.UNIX);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return EpollSocketChannel.class.getSimpleName()
+                                        + "(..., " + SocketProtocolFamily.UNIX;
+                            }
+                        })
         );
     }
 
@@ -188,7 +215,19 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     public List<BootstrapFactory<Bootstrap>> domainDatagramSocket() {
         return Collections.singletonList(
-                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDomainDatagramChannel.class)
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP)
+                        .channelFactory(new ChannelFactory<>() {
+                            @Override
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new EpollDatagramChannel(eventLoop, SocketProtocolFamily.UNIX);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return EpollDatagramChannel.class.getSimpleName()
+                                        + "(..., " + SocketProtocolFamily.UNIX;
+                            }
+                        })
         );
     }
 }

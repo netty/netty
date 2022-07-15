@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
@@ -129,7 +130,7 @@ public class DefaultDnsRecordEncoderTest {
             int rdataLength = out.readUnsignedShort();
             assertEquals(rdataLength, out.readableBytes());
 
-            assertEquals((short) DnsCodecUtil.addressNumber(family(address)), out.readShort());
+            assertEquals((short) DnsCodecUtil.addressNumber(SocketProtocolFamily.of(family(address))), out.readShort());
 
             assertEquals(prefix, out.readUnsignedByte());
             assertEquals(0, out.readUnsignedByte()); // This must be 0 for requests.

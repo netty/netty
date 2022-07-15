@@ -45,6 +45,7 @@ import java.util.concurrent.Executor;
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toJdkFamily;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 
 /**
@@ -89,7 +90,7 @@ public class NioSocketChannel
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
     public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
-        this(null, eventLoop, newChannel(provider, family), family);
+        this(null, eventLoop, newChannel(provider, toJdkFamily(family)), family);
     }
 
     /**
@@ -121,7 +122,7 @@ public class NioSocketChannel
     public NioSocketChannel(NioServerSocketChannel parent, EventLoop eventLoop, SocketChannel socket,
                             ProtocolFamily family) {
         super(parent, eventLoop, socket);
-        this.family = family;
+        this.family = toJdkFamily(family);
         // Enable TCP_NODELAY by default if possible.
         if (!isDomainSocket(family) && PlatformDependent.canEnableTcpNoDelayByDefault()) {
             try {
@@ -130,6 +131,7 @@ public class NioSocketChannel
                 // Ignore.
             }
         }
+        calculateMaxBytesPerGatheringWrite();
     }
 
     @Override

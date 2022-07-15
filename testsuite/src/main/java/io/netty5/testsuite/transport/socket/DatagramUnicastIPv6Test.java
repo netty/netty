@@ -15,11 +15,11 @@
  */
 package io.netty5.testsuite.transport.socket;
 
+import io.netty5.channel.socket.SocketProtocolFamily;
 import org.junit.jupiter.api.BeforeAll;
 import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
-import java.net.ProtocolFamily;
 import java.net.StandardProtocolFamily;
 import java.nio.channels.Channel;
 import java.nio.channels.spi.SelectorProvider;
@@ -38,7 +38,7 @@ public class DatagramUnicastIPv6Test extends DatagramUnicastInetTest {
         }
     }
     @Override
-    protected ProtocolFamily protocolFamily() {
-        return StandardProtocolFamily.INET6;
+    protected SocketProtocolFamily protocolFamily() {
+        return SocketProtocolFamily.INET6;
     }
 }
