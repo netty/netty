@@ -25,6 +25,11 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 public class NioEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
+    protected boolean supportsChannelIteration() {
+        return true;
+    }
+
+    @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new NioEventLoopGroup();
     }
