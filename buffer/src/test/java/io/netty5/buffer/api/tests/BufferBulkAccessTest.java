@@ -874,6 +874,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertTrue(buf.isDirect());
+            assertTrue(buf.hasNativeAddress());
         }
     }
 
@@ -883,6 +884,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             assertFalse(buf.isDirect());
+            assertFalse(buf.hasNativeAddress());
         }
     }
 }

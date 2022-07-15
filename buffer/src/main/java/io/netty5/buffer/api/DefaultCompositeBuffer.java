@@ -455,6 +455,24 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public boolean hasNativeAddress() {
+        if (bufs.length == 1) {
+            return bufs[0].hasNativeAddress();
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public long nativeAddress() {
+        if (bufs.length == 1) {
+            return bufs[0].nativeAddress();
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    @Override
     public CompositeBuffer fill(byte value) {
         if (closed) {
             throw bufferIsClosed(this);

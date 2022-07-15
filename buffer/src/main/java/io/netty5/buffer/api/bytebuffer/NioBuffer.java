@@ -162,7 +162,13 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         return this;
     }
 
-    private long nativeAddress() {
+    @Override
+    public boolean hasNativeAddress() {
+        return isDirect();
+    }
+
+    @Override
+    public long nativeAddress() {
         return Statics.nativeAddressOfDirectByteBuffer(rmem);
     }
 

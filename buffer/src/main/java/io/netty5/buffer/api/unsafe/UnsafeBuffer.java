@@ -176,8 +176,18 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         return this;
     }
 
-    private long nativeAddress() {
-        return base == null? address : 0;
+    @Override
+    public boolean hasNativeAddress() {
+        return isDirect();
+    }
+
+    @Override
+    public long nativeAddress() {
+        if (base == null) {
+          return address;
+        } else {
+          throw new UnsupportedOperationException();
+        }
     }
 
     @Override

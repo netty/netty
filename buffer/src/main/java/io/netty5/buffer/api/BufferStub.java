@@ -94,6 +94,16 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public boolean hasNativeAddress() {
+        return delegate.hasNativeAddress();
+    }
+
+    @Override
+    public long nativeAddress() {
+        return delegate.nativeAddress();
+    }
+
+    @Override
     public Buffer fill(byte value) {
         delegate.fill(value);
         return this;

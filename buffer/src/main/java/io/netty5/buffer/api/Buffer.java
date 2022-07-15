@@ -208,6 +208,25 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     }
 
     /**
+     * Queries if this buffer is backed by native memory and has single component, or not.
+     *
+     * @return {@code true} if this buffer is backed by native, off-heap, single component, memory. Otherwise, {@code false}, if this
+     * buffer is backed by on-heap memory or has more than one components.
+     */
+    public boolean hasNativeAddress();
+
+    /**
+     * Give the native memory address backing this buffer in unsafe way.
+     * <p>
+     * <strong>Note</strong> that the address should not be used for reading from or writing to the buffer memory, and doing so may
+     * produce undefined behaviour.
+     *
+     * @return The native memory address, if Buffer has {@linkplain #countComponents() single} component and is {@linkplain #isDirect direct}.
+     * @throws UnsupportedOperationException if this buffer do not have {@linkplain #hasNativeAddress() native address}.
+     */
+    long nativeAddress();
+
+    /**
      * Fills the buffer with the given byte value. This method does not respect the {@link #readerOffset()} or {@link
      * #writerOffset()}, but copies the full capacity of the buffer. The {@link #readerOffset()} and {@link
      * #writerOffset()} are not modified.
