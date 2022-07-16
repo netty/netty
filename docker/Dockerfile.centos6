@@ -20,6 +20,11 @@ RUN yum install -y \
  wget \
  zip
 
+RUN mkdir -p /var/cache/yum/x86_64/6/centos-sclo-rh/ && \
+    echo "https://vault.centos.org/6.10/sclo/x86_64/rh/" > /var/cache/yum/x86_64/6/centos-sclo-rh/mirrorlist.txt && \
+    yum install centos-release-SCL -y && \
+    yum install devtoolset-7 -y
+
 
 # Downloading and installing SDKMAN!
 RUN curl -s "https://get.sdkman.io" | bash
