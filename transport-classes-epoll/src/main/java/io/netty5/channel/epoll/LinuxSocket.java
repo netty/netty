@@ -336,6 +336,7 @@ public final class LinuxSocket extends Socket {
                 throw new UnsupportedOperationException();
         }
     }
+
     public static LinuxSocket newSocket(ProtocolFamily family) {
         if (family == null) {
             return newSocketStream();

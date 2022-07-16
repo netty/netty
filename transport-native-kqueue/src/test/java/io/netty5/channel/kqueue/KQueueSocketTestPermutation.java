@@ -145,7 +145,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                             @Override
                             public String toString() {
                                 return KQueueServerSocketChannel.class.getSimpleName()
-                                        + "(..., " + SocketProtocolFamily.UNIX;
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
                             }
                         })
         );
@@ -163,7 +163,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                             @Override
                             public String toString() {
                                 return KQueueSocketChannel.class.getSimpleName()
-                                        + "(..., " + SocketProtocolFamily.UNIX;
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
                             }
                         })
         );
@@ -225,7 +225,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                             @Override
                             public String toString() {
                                 return KQueueDatagramChannel.class.getSimpleName()
-                                        + "(..., " + SocketProtocolFamily.UNIX;
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
                             }
                         })
         );

@@ -178,7 +178,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                             @Override
                             public String toString() {
                                 return EpollServerSocketChannel.class.getSimpleName()
-                                        + "(..., " + SocketProtocolFamily.UNIX;
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
                             }
                         })
         );
@@ -196,7 +196,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                             @Override
                             public String toString() {
                                 return EpollSocketChannel.class.getSimpleName()
-                                        + "(..., " + SocketProtocolFamily.UNIX;
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
                             }
                         })
         );
@@ -225,7 +225,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                             @Override
                             public String toString() {
                                 return EpollDatagramChannel.class.getSimpleName()
-                                        + "(..., " + SocketProtocolFamily.UNIX;
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
                             }
                         })
         );
