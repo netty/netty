@@ -19,9 +19,9 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.OrderedEventExecutor;
 
 /**
- * Will handle all the I/O operations for a {@link Channel} once registered.
+ * Will handle all the I/O operations for a {@link IoHandle} once registered.
  *<p>
- * One {@link EventLoop} instance will usually handle more than one {@link Channel} but this may depend on
+ * One {@link EventLoop} instance will usually handle more than one {@link IoHandle} but this may depend on
  * implementation details and internals.
  */
 public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
@@ -32,24 +32,24 @@ public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
     }
 
     /**
-     * Register the {@link Channel} to the {@link EventLoop} for I/O processing.
+     * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
      *
-     * @param channel   the {@link Channel} to register.
+     * @param handle   the {@link IoHandle} to register.
      * @return          the {@link Future} that is notified once the operations completes.
      */
-    Future<Void> registerForIo(Channel channel);
+    Future<Void> registerForIo(IoHandle handle);
 
     /**
      * Deregister the {@link Channel} from the {@link EventLoop} for I/O processing.
      *
-     * @param channel   the {@link Channel} to deregister.
+     * @param channel   the {@link IoHandle} to deregister.
      * @return          the {@link Future} that is notified once the operations completes.
      */
-    Future<Void> deregisterForIo(Channel channel);
+    Future<Void> deregisterForIo(IoHandle handle);
 
     // Force the implementing class to implement this method itself. This is needed as
     // EventLoopGroup provides default implementations that call next() which would lead to
     // and infinite loop if not implemented differently in the EventLoop itself.
     @Override
-    boolean isCompatible(Class<? extends Channel> channelType);
+    boolean isCompatible(Class<? extends IoHandle> handleType);
 }

@@ -18,7 +18,7 @@ package io.netty5.channel;
 import io.netty5.util.concurrent.EventExecutorGroup;
 
 /**
- * Special {@link EventExecutorGroup} which allows registering {@link Channel}s that get
+ * Special {@link EventExecutorGroup} which allows registering {@link IoHandle}s that get
  * processed for later selection during the event loop.
  *
  */
@@ -33,10 +33,10 @@ public interface EventLoopGroup extends EventExecutorGroup {
      * Returns {@code true} if the given type is compatible with this {@link EventLoopGroup} and so can be registered
      * to the contained {@link EventLoop}s, {@code false} otherwise.
      *
-     * @param channelType   the type of the {@link Channel}.
+     * @param handleType    the type of the {@link IoHandle}.
      * @return              if compatible of not.
      */
-    default boolean isCompatible(Class<? extends Channel> channelType) {
-        return next().isCompatible(channelType);
+    default boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return next().isCompatible(handleType);
     }
 }

@@ -62,12 +62,12 @@ public class DefaultChannelPipelineTailTest {
             }
 
             @Override
-            public void register(Channel channel) {
+            public void register(IoHandle handle) {
                 // NOOP
             }
 
             @Override
-            public void deregister(Channel channel) {
+            public void deregister(IoHandle handle) {
                 // NOOP
             }
 
@@ -81,8 +81,8 @@ public class DefaultChannelPipelineTailTest {
             }
 
             @Override
-            public boolean isCompatible(Class<? extends Channel> channelType) {
-                return MyChannel.class.isAssignableFrom(channelType);
+            public boolean isCompatible(Class<? extends IoHandle> handleType) {
+                return MyChannel.class.isAssignableFrom(handleType);
             }
         });
     }

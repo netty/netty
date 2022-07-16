@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty5.channel.Channel;
 import io.netty5.channel.DefaultSelectStrategyFactory;
 import io.netty5.channel.IoExecutionContext;
+import io.netty5.channel.IoHandle;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
@@ -85,11 +85,11 @@ public class EpollHandler implements IoHandler {
     // See https://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
-    private static AbstractEpollChannel<?, ?, ?> cast(Channel channel) {
-        if (channel instanceof AbstractEpollChannel) {
-            return (AbstractEpollChannel<?, ?, ?>) channel;
+    private static AbstractEpollChannel<?, ?, ?> cast(IoHandle handle) {
+        if (handle instanceof AbstractEpollChannel) {
+            return (AbstractEpollChannel<?, ?, ?>) handle;
         }
-        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
     private EpollHandler() {
@@ -192,8 +192,8 @@ public class EpollHandler implements IoHandler {
     }
 
     @Override
-    public final void register(Channel channel) throws Exception {
-        final AbstractEpollChannel<?, ?, ?> epollChannel = cast(channel);
+    public final void register(IoHandle handle) throws Exception {
+        final AbstractEpollChannel<?, ?, ?> epollChannel = cast(handle);
         epollChannel.register0(new EpollRegistration() {
             @Override
             public void update() throws IOException {
@@ -219,8 +219,8 @@ public class EpollHandler implements IoHandler {
     }
 
     @Override
-    public final void deregister(Channel channel) throws Exception {
-        cast(channel).deregister0();
+    public final void deregister(IoHandle handle) throws Exception {
+        cast(handle).deregister0();
     }
 
     @Override
@@ -518,7 +518,7 @@ public class EpollHandler implements IoHandler {
     }
 
     @Override
-    public boolean isCompatible(Class<? extends Channel> channelType) {
-        return AbstractEpollChannel.class.isAssignableFrom(channelType);
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return AbstractEpollChannel.class.isAssignableFrom(handleType);
     }
 }

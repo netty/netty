@@ -27,7 +27,7 @@ public interface IoHandler {
      * scheduled on the {@link EventLoop}. This is done by taking {@link IoExecutionContext#delayNanos(long)} or
      * {@link IoExecutionContext#deadlineNanos()} into account.
      *
-     * @return the number of {@link Channel} for which I/O was handled.
+     * @return the number of {@link IoHandle} for which I/O was handled.
      */
     int run(IoExecutionContext context);
 
@@ -48,15 +48,15 @@ public interface IoHandler {
      * @param channel       the {@link Channel} to register..
      * @throws Exception    thrown if an error happens during registration.
      */
-    void register(Channel channel) throws Exception;
+    void register(IoHandle channel) throws Exception;
 
     /**
-     * Deregister a {@link Channel} for IO.
+     * Deregister a {@link IoHandle} for IO.
      *
-     * @param channel       the {@link Channel} to deregister..
+     * @param handle        the {@link IoHandle} to deregister..
      * @throws Exception    thrown if an error happens during deregistration.
      */
-    void deregister(Channel channel) throws Exception;
+    void deregister(IoHandle handle) throws Exception;
 
     /**
      * Wakeup the {@link IoHandler}, which means if any operation blocks it should be unblocked and
@@ -68,8 +68,8 @@ public interface IoHandler {
      * Returns {@code true} if the given type is compatible with this {@link IoHandler} and so can be registered,
      * {@code false} otherwise.
      *
-     * @param channelType   the type of the {@link Channel}.
+     * @param handleType    the type of the {@link IoHandle}.
      * @return              if compatible of not.
      */
-    boolean isCompatible(Class<? extends Channel> channelType);
+    boolean isCompatible(Class<? extends IoHandle> handleType);
 }

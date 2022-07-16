@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.IoHandle;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.AbstractNioChannel;
 import io.netty5.channel.nio.NioHandler;
@@ -163,18 +164,18 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel<?, ?, 
             }
 
             @Override
-            public Future<Void> registerForIo(Channel channel) {
-                return eventLoop.registerForIo(channel);
+            public Future<Void> registerForIo(IoHandle handle) {
+                return eventLoop.registerForIo(handle);
             }
 
             @Override
-            public Future<Void> deregisterForIo(Channel channel) {
-                return eventLoop.deregisterForIo(channel);
+            public Future<Void> deregisterForIo(IoHandle handle) {
+                return eventLoop.deregisterForIo(handle);
             }
 
             @Override
-            public boolean isCompatible(Class<? extends Channel> channelType) {
-                return eventLoop.isCompatible(channelType);
+            public boolean isCompatible(Class<? extends IoHandle> handleType) {
+                return eventLoop.isCompatible(handleType);
             }
         }
 
