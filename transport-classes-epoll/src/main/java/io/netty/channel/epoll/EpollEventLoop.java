@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
@@ -34,6 +35,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
@@ -277,6 +279,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
     @Override
     public int registeredChannels() {
         return channels.size();
+    }
+
+    @Override
+    public Iterator<Channel> registeredChannelsIterator() {
+        assert inEventLoop();
+        IntObjectMap<AbstractEpollChannel> ch = channels;
+        if (ch.isEmpty()) {
+            return ChannelsReadOnlyIterator.empty();
+        }
+        return new ChannelsReadOnlyIterator<AbstractEpollChannel>(ch.values());
     }
 
     private long epollWait(long deadlineNanos) throws IOException {

@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
@@ -33,6 +34,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -351,6 +353,16 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     @Override
     public int registeredChannels() {
         return channels.size();
+    }
+
+    @Override
+    public Iterator<Channel> registeredChannelsIterator() {
+        assert inEventLoop();
+        IntObjectMap<AbstractKQueueChannel> ch = channels;
+        if (ch.isEmpty()) {
+            return ChannelsReadOnlyIterator.empty();
+        }
+        return new ChannelsReadOnlyIterator<AbstractKQueueChannel>(ch.values());
     }
 
     @Override

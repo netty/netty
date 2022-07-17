@@ -27,9 +27,15 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -37,8 +43,11 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class AbstractSingleThreadEventLoopTest {
 
@@ -156,6 +165,134 @@ public abstract class AbstractSingleThreadEventLoopTest {
         assertRejection(loop);
     }
 
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelsIteratorEmpty() throws Exception {
+        assumeTrue(supportsChannelIteration());
+        EventLoopGroup group = newEventLoopGroup();
+        final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
+        try {
+            runBlockingOn(loop, new Runnable() {
+                @Override
+                public void run() {
+                    final Iterator<Channel> iterator = loop.registeredChannelsIterator();
+
+                    assertFalse(iterator.hasNext());
+                    assertThrows(NoSuchElementException.class, new Executable() {
+                        @Override
+                        public void execute() {
+                            iterator.next();
+                        }
+                    });
+                }
+            });
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelsIterator() throws Exception {
+        assumeTrue(supportsChannelIteration());
+        EventLoopGroup group = newEventLoopGroup();
+        final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
+        try {
+            final Channel ch1 = newChannel();
+            final Channel ch2 = newChannel();
+            loop.register(ch1).syncUninterruptibly();
+            loop.register(ch2).syncUninterruptibly();
+            assertEquals(2, registeredChannels(loop));
+
+            runBlockingOn(loop, new Runnable() {
+                @Override
+                public void run() {
+                    final Iterator<Channel> iterator = loop.registeredChannelsIterator();
+
+                    assertTrue(iterator.hasNext());
+                    Channel actualCh1 = iterator.next();
+                    assertNotNull(actualCh1);
+
+                    assertTrue(iterator.hasNext());
+                    Channel actualCh2 = iterator.next();
+                    assertNotNull(actualCh2);
+
+                    Set<Channel> expected = new HashSet<Channel>(4);
+                    expected.add(ch1);
+                    expected.add(ch2);
+                    expected.remove(actualCh1);
+                    expected.remove(actualCh2);
+                    assertTrue(expected.isEmpty());
+
+                    assertFalse(iterator.hasNext());
+                    assertThrows(NoSuchElementException.class, new Executable() {
+                        @Override
+                        public void execute() {
+                            iterator.next();
+                        }
+                    });
+                }
+            });
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelsIteratorRemoveThrows() throws Exception {
+        assumeTrue(supportsChannelIteration());
+        EventLoopGroup group = newEventLoopGroup();
+        final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
+
+        try {
+            final Channel ch = newChannel();
+            loop.register(ch).syncUninterruptibly();
+            assertEquals(1, registeredChannels(loop));
+
+            runBlockingOn(loop, new Runnable() {
+                @Override
+                public void run() {
+                    assertThrows(UnsupportedOperationException.class, new Executable() {
+                        @Override
+                        public void execute() {
+                            loop.registeredChannelsIterator().remove();
+                        }
+                    });
+                }
+            });
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    private static void runBlockingOn(EventLoop eventLoop, final Runnable action) {
+        final Promise<Void> promise = eventLoop.newPromise();
+            eventLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        action.run();
+                        promise.setSuccess(null);
+                    } catch (Throwable t) {
+                        promise.tryFailure(t);
+                    }
+                }
+            });
+        try {
+            promise.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        Throwable cause = promise.cause();
+        if (cause != null) {
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            throw new RuntimeException(cause);
+        }
+    }
+
     private static final Runnable NOOP = new Runnable() {
         @Override
         public void run() { }
@@ -170,6 +307,9 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
+    protected boolean supportsChannelIteration() {
+        return false;
+    }
     protected abstract EventLoopGroup newEventLoopGroup();
     protected abstract Channel newChannel();
     protected abstract Class<? extends ServerChannel> serverChannelClass();
