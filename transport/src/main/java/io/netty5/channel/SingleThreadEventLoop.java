@@ -193,25 +193,25 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     }
 
     @Override
-    public final Future<Void> registerForIo(Channel channel) {
+    public final Future<Void> registerForIo(IoHandle handle) {
         Promise<Void> promise = newPromise();
         if (inEventLoop()) {
-            registerForIO0(channel, promise);
+            registerForIO0(handle, promise);
         } else {
-            execute(() -> registerForIO0(channel, promise));
+            execute(() -> registerForIO0(handle, promise));
         }
         return promise.asFuture();
     }
 
-    private void registerForIO0(Channel channel, Promise<Void> promise) {
+    private void registerForIO0(IoHandle handle, Promise<Void> promise) {
         try {
-            if (channel.isRegistered()) {
-                throw new IllegalStateException("Channel already registered");
+            if (handle.isRegistered()) {
+                throw new IllegalStateException("IoHandle already registered");
             }
-            if (!channel.executor().inEventLoop()) {
-                throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
-            }
-            ioHandler.register(channel);
+
+            checkInEventLoopIfPossible(handle);
+
+            ioHandler.register(handle);
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
@@ -220,30 +220,35 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     }
 
     @Override
-    public final Future<Void> deregisterForIo(Channel channel) {
+    public final Future<Void> deregisterForIo(IoHandle handle) {
        Promise<Void> promise = newPromise();
        if (inEventLoop()) {
-           deregisterForIO(channel, promise);
+           deregisterForIO(handle, promise);
        } else {
-           execute(() -> deregisterForIO(channel, promise));
+           execute(() -> deregisterForIO(handle, promise));
        }
        return promise.asFuture();
     }
 
-    private void deregisterForIO(Channel channel, Promise<Void> promise) {
+    private void deregisterForIO(IoHandle handle, Promise<Void> promise) {
         try {
-            if (!channel.isRegistered()) {
+            if (!handle.isRegistered()) {
                 throw new IllegalStateException("Channel not registered");
             }
-            if (!channel.executor().inEventLoop()) {
-                throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
-            }
-            ioHandler.deregister(channel);
+            checkInEventLoopIfPossible(handle);
+
+            ioHandler.deregister(handle);
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
         }
         promise.setSuccess(null);
+    }
+
+    private static void checkInEventLoopIfPossible(IoHandle handle) {
+        if (handle instanceof Channel && !((Channel) handle).executor().inEventLoop()) {
+            throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
+        }
     }
 
     @Override
@@ -258,7 +263,7 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     }
 
     @Override
-    public boolean isCompatible(Class<? extends Channel> channelType) {
-        return ioHandler.isCompatible(channelType);
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return ioHandler.isCompatible(handleType);
     }
 }

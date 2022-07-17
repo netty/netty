@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty5.channel.Channel;
 import io.netty5.channel.DefaultSelectStrategyFactory;
 import io.netty5.channel.IoExecutionContext;
+import io.netty5.channel.IoHandle;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
@@ -66,11 +66,11 @@ public final class KQueueHandler implements IoHandler {
 
     private volatile int wakenUp;
 
-    private static AbstractKQueueChannel<?, ?, ?> cast(Channel channel) {
-        if (channel instanceof AbstractKQueueChannel) {
-            return (AbstractKQueueChannel<?, ?, ?>) channel;
+    private static AbstractKQueueChannel<?, ?, ?> cast(IoHandle handle) {
+        if (handle instanceof AbstractKQueueChannel) {
+            return (AbstractKQueueChannel<?, ?, ?>) handle;
         }
-        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+        throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
     private KQueueHandler() {
@@ -113,8 +113,8 @@ public final class KQueueHandler implements IoHandler {
     }
 
     @Override
-    public void register(Channel channel) {
-        final AbstractKQueueChannel<?, ?, ?> kQueueChannel = cast(channel);
+    public void register(IoHandle handle) {
+        final AbstractKQueueChannel<?, ?, ?> kQueueChannel = cast(handle);
         final int id = kQueueChannel.fd().intValue();
         AbstractKQueueChannel<?, ?, ?> old = channels.put(id, kQueueChannel);
         // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
@@ -135,8 +135,8 @@ public final class KQueueHandler implements IoHandler {
     }
 
     @Override
-    public void deregister(Channel channel) throws Exception {
-        AbstractKQueueChannel<?, ?, ?> kQueueChannel = cast(channel);
+    public void deregister(IoHandle handle) throws Exception {
+        AbstractKQueueChannel<?, ?, ?> kQueueChannel = cast(handle);
         int fd = kQueueChannel.fd().intValue();
 
         AbstractKQueueChannel<?, ?, ?> old = channels.remove(fd);
@@ -344,8 +344,8 @@ public final class KQueueHandler implements IoHandler {
     }
 
     @Override
-    public boolean isCompatible(Class<? extends Channel> channelType) {
-        return AbstractKQueueChannel.class.isAssignableFrom(channelType);
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return AbstractKQueueChannel.class.isAssignableFrom(handleType);
     }
 
     private static void handleLoopException(Throwable t) {

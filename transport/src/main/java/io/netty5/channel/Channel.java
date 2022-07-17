@@ -117,7 +117,7 @@ import java.net.SocketAddress;
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannel}.
  */
-public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparable<Channel> {
+public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparable<Channel>, IoHandle {
 
     /**
      * Returns the globally unique identifier of this {@link Channel}.
@@ -176,11 +176,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * Returns {@code true} if the {@link Channel} is open and may get active later
      */
     boolean isOpen();
-
-    /**
-     * Returns {@code true} if the {@link Channel} is registered with an {@link EventLoop}.
-     */
-    boolean isRegistered();
 
     /**
      * Return {@code true} if the {@link Channel} is active and so connected.

@@ -17,6 +17,7 @@ package io.netty5.channel.local;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.IoExecutionContext;
+import io.netty5.channel.IoHandle;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.util.internal.StringUtil;
@@ -41,11 +42,11 @@ public final class LocalHandler implements IoHandler {
         return LocalHandler::new;
     }
 
-    private static LocalChannelUnsafe cast(Channel channel) {
-        if (channel instanceof LocalChannelUnsafe) {
-            return (LocalChannelUnsafe) channel;
+    private static LocalChannelUnsafe cast(IoHandle handle) {
+        if (handle instanceof LocalChannelUnsafe) {
+            return (LocalChannelUnsafe) handle;
         }
-        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+        throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
     @Override
@@ -84,23 +85,23 @@ public final class LocalHandler implements IoHandler {
     }
 
     @Override
-    public void register(Channel channel) {
-        LocalChannelUnsafe unsafe = cast(channel);
+    public void register(IoHandle handle) {
+        LocalChannelUnsafe unsafe = cast(handle);
         if (registeredChannels.add(unsafe)) {
             unsafe.registerTransportNow();
         }
     }
 
     @Override
-    public void deregister(Channel channel) {
-        LocalChannelUnsafe unsafe = cast(channel);
+    public void deregister(IoHandle handle) {
+        LocalChannelUnsafe unsafe = cast(handle);
         if (registeredChannels.remove(unsafe)) {
             unsafe.deregisterTransportNow();
         }
     }
 
     @Override
-    public boolean isCompatible(Class<? extends Channel> channelType) {
-        return LocalChannelUnsafe.class.isAssignableFrom(channelType);
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return LocalChannelUnsafe.class.isAssignableFrom(handleType);
     }
 }

@@ -18,8 +18,8 @@ package io.netty5.channel.nio;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.DefaultSelectStrategyFactory;
-import io.netty5.channel.EventLoopException;
 import io.netty5.channel.IoExecutionContext;
+import io.netty5.channel.IoHandle;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
@@ -35,7 +35,6 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
@@ -244,33 +243,6 @@ public final class NioHandler implements IoHandler {
     }
 
     /**
-     * Registers an arbitrary {@link SelectableChannel}, not necessarily created by Netty, to the {@link Selector}
-     * of this event loop.  Once the specified {@link SelectableChannel} is registered, the specified {@code task} will
-     * be executed by this event loop when the {@link SelectableChannel} is ready.
-     */
-    public void register(final SelectableChannel ch, final int interestOps, final NioTask<?> task) {
-        requireNonNull(ch, "ch");
-        if (interestOps == 0) {
-            throw new IllegalArgumentException("interestOps must be non-zero.");
-        }
-        if ((interestOps & ~ch.validOps()) != 0) {
-            throw new IllegalArgumentException(
-                    "invalid interestOps: " + interestOps + "(validOps: " + ch.validOps() + ')');
-        }
-        requireNonNull(task, "task");
-
-        register0(ch, interestOps, task);
-    }
-
-    private void register0(SelectableChannel ch, int interestOps, NioTask<?> task) {
-        try {
-            ch.register(unwrappedSelector, interestOps, task);
-        } catch (Exception e) {
-            throw new EventLoopException("failed to register a channel", e);
-        }
-    }
-
-    /**
      * Replaces the current {@link Selector} of this event loop with newly created {@link Selector}s to work
      * around the infamous epoll 100% CPU bug.
      */
@@ -292,30 +264,16 @@ public final class NioHandler implements IoHandler {
         // Register all channels to the new Selector.
         int nChannels = 0;
         for (SelectionKey key: oldSelector.keys()) {
-            Object a = key.attachment();
+            NioProcessor handle = (NioProcessor) key.attachment();
             try {
                 if (!key.isValid() || key.channel().keyFor(newSelectorTuple.unwrappedSelector) != null) {
                     continue;
                 }
-
-                int interestOps = key.interestOps();
-                key.cancel();
-                SelectionKey newKey = key.channel().register(newSelectorTuple.unwrappedSelector, interestOps, a);
-                if (a instanceof AbstractNioChannel) {
-                    // Update SelectionKey
-                    ((AbstractNioChannel<?, ?, ?>) a).selectionKey = newKey;
-                }
+                handle.register(newSelectorTuple.unwrappedSelector);
                 nChannels ++;
             } catch (Exception e) {
-                logger.warn("Failed to re-register a Channel to the new Selector.", e);
-                if (a instanceof AbstractNioChannel) {
-                    AbstractNioChannel<?, ?, ?> ch = (AbstractNioChannel<?, ?, ?>) a;
-                    ch.closeTransportNow();
-                } else {
-                    @SuppressWarnings("unchecked")
-                    NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
-                    invokeChannelUnregistered(task, key, e);
-                }
+                logger.warn("Failed to re-register a NioHandle to the new Selector.", e);
+                handle.close();
             }
         }
 
@@ -336,20 +294,23 @@ public final class NioHandler implements IoHandler {
         }
     }
 
-    private static AbstractNioChannel<?, ?, ?> cast(Channel channel) {
-        if (channel instanceof AbstractNioChannel) {
-            return (AbstractNioChannel<?, ?, ?>) channel;
+    private static NioProcessor nioHandle(IoHandle handle) {
+        if (handle instanceof AbstractNioChannel) {
+            return ((AbstractNioChannel<?, ?, ?>) handle).nioProcessor();
         }
-        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+        if (handle instanceof NioSelectableChannelHandle) {
+            return ((NioSelectableChannelHandle<?>) handle).nioProcessor();
+        }
+        throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
     @Override
-    public void register(Channel channel) throws Exception {
-        AbstractNioChannel<?, ?, ?> nioChannel = cast(channel);
+    public void register(IoHandle handle) throws Exception {
+        NioProcessor nioProcessor = nioHandle(handle);
         boolean selected = false;
         for (;;) {
             try {
-                nioChannel.selectionKey = nioChannel.javaChannel().register(unwrappedSelector(), 0, nioChannel);
+                nioProcessor.register(unwrappedSelector());
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
@@ -367,9 +328,14 @@ public final class NioHandler implements IoHandler {
     }
 
     @Override
-    public void deregister(Channel channel) {
-        AbstractNioChannel<?, ?, ?> nioChannel = cast(channel);
-        cancel(nioChannel.selectionKey());
+    public void deregister(IoHandle handle) {
+        NioProcessor nioProcessor = nioHandle(handle);
+        nioProcessor.deregister();
+        cancelledKeys ++;
+        if (cancelledKeys >= CLEANUP_INTERVAL) {
+            cancelledKeys = 0;
+            needsToSelectAgain = true;
+        }
     }
 
     @Override
@@ -469,15 +435,6 @@ public final class NioHandler implements IoHandler {
         }
     }
 
-    private void cancel(SelectionKey key) {
-        key.cancel();
-        cancelledKeys ++;
-        if (cancelledKeys >= CLEANUP_INTERVAL) {
-            cancelledKeys = 0;
-            needsToSelectAgain = true;
-        }
-    }
-
     private int processSelectedKeysPlain(Set<SelectionKey> selectedKeys) {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
@@ -538,108 +495,22 @@ public final class NioHandler implements IoHandler {
     }
 
     private void processSelectedKey(SelectionKey k) {
-        final Object a = k.attachment();
-
-        if (a instanceof AbstractNioChannel) {
-            processSelectedKey(k, (AbstractNioChannel<?, ?, ?>) a);
-        } else {
-            @SuppressWarnings("unchecked")
-            NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
-            processSelectedKey(k, task);
-        }
-    }
-
-    private void processSelectedKey(SelectionKey k, AbstractNioChannel<?, ?, ?> ch) {
-        if (!k.isValid()) {
-
-            // close the channel if the key is not valid anymore
-            ch.closeTransportNow();
-            return;
-        }
-
-        try {
-            int readyOps = k.readyOps();
-            // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
-            // the NIO JDK channel implementation may throw a NotYetConnectedException.
-            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
-                // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
-                // See https://github.com/netty/netty/issues/924
-                int ops = k.interestOps();
-                ops &= ~SelectionKey.OP_CONNECT;
-                k.interestOps(ops);
-
-                ch.finishConnectNow();
-            }
-
-            // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
-            if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
-                ch.forceFlush();
-            }
-
-            // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
-            // to a spin loop
-            if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                ch.readNow();
-            }
-        } catch (CancelledKeyException ignored) {
-            ch.closeTransportNow();
-        }
-    }
-
-    private static void processSelectedKey(SelectionKey k, NioTask<SelectableChannel> task) {
-        int state = 0;
-        try {
-            task.channelReady(k.channel(), k);
-            state = 1;
-        } catch (Exception e) {
-            k.cancel();
-            invokeChannelUnregistered(task, k, e);
-            state = 2;
-        } finally {
-            switch (state) {
-            case 0:
-                k.cancel();
-                invokeChannelUnregistered(task, k, null);
-                break;
-            case 1:
-                if (!k.isValid()) { // Cancelled by channelReady()
-                    invokeChannelUnregistered(task, k, null);
-                }
-                break;
-            default:
-                 break;
-            }
-        }
+        final NioProcessor handle = (NioProcessor) k.attachment();
+        handle.handle(k);
     }
 
     @Override
     public void prepareToDestroy() {
         selectAgain();
         Set<SelectionKey> keys = selector.keys();
-        Collection<AbstractNioChannel<?, ?, ?>> channels = new ArrayList<>(keys.size());
+        Collection<NioProcessor> handles = new ArrayList<>(keys.size());
         for (SelectionKey k: keys) {
-            Object a = k.attachment();
-            if (a instanceof AbstractNioChannel) {
-                channels.add((AbstractNioChannel<?, ?, ?>) a);
-            } else {
-                k.cancel();
-                @SuppressWarnings("unchecked")
-                NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
-                invokeChannelUnregistered(task, k, null);
-            }
+            NioProcessor handle = (NioProcessor) k.attachment();
+            handles.add(handle);
         }
 
-        for (AbstractNioChannel<?, ?, ?> ch: channels) {
-            ch.closeTransportNow();
-        }
-    }
-
-    private static void invokeChannelUnregistered(NioTask<SelectableChannel> task, SelectionKey k, Throwable cause) {
-        try {
-            task.channelUnregistered(k.channel(), cause);
-        } catch (Exception e) {
-            logger.warn("Unexpected exception while running NioTask.channelUnregistered()", e);
+        for (NioProcessor h: handles) {
+            h.close();
         }
     }
 
@@ -651,8 +522,8 @@ public final class NioHandler implements IoHandler {
     }
 
     @Override
-    public boolean isCompatible(Class<? extends Channel> channelType) {
-        return AbstractNioChannel.class.isAssignableFrom(channelType);
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return AbstractNioChannel.class.isAssignableFrom(handleType);
     }
 
     Selector unwrappedSelector() {

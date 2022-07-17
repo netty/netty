@@ -17,6 +17,7 @@ package io.netty5.channel.embedded;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.IoHandle;
 import io.netty5.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -49,11 +50,11 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     private final Queue<Runnable> tasks = new ArrayDeque<>(2);
     boolean running;
 
-    private static EmbeddedChannel cast(Channel channel) {
-        if (channel instanceof EmbeddedChannel) {
-            return (EmbeddedChannel) channel;
+    private static EmbeddedChannel cast(IoHandle handle) {
+        if (handle instanceof EmbeddedChannel) {
+            return (EmbeddedChannel) handle;
         }
-        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
     @Override
@@ -62,8 +63,9 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    public Future<Void> registerForIo(Channel channel) {
+    public Future<Void> registerForIo(IoHandle handle) {
         Promise<Void> promise = newPromise();
+        EmbeddedChannel channel = cast(handle);
         if (inEventLoop()) {
             registerForIO0(channel, promise);
         } else {
@@ -72,7 +74,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         return promise.asFuture();
     }
 
-    private void registerForIO0(Channel channel, Promise<Void> promise) {
+    private void registerForIO0(EmbeddedChannel channel, Promise<Void> promise) {
         assert inEventLoop();
         try {
             if (channel.isRegistered()) {
@@ -81,7 +83,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
             if (!channel.executor().inEventLoop()) {
                 throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
             }
-            cast(channel).setActive();
+            channel.setActive();
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
@@ -89,8 +91,9 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         promise.setSuccess(null);
     }
     @Override
-    public Future<Void> deregisterForIo(Channel channel) {
+    public Future<Void> deregisterForIo(IoHandle handle) {
         Promise<Void> promise = newPromise();
+        EmbeddedChannel channel = cast(handle);
         if (inEventLoop()) {
             deregisterForIO0(channel, promise);
         } else {
@@ -249,7 +252,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    public boolean isCompatible(Class<? extends Channel> channelType) {
-        return EmbeddedChannel.class.isAssignableFrom(channelType);
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return EmbeddedChannel.class.isAssignableFrom(handleType);
     }
 }

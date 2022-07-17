@@ -472,17 +472,17 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Future<Void> registerForIo(Channel channel) {
+        public Future<Void> registerForIo(IoHandle handle) {
             return newSucceededFuture(null);
         }
 
         @Override
-        public Future<Void> deregisterForIo(Channel channel) {
+        public Future<Void> deregisterForIo(IoHandle handle) {
             return newSucceededFuture(null);
         }
 
         @Override
-        public boolean isCompatible(Class<? extends Channel> channelType) {
+        public boolean isCompatible(Class<? extends IoHandle> handleType) {
             return true;
         }
     }
@@ -523,17 +523,17 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Future<Void> registerForIo(Channel channel) {
+        public Future<Void> registerForIo(IoHandle handleType) {
             return newSucceededFuture(null);
         }
 
         @Override
-        public Future<Void> deregisterForIo(Channel channel) {
+        public Future<Void> deregisterForIo(IoHandle handleType) {
             return newSucceededFuture(null);
         }
 
         @Override
-        public boolean isCompatible(Class<? extends Channel> channelType) {
+        public boolean isCompatible(Class<? extends IoHandle> handleType) {
             return true;
         }
     }

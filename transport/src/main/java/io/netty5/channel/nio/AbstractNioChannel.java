@@ -30,8 +30,11 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
@@ -47,6 +50,75 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     volatile SelectionKey selectionKey;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = this::clearReadPending0;
+
+    private final NioProcessor nioProcessor = new NioProcessor() {
+        @Override
+        public void register(Selector selector) throws ClosedChannelException {
+            int interestOps;
+            SelectionKey key = selectionKey;
+            if (key != null) {
+                interestOps = key.interestOps();
+                key.cancel();
+            } else {
+                interestOps = 0;
+            }
+            selectionKey = javaChannel().register(selector, interestOps, this);
+        }
+
+        @Override
+        public void deregister() {
+            SelectionKey key = selectionKey;
+            if (key != null) {
+                key.cancel();
+                selectionKey = null;
+            }
+        }
+
+        @Override
+        public void handle(SelectionKey k) {
+            if (!k.isValid()) {
+
+                // close the channel if the key is not valid anymore
+                closeTransportNow();
+                return;
+            }
+
+            try {
+                int readyOps = k.readyOps();
+                // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
+                // the NIO JDK channel implementation may throw a NotYetConnectedException.
+                if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                    // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
+                    // See https://github.com/netty/netty/issues/924
+                    int ops = k.interestOps();
+                    ops &= ~SelectionKey.OP_CONNECT;
+                    k.interestOps(ops);
+
+                    finishConnectNow();
+                }
+
+                // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
+                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+                    // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to
+                    // write
+                    forceFlush();
+                }
+
+                // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
+                // to a spin loop
+                if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                    readNow();
+                }
+            } catch (CancelledKeyException ignored) {
+                closeTransportNow();
+            }
+        }
+
+        @Override
+        public void close() {
+            closeTransportNow();
+        }
+    };
 
     /**
      * Create a new instance
@@ -89,7 +161,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
 
     /**
      * Return the current {@link SelectionKey} or {@code null} if the underlying channel was not registered with the
-     * {@link java.nio.channels.Selector} yet.
+     * {@link Selector} yet.
      */
     protected SelectionKey selectionKey() {
         return selectionKey;
@@ -262,11 +334,15 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
 
     protected abstract void readNow();
 
-    final void closeTransportNow() {
+    private void closeTransportNow() {
         closeTransport(newPromise());
     }
 
-    final void finishConnectNow() {
+    private void finishConnectNow() {
         finishConnect();
+    }
+
+    final NioProcessor nioProcessor() {
+        return nioProcessor;
     }
 }
