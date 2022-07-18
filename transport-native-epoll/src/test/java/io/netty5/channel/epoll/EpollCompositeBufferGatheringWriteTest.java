@@ -32,8 +32,8 @@ public class EpollCompositeBufferGatheringWriteTest extends CompositeBufferGathe
     @Override
     protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(Channel channel,
                                                                                  int soSndBuf) {
-        if (channel instanceof AbstractEpollStreamChannel) {
-            ((AbstractEpollStreamChannel<?, ?, ?>) channel).setMaxBytesPerGatheringWrite(soSndBuf);
+        if (channel instanceof EpollSocketChannel) {
+            ((EpollSocketChannel) channel).setMaxBytesPerGatheringWrite(soSndBuf);
         }
     }
 }

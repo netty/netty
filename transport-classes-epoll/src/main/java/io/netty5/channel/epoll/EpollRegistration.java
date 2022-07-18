@@ -20,7 +20,7 @@ import io.netty5.channel.unix.IovArray;
 import java.io.IOException;
 
 /**
- * Registration with an {@link EpollEventLoop}.
+ * Registration with an {@link EpollHandler}.
  */
 interface EpollRegistration {
 

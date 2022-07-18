@@ -23,6 +23,9 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.ServerChannel;
+import io.netty5.channel.ServerChannelFactory;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -132,13 +135,37 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     public List<BootstrapFactory<ServerBootstrap>> kqueueServerDomainSocket() {
         return Collections.singletonList(
                 () -> new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
-                        .channel(KQueueServerDomainSocketChannel.class)
+                        .channelFactory(new ServerChannelFactory<>() {
+                            @Override
+                            public ServerChannel newChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+                                return new KQueueServerSocketChannel(
+                                        eventLoop, childEventLoopGroup, SocketProtocolFamily.UNIX);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return KQueueServerSocketChannel.class.getSimpleName()
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
+                            }
+                        })
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> kqueueClientDomainSocket() {
         return Collections.singletonList(
-                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainSocketChannel.class)
+                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP)
+                        .channelFactory(new ChannelFactory<>() {
+                            @Override
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new KQueueSocketChannel(eventLoop, SocketProtocolFamily.UNIX);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return KQueueSocketChannel.class.getSimpleName()
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
+                            }
+                        })
         );
     }
 
@@ -188,8 +215,19 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> kqueueDomainDatagramSocket() {
-        return Collections.singletonList(
-                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainDatagramChannel.class)
+        return Collections.singletonList(() -> new Bootstrap().group(KQUEUE_WORKER_GROUP)
+                        .channelFactory(new ChannelFactory<>() {
+                            @Override
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new KQueueDatagramChannel(eventLoop, SocketProtocolFamily.UNIX);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return KQueueDatagramChannel.class.getSimpleName()
+                                        + "(..., " + SocketProtocolFamily.UNIX + ')';
+                            }
+                        })
         );
     }
 }

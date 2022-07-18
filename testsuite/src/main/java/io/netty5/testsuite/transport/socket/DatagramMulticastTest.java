@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
@@ -32,8 +33,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.ProtocolFamily;
-import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
@@ -165,14 +164,15 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     private InetSocketAddress newAnySocketAddress() throws UnknownHostException {
-        ProtocolFamily family = socketProtocolFamily();
-        if (family == StandardProtocolFamily.INET) {
-            return new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0);
+        SocketProtocolFamily family = SocketProtocolFamily.of(socketProtocolFamily());
+        switch (family) {
+            case INET:
+                return new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0);
+            case INET6:
+                return new InetSocketAddress(InetAddress.getByName("::"), 0);
+            default:
+                throw new UnsupportedOperationException("Any address not supported: " + family);
         }
-        if (family == StandardProtocolFamily.INET6) {
-            return new InetSocketAddress(InetAddress.getByName("::"), 0);
-        }
-        throw new AssertionError();
     }
 
     private InetSocketAddress newSocketAddress(NetworkInterface iface) {
@@ -212,7 +212,13 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     private String groupAddress() {
-        return groupProtocolFamily() == StandardProtocolFamily.INET?
-                "230.0.0.1" : "FF01:0:0:0:0:0:0:101";
+        switch (groupProtocolFamily()) {
+            case INET:
+                return "230.0.0.1";
+            case INET6:
+                return "FF01:0:0:0:0:0:0:101";
+            default:
+                throw new UnsupportedOperationException();
+        }
     }
 }

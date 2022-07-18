@@ -19,7 +19,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ServerChannel;
 
 /**
- * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
+ * A Socket {@link ServerChannel} which accepts incoming Socket connections.
  *
  * <h3>Available options</h3>
  *
@@ -29,13 +29,16 @@ import io.netty5.channel.ServerChannel;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_BACKLOG}</td>
+ * <td>{@link ChannelOption#SO_BACKLOG}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td><td>X</td><td>X</td><td>X</td>
  * </tr>
  * </table>
  */

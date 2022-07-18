@@ -62,13 +62,13 @@ public final class KQueueHandler implements IoHandler {
     private final SelectStrategy selectStrategy;
     private final IovArray iovArray = new IovArray();
     private final IntSupplier selectNowSupplier = this::kqueueWaitNow;
-    private final IntObjectMap<AbstractKQueueChannel<?, ?, ?>> channels = new IntObjectHashMap<>(4096);
+    private final IntObjectMap<AbstractKQueueChannel<?>> channels = new IntObjectHashMap<>(4096);
 
     private volatile int wakenUp;
 
-    private static AbstractKQueueChannel<?, ?, ?> cast(IoHandle handle) {
+    private static AbstractKQueueChannel<?> cast(IoHandle handle) {
         if (handle instanceof AbstractKQueueChannel) {
-            return (AbstractKQueueChannel<?, ?, ?>) handle;
+            return (AbstractKQueueChannel<?>) handle;
         }
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
@@ -114,9 +114,9 @@ public final class KQueueHandler implements IoHandler {
 
     @Override
     public void register(IoHandle handle) {
-        final AbstractKQueueChannel<?, ?, ?> kQueueChannel = cast(handle);
+        final AbstractKQueueChannel<?> kQueueChannel = cast(handle);
         final int id = kQueueChannel.fd().intValue();
-        AbstractKQueueChannel<?, ?, ?> old = channels.put(id, kQueueChannel);
+        AbstractKQueueChannel<?> old = channels.put(id, kQueueChannel);
         // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
         // closed.
         assert old == null || !old.isOpen();
@@ -136,10 +136,10 @@ public final class KQueueHandler implements IoHandler {
 
     @Override
     public void deregister(IoHandle handle) throws Exception {
-        AbstractKQueueChannel<?, ?, ?> kQueueChannel = cast(handle);
+        AbstractKQueueChannel<?> kQueueChannel = cast(handle);
         int fd = kQueueChannel.fd().intValue();
 
-        AbstractKQueueChannel<?, ?, ?> old = channels.remove(fd);
+        AbstractKQueueChannel<?> old = channels.remove(fd);
         if (old != null && old != kQueueChannel) {
             // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
             channels.put(fd, old);
@@ -157,7 +157,7 @@ public final class KQueueHandler implements IoHandler {
         kQueueChannel.deregister0();
     }
 
-    private void evSet(AbstractKQueueChannel<?, ?, ?> ch, short filter, short flags, int fflags) {
+    private void evSet(AbstractKQueueChannel<?> ch, short filter, short flags, int fflags) {
         changeList.evSet(ch, filter, flags, fflags);
     }
 
@@ -216,7 +216,7 @@ public final class KQueueHandler implements IoHandler {
                 continue;
             }
 
-            AbstractKQueueChannel<?, ?, ?> channel = channels.get(fd);
+            AbstractKQueueChannel<?> channel = channels.get(fd);
             if (channel == null) {
                 // This may happen if the channel has already been closed, and it will be removed from kqueue anyways.
                 // We also handle EV_ERROR above to skip this even early if it is a result of a referencing a closed and
@@ -336,9 +336,9 @@ public final class KQueueHandler implements IoHandler {
 
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
-        AbstractKQueueChannel<?, ?, ?>[] localChannels = channels.values().toArray(new AbstractKQueueChannel[0]);
+        AbstractKQueueChannel<?>[] localChannels = channels.values().toArray(new AbstractKQueueChannel[0]);
 
-        for (AbstractKQueueChannel<?, ?, ?> ch: localChannels) {
+        for (AbstractKQueueChannel<?> ch: localChannels) {
             ch.closeTransportNow();
         }
     }

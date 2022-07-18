@@ -21,6 +21,8 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.util.Resource;
@@ -39,15 +41,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
+import static io.netty5.util.CharsetUtil.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
-        extends AbstractChannel<P, L, R> implements UnixChannel {
+abstract class AbstractEpollChannel<P extends UnixChannel>
+        extends AbstractChannel<P, SocketAddress, SocketAddress> implements UnixChannel {
     final LinuxSocket socket;
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -55,8 +57,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
      */
     protected EpollRegistration registration;
 
-    private volatile L local;
-    private volatile R remote;
+    private volatile SocketAddress localAddress;
+    private volatile SocketAddress remoteAddress;
 
     protected int flags = Native.EPOLLET;
     boolean inputClosedSeenErrorOnRead;
@@ -89,21 +91,25 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
-            local = (L) fd.localAddress();
-            remote = (R) fd.remoteAddress();
+            localAddress = fd.localAddress();
+            remoteAddress = fd.remoteAddress();
         }
     }
 
     @SuppressWarnings("unchecked")
     AbstractEpollChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
-                         RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, R remote) {
+                         RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, SocketAddress remote) {
         super(parent, eventLoop, metadata, defaultRecvAllocator);
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
-        this.remote = (R) remote;
-        local = (L) fd.localAddress();
+        remoteAddress =  remote;
+        localAddress = fd.localAddress();
+    }
+
+    protected boolean fetchLocalAddress() {
+        return socket.protocolFamily() != SocketProtocolFamily.UNIX;
     }
 
     static boolean isSoErrorZero(Socket fd) {
@@ -157,9 +163,9 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
     }
 
     @SuppressWarnings("unchecked")
-    void resetCachedAddresses() {
-        local = (L) socket.localAddress();
-        remote = (R) socket.remoteAddress();
+    final void resetCachedAddresses() {
+        cacheAddresses(localAddress, null);
+        remoteAddress = null;
     }
 
     @Override
@@ -172,7 +178,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
         return socket.isOpen();
     }
 
-    void register0(EpollRegistration registration) throws Exception {
+    void register0(EpollRegistration registration) {
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
@@ -309,7 +315,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
      * Write bytes to the socket, with or without a remote address.
      * Used for datagram and TCP client fast open writes.
      */
-    final long doWriteOrSendBytes(Buffer data, InetSocketAddress remoteAddress, boolean fastOpen)
+    final long doWriteOrSendBytes(Buffer data, SocketAddress remoteAddress, boolean fastOpen)
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
 
@@ -320,8 +326,15 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
         if (remoteAddress == null) {
             return socket.writevAddresses(array.memoryAddress(0), count);
         }
-        return socket.sendToAddresses(array.memoryAddress(0), count,
-                                      remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+             return socket.sendToAddressesDomainSocket(
+                    array.memoryAddress(0), count, ((DomainSocketAddress) remoteAddress)
+                            .path().getBytes(UTF_8));
+        } else {
+            InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
+            return socket.sendToAddresses(array.memoryAddress(0), count,
+                    inetSocketAddress.getAddress(), inetSocketAddress.getPort(), fastOpen);
+        }
     }
 
     /**
@@ -467,12 +480,14 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
 
     @Override
     @SuppressWarnings("unchecked")
-    protected boolean doFinishConnect(R requestedRemoteAddress) throws Exception {
+    protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) throws Exception {
         if (socket.finishConnect()) {
             active = true;
             clearFlag(Native.EPOLLOUT);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remote = (R) computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remoteAddress = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+            } else {
+                remoteAddress = requestedRemoteAddress;
             }
             return true;
         }
@@ -487,13 +502,16 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
             checkResolvable((InetSocketAddress) local);
         }
         socket.bind(local);
-        this.local = (L) socket.localAddress();
+        if (fetchLocalAddress()) {
+            this.localAddress = socket.localAddress();
+        } else {
+            this.localAddress = local;
+        }
     }
 
     /**
      * Connect to the remote peer
      */
-    @SuppressWarnings("unchecked")
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) localAddress);
@@ -505,27 +523,22 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
             checkResolvable(remoteSocketAddr);
         }
 
-        if (remote != null) {
-            // Check if already connected before trying to connect. This is needed as connect(...) will not return -1
-            // and set errno to EISCONN if a previous connect(...) attempt was setting errno to EINPROGRESS and finished
-            // later.
-            throw new AlreadyConnectedException();
-        }
-
         if (localAddress != null) {
             socket.bind(localAddress);
         }
 
         boolean connected = doConnect0(remoteAddress);
         if (connected) {
-            remote = remoteSocketAddr == null ?
-                    (R) remoteAddress : (R) computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+            this.remoteAddress = remoteSocketAddr == null ?
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
             active = true;
         }
-        // We always need to set the localAddress even if not connected yet as the bind already took place.
-        //
-        // See https://github.com/netty/netty/issues/3463
-        local = (L) socket.localAddress();
+        if (fetchLocalAddress()) {
+            // We always need to set the localAddress even if not connected yet as the bind already took place.
+            //
+            // See https://github.com/netty/netty/issues/3463
+            this.localAddress = socket.localAddress();
+        }
         return connected;
     }
 
@@ -546,13 +559,13 @@ abstract class AbstractEpollChannel<P extends UnixChannel, L extends SocketAddre
     }
 
     @Override
-    protected L localAddress0() {
-        return local;
+    protected SocketAddress localAddress0() {
+        return localAddress;
     }
 
     @Override
-    protected R remoteAddress0() {
-        return remote;
+    protected SocketAddress remoteAddress0() {
+        return remoteAddress;
     }
 
     final void closeTransportNow() {

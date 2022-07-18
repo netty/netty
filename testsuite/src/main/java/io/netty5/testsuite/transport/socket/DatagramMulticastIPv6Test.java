@@ -16,10 +16,8 @@
 package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.internal.PlatformDependent;
-
-import java.net.ProtocolFamily;
-import java.net.StandardProtocolFamily;
 
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -34,7 +32,7 @@ public class DatagramMulticastIPv6Test extends DatagramMulticastTest {
     }
 
     @Override
-    protected ProtocolFamily protocolFamily() {
-        return StandardProtocolFamily.INET6;
+    protected SocketProtocolFamily protocolFamily() {
+        return SocketProtocolFamily.INET6;
     }
 }

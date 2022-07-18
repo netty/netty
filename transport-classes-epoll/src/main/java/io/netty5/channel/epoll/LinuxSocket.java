@@ -17,6 +17,7 @@ package io.netty5.channel.epoll;
 
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.DefaultFileRegion;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.NativeInetAddress;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
@@ -28,7 +29,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ProtocolFamily;
-import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
@@ -43,12 +43,8 @@ public final class LinuxSocket extends Socket {
     private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
-    LinuxSocket(int fd) {
-        super(fd);
-    }
-
-    ProtocolFamily family() {
-        return ipv6 ? StandardProtocolFamily.INET6 : StandardProtocolFamily.INET;
+    LinuxSocket(int fd, SocketProtocolFamily family) {
+        super(fd, family);
     }
 
     int sendmmsg(NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
@@ -75,9 +71,9 @@ public final class LinuxSocket extends Socket {
     }
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
-        InetAddress address = deriveInetAddress(netInterface, family() == StandardProtocolFamily.INET6);
-        if (address.equals(family() == StandardProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
-            throw new IOException("NetworkInterface does not support " + family());
+        InetAddress address = deriveInetAddress(netInterface, protocolFamily() == SocketProtocolFamily.INET6);
+        if (address.equals(protocolFamily() == SocketProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
+            throw new IOException("NetworkInterface does not support " + protocolFamily());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
@@ -325,12 +321,45 @@ public final class LinuxSocket extends Socket {
         return ipAny;
     }
 
+    public static LinuxSocket newDatagramSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketDgram();
+        }
+        SocketProtocolFamily protocolFamily = SocketProtocolFamily.of(family);
+        switch (protocolFamily) {
+            case UNIX:
+                return newSocketDomainDgram();
+            case INET6:
+            case INET:
+                return newSocketDgram(protocolFamily);
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
+    public static LinuxSocket newSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketStream();
+        }
+        SocketProtocolFamily protocolFamily = SocketProtocolFamily.of(family);
+
+        switch (protocolFamily) {
+            case UNIX:
+                return newSocketDomain();
+            case INET6:
+            case INET:
+                return newSocketStream(protocolFamily);
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
     public static LinuxSocket newSocketStream(boolean ipv6) {
-        return new LinuxSocket(newSocketStream0(ipv6));
+        return new LinuxSocket(newSocketStream0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
     public static LinuxSocket newSocketStream(ProtocolFamily protocol) {
-        return new LinuxSocket(newSocketStream0(protocol));
+        return new LinuxSocket(newSocketStream0(protocol), SocketProtocolFamily.of(protocol));
     }
 
     public static LinuxSocket newSocketStream() {
@@ -338,11 +367,11 @@ public final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
-        return new LinuxSocket(newSocketDgram0(ipv6));
+        return new LinuxSocket(newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
     public static LinuxSocket newSocketDgram(ProtocolFamily family) {
-        return new LinuxSocket(newSocketDgram0(family));
+        return new LinuxSocket(newSocketDgram0(family), SocketProtocolFamily.of(family));
     }
 
     public static LinuxSocket newSocketDgram() {
@@ -350,11 +379,11 @@ public final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDomain() {
-        return new LinuxSocket(newSocketDomain0());
+        return new LinuxSocket(newSocketDomain0(), SocketProtocolFamily.UNIX);
     }
 
     public static LinuxSocket newSocketDomainDgram() {
-        return new LinuxSocket(newSocketDomainDgram0());
+        return new LinuxSocket(newSocketDomainDgram0(), SocketProtocolFamily.UNIX);
     }
 
     private static InetAddress unsafeInetAddrByName(String inetName) {

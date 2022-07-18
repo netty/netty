@@ -17,15 +17,28 @@ package io.netty5.channel.kqueue;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
+import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ServerChannelRecvBufferAllocator;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.UnstableApi;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Set;
 
@@ -49,47 +62,81 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
- * <td>{@link ChannelOption#TCP_FASTOPEN}</td>
+ * <td>{@link IntegerUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link KQueueChannelOption#RCV_ALLOC_TRANSPORT_PROVIDES_GUESS}</td>
+ * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link KQueueChannelOption#SO_ACCEPTFILTER}</td>
+ * <td>{@link ChannelOption#TCP_FASTOPEN}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link io.netty5.channel.unix.UnixChannelOption#SO_REUSEPORT}</td>
+ * <td>{@link KQueueChannelOption#RCV_ALLOC_TRANSPORT_PROVIDES_GUESS}</td><td>X</td><td>X</td><td>X</td>
+ * </tr><tr>
+ * <td>{@link KQueueChannelOption#SO_ACCEPTFILTER}</td><td>X</td><td>X</td><td>X</td>
+ * </tr><tr>
+ * <td>{@link io.netty5.channel.unix.UnixChannelOption#SO_REUSEPORT}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */
 @UnstableApi
 public final class KQueueServerSocketChannel extends
-        AbstractKQueueServerChannel<UnixChannel, SocketAddress, SocketAddress> implements ServerSocketChannel {
+        AbstractKQueueChannel<UnixChannel> implements ServerSocketChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
+            KQueueServerSocketChannel.class);
+
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
+
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN = supportedOptionsDomainSocket();
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+    private final EventLoopGroup childEventLoopGroup;
+
+    // Will hold the remote address after accept(...) was successful.
+    // We need 24 bytes for the address as maximum + 1 byte for storing the capacity.
+    // So use 26 bytes as it's a power of two.
+    private final byte[] acceptedAddress = new byte[26];
+
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile boolean enableTcpFastOpen;
+
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, newSocketStream(), false);
+        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
+                newSocketStream(), false);
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
+                KQueueSocketChannel.class);
     }
 
-    public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+    public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                     SocketProtocolFamily protocolFamily) {
+        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
+                BsdSocket.newSocket(protocolFamily), false);
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
+                KQueueSocketChannel.class);
+    }
+
+    public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                     int fd, ProtocolFamily protocolFamily) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        this(eventLoop, childEventLoopGroup, new BsdSocket(fd));
+        this(eventLoop, childEventLoopGroup, new BsdSocket(fd, SocketProtocolFamily.of(protocolFamily)));
     }
 
-    KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
-        super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, fd);
-    }
-
-    KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
-        super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, fd, active);
+    private KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket socket) {
+        // Must call this constructor to ensure this object's local address is configured correctly.
+        // The local address can only be obtained from a Socket object.
+        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
+                KQueueSocketChannel.class);
     }
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
         socket.listen(getBacklog());
-        if (isTcpFastOpen()) {
+        if (socket.protocolFamily() != SocketProtocolFamily.UNIX && isTcpFastOpen()) {
             socket.setTcpFastOpen(true);
         }
         active = true;
@@ -98,57 +145,69 @@ public final class KQueueServerSocketChannel extends
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
-        }
-        if (option == SO_REUSEADDR) {
-            return (T) Boolean.valueOf(isReuseAddress());
-        }
-        if (option == SO_BACKLOG) {
-            return (T) Integer.valueOf(getBacklog());
-        }
-        if (option == TCP_FASTOPEN) {
-            return (T) (isTcpFastOpen() ? Integer.valueOf(1) : Integer.valueOf(0));
-        }
-        if (option == SO_REUSEPORT) {
-            return (T) Boolean.valueOf(isReusePort());
-        }
-        if (option == SO_ACCEPTFILTER) {
-            return (T) getAcceptFilter();
+        if (isSupported(socket.protocolFamily(), option)) {
+            if (option == SO_RCVBUF) {
+                return (T) Integer.valueOf(getReceiveBufferSize());
+            }
+            if (option == SO_REUSEADDR) {
+                return (T) Boolean.valueOf(isReuseAddress());
+            }
+            if (option == SO_BACKLOG) {
+                return (T) Integer.valueOf(getBacklog());
+            }
+            if (option == TCP_FASTOPEN) {
+                return (T) (isTcpFastOpen() ? Integer.valueOf(1) : Integer.valueOf(0));
+            }
+            if (option == SO_REUSEPORT) {
+                return (T) Boolean.valueOf(isReusePort());
+            }
+            if (option == SO_ACCEPTFILTER) {
+                return (T) getAcceptFilter();
+            }
         }
         return super.getExtendedOption(option);
     }
 
     @Override
     protected  <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
-        } else if (option == SO_REUSEADDR) {
-            setReuseAddress((Boolean) value);
-        } else if (option == SO_BACKLOG) {
-            setBacklog((Integer) value);
-        } else if (option == TCP_FASTOPEN) {
-            setTcpFastOpen((Integer) value > 0);
-        } else if (option == SO_REUSEPORT) {
-            setReusePort((Boolean) value);
-        } else if (option == SO_ACCEPTFILTER) {
-            setAcceptFilter((AcceptFilter) value);
+        if (isSupported(socket.protocolFamily(), option)) {
+            if (option == SO_RCVBUF) {
+                setReceiveBufferSize((Integer) value);
+            } else if (option == SO_REUSEADDR) {
+                setReuseAddress((Boolean) value);
+            } else if (option == SO_BACKLOG) {
+                setBacklog((Integer) value);
+            } else if (option == TCP_FASTOPEN) {
+                setTcpFastOpen((Integer) value > 0);
+            } else if (option == SO_REUSEPORT) {
+                setReusePort((Boolean) value);
+            } else if (option == SO_ACCEPTFILTER) {
+                setAcceptFilter((AcceptFilter) value);
+            }
         } else {
             super.setExtendedOption(option, value);
         }
     }
 
+    private boolean isSupported(SocketProtocolFamily protocolFamily, ChannelOption<?> option) {
+        if (protocolFamily == SocketProtocolFamily.UNIX) {
+            return SUPPORTED_OPTIONS_DOMAIN.contains(option);
+        }
+        return SUPPORTED_OPTIONS.contains(option);
+    }
+
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (SUPPORTED_OPTIONS.contains(option)) {
-            return true;
-        }
-        return super.isExtendedOptionSupported(option);
+        return isSupported(socket.protocolFamily(), option) || super.isExtendedOptionSupported(option);
     }
 
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG,
                 TCP_FASTOPEN, SO_REUSEPORT, SO_ACCEPTFILTER);
+    }
+
+    private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
+        return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG, SO_ACCEPTFILTER);
     }
 
     private boolean isReuseAddress() {
@@ -245,9 +304,111 @@ public final class KQueueServerSocketChannel extends
         }
     }
 
-    @Override
-    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
+    private Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
+        final SocketAddress remote;
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            remote = null;
+        } else {
+            remote = address(address, offset, len);
+        }
         return new KQueueSocketChannel(this, childEventLoopGroup().next(),
-                                       new BsdSocket(fd), address(address, offset, len));
+                new BsdSocket(fd, socket.protocolFamily()), remote);
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        SocketAddress local = localAddress();
+        try {
+            super.doClose();
+        } finally {
+            if (local != null && socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                String path = ((DomainSocketAddress) local).path();
+                // Delete the socket file if possible.
+                File socketFile = new File(path);
+                boolean success = socketFile.delete();
+                if (!success && logger.isDebugEnabled()) {
+                    logger.debug("Failed to delete a domain socket file: {}", path);
+                }
+            }
+        }
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return null;
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        return !isActive();
+    }
+
+    @Override
+    void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
+        assert executor().inEventLoop();
+        if (shouldBreakReadReady()) {
+            clearReadFilter0();
+            return;
+        }
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset();
+        allocHandle.attemptedBytesRead(1);
+        readReadyBefore();
+
+        Throwable exception = null;
+        try {
+            try {
+                do {
+                    int acceptFd = socket.accept(acceptedAddress);
+                    if (acceptFd == -1) {
+                        // this means everything was handled for now
+                        allocHandle.lastBytesRead(-1);
+                        break;
+                    }
+                    allocHandle.lastBytesRead(1);
+                    allocHandle.incMessagesRead(1);
+
+                    readPending = false;
+                    pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
+                            acceptedAddress[0]));
+                } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } catch (Throwable t) {
+                exception = t;
+            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireChannelExceptionCaught(exception);
+            }
+            readIfIsAutoRead();
+        } finally {
+            readReadyFinally();
+        }
     }
 }

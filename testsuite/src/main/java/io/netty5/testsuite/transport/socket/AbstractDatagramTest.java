@@ -18,14 +18,13 @@ package io.netty5.testsuite.transport.socket;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.testsuite.transport.AbstractComboTestsuiteTest;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.util.NetUtil;
 
 import java.net.InetSocketAddress;
-import java.net.ProtocolFamily;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
 import java.util.List;
 
 public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bootstrap, Bootstrap> {
@@ -42,25 +41,28 @@ public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bo
     }
 
     protected SocketAddress newSocketAddress() {
-        ProtocolFamily family = socketProtocolFamily();
-        if (family == StandardProtocolFamily.INET) {
-            return new InetSocketAddress(NetUtil.LOCALHOST4, 0);
+        SocketProtocolFamily family = socketProtocolFamily();
+        switch (family) {
+            case INET:
+                return new InetSocketAddress(NetUtil.LOCALHOST4, 0);
+            case INET6:
+                return new InetSocketAddress(NetUtil.LOCALHOST6, 0);
+            case UNIX:
+                return SocketTestPermutation.newDomainSocketAddress();
+            default:
+                throw new AssertionError();
         }
-        if (family == StandardProtocolFamily.INET6) {
-            return new InetSocketAddress(NetUtil.LOCALHOST6, 0);
-        }
-        throw new AssertionError();
     }
 
-    protected ProtocolFamily protocolFamily() {
-        return StandardProtocolFamily.INET;
+    protected SocketProtocolFamily protocolFamily() {
+        return SocketProtocolFamily.INET;
     }
 
-    protected ProtocolFamily groupProtocolFamily() {
+    protected SocketProtocolFamily groupProtocolFamily() {
         return protocolFamily();
     }
 
-    protected ProtocolFamily socketProtocolFamily() {
+    protected SocketProtocolFamily socketProtocolFamily() {
         return protocolFamily();
     }
 }

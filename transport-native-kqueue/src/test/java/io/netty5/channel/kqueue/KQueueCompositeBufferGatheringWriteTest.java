@@ -32,8 +32,8 @@ public class KQueueCompositeBufferGatheringWriteTest extends CompositeBufferGath
     @Override
     protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(Channel channel,
                                                                                  int soSndBuf) {
-        if (channel instanceof AbstractKQueueChannel<?, ?, ?>) {
-            ((AbstractKQueueChannel<?, ?, ?>) channel).setMaxBytesPerGatheringWrite(soSndBuf);
+        if (channel instanceof AbstractKQueueChannel<?>) {
+            ((AbstractKQueueChannel<?>) channel).setMaxBytesPerGatheringWrite(soSndBuf);
         }
     }
 }

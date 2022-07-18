@@ -17,11 +17,18 @@ package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
+import io.netty5.channel.unix.DomainDatagramSocketAddress;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
+import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.Resource;
@@ -55,11 +62,9 @@ import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
 import java.net.SocketException;
 import java.util.Set;
 
-import static io.netty5.channel.epoll.LinuxSocket.newSocketDgram;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -73,22 +78,28 @@ import static java.util.Objects.requireNonNull;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Name</th>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX</th>
  * </tr><tr>
- * <td>{@link UnixChannelOption#SO_REUSEPORT}</td>
+ * <td>{@link IntegerUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#IP_FREEBIND}</td>
+ * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#IP_RECVORIGDSTADDR}</td>
+ * <td>{@link UnixChannelOption#SO_REUSEPORT}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#MAX_DATAGRAM_PAYLOAD_SIZE}</td>
+ * <td>{@link EpollChannelOption#IP_FREEBIND}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
- * <td>{@link EpollChannelOption#UDP_GRO}</td>
+ * <td>{@link EpollChannelOption#IP_RECVORIGDSTADDR}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#MAX_DATAGRAM_PAYLOAD_SIZE}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
+ * <td>{@link EpollChannelOption#UDP_GRO}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
  * </table>
  */
-public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel, SocketAddress, SocketAddress>
-        implements DatagramChannel {
+public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel> implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final String EXPECTED_TYPES =
@@ -98,7 +109,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(Buffer.class) + ')';
 
+    private static final String EXPECTED_TYPES_DOMAIN_SOCKET =
+            " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
+                    StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
+                    StringUtil.simpleClassName(Buffer.class) + ", " +
+                    StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
+                    StringUtil.simpleClassName(Buffer.class) + ')';
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
+
+    private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
+
     private volatile boolean activeOnOpen;
     private volatile int maxDatagramSize;
     private volatile boolean gro;
@@ -131,16 +151,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop, ProtocolFamily family) {
-        this(eventLoop, newSocketDgram(family),
-        false);
+        this(eventLoop, LinuxSocket.newDatagramSocket(family), false);
     }
 
     /**
      * Create a new instance which selects the {@link ProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
-    public EpollDatagramChannel(EventLoop eventLoop, int fd) {
-        this(eventLoop, new LinuxSocket(fd), true);
+    public EpollDatagramChannel(EventLoop eventLoop, int fd, ProtocolFamily family) {
+        this(eventLoop, new LinuxSocket(fd, SocketProtocolFamily.of(family)), true);
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
@@ -183,6 +202,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
 
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return newFailedFuture(new UnsupportedOperationException("Multicast not supported"));
+        }
+
         Promise<Void> promise = newPromise();
         if (executor().inEventLoop()) {
             joinGroup0(multicastAddress, networkInterface, source, promise);
@@ -219,6 +242,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
+
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return newFailedFuture(new UnsupportedOperationException("Multicast not supported"));
+        }
 
         Promise<Void> promise = newPromise();
         if (executor().inEventLoop()) {
@@ -301,7 +328,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
-                if (socket.family() == StandardProtocolFamily.INET6) {
+                if (socket.protocolFamily() == SocketProtocolFamily.INET6) {
                     localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
                 }
             }
@@ -322,7 +349,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
             try {
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
-                if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1 ||
+                if (Native.IS_SUPPORTING_SENDMMSG && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                        in.size() > 1 ||
                         // We only handle UDP_SEGMENT in sendmmsg.
                         in.current() instanceof SegmentedDatagramPacket) {
                     NativeDatagramPacketArray array = cleanDatagramPacketArray();
@@ -380,10 +408,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
     private boolean doWriteMessage(Object msg) throws Exception {
         final Buffer data;
-        final InetSocketAddress remoteAddress;
+        final SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<?, InetSocketAddress> envelope = (AddressedEnvelope<?, InetSocketAddress>) msg;
+            AddressedEnvelope<?, SocketAddress> envelope = (AddressedEnvelope<?, SocketAddress>) msg;
             data = (Buffer) envelope.content();
             remoteAddress = envelope.recipient();
         } else {
@@ -399,32 +427,39 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return filterOutboundMessage0(msg, DomainSocketAddress.class, EXPECTED_TYPES_DOMAIN_SOCKET);
+        }
+        return filterOutboundMessage0(msg, InetSocketAddress.class, EXPECTED_TYPES);
+    }
+
+    private Object filterOutboundMessage0(Object msg, Class<? extends SocketAddress> recipientClass,
+                                          String expectedTypes) {
         if (msg instanceof SegmentedDatagramPacket) {
             if (!Native.IS_SUPPORTING_UDP_SEGMENT) {
                 throw new UnsupportedOperationException(
-                        "Unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
+                        "Unsupported message type: " + StringUtil.simpleClassName(msg) + expectedTypes);
             }
             SegmentedDatagramPacket packet = (SegmentedDatagramPacket) msg;
-            Buffer content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                    packet.replace(newDirectBuffer(packet, content)) : msg;
-        }
-        if (msg instanceof DatagramPacket) {
+            if (recipientClass.isInstance(packet.recipient())) {
+                Buffer content = packet.content();
+                return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
+                        packet.replace(newDirectBuffer(packet, content)) : msg;
+            }
+        } else if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            Buffer content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                    new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
-        }
-
-        if (msg instanceof Buffer) {
+            if (recipientClass.isInstance(packet.recipient())) {
+                Buffer content = packet.content();
+                return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
+                        new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
+            }
+        } else if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
-        }
-
-        if (msg instanceof AddressedEnvelope) {
+        } else if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.recipient() == null || e.recipient() instanceof InetSocketAddress) {
+            if (recipientClass.isInstance(e.recipient())) {
                 InetSocketAddress recipient = (InetSocketAddress) e.recipient();
                 Object content = e.content();
                 if (content instanceof Buffer) {
@@ -442,7 +477,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
 
         throw new UnsupportedOperationException(
-                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + expectedTypes);
     }
 
     @Override
@@ -481,7 +516,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         epollInBefore();
 
         try {
-            Throwable exception = doReadBuffer(allocHandle);
+            Throwable exception = socket.protocolFamily() == SocketProtocolFamily.UNIX ?
+                    doReadBufferDomainSocket(allocHandle) : doReadBuffer(allocHandle);
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
 
@@ -492,6 +528,66 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         } finally {
             epollInFinally();
         }
+    }
+
+    private Throwable doReadBufferDomainSocket(EpollRecvBufferAllocatorHandle allocHandle) {
+        BufferAllocator allocator = bufferAllocator();
+        if (!allocator.getAllocationType().isDirect()) {
+            allocator = DefaultBufferAllocators.offHeapAllocator();
+        }
+        Buffer buf = null;
+        try {
+            boolean connected = isConnected();
+            do {
+                buf = allocHandle.allocate(allocator);
+                allocHandle.attemptedBytesRead(buf.writableBytes());
+
+                final DatagramPacket packet;
+                if (connected) {
+                    doReadBytes(buf);
+                    if (allocHandle.lastBytesRead() <= 0) {
+                        // nothing was read, release the buffer.
+                        buf.close();
+                        break;
+                    }
+                    packet = new DatagramPacket(buf, localAddress(), remoteAddress());
+                } else {
+                    final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
+                    buf.forEachWritable(0, recvFrom);
+                    final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
+
+                    if (remoteAddress == null) {
+                        allocHandle.lastBytesRead(-1);
+                        buf.close();
+                        break;
+                    }
+                    DomainSocketAddress localAddress = remoteAddress.localAddress();
+                    if (localAddress == null) {
+                        localAddress = (DomainSocketAddress) localAddress();
+                    }
+                    allocHandle.lastBytesRead(remoteAddress.receivedAmount());
+                    buf.skipWritableBytes(allocHandle.lastBytesRead());
+
+                    packet = new DatagramPacket(buf, localAddress, remoteAddress);
+                }
+
+                allocHandle.incMessagesRead(1);
+
+                readPending = false;
+                pipeline().fireChannelRead(packet);
+
+                buf = null;
+
+                // We use the TRUE_SUPPLIER as it is also ok to read less than what we did try to read (as long
+                // as we read anything).
+            } while (allocHandle.continueReading(isAutoRead(), UncheckedBooleanSupplier.TRUE_SUPPLIER));
+        } catch (Throwable t) {
+            if (buf != null) {
+                buf.close();
+            }
+            return t;
+        }
+        return null;
     }
 
     private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle) {
@@ -739,87 +835,90 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == ChannelOption.SO_BROADCAST) {
-            return (T) Boolean.valueOf(isBroadcast());
-        }
-        if (option == ChannelOption.SO_RCVBUF) {
-            return (T) Integer.valueOf(getReceiveBufferSize());
-        }
-        if (option == ChannelOption.SO_SNDBUF) {
-            return (T) Integer.valueOf(getSendBufferSize());
-        }
-        if (option == ChannelOption.SO_REUSEADDR) {
-            return (T) Boolean.valueOf(isReuseAddress());
-        }
-        if (option == ChannelOption.IP_MULTICAST_LOOP_DISABLED) {
-            return (T) Boolean.valueOf(isLoopbackModeDisabled());
-        }
-        if (option == ChannelOption.IP_MULTICAST_IF) {
-            return (T) getNetworkInterface();
-        }
-        if (option == ChannelOption.IP_MULTICAST_TTL) {
-            return (T) Integer.valueOf(getTimeToLive());
-        }
-        if (option == ChannelOption.IP_TOS) {
-            return (T) Integer.valueOf(getTrafficClass());
-        }
-        if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
-            return (T) Boolean.valueOf(activeOnOpen);
-        }
-        if (option == UnixChannelOption.SO_REUSEPORT) {
-            return (T) Boolean.valueOf(isReusePort());
-        }
-        if (option == EpollChannelOption.IP_TRANSPARENT) {
-            return (T) Boolean.valueOf(isIpTransparent());
-        }
-        if (option == EpollChannelOption.IP_FREEBIND) {
-            return (T) Boolean.valueOf(isFreeBind());
-        }
-        if (option == EpollChannelOption.IP_RECVORIGDSTADDR) {
-            return (T) Boolean.valueOf(isIpRecvOrigDestAddr());
-        }
-        if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
-            return (T) Integer.valueOf(getMaxDatagramPayloadSize());
-        }
-        if (option == EpollChannelOption.UDP_GRO) {
-            return (T) Boolean.valueOf(isUdpGro());
+        if (isOptionSupported(socket.protocolFamily(), option)) {
+            if (option == ChannelOption.SO_BROADCAST) {
+                return (T) Boolean.valueOf(isBroadcast());
+            }
+            if (option == ChannelOption.SO_RCVBUF) {
+                return (T) Integer.valueOf(getReceiveBufferSize());
+            }
+            if (option == ChannelOption.SO_SNDBUF) {
+                return (T) Integer.valueOf(getSendBufferSize());
+            }
+            if (option == ChannelOption.SO_REUSEADDR) {
+                return (T) Boolean.valueOf(isReuseAddress());
+            }
+            if (option == ChannelOption.IP_MULTICAST_LOOP_DISABLED) {
+                return (T) Boolean.valueOf(isLoopbackModeDisabled());
+            }
+            if (option == ChannelOption.IP_MULTICAST_IF) {
+                return (T) getNetworkInterface();
+            }
+            if (option == ChannelOption.IP_MULTICAST_TTL) {
+                return (T) Integer.valueOf(getTimeToLive());
+            }
+            if (option == ChannelOption.IP_TOS) {
+                return (T) Integer.valueOf(getTrafficClass());
+            }
+            if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
+                return (T) Boolean.valueOf(activeOnOpen);
+            }
+            if (option == UnixChannelOption.SO_REUSEPORT) {
+                return (T) Boolean.valueOf(isReusePort());
+            }
+            if (option == EpollChannelOption.IP_TRANSPARENT) {
+                return (T) Boolean.valueOf(isIpTransparent());
+            }
+            if (option == EpollChannelOption.IP_FREEBIND) {
+                return (T) Boolean.valueOf(isFreeBind());
+            }
+            if (option == EpollChannelOption.IP_RECVORIGDSTADDR) {
+                return (T) Boolean.valueOf(isIpRecvOrigDestAddr());
+            }
+            if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
+                return (T) Integer.valueOf(getMaxDatagramPayloadSize());
+            }
+            if (option == EpollChannelOption.UDP_GRO) {
+                return (T) Boolean.valueOf(isUdpGro());
+            }
         }
         return super.getExtendedOption(option);
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == ChannelOption.SO_BROADCAST) {
-            setBroadcast((Boolean) value);
-        } else if (option == ChannelOption.SO_RCVBUF) {
-            setReceiveBufferSize((Integer) value);
-        } else if (option == ChannelOption.SO_SNDBUF) {
-            setSendBufferSize((Integer) value);
-        } else if (option == ChannelOption.SO_REUSEADDR) {
-            setReuseAddress((Boolean) value);
-        } else if (option == ChannelOption.IP_MULTICAST_LOOP_DISABLED) {
-            setLoopbackModeDisabled((Boolean) value);
-        } else if (option == ChannelOption.IP_MULTICAST_IF) {
-            setNetworkInterface((NetworkInterface) value);
-        } else if (option == ChannelOption.IP_MULTICAST_TTL) {
-            setTimeToLive((Integer) value);
-        } else if (option == ChannelOption.IP_TOS) {
-            setTrafficClass((Integer) value);
-        } else if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
-            setActiveOnOpen((Boolean) value);
-        } else if (option == UnixChannelOption.SO_REUSEPORT) {
-            setReusePort((Boolean) value);
-        } else if (option == EpollChannelOption.IP_FREEBIND) {
-            setFreeBind((Boolean) value);
-        } else if (option == EpollChannelOption.IP_TRANSPARENT) {
-            setIpTransparent((Boolean) value);
-        } else if (option == EpollChannelOption.IP_RECVORIGDSTADDR) {
-            setIpRecvOrigDestAddr((Boolean) value);
-        } else if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
-            setMaxDatagramPayloadSize((Integer) value);
-        } else if (option == EpollChannelOption.UDP_GRO) {
-            setUdpGro((Boolean) value);
+        if (isOptionSupported(socket.protocolFamily(), option)) {
+            if (option == ChannelOption.SO_BROADCAST) {
+                setBroadcast((Boolean) value);
+            } else if (option == ChannelOption.SO_RCVBUF) {
+                setReceiveBufferSize((Integer) value);
+            } else if (option == ChannelOption.SO_SNDBUF) {
+                setSendBufferSize((Integer) value);
+            } else if (option == ChannelOption.SO_REUSEADDR) {
+                setReuseAddress((Boolean) value);
+            } else if (option == ChannelOption.IP_MULTICAST_LOOP_DISABLED) {
+                setLoopbackModeDisabled((Boolean) value);
+            } else if (option == ChannelOption.IP_MULTICAST_IF) {
+                setNetworkInterface((NetworkInterface) value);
+            } else if (option == ChannelOption.IP_MULTICAST_TTL) {
+                setTimeToLive((Integer) value);
+            } else if (option == ChannelOption.IP_TOS) {
+                setTrafficClass((Integer) value);
+            } else if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
+                setActiveOnOpen((Boolean) value);
+            } else if (option == UnixChannelOption.SO_REUSEPORT) {
+                setReusePort((Boolean) value);
+            } else if (option == EpollChannelOption.IP_FREEBIND) {
+                setFreeBind((Boolean) value);
+            } else if (option == EpollChannelOption.IP_TRANSPARENT) {
+                setIpTransparent((Boolean) value);
+            } else if (option == EpollChannelOption.IP_RECVORIGDSTADDR) {
+                setIpRecvOrigDestAddr((Boolean) value);
+            } else if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
+                setMaxDatagramPayloadSize((Integer) value);
+            } else if (option == EpollChannelOption.UDP_GRO) {
+                setUdpGro((Boolean) value);
+            }
         } else {
             super.setExtendedOption(option, value);
         }
@@ -836,12 +935,21 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 EpollChannelOption.UDP_GRO);
     }
 
+    private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
+        return newSupportedIdentityOptionsSet(ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF,
+                ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION);
+    }
+
+    private static boolean isOptionSupported(SocketProtocolFamily family, ChannelOption<?> option) {
+        if (family == SocketProtocolFamily.UNIX) {
+            return SUPPORTED_OPTIONS_DOMAIN_SOCKET.contains(option);
+        }
+        return SUPPORTED_OPTIONS.contains(option);
+    }
+
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (SUPPORTED_OPTIONS.contains(option)) {
-            return true;
-        }
-        return super.isExtendedOptionSupported(option);
+        return isOptionSupported(socket.protocolFamily(), option) || super.isExtendedOptionSupported(option);
     }
 
     private void setActiveOnOpen(boolean activeOnOpen) {
@@ -1103,7 +1211,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     /**
      * Enable / disable <a href="https://lwn.net/Articles/768995/">UDP_GRO</a>.
      * @param gro {@code true} if {@code UDP_GRO} should be enabled, {@code false} otherwise.
-     * @return this.
      */
     private void setUdpGro(boolean gro) {
         try {

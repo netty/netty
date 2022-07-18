@@ -20,6 +20,7 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainSocketReadMode;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.UnixChannelOption;
@@ -63,7 +64,8 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Create new channel and obtain a file descriptor from it.
-                final KQueueDomainSocketChannel ch = new KQueueDomainSocketChannel(ctx.channel().executor());
+                final KQueueSocketChannel ch = new KQueueSocketChannel(ctx.channel().executor(),
+                        SocketProtocolFamily.UNIX);
 
                 ctx.writeAndFlush(ch.fd()).addListener(future -> {
                     if (future.isFailed()) {

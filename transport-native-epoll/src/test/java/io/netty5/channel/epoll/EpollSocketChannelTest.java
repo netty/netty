@@ -39,26 +39,7 @@ public class EpollSocketChannelTest {
                                                                   .channel(EpollSocketChannel.class)
                                                                   .handler(new ChannelHandler() { })
                                                                   .bind(new InetSocketAddress(0)).asStage().get();
-            EpollTcpInfo info = ch.tcpInfo();
-            assertTcpInfo0(info);
-            ch.close().asStage().sync();
-        } finally {
-            group.shutdownGracefully();
-        }
-    }
-
-    @Test
-    public void testTcpInfoReuse() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
-
-        try {
-            Bootstrap bootstrap = new Bootstrap();
-            EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
-                                                                  .channel(EpollSocketChannel.class)
-                                                                  .handler(new ChannelHandler() { })
-                                                                  .bind(new InetSocketAddress(0)).asStage().get();
-            EpollTcpInfo info = new EpollTcpInfo();
-            ch.tcpInfo(info);
+            EpollTcpInfo info = ch.getOption(EpollChannelOption.TCP_INFO);
             assertTcpInfo0(info);
             ch.close().asStage().sync();
         } finally {

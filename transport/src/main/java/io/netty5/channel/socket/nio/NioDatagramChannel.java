@@ -18,6 +18,7 @@ package io.netty5.channel.socket.nio;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
@@ -65,15 +66,33 @@ import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTR
 
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toJdkFamily;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 import static java.util.Objects.requireNonNull;
 
 /**
- * An NIO datagram {@link Channel} that sends and receives an
+ * An NIO {@link io.netty5.channel.socket.DatagramChannel} that sends and receives an
  * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
  *
  * @see AddressedEnvelope
  * @see DatagramPacket
+ *
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link io.netty5.channel.socket.DatagramChannel},
+ * {@link NioDatagramChannel} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>{@link ChannelOption}</th>
+ * <th>{@code INET}</th>
+ * <th>{@code INET6}</th>
+ * <th>{@code UNIX</th>
+ * </tr><tr>
+ * <td>{@link NioChannelOption}</td><td>X</td><td>X</td><td>X</td>
+ * </tr>
+ * </table>
  */
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel<Channel, SocketAddress, SocketAddress>
@@ -141,7 +160,7 @@ public final class NioDatagramChannel
      * on the Operation Systems default which will be chosen.
      */
     public NioDatagramChannel(EventLoop eventLoop, ProtocolFamily family) {
-        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, family), family);
+        this(eventLoop, DEFAULT_SELECTOR_PROVIDER, family);
     }
 
     /**
@@ -150,7 +169,7 @@ public final class NioDatagramChannel
      * which will be chosen.
      */
     public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider, ProtocolFamily family) {
-        this(eventLoop, newSocket(provider, family), family);
+        this(eventLoop, newSocket(provider, toJdkFamily(family)), family);
     }
 
     /**
@@ -158,7 +177,7 @@ public final class NioDatagramChannel
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket, ProtocolFamily family) {
         super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, SelectionKey.OP_READ);
-        this.family = family;
+        this.family = toJdkFamily(family);
     }
 
     @SuppressWarnings("unchecked")
