@@ -66,13 +66,13 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.graalvm.nativeimage</groupId>
-        <artifactId>native-image-maven-plugin</artifactId>
-        <version>${graalvm.version}</version>
+        <groupId>org.graalvm.buildtools</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <version>${nativebuildtools.version}</version>
         <executions>
           <execution>
             <goals>
-              <goal>native-image</goal>
+              <goal>build</goal>
             </goals>
             <phase>package</phase>
           </execution>
@@ -81,7 +81,6 @@
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
           <mainClass>io.netty5.testsuite.svm.client.DnsNativeClient</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback</buildArgs>
         </configuration>
       </plugin>
       <plugin>
