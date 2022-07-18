@@ -1,0 +1,3677 @@
+[
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[C"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[D"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[F"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[I"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[J"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[Ljava.lang.String;"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[Ljavax.management.openmbean.CompositeData;"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[S"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[Z"
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.internal.MemoryManagerOverride"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.pool.PooledBufferAllocator"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.MultithreadEventLoopGroup"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.http.cookie.ServerCookieEncoder"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.HostsFileEntriesProvider$ParserImpl"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.UnixResolverDnsServerAddressStreamProvider"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.FastThreadLocalThread"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.SystemPropertyUtil"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.InternalLoggerFactory"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.InternalLoggerFactory$InternalLoggerFactoryHolder"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory$NopInstanceHolder"},
+  "name":"ch.qos.logback.classic.encoder.PatternLayoutEncoder"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.classic.pattern.DateConverter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.classic.pattern.LevelConverter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.classic.pattern.LineSeparatorConverter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.classic.pattern.LoggerConverter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.classic.pattern.MessageConverter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.classic.pattern.ThreadConverter",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.internal.MemoryManagerOverride"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.pool.PooledBufferAllocator"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.MultithreadEventLoopGroup"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.http.cookie.ServerCookieEncoder"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.HostsFileEntriesProvider$ParserImpl"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.UnixResolverDnsServerAddressStreamProvider"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.FastThreadLocalThread"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.SystemPropertyUtil"},
+  "name":"ch.qos.logback.core.ConsoleAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.InternalLoggerFactory"},
+  "name":"ch.qos.logback.core.ConsoleAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.InternalLoggerFactory$InternalLoggerFactoryHolder"},
+  "name":"ch.qos.logback.core.ConsoleAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.core.ConsoleAppender",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory$NopInstanceHolder"},
+  "name":"ch.qos.logback.core.ConsoleAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.core.OutputStreamAppender",
+  "methods":[{"name":"setEncoder","parameterTypes":["ch.qos.logback.core.encoder.Encoder"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.core.encoder.LayoutWrappingEncoder",
+  "methods":[{"name":"setParent","parameterTypes":["ch.qos.logback.core.Appender"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"ch.qos.logback.core.pattern.PatternLayoutEncoderBase",
+  "methods":[{"name":"setPattern","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.Brotli"},
+  "name":"com.aayushatharva.brotli4j.Brotli4jLoader"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.fasterxml.jackson.databind.ObjectMapper"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.Zstd"},
+  "name":"com.github.luben.zstd.Zstd"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.LzfDecompressor"},
+  "name":"com.ning.compress.lzf.impl.UnsafeChunkDecoder",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"com.sun.crypto.provider.AESCipher$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.AESCipher$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$795/0x00000008011c4000"},
+  "name":"com.sun.crypto.provider.AESCipher$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$824/0x00000008011b43f8"},
+  "name":"com.sun.crypto.provider.AESCipher$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.AESCipher$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.AESCipher$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslClientHelloHandler"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$1254/0x000000080136a3a8"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$678/0x000000080122d8e8"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.AESKeyGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"com.sun.crypto.provider.DHKeyFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"com.sun.crypto.provider.DHKeyPairGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.DefaultChannelHandlerContext$$Lambda$662/0x000000080119f380"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslEngine"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"com.sun.crypto.provider.HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$795/0x00000008011c4000"},
+  "name":"com.sun.crypto.provider.HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$824/0x00000008011b43f8"},
+  "name":"com.sun.crypto.provider.HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509KeyManagerFactory$OpenSslKeyManagerFactorySpi"},
+  "name":"com.sun.crypto.provider.PBEKeyFactory$PBEWithMD5AndDES",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"com.sun.crypto.provider.PBEKeyFactory$PBEWithMD5AndDES",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"com.sun.crypto.provider.PBEParameters",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"com.sun.crypto.provider.PBES2Core$HmacSHA256AndAES_256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"com.sun.crypto.provider.PBES2Parameters$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"com.sun.crypto.provider.PBES2Parameters$HmacSHA256AndAES_256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"com.sun.crypto.provider.RSACipher",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.RSACipher",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.RSACipher",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.RSACipher",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslClientHelloHandler"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.TlsKeyMaterialGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslClientHelloHandler"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.TlsMasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslClientHelloHandler"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.TlsPrfGenerator$V12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"com.sun.crypto.provider.TlsRsaPremasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"com.sun.crypto.provider.TlsRsaPremasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"com.sun.crypto.provider.TlsRsaPremasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"com.sun.crypto.provider.TlsRsaPremasterSecretGenerator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.GarbageCollectorMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.GcInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.HotSpotDiagnosticMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.ThreadMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.UnixOperatingSystemMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.VMOption",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.internal.GarbageCollectorExtImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.internal.HotSpotDiagnostic",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.internal.HotSpotThreadImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.internal.OperatingSystemImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSsl"},
+  "name":"io.netty.internal.tcnative.SSLContext"
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.BufferHolder"},
+  "name":"io.netty5.buffer.api.BufferHolder",
+  "fields":[{"name":"buf"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.internal.ArcDrop"},
+  "name":"io.netty5.buffer.api.internal.ArcDrop",
+  "fields":[{"name":"count"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.internal.LeakDetection"},
+  "name":"io.netty5.buffer.api.internal.LeakDetection",
+  "fields":[{"name":"leakDetectionEnabled"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.internal.SendFromOwned"},
+  "name":"io.netty5.buffer.api.internal.SendFromOwned",
+  "fields":[{"name":"received"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$438/0x0000000800fbaa58"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"bind","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress"] }, 
+    {"name":"channelActive","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"close","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"connect","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress","java.net.SocketAddress"] }, 
+    {"name":"deregister","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"disconnect","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"flush","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"pendingOutboundBytes","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"read","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$509/0x0000000801006e40"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"pendingOutboundBytes","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$550/0x000000080101f640"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"bind","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress"] }, 
+    {"name":"connect","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress","java.net.SocketAddress"] }, 
+    {"name":"deregister","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"disconnect","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"pendingOutboundBytes","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"read","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$561/0x000000080100bc18"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"bind","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress"] }, 
+    {"name":"channelActive","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelReadComplete","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelShutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"close","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"connect","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress","java.net.SocketAddress"] }, 
+    {"name":"deregister","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"disconnect","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"flush","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"pendingOutboundBytes","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"read","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$565/0x0000000801083138"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$574/0x0000000801034de0"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"bind","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"close","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"connect","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress","java.net.SocketAddress"] }, 
+    {"name":"deregister","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"disconnect","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"pendingOutboundBytes","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$617/0x0000000801129db0"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"bind","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelReadComplete","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelShutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"close","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"connect","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.net.SocketAddress","java.net.SocketAddress"] }, 
+    {"name":"deregister","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"disconnect","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"flush","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"pendingOutboundBytes","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"read","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }, 
+    {"name":"write","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.ChannelHandlerMask$$Lambda$930/0x00000008010a3790"},
+  "name":"io.netty5.channel.ChannelHandler",
+  "queriedMethods":[
+    {"name":"register","parameterTypes":["io.netty5.channel.ChannelHandlerContext"] }, 
+    {"name":"sendOutboundEvent","parameterTypes":["io.netty5.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"shutdown","parameterTypes":["io.netty5.channel.ChannelHandlerContext","io.netty5.channel.ChannelShutdownDirection"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.DefaultFileRegion"
+},
+{
+  "condition":{"typeReachable":"io.netty5.bootstrap.AbstractBootstrap"},
+  "name":"io.netty5.channel.epoll.EpollServerSocketChannel",
+  "methods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop","io.netty5.channel.EventLoopGroup"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.epoll.NativeDatagramPacketArray$NativeDatagramPacket"
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.DnsAddressResolverGroup"},
+  "name":"io.netty5.channel.socket.nio.NioDatagramChannel",
+  "methods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.DnsNameResolver"},
+  "name":"io.netty5.channel.socket.nio.NioDatagramChannel",
+  "methods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.DnsNameResolverBuilder"},
+  "name":"io.netty5.channel.socket.nio.NioDatagramChannel",
+  "queriedMethods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.bootstrap.AbstractBootstrap"},
+  "name":"io.netty5.channel.socket.nio.NioServerSocketChannel",
+  "methods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop","io.netty5.channel.EventLoopGroup"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.bootstrap.Bootstrap"},
+  "name":"io.netty5.channel.socket.nio.NioSocketChannel",
+  "methods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.DnsNameResolver$DnsResponseHandler"},
+  "name":"io.netty5.channel.socket.nio.NioSocketChannel",
+  "methods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.DnsNameResolverBuilder"},
+  "name":"io.netty5.channel.socket.nio.NioSocketChannel",
+  "queriedMethods":[{"name":"<init>","parameterTypes":["io.netty5.channel.EventLoop"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"io.netty5.channel.unix.DatagramSocketAddress"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"io.netty5.channel.unix.DomainDatagramSocketAddress"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.PeerCredentials"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.ReferenceCountUpdater"},
+  "name":"io.netty5.util.AbstractReferenceCounted",
+  "fields":[{"name":"refCnt"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.DefaultChannelPipeline"},
+  "name":"io.netty5.util.ReferenceCountUtil"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.DefaultChannelPipeline$TailHandler"},
+  "name":"io.netty5.util.ReferenceCountUtil"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.embedded.EmbeddedChannel"},
+  "name":"io.netty5.util.ReferenceCountUtil",
+  "queryAllDeclaredMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollDatagramChannel"},
+  "name":"io.netty5.util.ReferenceCountUtil",
+  "queryAllDeclaredMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.DnsResolveContext"},
+  "name":"io.netty5.util.ReferenceCountUtil",
+  "queryAllDeclaredMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.ReferenceCountUtil"},
+  "name":"io.netty5.util.ReferenceCountUtil"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.ResourceLeakDetector"},
+  "name":"io.netty5.util.ReferenceCountUtil"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.FastThreadLocalRunnable"},
+  "name":"io.netty5.util.ReferenceCountUtil",
+  "queryAllDeclaredMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.SilentDispose"},
+  "name":"io.netty5.util.ReferenceCountUtil",
+  "queryAllDeclaredMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.NativeLibraryLoader"},
+  "name":"io.netty5.util.internal.NativeLibraryUtil",
+  "methods":[{"name":"loadLibrary","parameterTypes":["java.lang.String","boolean"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.SendFromSupplier"},
+  "name":"io.netty5.util.internal.SendFromSupplier",
+  "fields":[{"name":"gate"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.BaseLinkedQueueConsumerNodeRef"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.BaseLinkedQueueConsumerNodeRef",
+  "fields":[{"name":"consumerNode"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.BaseLinkedQueueProducerNodeRef"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.BaseLinkedQueueProducerNodeRef",
+  "fields":[{"name":"producerNode"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueColdProducerFields"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueColdProducerFields",
+  "fields":[{"name":"producerLimit"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueConsumerFields"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueConsumerFields",
+  "fields":[{"name":"consumerIndex"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueProducerFields"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueProducerFields",
+  "fields":[{"name":"producerIndex"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.LinkedQueueNode"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.LinkedQueueNode",
+  "fields":[{"name":"next"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.MpscArrayQueueConsumerIndexField"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.MpscArrayQueueConsumerIndexField",
+  "fields":[{"name":"consumerIndex"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerIndexField"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerIndexField",
+  "fields":[{"name":"producerIndex"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerLimitField"},
+  "name":"io.netty5.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerLimitField",
+  "fields":[{"name":"producerLimit"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"jakarta.servlet.Servlet"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.io.FileDescriptor"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.io.FilePermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"java.io.IOException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.io.ObjectInputStream",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Boolean",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Byte",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Character",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Deprecated",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Double",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Float",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Integer",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Long",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"java.lang.OutOfMemoryError"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"java.lang.RuntimeException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.lang.RuntimePermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Short",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.StackTraceElement",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.CommonsLoggerFactory"},
+  "name":"java.lang.String"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.String"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.LocationAwareSlf4JLogger"},
+  "name":"java.lang.Throwable",
+  "methods":[{"name":"getSuppressed","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.Void",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.BufferPoolMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.ClassLoadingMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.CompilationMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.LockInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent"},
+  "name":"java.lang.management.ManagementFactory",
+  "methods":[{"name":"getRuntimeMXBean","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.ManagementPermission",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.MemoryMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.MemoryManagerMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.MemoryPoolMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.MemoryUsage",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.MonitorInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.PlatformLoggingMXBean",
+  "queryAllPublicMethods":true,
+  "queriedMethods":[
+    {"name":"getLoggerLevel","parameterTypes":["java.lang.String"] }, 
+    {"name":"getLoggerNames","parameterTypes":[] }, 
+    {"name":"getParentLoggerName","parameterTypes":["java.lang.String"] }, 
+    {"name":"setLoggerLevel","parameterTypes":["java.lang.String","java.lang.String"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent"},
+  "name":"java.lang.management.RuntimeMXBean",
+  "methods":[{"name":"getInputArguments","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.RuntimeMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.lang.management.ThreadInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.DefaultHostsFileEntriesResolver"},
+  "name":"java.lang.reflect.Executable",
+  "methods":[{"name":"getParameterCount","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.dns.DnsNameResolverBuilder"},
+  "name":"java.lang.reflect.Executable",
+  "methods":[{"name":"getParameterCount","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor"},
+  "name":"java.lang.reflect.Executable",
+  "methods":[{"name":"getParameterCount","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.math.BigDecimal"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.math.BigInteger"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"java.net.InetSocketAddress"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.net.NetPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"java.net.PortUnreachableException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.net.SocketPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.net.URLPermission",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.socket.nio.NioChannelUtil"},
+  "name":"java.net.UnixDomainSocketAddress",
+  "methods":[
+    {"name":"getPath","parameterTypes":[] }, 
+    {"name":"of","parameterTypes":["java.lang.String"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$1"},
+  "name":"java.nio.Bits",
+  "fields":[{"name":"UNALIGNED"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0"},
+  "name":"java.nio.Buffer",
+  "fields":[{"name":"address"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.internal.Statics"},
+  "name":"java.nio.ByteBuffer",
+  "methods":[
+    {"name":"put","parameterTypes":["int","java.nio.ByteBuffer","int","int"] }, 
+    {"name":"slice","parameterTypes":["int","int"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0"},
+  "name":"java.nio.ByteBuffer",
+  "queriedMethods":[{"name":"alignedSlice","parameterTypes":["int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0"},
+  "name":"java.nio.DirectByteBuffer"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$1001/0x0000000801011540"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$377/0x0000000800ee8000"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$392/0x0000000800f98658"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$395/0x0000000800f22a38"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$405/0x0000000800f02550"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$423/0x0000000800faaf40"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$497/0x0000000800fbb528"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$509/0x000000080100fd68"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$515/0x0000000801005360"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$518/0x000000080100a158"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$524/0x0000000801019308"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$525/0x0000000800fac5c8"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$538/0x0000000801016228"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$551/0x00000008011027a0"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0$$Lambda$895/0x000000080108ade8"},
+  "name":"java.nio.DirectByteBuffer",
+  "queryAllDeclaredConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.unix.Unix"},
+  "name":"java.nio.channels.ClosedChannelException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.nio.channels.FileChannel"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.socket.nio.NioChannelUtil"},
+  "name":"java.nio.channels.spi.SelectorProvider"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.socket.nio.NioServerSocketChannel"},
+  "name":"java.nio.channels.spi.SelectorProvider",
+  "queriedMethods":[{"name":"openServerSocketChannel","parameterTypes":["java.net.ProtocolFamily"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.socket.nio.NioSocketChannel"},
+  "name":"java.nio.channels.spi.SelectorProvider",
+  "queriedMethods":[{"name":"openSocketChannel","parameterTypes":["java.net.ProtocolFamily"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.security.AllPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"java.security.KeyStoreSpi"
+},
+{
+  "condition":{"typeReachable":"io.netty5.bootstrap.Bootstrap$$Lambda$587/0x000000080103d6d8"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkAlpnSslUtils"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslClientContext"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslServerContext"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509TrustManagerWrapper"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslUtils"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.ThreadLocalInsecureRandom"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.security.SecurityPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"java.security.cert.CertStoreParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"java.security.interfaces.ECPrivateKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"java.security.interfaces.ECPrivateKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"java.security.interfaces.ECPublicKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"java.security.interfaces.ECPublicKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"java.security.interfaces.RSAPrivateKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"java.security.interfaces.RSAPrivateKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"java.security.interfaces.RSAPrivateKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"java.security.interfaces.RSAPublicKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"java.security.interfaces.RSAPublicKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"java.security.interfaces.RSAPublicKey"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.util.Date"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.util.PropertyPermission",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"java.util.PropertyPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.util.logging.LogManager",
+  "methods":[{"name":"getLoggingMXBean","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.util.logging.LoggingMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.management.MBeanOperationInfo",
+  "queryAllPublicMethods":true,
+  "queriedMethods":[{"name":"getSignature","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.management.MBeanServerBuilder",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.management.NotificationBroadcasterSupport",
+  "queriedMethods":[{"name":"getNotificationInfo","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.management.ObjectName"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"javax.management.ObjectName"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.management.openmbean.CompositeData"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.management.openmbean.OpenMBeanOperationInfoSupport"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.management.openmbean.TabularData"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509TrustManagerWrapper"},
+  "name":"javax.net.ssl.SSLContext",
+  "fields":[{"name":"contextSpi"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkAlpnSslUtils"},
+  "name":"javax.net.ssl.SSLEngine",
+  "methods":[
+    {"name":"getApplicationProtocol","parameterTypes":[] }, 
+    {"name":"getHandshakeApplicationProtocol","parameterTypes":[] }, 
+    {"name":"getHandshakeApplicationProtocolSelector","parameterTypes":[] }, 
+    {"name":"setHandshakeApplicationProtocolSelector","parameterTypes":["java.util.function.BiFunction"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkAlpnSslUtils"},
+  "name":"javax.net.ssl.SSLParameters",
+  "methods":[{"name":"setApplicationProtocols","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslServerContext"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslEngine$DefaultOpenSslSession"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.LazyX509Certificate"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"javax.servlet.Servlet"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Slf4JLoggerFactory"},
+  "name":"javax.smartcardio.CardPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0"},
+  "name":"jdk.internal.misc.Unsafe",
+  "methods":[{"name":"getUnsafe","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"jdk.management.jfr.ConfigurationInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"jdk.management.jfr.EventTypeInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"jdk.management.jfr.FlightRecorderMXBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"jdk.management.jfr.FlightRecorderMXBeanImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"jdk.management.jfr.RecordingInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"jdk.management.jfr.SettingDescriptorInfo",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.Lz4Decompressor"},
+  "name":"net.jpountz.lz4.LZ4HCJavaSafeCompressor",
+  "fields":[{"name":"INSTANCE"}],
+  "methods":[{"name":"<init>","parameterTypes":["int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.Lz4Decompressor"},
+  "name":"net.jpountz.lz4.LZ4JavaSafeCompressor",
+  "fields":[{"name":"INSTANCE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.Lz4Decompressor"},
+  "name":"net.jpountz.lz4.LZ4JavaSafeFastDecompressor",
+  "fields":[{"name":"INSTANCE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.Lz4Decompressor"},
+  "name":"net.jpountz.lz4.LZ4JavaSafeSafeDecompressor",
+  "fields":[{"name":"INSTANCE"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.CommonsLoggerFactory"},
+  "name":"org.apache.commons.logging.LogFactory"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.CommonsLoggerFactory"},
+  "name":"org.apache.commons.logging.impl.Jdk14Logger",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.CommonsLoggerFactory"},
+  "name":"org.apache.commons.logging.impl.Log4JLogger"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.CommonsLoggerFactory"},
+  "name":"org.apache.commons.logging.impl.LogFactoryImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.CommonsLoggerFactory"},
+  "name":"org.apache.commons.logging.impl.WeakHashtable",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2Logger"},
+  "name":"org.apache.logging.log4j.Logger",
+  "queriedMethods":[{"name":"debug","parameterTypes":["java.lang.String","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.AppenderSet"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.AsyncAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.ConsoleAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.CountingNoOpAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.FailoverAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.FailoversPlugin"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.FileAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.HttpAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.MemoryMappedFileAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.NullAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.OutputStreamAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.RandomAccessFileAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.RollingFileAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.RollingRandomAccessFileAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.ScriptAppenderSelector"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.SmtpAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.SocketAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.SyslogAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.WriterAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.db.ColumnMapping"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.db.jdbc.ColumnConfig"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.db.jdbc.DataSourceConnectionSource"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.db.jdbc.DriverManagerConnectionSource"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.db.jdbc.FactoryMethodConnectionSource"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.db.jdbc.JdbcAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.mom.JmsAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.mom.jeromq.JeroMqAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.mom.kafka.KafkaAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.nosql.NoSqlAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rewrite.LoggerNameLevelRewritePolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rewrite.MapRewritePolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rewrite.PropertiesRewritePolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rewrite.RewriteAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.CompositeTriggeringPolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.CronTriggeringPolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.DefaultRolloverStrategy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.DirectWriteRolloverStrategy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.NoOpTriggeringPolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.OnStartupTriggeringPolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.TimeBasedTriggeringPolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.DeleteAction"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.IfAccumulatedFileCount"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.IfAccumulatedFileSize"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.IfAll"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.IfAny"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.IfFileName"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.IfLastModified"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.IfNot"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.PathSortByModificationTime"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.PosixViewAttributeAction"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.rolling.action.ScriptCondition"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.routing.IdlePurgePolicy"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.routing.Route"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.routing.Routes"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.appender.routing.RoutingAppender"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.async.ArrayBlockingQueueFactory"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.async.AsyncLoggerConfig"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.async.AsyncLoggerConfig$RootLogger"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.async.DisruptorBlockingQueueFactory"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.async.JCToolsBlockingQueueFactory"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.async.LinkedTransferQueueFactory"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.AppenderRef"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.AppendersPlugin"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.CustomLevelConfig"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.CustomLevels"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.DefaultAdvertiser"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.HttpWatcher"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.LoggerConfig"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.LoggerConfig$RootLogger"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.LoggersPlugin"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.PropertiesPlugin"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.Property"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.ScriptsPlugin"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.arbiters.ClassArbiter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.arbiters.DefaultArbiter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.arbiters.ScriptArbiter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.arbiters.SelectArbiter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.arbiters.SystemPropertyArbiter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.json.JsonConfigurationFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$BigDecimalConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$BigIntegerConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$BooleanConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$ByteArrayConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$ByteConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$CharArrayConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$CharacterConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$CharsetConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$ClassConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$CronExpressionConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$DoubleConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$DurationConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$FileConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$FloatConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$InetAddressConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$IntegerConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$LevelConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$LongConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$PathConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$PatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$SecurityProviderConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$ShortConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$StringConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$UriConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$UrlConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.plugins.convert.TypeConverters$UuidConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.properties.PropertiesConfigurationFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.xml.XmlConfigurationFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.config.yaml.YamlConfigurationFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.BurstFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.CompositeFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.DenyAllFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.DynamicThresholdFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.LevelMatchFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.LevelRangeFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.MapFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.MarkerFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.NoMarkerFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.RegexFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.ScriptFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.StringMatchFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.StructuredDataFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.ThreadContextMapFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.ThresholdFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.filter.TimeFilter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.impl.Log4jContextFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.AppenderAdmin",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.AppenderAdminMBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.ContextSelectorAdmin",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.ContextSelectorAdminMBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.LoggerContextAdmin",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.LoggerContextAdminMBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.StatusLoggerAdmin",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.jmx.StatusLoggerAdminMBean",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.CsvLogEventLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.CsvParameterLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.GelfLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.HtmlLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.JsonLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.LevelPatternSelector"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.LoggerFields"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.MarkerPatternSelector"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.MessageLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.PatternLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.PatternMatch"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.Rfc5424Layout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.ScriptPatternSelector"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.SerializedLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.SyslogLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.XmlLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.layout.YamlLayout"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.ContextMapLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.DateLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.EnvironmentLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.EventLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.JavaLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.JmxRuntimeInputArgumentsLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.JndiLookup"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.Log4jLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.LowerLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.MainMapLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.MapLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.MarkerLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.ResourceBundleLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.StructuredDataLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.SystemPropertiesLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.lookup.UpperLookup",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.net.MulticastDnsAdvertiser"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.net.SocketAddress"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.net.SocketOptions"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.net.SocketPerformancePreferences"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.net.ssl.KeyStoreConfiguration"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.net.ssl.SslConfiguration"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.net.ssl.TrustStoreConfiguration"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Black"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Blue"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Cyan"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Green"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Magenta"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Red"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$White"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Yellow"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.ClassNamePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.DatePatternConverter",
+  "queryAllDeclaredMethods":true,
+  "methods":[{"name":"newInstance","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.EncodingPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.EndOfBatchPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.EqualsIgnoreCaseReplacementConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.EqualsReplacementConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.ExtendedThrowablePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.FileDatePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.FileLocationPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.FullLocationPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.HighlightConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.IntegerPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.LevelPatternConverter",
+  "queryAllDeclaredMethods":true,
+  "methods":[{"name":"newInstance","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.LineLocationPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.LineSeparatorPatternConverter",
+  "queryAllDeclaredMethods":true,
+  "methods":[{"name":"newInstance","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.LoggerFqcnPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.LoggerPatternConverter",
+  "queryAllDeclaredMethods":true,
+  "methods":[{"name":"newInstance","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.MapPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.MarkerPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.MarkerSimpleNamePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.MaxLengthConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.MdcPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.MessagePatternConverter",
+  "queryAllDeclaredMethods":true,
+  "methods":[{"name":"newInstance","parameterTypes":["org.apache.logging.log4j.core.config.Configuration","java.lang.String[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.MethodLocationPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.NanoTimePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.NdcPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.ProcessIdPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.RegexReplacement"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.RegexReplacementConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.RelativeTimePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.RepeatPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.RootThrowablePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.SequenceNumberPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.StyleConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.ThreadIdPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.ThreadNamePatternConverter",
+  "queryAllDeclaredMethods":true,
+  "methods":[{"name":"newInstance","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.ThreadPriorityPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.ThrowablePatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.UuidPatternConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.pattern.VariablesNotEmptyReplacementConverter"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.script.Script"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.script.ScriptFile"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.script.ScriptRef"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.core.util.KeyValuePair"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2Logger"},
+  "name":"org.apache.logging.log4j.message.DefaultFlowMessageFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.message.DefaultFlowMessageFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.message.ReusableMessageFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"org.apache.logging.log4j.util.internal.DefaultObjectInputFilter",
+  "queryAllPublicMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.COMPOSITE$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.DH$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.DSA$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.DSTU4145$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.EC$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.ECGOST$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.EdEC$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.ElGamal$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.GM$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.GOST$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.IES$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.RSA$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.X509$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.SelfSignedCertificate"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.Blake2b$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.Blake2s$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.DSTU7564$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.GOST3411$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.Haraka$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.Keccak$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.MD2$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.MD4$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.MD5$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.RIPEMD128$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.RIPEMD160$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.RIPEMD256$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.RIPEMD320$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.SHA1$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.SHA224$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.SHA256$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.SHA3$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.SHA384$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.SHA512$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.SM3$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.Skein$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.Tiger$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.digest.Whirlpool$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.drbg.DRBG$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.keystore.BC$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.keystore.BCFKS$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.keystore.PKCS12$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.AES$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.ARC4$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.ARIA$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Blowfish$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.CAST5$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.CAST6$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Camellia$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.ChaCha$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.DES$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.DESede$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.DSTU7624$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.GOST28147$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.GOST3412_2015$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Grain128$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Grainv1$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.HC128$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.HC256$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.IDEA$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Noekeon$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.OpenSSLPBKDF$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.PBEPBKDF1$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.PBEPBKDF2$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.PBEPKCS12$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Poly1305$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.RC2$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.RC5$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.RC6$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Rijndael$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.SCRYPT$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.SEED$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.SM4$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Salsa20$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Serpent$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Shacal2$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.SipHash$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.SipHash128$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Skipjack$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.TEA$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.TLSKDF$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Threefish$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Twofish$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.VMPC$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.VMPCKSA3$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.XSalsa20$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.XTEA$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"org.bouncycastle.jcajce.provider.symmetric.Zuc$Mappings",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.BouncyCastle"},
+  "name":"org.bouncycastle.jsse.provider.BouncyCastleJsseProvider"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.ZstdCompressor"},
+  "name":"org.osgi.framework.BundleEvent"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.ClassLoadingImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.CompilationImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.ManagementFactoryHelper$1",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.ManagementFactoryHelper$PlatformLoggingImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.MemoryImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.MemoryManagerImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.MemoryPoolImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"sun.management.RuntimeImpl",
+  "queryAllPublicConstructors":true
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.LzfCompressor"},
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.CleanerJava9"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent$Mpsc$$Lambda$559/0x0000000801106648"},
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}],
+  "queriedMethods":[
+    {"name":"getAndAddLong","parameterTypes":["java.lang.Object","long","long"] }, 
+    {"name":"getAndSetObject","parameterTypes":["java.lang.Object","long","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent0"},
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}],
+  "queriedMethods":[{"name":"copyMemory","parameterTypes":["java.lang.Object","long","java.lang.Object","long","long"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.shaded.org.jctools.util.UnsafeAccess"},
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}],
+  "queriedMethods":[
+    {"name":"getAndAddLong","parameterTypes":["java.lang.Object","long","long"] }, 
+    {"name":"getAndSetObject","parameterTypes":["java.lang.Object","long","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent"},
+  "name":"sun.misc.VM"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.nio.NioHandler"},
+  "name":"sun.nio.ch.SelectorImpl",
+  "fields":[
+    {"name":"publicSelectedKeys"}, 
+    {"name":"selectedKeys"}
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.provider.JavaKeyStore$JKS",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.bootstrap.Bootstrap$$Lambda$587/0x000000080103d6d8"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkAlpnSslUtils"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslClientContext"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslServerContext"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509TrustManagerWrapper"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslUtils"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.ThreadLocalInsecureRandom"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.PlatformDependent"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.http.websocketx.WebSocketUtil$1"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$795/0x00000008011c4000"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$824/0x00000008011b43f8"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollDomainSocketChannel"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslServerContext"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$1254/0x000000080136a3a8"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.BouncyCastleSelfSignedCertGenerator"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.SelfSignedCertificate"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"sun.security.provider.SHA5$SHA512",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.provider.SHA5$SHA512",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"sun.security.provider.SHA5$SHA512",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"sun.security.provider.SHA5$SHA512",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"sun.security.provider.SHA5$SHA512",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.AbstractEpollChannel$1"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslClientHelloHandler"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner$$Lambda$678/0x000000080122d8e8"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.LazyX509Certificate"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.SelfSignedCertificate"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.provider.certpath.CollectionCertStore",
+  "methods":[{"name":"<init>","parameterTypes":["java.security.cert.CertStoreParameters"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.provider.certpath.PKIXCertPathValidator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"sun.security.provider.certpath.PKIXCertPathValidator",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.provider.certpath.SunCertPathBuilder",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.rsa.PSSParameters",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSsl"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509KeyManagerFactory$OpenSslKeyManagerFactorySpi"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.util.SelfSignedCertificate"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslClientHelloHandler"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslHandler$SslTasksRunner"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"sun.security.rsa.RSAPSSSignature",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"sun.security.rsa.RSASignature$SHA512withRSA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"sun.security.rsa.RSASignature$SHA512withRSA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"sun.security.rsa.RSASignature$SHA512withRSA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"sun.security.rsa.RSASignature$SHA512withRSA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"sun.security.rsa.RSASignature$SHA512withRSA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509KeyManagerFactory"},
+  "name":"sun.security.ssl.KeyManagerFactoryImpl$SunX509",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"sun.security.ssl.KeyManagerFactoryImpl$SunX509",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JettyNpnSslEngine"},
+  "name":"sun.security.ssl.NextProtoNegoExtension"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509TrustManagerWrapper"},
+  "name":"sun.security.ssl.SSLContextImpl",
+  "fields":[{"name":"trustManager"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkAlpnSslUtils"},
+  "name":"sun.security.ssl.SSLContextImpl$TLSContext",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslClientContext"},
+  "name":"sun.security.ssl.SSLContextImpl$TLSContext",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.ssl.SSLContextImpl$TLSContext",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslServerContext"},
+  "name":"sun.security.ssl.SSLContextImpl$TLSContext",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslX509TrustManagerWrapper"},
+  "name":"sun.security.ssl.SSLContextImpl$TLSContext",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslUtils"},
+  "name":"sun.security.ssl.SSLContextImpl$TLSContext",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslMasterKeyHandler"},
+  "name":"sun.security.ssl.SSLSessionImpl",
+  "fields":[{"name":"masterSecret"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkAlpnSslUtils"},
+  "name":"sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslServerContext"},
+  "name":"sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslContext"},
+  "name":"sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.AuthorityInfoAccessExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.AuthorityKeyIdentifierExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.BasicConstraintsExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.CRLDistributionPointsExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.CertificatePoliciesExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.ExtendedKeyUsageExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.IssuerAlternativeNameExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.KeyUsageExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.NetscapeCertTypeExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.PrivateKeyUsageExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.SubjectAlternativeNameExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.JdkSslContext$Defaults"},
+  "name":"sun.security.x509.SubjectKeyIdentifierExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+}
+]

@@ -1,0 +1,230 @@
+[
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[Lcom.sun.management.internal.DiagnosticCommandArgumentInfo;"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"[Lcom.sun.management.internal.DiagnosticCommandInfo;"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSsl"},
+  "name":"[Ljava.lang.String;"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslEngine"},
+  "name":"[Ljava.lang.String;"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslEngine$DefaultOpenSslSession"},
+  "name":"[Ljava.lang.String;"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.EpollHandler"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.local.LocalChannel$$Lambda$1251/0x0000000801369868"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslEngine"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.SslClientHelloHandler"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$1211/0x000000080133ee58"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$556/0x00000008010f5cc8"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$570/0x0000000801081400"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.SingleThreadEventExecutor$$Lambda$579/0x0000000801035d10"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.codec.compression.ZstdCompressor"},
+  "name":"com.github.luben.zstd.ZstdCompressCtx",
+  "fields":[{"name":"nativePtr"}]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.internal.DiagnosticCommandArgumentInfo",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","boolean","boolean","boolean","int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"com.sun.management.internal.DiagnosticCommandInfo",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","boolean","java.util.List"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.ChannelException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.Buffer"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.DatagramSocketAddress",
+  "methods":[{"name":"<init>","parameterTypes":["byte[]","int","int","int","io.netty5.channel.unix.DatagramSocketAddress"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.DomainDatagramSocketAddress",
+  "methods":[{"name":"<init>","parameterTypes":["byte[]","int","io.netty5.channel.unix.DomainDatagramSocketAddress"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.FileDescriptor"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.LimitsStaticallyReferencedJniMethods"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"io.netty5.channel.unix.Socket"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslClientContext$OpenSslClientSessionContext"},
+  "name":"io.netty5.handler.ssl.OpenSslClientSessionCache"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSslSessionContext"},
+  "name":"io.netty5.handler.ssl.OpenSslSessionCache",
+  "methods":[
+    {"name":"getSession","parameterTypes":["long","byte[]"] }, 
+    {"name":"sessionCreated","parameterTypes":["long","long"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslClientContext"},
+  "name":"io.netty5.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslClientContext"},
+  "name":"io.netty5.handler.ssl.ReferenceCountedOpenSslContext$AbstractCertificateVerifier",
+  "methods":[{"name":"verify","parameterTypes":["long","byte[][]","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext"},
+  "name":"io.netty5.handler.ssl.ReferenceCountedOpenSslContext$AbstractCertificateVerifier",
+  "methods":[{"name":"verify","parameterTypes":["long","byte[][]","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext"},
+  "name":"io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext$ExtendedTrustManagerVerifyCallback"
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext"},
+  "name":"io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext$OpenSslServerCertificateCallback",
+  "methods":[{"name":"handle","parameterTypes":["long","byte[]","byte[][]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext"},
+  "name":"io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext$OpenSslSniHostnameMatcher",
+  "methods":[{"name":"match","parameterTypes":["long","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.io.IOException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.internal.MemoryManagerOverride"},
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.buffer.api.pool.PooledBufferAllocator"},
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.MultithreadEventLoopGroup"},
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.resolver.HostsFileEntriesProvider$ParserImpl"},
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.concurrent.FastThreadLocalThread"},
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.SocketUtils$$Lambda$380/0x0000000800edaa30"},
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.SystemPropertyUtil"},
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.handler.ssl.OpenSsl"},
+  "name":"java.lang.Exception",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.lang.OutOfMemoryError"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.lang.RuntimeException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.net.InetSocketAddress",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.net.PortUnreachableException"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.nio.Buffer",
+  "fields":[
+    {"name":"limit"}, 
+    {"name":"position"}
+  ],
+  "methods":[
+    {"name":"limit","parameterTypes":[] }, 
+    {"name":"position","parameterTypes":[] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.nio.DirectByteBuffer"
+},
+{
+  "condition":{"typeReachable":"io.netty5.channel.epoll.Native"},
+  "name":"java.nio.channels.ClosedChannelException",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty5.util.internal.logging.Log4J2LoggerFactory"},
+  "name":"java.util.Arrays",
+  "methods":[{"name":"asList","parameterTypes":["java.lang.Object[]"] }]
+}
+]
