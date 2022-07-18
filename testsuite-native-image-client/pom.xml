@@ -81,7 +81,7 @@
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
           <mainClass>io.netty5.testsuite.svm.client.DnsNativeClient</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback --initialize-at-build-time=io.netty5 -H:ReflectionConfigurationResources=reflection-config.json</buildArgs>
+          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback</buildArgs>
         </configuration>
       </plugin>
       <plugin>

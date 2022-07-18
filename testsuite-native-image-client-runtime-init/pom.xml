@@ -75,7 +75,7 @@
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
           <mainClass>io.netty5.testsuite.svm.client.NativeClientWithNettyInitAtRuntime</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback --initialize-at-run-time=io.netty5.util.NetUtil</buildArgs>
+          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback</buildArgs>
         </configuration>
       </plugin>
       <plugin>
