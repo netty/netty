@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.util.IntSupplier;
+import java.util.function.IntSupplier;
 
 /**
  * Default select strategy.
@@ -27,6 +27,6 @@ final class DefaultSelectStrategy implements SelectStrategy {
 
     @Override
     public int calculateStrategy(IntSupplier selectSupplier, boolean notBlockForIo) throws Exception {
-        return notBlockForIo ? selectSupplier.get() : SelectStrategy.SELECT;
+        return notBlockForIo ? selectSupplier.getAsInt() : SelectStrategy.SELECT;
     }
 }

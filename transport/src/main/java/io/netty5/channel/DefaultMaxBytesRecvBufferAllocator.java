@@ -17,10 +17,10 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.UncheckedBooleanSupplier;
 
 import java.util.AbstractMap;
 import java.util.Map.Entry;
+import java.util.function.BooleanSupplier;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
@@ -37,12 +37,7 @@ public class DefaultMaxBytesRecvBufferAllocator implements MaxBytesRecvBufferAll
         private int bytesToRead;
         private int lastBytesRead;
         private int attemptBytesRead;
-        private final UncheckedBooleanSupplier defaultMaybeMoreSupplier = new UncheckedBooleanSupplier() {
-            @Override
-            public boolean get() {
-                return attemptBytesRead == lastBytesRead;
-            }
-        };
+        private final BooleanSupplier defaultMaybeMoreSupplier = () -> attemptBytesRead == lastBytesRead;
 
         @Override
         public Buffer allocate(BufferAllocator alloc) {
@@ -83,9 +78,9 @@ public class DefaultMaxBytesRecvBufferAllocator implements MaxBytesRecvBufferAll
         }
 
         @Override
-        public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+        public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
             // Keep reading if we are allowed to read more bytes, and our last read filled up the buffer we provided.
-            return bytesToRead > 0 && maybeMoreDataSupplier.get();
+            return bytesToRead > 0 && maybeMoreDataSupplier.getAsBoolean();
         }
 
         @Override

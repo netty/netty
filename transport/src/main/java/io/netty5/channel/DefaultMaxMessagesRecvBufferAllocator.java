@@ -17,7 +17,8 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.UncheckedBooleanSupplier;
+
+import java.util.function.BooleanSupplier;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
@@ -97,12 +98,7 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
         private int attemptedBytesRead;
         private int lastBytesRead;
         private final boolean respectMaybeMoreData = DefaultMaxMessagesRecvBufferAllocator.this.respectMaybeMoreData;
-        private final UncheckedBooleanSupplier defaultMaybeMoreSupplier = new UncheckedBooleanSupplier() {
-            @Override
-            public boolean get() {
-                return attemptedBytesRead == lastBytesRead;
-            }
-        };
+        private final BooleanSupplier defaultMaybeMoreSupplier = () -> attemptedBytesRead == lastBytesRead;
 
         /**
          * Only {@link ChannelOption#MAX_MESSAGES_PER_READ} is used.
@@ -142,9 +138,9 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
         }
 
         @Override
-        public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+        public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
             return autoRead &&
-                   (!respectMaybeMoreData || maybeMoreDataSupplier.get()) &&
+                   (!respectMaybeMoreData || maybeMoreDataSupplier.getAsBoolean()) &&
                    totalMessages < maxMessagePerRead && (ignoreBytesRead || totalBytesRead > 0);
         }
 

@@ -41,7 +41,6 @@ import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
@@ -58,6 +57,8 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 import static io.netty5.channel.ChannelOption.IP_TOS;
@@ -119,6 +120,9 @@ public final class KQueueDatagramChannel
                     StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
                     StringUtil.simpleClassName(Buffer.class) + ')';
+
+    private static final BooleanSupplier TRUE_SUPPLIER = () -> true;
+
     private volatile boolean connected;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
@@ -584,7 +588,7 @@ public final class KQueueDatagramChannel
 
                 // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
                 // as we read anything).
-                } while (allocHandle.continueReading(isAutoRead(), UncheckedBooleanSupplier.TRUE_SUPPLIER));
+                } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
             } catch (Throwable t) {
                 if (buffer != null) {
                     buffer.close();
