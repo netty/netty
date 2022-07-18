@@ -25,7 +25,6 @@ import io.netty5.channel.SelectStrategyFactory;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
-import io.netty5.util.IntSupplier;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -41,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.IntSupplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;

@@ -17,8 +17,9 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.internal.UnstableApi;
+
+import java.util.function.BooleanSupplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -106,7 +107,7 @@ public interface RecvBufferAllocator {
          * @return                      {@code true} if the read loop should continue reading. {@code false} if the
          * read loop is complete.
          */
-        boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier);
+        boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier);
 
         /**
          * The read has completed.
@@ -168,7 +169,7 @@ public interface RecvBufferAllocator {
         }
 
         @Override
-        public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+        public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
             return delegate.continueReading(autoRead, maybeMoreDataSupplier);
         }
 

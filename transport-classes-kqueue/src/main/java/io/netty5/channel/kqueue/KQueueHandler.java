@@ -24,7 +24,6 @@ import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
-import io.netty5.util.IntSupplier;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.internal.StringUtil;
@@ -33,7 +32,9 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.IntSupplier;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
@@ -61,7 +62,14 @@ public final class KQueueHandler implements IoHandler {
     private final KQueueEventArray eventList;
     private final SelectStrategy selectStrategy;
     private final IovArray iovArray = new IovArray();
-    private final IntSupplier selectNowSupplier = this::kqueueWaitNow;
+    private final IntSupplier selectNowSupplier = () -> {
+        try {
+            return kqueueWaitNow();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    };
+
     private final IntObjectMap<AbstractKQueueChannel<?>> channels = new IntObjectHashMap<>(4096);
 
     private volatile int wakenUp;

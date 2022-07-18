@@ -20,13 +20,14 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.RecvBufferAllocator.DelegatingHandle;
 import io.netty5.channel.RecvBufferAllocator.Handle;
-import io.netty5.util.UncheckedBooleanSupplier;
+
+import java.util.function.BooleanSupplier;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 abstract class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
-    private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
+    private final BooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
     private boolean overrideGuess;
     private boolean readEOF;
     private long numberBytesPending;

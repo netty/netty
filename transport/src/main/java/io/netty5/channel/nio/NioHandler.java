@@ -24,7 +24,6 @@ import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
-import io.netty5.util.IntSupplier;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.ReflectionUtil;
 import io.netty5.util.internal.StringUtil;
@@ -33,6 +32,7 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
@@ -46,6 +46,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.IntSupplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -66,7 +67,13 @@ public final class NioHandler implements IoHandler {
     private static final int MIN_PREMATURE_SELECTOR_RETURNS = 3;
     private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
 
-    private final IntSupplier selectNowSupplier = this::selectNow;
+    private final IntSupplier selectNowSupplier = () -> {
+        try {
+            return selectNow();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    };
 
     static {
         int selectorAutoRebuildThreshold = SystemPropertyUtil.getInt("io.netty5.selectorAutoRebuildThreshold", 512);

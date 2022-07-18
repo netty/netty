@@ -22,9 +22,10 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.RecvBufferAllocator;
-import io.netty5.util.UncheckedBooleanSupplier;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 /**
  * Channel initializer useful in tests.
@@ -111,7 +112,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+                public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
                     return continueReading(autoRead);
                 }
 

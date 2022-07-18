@@ -25,7 +25,6 @@ import io.netty5.channel.SelectStrategyFactory;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
-import io.netty5.util.IntSupplier;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.internal.StringUtil;
@@ -34,7 +33,9 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.IntSupplier;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
@@ -69,7 +70,13 @@ public class EpollHandler implements IoHandler {
     private NativeDatagramPacketArray datagramPacketArray;
 
     private final SelectStrategy selectStrategy;
-    private final IntSupplier selectNowSupplier = this::epollWaitNow;
+    private final IntSupplier selectNowSupplier = () -> {
+        try {
+            return epollWaitNow();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    };
 
     private static final long AWAKE = -1L;
     private static final long NONE = Long.MAX_VALUE;

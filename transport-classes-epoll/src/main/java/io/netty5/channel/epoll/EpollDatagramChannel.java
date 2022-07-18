@@ -44,7 +44,6 @@ import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.Errors.NativeIoException;
 import io.netty5.channel.unix.SegmentedDatagramPacket;
 import io.netty5.channel.unix.UnixChannelUtil;
-import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectUtil;
@@ -64,6 +63,7 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -118,6 +118,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
+    private static final BooleanSupplier TRUE_SUPPLIER = () -> true;
 
     private volatile boolean activeOnOpen;
     private volatile int maxDatagramSize;
@@ -580,7 +581,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
                 // We use the TRUE_SUPPLIER as it is also ok to read less than what we did try to read (as long
                 // as we read anything).
-            } while (allocHandle.continueReading(isAutoRead(), UncheckedBooleanSupplier.TRUE_SUPPLIER));
+            } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
         } catch (Throwable t) {
             if (buf != null) {
                 buf.close();
@@ -629,7 +630,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 }
             // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
             // as we read anything).
-            } while (allocHandle.continueReading(isAutoRead(), UncheckedBooleanSupplier.TRUE_SUPPLIER));
+            } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
         } catch (Throwable t) {
             return t;
         }

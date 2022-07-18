@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.util.IntSupplier;
+import java.util.function.IntSupplier;
 
 /**
  * Select strategy interface.

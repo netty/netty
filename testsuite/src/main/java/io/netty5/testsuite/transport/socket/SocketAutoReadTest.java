@@ -27,13 +27,13 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.RecvBufferAllocator;
-import io.netty5.util.UncheckedBooleanSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -216,7 +216,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+                public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
                     return autoRead;
                 }
 

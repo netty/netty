@@ -18,7 +18,6 @@ package io.netty5.channel.socket.nio;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedRecvBufferAllocator;
-import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
@@ -34,7 +33,6 @@ import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.RecvBufferAllocator.Handle;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
@@ -61,6 +59,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 
@@ -107,6 +106,8 @@ public final class NioDatagramChannel
             StringUtil.simpleClassName(Buffer.class) + ", " +
             StringUtil.simpleClassName(SocketAddress.class) + ">, " +
             StringUtil.simpleClassName(Buffer.class) + ')';
+
+    private static final BooleanSupplier TRUE_SUPPLIER = () -> true;
 
     private final ProtocolFamily family;
 
@@ -652,7 +653,7 @@ public final class NioDatagramChannel
     protected boolean continueReading(RecvBufferAllocator.Handle allocHandle) {
         // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
         // as we read anything).
-        return allocHandle.continueReading(isAutoRead(), UncheckedBooleanSupplier.TRUE_SUPPLIER);
+        return allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER);
     }
 
     private static final class ReceiveDatagram implements WritableComponentProcessor<IOException> {

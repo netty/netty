@@ -29,7 +29,6 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.util.UncheckedBooleanSupplier;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -38,6 +37,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -649,8 +649,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead, UncheckedBooleanSupplier maybeMoreDataSupplier) {
-                    return continueReading(autoRead) && maybeMoreDataSupplier.get();
+                public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
+                    return continueReading(autoRead) && maybeMoreDataSupplier.getAsBoolean();
                 }
 
                 @Override
