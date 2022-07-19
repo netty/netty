@@ -592,7 +592,6 @@ public class HttpResponseDecoderTest {
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_0));
         assertThat(res.status().code(), is(999));
         assertThat(res.decoderResult().isFailure(), is(true));
-        assertThat(res.decoderResult().isFinished(), is(true));
         assertThat(ch.readInbound(), is(nullValue()));
 
         // More garbage should not generate anything (i.e. the decoder discards anything beyond this point.)

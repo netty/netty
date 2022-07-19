@@ -22,7 +22,7 @@ import static java.util.Objects.requireNonNull;
 public class DefaultHttpObject implements HttpObject {
 
     private static final int HASH_CODE_PRIME = 31;
-    private DecoderResult decoderResult = DecoderResult.SUCCESS;
+    private DecoderResult decoderResult = DecoderResult.success();
 
     protected DefaultHttpObject() {
         // Disallow direct instantiation

@@ -15,65 +15,54 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.util.Signal;
-
 import static java.util.Objects.requireNonNull;
 
 public class DecoderResult {
 
-    protected static final Signal SIGNAL_UNFINISHED = Signal.valueOf(DecoderResult.class, "UNFINISHED");
-    protected static final Signal SIGNAL_SUCCESS = Signal.valueOf(DecoderResult.class, "SUCCESS");
-
-    public static final DecoderResult UNFINISHED = new DecoderResult(SIGNAL_UNFINISHED);
-    public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
+    private static final DecoderResult SUCCESS = new DecoderResult();
 
     public static DecoderResult failure(Throwable cause) {
         requireNonNull(cause, "cause");
         return new DecoderResult(cause);
     }
 
+    public static DecoderResult success() {
+        return SUCCESS;
+    }
+
     private final Throwable cause;
 
     protected DecoderResult(Throwable cause) {
-        requireNonNull(cause, "cause");
-        this.cause = cause;
+        this.cause = requireNonNull(cause, "cause");
     }
 
-    public boolean isFinished() {
-        return cause != SIGNAL_UNFINISHED;
+    protected DecoderResult() {
+        this.cause = null;
     }
 
-    public boolean isSuccess() {
-        return cause == SIGNAL_SUCCESS;
+    public final boolean isSuccess() {
+        return cause == null;
     }
 
-    public boolean isFailure() {
-        return cause != SIGNAL_SUCCESS && cause != SIGNAL_UNFINISHED;
+    public final boolean isFailure() {
+        return cause != null;
     }
 
-    public Throwable cause() {
-        if (isFailure()) {
-            return cause;
-        } else {
-            return null;
-        }
+    public final Throwable cause() {
+        return cause;
     }
 
     @Override
     public String toString() {
-        if (isFinished()) {
-            if (isSuccess()) {
-                return "success";
-            }
+        if (isSuccess()) {
+            return "success";
+        }
 
-            String cause = cause().toString();
-            return new StringBuilder(cause.length() + 17)
+        String cause = cause().toString();
+        return new StringBuilder(cause.length() + 17)
                 .append("failure(")
                 .append(cause)
                 .append(')')
                 .toString();
-        } else {
-            return "unfinished";
-        }
     }
 }
