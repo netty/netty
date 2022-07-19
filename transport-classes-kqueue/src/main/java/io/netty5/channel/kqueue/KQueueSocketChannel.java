@@ -27,6 +27,7 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
+import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -56,6 +57,7 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.IP_TOS;
 import static io.netty5.channel.ChannelOption.SO_KEEPALIVE;
@@ -497,26 +499,18 @@ public final class KQueueSocketChannel
     }
 
     @Override
-    void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
+    void readReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
+                   Predicate<RecvBufferAllocator.Handle> maybeMoreData) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX &&
                 getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
-            readReadyFd();
+            readReadyFd(allocHandle);
         } else {
-            readReadyBytes(allocHandle);
+            readReadyBytes(allocHandle, recvBufferAllocator, maybeMoreData);
         }
     }
 
-    private void readReadyFd() {
-        if (socket.isInputShutdown()) {
-            super.clearReadFilter0();
-            return;
-        }
-        final KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
-
+    private void readReadyFd(RecvBufferAllocator.Handle allocHandle) {
         final ChannelPipeline pipeline = pipeline();
-        allocHandle.reset();
-        readReadyBefore();
-
         try {
             readLoop: do {
                 // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
@@ -548,7 +542,6 @@ public final class KQueueSocketChannel
             pipeline.fireChannelExceptionCaught(t);
         } finally {
             readIfIsAutoRead();
-            readReadyFinally();
         }
     }
 
@@ -880,23 +873,17 @@ public final class KQueueSocketChannel
         }
     }
 
-    private void readReadyBytes(final KQueueRecvBufferAllocatorHandle allocHandle) {
-        if (shouldBreakReadReady()) {
-            clearReadFilter0();
-            return;
-        }
+    private void readReadyBytes(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
+                                Predicate<RecvBufferAllocator.Handle> maybeMoreData) {
         final ChannelPipeline pipeline = pipeline();
-        final BufferAllocator bufferAllocator = bufferAllocator();
         allocHandle.reset();
-        readReadyBefore();
-
         Buffer buffer = null;
         boolean close = false;
         try {
             do {
                 // we use a direct buffer here as the native implementations only be able
                 // to handle direct buffers.
-                buffer = allocHandle.allocate(bufferAllocator);
+                buffer = allocHandle.allocate(recvBufferAllocator);
                 doReadBytes(buffer);
                 if (allocHandle.lastBytesRead() <= 0) {
                     // nothing was read, release the buffer.
@@ -928,7 +915,8 @@ public final class KQueueSocketChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (allocHandle.continueReading(isAutoRead(), maybeMoreData)
+                    && !isShutdown(ChannelShutdownDirection.Inbound));
 
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -940,13 +928,11 @@ public final class KQueueSocketChannel
             }
         } catch (Throwable t) {
             handleReadException(pipeline, buffer, t, close, allocHandle);
-        } finally {
-            readReadyFinally();
         }
     }
 
     private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
-                                     KQueueRecvBufferAllocatorHandle allocHandle) {
+                                     RecvBufferAllocator.Handle allocHandle) {
         if (buffer.readableBytes() > 0) {
             readPending = false;
             pipeline.fireChannelRead(buffer);

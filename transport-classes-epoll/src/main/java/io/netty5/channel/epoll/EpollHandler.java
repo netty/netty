@@ -243,7 +243,7 @@ public class EpollHandler implements IoHandler {
      */
     private void add(AbstractEpollChannel<?> ch) throws IOException {
         int fd = ch.socket.intValue();
-        Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
+        Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags());
         AbstractEpollChannel<?> old = channels.put(fd, ch);
 
         // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
@@ -255,7 +255,7 @@ public class EpollHandler implements IoHandler {
      * The flags of the given epoll was modified so update the registration
      */
     private void modify(AbstractEpollChannel<?> ch) throws IOException {
-        Native.epollCtlMod(epollFd.intValue(), ch.socket.intValue(), ch.flags);
+        Native.epollCtlMod(epollFd.intValue(), ch.socket.intValue(), ch.flags());
     }
 
     /**

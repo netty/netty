@@ -31,7 +31,6 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.RecvBufferAllocator.Handle;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Socket;
@@ -50,25 +49,8 @@ import static java.util.Objects.requireNonNull;
 
 abstract class AbstractEpollChannel<P extends UnixChannel>
         extends AbstractChannel<P, SocketAddress, SocketAddress> implements UnixChannel {
-    final LinuxSocket socket;
-    /**
-     * The future of the current connection attempt.  If not null, subsequent
-     * connection attempts will fail.
-     */
-    protected EpollRegistration registration;
+    protected final LinuxSocket socket;
 
-    private volatile SocketAddress localAddress;
-    private volatile SocketAddress remoteAddress;
-
-    protected int flags = Native.EPOLLET;
-    boolean inputClosedSeenErrorOnRead;
-    boolean epollInReadyRunnablePending;
-
-    protected volatile boolean active;
-
-    boolean readPending;
-    boolean maybeMoreDataToRead;
-    private EpollRecvBufferAllocatorHandle allocHandle;
     private final Runnable epollInReadyRunnable = new Runnable() {
         @Override
         public void run() {
@@ -77,15 +59,31 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     };
 
-    AbstractEpollChannel(EventLoop eventLoop, ChannelMetadata metadata,
+    protected volatile boolean active;
+
+    boolean readPending;
+
+    private EpollRegistration registration;
+
+    private int flags = Native.EPOLLET;
+    private boolean inputClosedSeenErrorOnRead;
+    private boolean epollInReadyRunnablePending;
+    private boolean maybeMoreDataToRead;
+
+    private boolean receivedRdHup;
+    private volatile SocketAddress localAddress;
+    private volatile SocketAddress remoteAddress;
+
+    AbstractEpollChannel(EventLoop eventLoop, ChannelMetadata metadata, int initialFlag,
                          RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd) {
-        this(null, eventLoop, metadata, defaultRecvAllocator, fd, false);
+        this(null, eventLoop, metadata, initialFlag, defaultRecvAllocator, fd, false);
     }
 
     @SuppressWarnings("unchecked")
-    AbstractEpollChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
+    AbstractEpollChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata, int initialFlag,
                          RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, boolean active) {
         super(parent, eventLoop, metadata, defaultRecvAllocator);
+        flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -97,9 +95,10 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @SuppressWarnings("unchecked")
-    AbstractEpollChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
+    AbstractEpollChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata, int initialFlag,
                          RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, SocketAddress remote) {
         super(parent, eventLoop, metadata, defaultRecvAllocator);
+        flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
@@ -108,11 +107,11 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         localAddress = fd.localAddress();
     }
 
-    protected boolean fetchLocalAddress() {
+    protected final boolean fetchLocalAddress() {
         return socket.protocolFamily() != SocketProtocolFamily.UNIX;
     }
 
-    static boolean isSoErrorZero(Socket fd) {
+    protected static boolean isSoErrorZero(Socket fd) {
         try {
             return fd.getSoError() == 0;
         } catch (IOException e) {
@@ -120,27 +119,31 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    void setFlag(int flag) throws IOException {
+    protected final void setFlag(int flag) throws IOException {
         if (!isFlagSet(flag)) {
             flags |= flag;
             modifyEvents();
         }
     }
 
-    void clearFlag(int flag) throws IOException {
+    protected final void clearFlag(int flag) throws IOException {
         if (isFlagSet(flag)) {
             flags &= ~flag;
             modifyEvents();
         }
     }
 
-    EpollRegistration registration() {
+    protected final EpollRegistration registration() {
         assert registration != null;
         return registration;
     }
 
-    boolean isFlagSet(int flag) {
+    private boolean isFlagSet(int flag) {
         return (flags & flag) != 0;
+    }
+
+    final int flags() {
+        return flags;
     }
 
     @Override
@@ -162,7 +165,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         socket.close();
     }
 
-    @SuppressWarnings("unchecked")
     final void resetCachedAddresses() {
         cacheAddresses(localAddress, null);
         remoteAddress = null;
@@ -174,11 +176,11 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return socket.isOpen();
     }
 
-    void register0(EpollRegistration registration) {
+    final void register0(EpollRegistration registration) {
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
@@ -186,7 +188,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         this.registration = registration;
     }
 
-    void deregister0() throws Exception {
+    final void deregister0() throws Exception {
         if (registration != null) {
             registration.remove();
         }
@@ -213,7 +215,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || isAllowHalfClosure());
     }
 
-    final void clearEpollIn() {
+    private void clearEpollIn() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
             final EventLoop loop = executor();
@@ -253,10 +255,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
      * that it owned (or was itself) the buffer.
      */
     protected final Buffer newDirectBuffer(Resource<?> holder, Buffer buf) {
-        BufferAllocator allocator = bufferAllocator();
-        if (!allocator.getAllocationType().isDirect()) {
-            allocator = DefaultBufferAllocators.offHeapAllocator();
-        }
+        BufferAllocator allocator = ioBufferAllocator();
         try (holder) {
             int readableBytes = buf.readableBytes();
             Buffer directCopy = allocator.allocate(readableBytes);
@@ -315,7 +314,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
      * Write bytes to the socket, with or without a remote address.
      * Used for datagram and TCP client fast open writes.
      */
-    final long doWriteOrSendBytes(Buffer data, SocketAddress remoteAddress, boolean fastOpen)
+    protected final long doWriteOrSendBytes(Buffer data, SocketAddress remoteAddress, boolean fastOpen)
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
 
@@ -337,39 +336,50 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    /**
-     * Called once EPOLLIN event is ready to be processed
-     */
-    abstract void epollInReady();
+    final void epollInReady() {
+        if (shouldBreakEpollInReady()) {
+            clearEpollIn0();
+            return;
+        }
+        maybeMoreDataToRead = true;
+        RecvBufferAllocator.Handle handle = recvBufAllocHandle();
+        handle.reset();
 
-    final void epollInBefore() {
-        maybeMoreDataToRead = false;
-    }
+        try {
+            epollInReady(handle, ioBufferAllocator(), receivedRdHup);
+        } finally {
+            this.maybeMoreDataToRead = maybeMoreDataToRead(handle) || receivedRdHup;
 
-    final void epollInFinally() {
-        maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
-
-        if (allocHandle.isReceivedRdHup() || readPending && maybeMoreDataToRead) {
-            // trigger a read again as there may be something left to read and because of epoll ET we
-            // will not get notified again until we read everything from the socket
-            //
-            // It is possible the last fireChannelRead call could cause the user to call read() again, or if
-            // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
-            // to false before every read operation to prevent re-entry into epollInReady() we will not read from
-            // the underlying OS again unless the user happens to call read again.
-            executeEpollInReadyRunnable();
-        } else if (!readPending && !isAutoRead()) {
-            // Check if there is a readPending which was not processed yet.
-            // This could be for two reasons:
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-            //
-            // See https://github.com/netty/netty/issues/2254
-            clearEpollIn();
+            if (receivedRdHup || readPending && maybeMoreDataToRead) {
+                // trigger a read again as there may be something left to read and because of epoll ET we
+                // will not get notified again until we read everything from the socket
+                //
+                // It is possible the last fireChannelRead call could cause the user to call read() again, or if
+                // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
+                // to false before every read operation to prevent re-entry into epollInReady() we will not read from
+                // the underlying OS again unless the user happens to call read again.
+                executeEpollInReadyRunnable();
+            } else if (!readPending && !isAutoRead()) {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                clearEpollIn();
+            }
         }
     }
 
-    final void executeEpollInReadyRunnable() {
+    /**
+     * Called once EPOLLIN event is ready to be processed
+     */
+    protected abstract void epollInReady(RecvBufferAllocator.Handle handle, BufferAllocator recvBufferAllocator,
+                                         boolean receivedRdHup);
+
+    protected abstract boolean maybeMoreDataToRead(RecvBufferAllocator.Handle handle);
+
+    private void executeEpollInReadyRunnable() {
         if (epollInReadyRunnablePending || !isActive() || shouldBreakEpollInReady()) {
             return;
         }
@@ -382,7 +392,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
      */
     final void epollRdHupReady() {
         // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
-        recvBufAllocHandle().receivedRdHup();
+        receivedRdHup = true;
 
         if (isActive()) {
             // If it is still active, we need to call epollInReady as otherwise we may miss to
@@ -413,7 +423,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     /**
      * Shutdown the input side of the channel.
      */
-    void shutdownInput(boolean rdHup) {
+    protected final void shutdownInput(boolean rdHup) {
         if (!socket.isInputShutdown()) {
             if (isAllowHalfClosure()) {
                 clearEpollIn();
@@ -424,22 +434,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         } else if (!rdHup) {
             inputClosedSeenErrorOnRead = true;
         }
-    }
-
-    @Override
-    public EpollRecvBufferAllocatorHandle recvBufAllocHandle() {
-        if (allocHandle == null) {
-            allocHandle = newEpollHandle(super.recvBufAllocHandle());
-        }
-        return allocHandle;
-    }
-
-    /**
-     * Create a new {@link EpollRecvBufferAllocatorHandle} instance.
-     * @param handle The handle to wrap with EPOLL specific logic.
-     */
-    EpollRecvBufferAllocatorHandle newEpollHandle(Handle handle) {
-        return new EpollRecvBufferAllocatorHandle(handle);
     }
 
     @Override
@@ -465,7 +459,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    protected final void clearEpollIn0() {
+    private void clearEpollIn0() {
         assert executor().inEventLoop();
         try {
             readPending = false;
@@ -479,7 +473,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) throws Exception {
         if (socket.finishConnect()) {
             active = true;
@@ -496,7 +489,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected void doBind(SocketAddress local) throws Exception {
         if (local instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) local);
@@ -542,7 +534,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         return connected;
     }
 
-    boolean doConnect0(SocketAddress remote) throws Exception {
+    protected boolean doConnect0(SocketAddress remote) throws Exception {
         boolean success = false;
         try {
             boolean connected = socket.connect(remote);
@@ -559,12 +551,12 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    protected SocketAddress localAddress0() {
+    protected final SocketAddress localAddress0() {
         return localAddress;
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
+    protected final SocketAddress remoteAddress0() {
         return remoteAddress;
     }
 
@@ -621,5 +613,14 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     @Override
     protected final void autoReadCleared() {
         clearEpollIn();
+    }
+
+    private BufferAllocator ioBufferAllocator() {
+        BufferAllocator alloc =  bufferAllocator();
+        // We need to ensure we always allocate a direct Buffer as we can only use a direct buffer to read via JNI.
+        if (!alloc.getAllocationType().isDirect()) {
+            return DefaultBufferAllocators.offHeapAllocator();
+        }
+        return alloc;
     }
 }

@@ -27,6 +27,7 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -57,8 +58,7 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 import static io.netty5.channel.ChannelOption.IP_TOS;
@@ -91,8 +91,6 @@ import static java.util.Objects.requireNonNull;
  * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
  * <td>{@link UnixChannelOption#SO_REUSEPORT}</td><td>X</td><td>X</td><td>-</td>
- * </tr><tr>
- * <td>{@link KQueueChannelOption#RCV_ALLOC_TRANSPORT_PROVIDES_GUESS}</td><td>X</td><td>X</td><td>X</td>
  * </tr>
  * </table>
  */
@@ -121,7 +119,7 @@ public final class KQueueDatagramChannel
                     StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
                     StringUtil.simpleClassName(Buffer.class) + ')';
 
-    private static final BooleanSupplier TRUE_SUPPLIER = () -> true;
+    private static final Predicate<RecvBufferAllocator.Handle> TRUE_SUPPLIER = h -> true;
 
     private volatile boolean connected;
     private volatile boolean inputShutdown;
@@ -491,121 +489,110 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
-        assert executor().inEventLoop();
-        if (shouldBreakReadReady()) {
-            clearReadFilter0();
-            return;
-        }
+    void readReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
+                   Predicate<RecvBufferAllocator.Handle> maybeMoreData) {
         final ChannelPipeline pipeline = pipeline();
-        final BufferAllocator allocator = bufferAllocator();
-        allocHandle.reset();
-        readReadyBefore();
 
         Throwable exception = null;
+        Buffer buffer = null;
         try {
-            Buffer buffer = null;
-            try {
-                boolean connected = isConnected();
-                do {
-                    buffer = allocHandle.allocate(allocator);
-                    allocHandle.attemptedBytesRead(buffer.writableBytes());
+            boolean connected = isConnected();
+            do {
+                buffer = allocHandle.allocate(recvBufferAllocator);
+                allocHandle.attemptedBytesRead(buffer.writableBytes());
 
-                    final DatagramPacket packet;
-                    if (connected) {
-                        try {
-                            allocHandle.lastBytesRead(doReadBytes(buffer));
-                        } catch (Errors.NativeIoException e) {
-                            // We need to correctly translate connect errors to match NIO behaviour.
-                            if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
-                                PortUnreachableException error = new PortUnreachableException(e.getMessage());
-                                error.initCause(e);
-                                throw error;
-                            }
-                            throw e;
+                final DatagramPacket packet;
+                if (connected) {
+                    try {
+                        allocHandle.lastBytesRead(doReadBytes(buffer));
+                    } catch (Errors.NativeIoException e) {
+                        // We need to correctly translate connect errors to match NIO behaviour.
+                        if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+                            PortUnreachableException error = new PortUnreachableException(e.getMessage());
+                            error.initCause(e);
+                            throw error;
                         }
-                        if (allocHandle.lastBytesRead() <= 0) {
-                            // nothing was read, release the buffer.
-                            buffer.close();
-                            buffer = null;
-                            break;
+                        throw e;
+                    }
+                    if (allocHandle.lastBytesRead() <= 0) {
+                        // nothing was read, release the buffer.
+                        buffer.close();
+                        buffer = null;
+                        break;
+                    }
+                    packet = new DatagramPacket(buffer, localAddress(), remoteAddress());
+                } else {
+                    SocketAddress localAddress = null;
+                    SocketAddress remoteAddress = null;
+                    int bytesRead = 0;
+                    if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                        final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
+                        buffer.forEachWritable(0, recvFrom);
+                        DomainDatagramSocketAddress recvAddress = recvFrom.remoteAddress();
+                        if (recvAddress != null) {
+                            remoteAddress = recvAddress;
+                            bytesRead = recvAddress.receivedAmount();
+                            localAddress = recvAddress.localAddress();
                         }
-                        packet = new DatagramPacket(buffer, localAddress(), remoteAddress());
                     } else {
-                        SocketAddress localAddress = null;
-                        SocketAddress remoteAddress = null;
-                        int bytesRead = 0;
-                        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-                            final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
-                            buffer.forEachWritable(0, recvFrom);
-                            DomainDatagramSocketAddress recvAddress = recvFrom.remoteAddress();
-                            if (recvAddress != null) {
-                                remoteAddress = recvAddress;
-                                bytesRead = recvAddress.receivedAmount();
-                                localAddress = recvAddress.localAddress();
+                        try (var iterator = buffer.forEachWritable()) {
+                            var component = iterator.first();
+                            long addr = component.writableNativeAddress();
+                            DatagramSocketAddress datagramSocketAddress;
+                            if (addr != 0) {
+                                // has a memory address so use optimized call
+                                datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
+                            } else {
+                                ByteBuffer nioData = component.writableBuffer();
+                                datagramSocketAddress = socket.recvFrom(
+                                        nioData, nioData.position(), nioData.limit());
                             }
-                        } else {
-                            try (var iterator = buffer.forEachWritable()) {
-                                var component = iterator.first();
-                                long addr = component.writableNativeAddress();
-                                DatagramSocketAddress datagramSocketAddress;
-                                if (addr != 0) {
-                                    // has a memory address so use optimized call
-                                    datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
-                                } else {
-                                    ByteBuffer nioData = component.writableBuffer();
-                                    datagramSocketAddress = socket.recvFrom(
-                                            nioData, nioData.position(), nioData.limit());
-                                }
-                                if (datagramSocketAddress != null) {
-                                    remoteAddress = datagramSocketAddress;
-                                    localAddress = datagramSocketAddress.localAddress();
-                                    bytesRead = datagramSocketAddress.receivedAmount();
-                                }
+                            if (datagramSocketAddress != null) {
+                                remoteAddress = datagramSocketAddress;
+                                localAddress = datagramSocketAddress.localAddress();
+                                bytesRead = datagramSocketAddress.receivedAmount();
                             }
                         }
-
-                        if (remoteAddress == null) {
-                            allocHandle.lastBytesRead(-1);
-                            buffer.close();
-                            break;
-                        }
-                        if (localAddress == null) {
-                            localAddress = localAddress();
-                        }
-                        allocHandle.lastBytesRead(bytesRead);
-                        buffer.skipWritableBytes(allocHandle.lastBytesRead());
-
-                        packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                     }
 
-                    allocHandle.incMessagesRead(1);
+                    if (remoteAddress == null) {
+                        allocHandle.lastBytesRead(-1);
+                        buffer.close();
+                        break;
+                    }
+                    if (localAddress == null) {
+                        localAddress = localAddress();
+                    }
+                    allocHandle.lastBytesRead(bytesRead);
+                    buffer.skipWritableBytes(allocHandle.lastBytesRead());
 
-                    readPending = false;
-                    pipeline.fireChannelRead(packet);
-
-                    buffer = null;
-
-                // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-                // as we read anything).
-                } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
-            } catch (Throwable t) {
-                if (buffer != null) {
-                    buffer.close();
+                    packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                 }
-                exception = t;
-            }
 
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
+                allocHandle.incMessagesRead(1);
 
-            if (exception != null) {
-                pipeline.fireChannelExceptionCaught(exception);
-            } else {
-                readIfIsAutoRead();
+                readPending = false;
+                pipeline.fireChannelRead(packet);
+
+                buffer = null;
+
+            // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+            // as we read anything).
+            } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
+        } catch (Throwable t) {
+            if (buffer != null) {
+                buffer.close();
             }
-        } finally {
-            readReadyFinally();
+            exception = t;
+        }
+
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+
+        if (exception != null) {
+            pipeline.fireChannelExceptionCaught(exception);
+        } else {
+            readIfIsAutoRead();
         }
     }
 

@@ -17,7 +17,6 @@ package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -63,7 +62,7 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
 
@@ -118,7 +117,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
-    private static final BooleanSupplier TRUE_SUPPLIER = () -> true;
+    private static final Predicate<RecvBufferAllocator.Handle> TRUE_SUPPLIER = h -> true;
 
     private volatile boolean activeOnOpen;
     private volatile int maxDatagramSize;
@@ -164,7 +163,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), fd, active);
+        super(null, eventLoop, METADATA, 0, new FixedRecvBufferAllocator(2048), fd, active);
     }
 
     @Override
@@ -504,38 +503,27 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     @Override
-    void epollInReady() {
-        assert executor().inEventLoop();
-        if (shouldBreakEpollInReady()) {
-            clearEpollIn0();
-            return;
-        }
-        final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
-
+    protected void epollInReady(RecvBufferAllocator.Handle handle, BufferAllocator recvBufferAllocator,
+                                boolean receivedRdHup) {
         final ChannelPipeline pipeline = pipeline();
-        allocHandle.reset();
-        epollInBefore();
+        Throwable exception = socket.protocolFamily() == SocketProtocolFamily.UNIX ?
+                doReadBufferDomainSocket(handle, recvBufferAllocator) : doReadBuffer(handle, recvBufferAllocator);
+        handle.readComplete();
+        pipeline.fireChannelReadComplete();
 
-        try {
-            Throwable exception = socket.protocolFamily() == SocketProtocolFamily.UNIX ?
-                    doReadBufferDomainSocket(allocHandle) : doReadBuffer(allocHandle);
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-
-            if (exception != null) {
-                pipeline.fireChannelExceptionCaught(exception);
-            }
-            readIfIsAutoRead();
-        } finally {
-            epollInFinally();
+        if (exception != null) {
+            pipeline.fireChannelExceptionCaught(exception);
         }
+        readIfIsAutoRead();
     }
 
-    private Throwable doReadBufferDomainSocket(EpollRecvBufferAllocatorHandle allocHandle) {
-        BufferAllocator allocator = bufferAllocator();
-        if (!allocator.getAllocationType().isDirect()) {
-            allocator = DefaultBufferAllocators.offHeapAllocator();
-        }
+    @Override
+    protected boolean maybeMoreDataToRead(RecvBufferAllocator.Handle handle) {
+        return handle.lastBytesRead() > 0;
+    }
+
+    private Throwable doReadBufferDomainSocket(RecvBufferAllocator.Handle allocHandle,
+                                               BufferAllocator allocator) {
         Buffer buf = null;
         try {
             boolean connected = isConnected();
@@ -591,8 +579,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         return null;
     }
 
-    private Throwable doReadBuffer(EpollRecvBufferAllocatorHandle allocHandle) {
-        final BufferAllocator allocator = bufferAllocator();
+    private Throwable doReadBuffer(RecvBufferAllocator.Handle allocHandle, BufferAllocator allocator) {
         try {
             boolean connected = isConnected();
             do {
@@ -607,13 +594,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 try {
                     if (numDatagram <= 1) {
                         if (!connected || isUdpGro()) {
-                            read = recvmsg(allocHandle, cleanDatagramPacketArray(), buf);
+                            read = recvmsg(allocHandle, allocator, cleanDatagramPacketArray(), buf);
                         } else {
                             read = connectedRead(allocHandle, buf, datagramSize);
                         }
                     } else {
                         // Try to use scattering reads via recvmmsg(...) syscall.
-                        read = scatteringRead(allocHandle, cleanDatagramPacketArray(),
+                        read = scatteringRead(allocHandle, allocator, cleanDatagramPacketArray(),
                                               buf, datagramSize, numDatagram);
                     }
                 } catch (NativeIoException e) {
@@ -637,7 +624,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         return null;
     }
 
-    private boolean connectedRead(EpollRecvBufferAllocatorHandle allocHandle, Buffer buf,
+    private boolean connectedRead(RecvBufferAllocator.Handle allocHandle, Buffer buf,
                                   int maxDatagramPacketSize) throws Exception {
         try {
             int writable = maxDatagramPacketSize != 0 ? Math.min(buf.writableBytes(), maxDatagramPacketSize)
@@ -713,25 +700,24 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private static void processPacket(ChannelPipeline pipeline, EpollRecvBufferAllocatorHandle handle,
+    private static void processPacket(ChannelPipeline pipeline, RecvBufferAllocator.Handle handle,
                                       int bytesRead, AddressedEnvelope<?, ?> packet) {
         handle.lastBytesRead(bytesRead);
         handle.incMessagesRead(1);
         pipeline.fireChannelRead(packet);
     }
 
-    private static void processPacketList(ChannelPipeline pipeline, EpollRecvBufferAllocatorHandle handle,
-                                          int bytesRead, RecyclableArrayList packetList) {
+    private static void processPacketList(ChannelPipeline pipeline, RecvBufferAllocator.Handle handle,
+                                          BufferAllocator allocator, int bytesRead, RecyclableArrayList packetList) {
         int messagesRead = packetList.size();
         handle.lastBytesRead(bytesRead);
         handle.incMessagesRead(messagesRead);
-        BufferAllocator allocator = pipeline.channel().bufferAllocator();
         for (int i = 0; i < messagesRead; i++) {
             pipeline.fireChannelRead(packetList.set(i, allocator.allocate(0)));
         }
     }
 
-    private boolean recvmsg(EpollRecvBufferAllocatorHandle allocHandle,
+    private boolean recvmsg(RecvBufferAllocator.Handle allocHandle, BufferAllocator allocator,
                             NativeDatagramPacketArray array, Buffer buf) throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
@@ -765,7 +751,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // it into the RecyclableArrayList.
                 buf = null;
 
-                processPacketList(pipeline(), allocHandle, bytesReceived, datagramPackets);
+                processPacketList(pipeline(), allocHandle, allocator, bytesReceived, datagramPackets);
                 datagramPackets.recycle();
                 datagramPackets = null;
             }
@@ -776,8 +762,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private boolean scatteringRead(EpollRecvBufferAllocatorHandle allocHandle, NativeDatagramPacketArray array,
-                                   Buffer buf, int datagramSize, int numDatagram) throws IOException {
+    private boolean scatteringRead(RecvBufferAllocator.Handle allocHandle, BufferAllocator allocator,
+                                   NativeDatagramPacketArray array, Buffer buf, int datagramSize, int numDatagram)
+            throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
             int initialWriterOffset = buf.writerOffset();
@@ -820,7 +807,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             buf.close();
             buf = null;
 
-            processPacketList(pipeline(), allocHandle, bytesReceived, datagramPackets);
+            processPacketList(pipeline(), allocHandle, allocator, bytesReceived, datagramPackets);
             datagramPackets.recycle();
             datagramPackets = null;
             return true;

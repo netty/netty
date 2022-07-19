@@ -17,11 +17,8 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.internal.UnstableApi;
 
-import java.util.function.BooleanSupplier;
-
-import static java.util.Objects.requireNonNull;
+import java.util.function.Predicate;
 
 /**
  * Allocates a new receive buffer whose capacity is probably large enough to read all inbound data and small enough
@@ -34,7 +31,6 @@ public interface RecvBufferAllocator {
      */
     Handle newHandle();
 
-    @UnstableApi
     interface Handle {
         /**
          * Creates a new receive buffer whose capacity is probably large enough to read all inbound data and small
@@ -60,6 +56,7 @@ public interface RecvBufferAllocator {
 
         /**
          * Increment the number of messages that have been read for the current read loop.
+         *
          * @param numMessages The amount to increment by.
          */
         void incMessagesRead(int numMessages);
@@ -67,125 +64,58 @@ public interface RecvBufferAllocator {
         /**
          * Set the bytes that have been read for the last read operation.
          * This may be used to increment the number of bytes that have been read.
+         *
          * @param bytes The number of bytes from the previous read operation. This may be negative if an read error
-         * occurs. If a negative value is seen it is expected to be return on the next call to
-         * {@link #lastBytesRead()}. A negative value will signal a termination condition enforced externally
-         * to this class and is not required to be enforced in {@link #continueReading(boolean)}.
+         *              occurs. If a negative value is seen it is expected to be return on the next call to
+         *              {@link #lastBytesRead()}. A negative value will signal a termination condition enforced
+         *              externally to this class and is not required to be enforced in
+         *              {@link #continueReading(boolean)}.
          */
         void lastBytesRead(int bytes);
 
         /**
          * Get the amount of bytes for the previous read operation.
+         *
          * @return The amount of bytes for the previous read operation.
          */
         int lastBytesRead();
 
         /**
          * Set how many bytes the read operation will (or did) attempt to read.
+         *
          * @param bytes How many bytes the read operation will (or did) attempt to read.
          */
         void attemptedBytesRead(int bytes);
 
         /**
          * Get how many bytes the read operation will (or did) attempt to read.
+         *
          * @return How many bytes the read operation will (or did) attempt to read.
          */
         int attemptedBytesRead();
 
         /**
          * Determine if the current read loop should continue.
-         * @param autoRead              {@çode true} if autoread is used, {@code false} otherwise.
-         * @return                      {@code true} if the read loop should continue reading. {@code false}
-         *                              if the read loop is complete.
+         *
+         * @param autoRead {@çode true} if autoread is used, {@code false} otherwise.
+         * @return {@code true} if the read loop should continue reading. {@code false}
+         * if the read loop is complete.
          */
         boolean continueReading(boolean autoRead);
 
         /**
          * Same as {@link Handle#continueReading(boolean)} except "more data" is determined by the supplier parameter.
-         * @param autoRead              {@çode true} if autoread is used, {@code false} otherwise.
-         * @param maybeMoreDataSupplier A supplier that determines if there maybe more data to read.
-         * @return                      {@code true} if the read loop should continue reading. {@code false} if the
+         *
+         * @param autoRead               {@code true} if autoread is used, {@code false} otherwise.
+         * @param maybeMoreDataPredicate A Predicate that determines if there maybe more data to read.
+         * @return {@code true} if the read loop should continue reading. {@code false} if the
          * read loop is complete.
          */
-        boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier);
+        boolean continueReading(boolean autoRead, Predicate<Handle> maybeMoreDataPredicate);
 
         /**
          * The read has completed.
          */
         void readComplete();
-    }
-
-    /**
-     * A {@link Handle} which delegates all call to some other {@link Handle}.
-     */
-    class DelegatingHandle implements Handle {
-        private final Handle delegate;
-
-        public DelegatingHandle(Handle delegate) {
-            this.delegate = requireNonNull(delegate, "delegate");
-        }
-
-        /**
-         * Get the {@link Handle} which all methods will be delegated to.
-         * @return the {@link Handle} which all methods will be delegated to.
-         */
-        protected final Handle delegate() {
-            return delegate;
-        }
-
-        @Override
-        public Buffer allocate(BufferAllocator alloc) {
-            return delegate.allocate(alloc);
-        }
-
-        @Override
-        public int guess() {
-            return delegate.guess();
-        }
-
-        @Override
-        public void reset() {
-            delegate.reset();
-        }
-
-        @Override
-        public void incMessagesRead(int numMessages) {
-            delegate.incMessagesRead(numMessages);
-        }
-
-        @Override
-        public void lastBytesRead(int bytes) {
-            delegate.lastBytesRead(bytes);
-        }
-
-        @Override
-        public int lastBytesRead() {
-            return delegate.lastBytesRead();
-        }
-
-        @Override
-        public boolean continueReading(boolean autoRead) {
-            return delegate.continueReading(autoRead);
-        }
-
-        @Override
-        public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
-            return delegate.continueReading(autoRead, maybeMoreDataSupplier);
-        }
-
-        @Override
-        public int attemptedBytesRead() {
-            return delegate.attemptedBytesRead();
-        }
-
-        @Override
-        public void attemptedBytesRead(int bytes) {
-            delegate.attemptedBytesRead(bytes);
-        }
-
-        @Override
-        public void readComplete() {
-            delegate.readComplete();
-        }
     }
 }

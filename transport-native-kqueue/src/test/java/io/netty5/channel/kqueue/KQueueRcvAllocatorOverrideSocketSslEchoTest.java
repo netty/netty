@@ -18,14 +18,15 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.ChannelOption;
 
 public class KQueueRcvAllocatorOverrideSocketSslEchoTest extends KQueueSocketSslEchoTest {
     @Override
     protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2,
                              BufferAllocator bufferAllocator) {
         super.configure(bootstrap, bootstrap2, bufferAllocator);
-        bootstrap.option(KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS, true);
-        bootstrap.childOption(KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS, true);
-        bootstrap2.option(KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS, true);
+        bootstrap.option(ChannelOption.RCVBUFFER_ALLOCATOR, new KQueueGuessRecvBufferAllocator());
+        bootstrap.childOption(ChannelOption.RCVBUFFER_ALLOCATOR, new KQueueGuessRecvBufferAllocator());
+        bootstrap2.option(ChannelOption.RCVBUFFER_ALLOCATOR, new KQueueGuessRecvBufferAllocator());
     }
 }

@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -194,7 +194,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
+                public boolean continueReading(boolean autoRead, Predicate<Handle> maybeMoreDataSupplier) {
                     return continueReading(autoRead);
                 }
 

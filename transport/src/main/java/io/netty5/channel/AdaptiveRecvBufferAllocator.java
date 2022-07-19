@@ -195,10 +195,4 @@ public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAll
     public Handle newHandle() {
         return new HandleImpl(minIndex, maxIndex, initial);
     }
-
-    @Override
-    public AdaptiveRecvBufferAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
-        super.respectMaybeMoreData(respectMaybeMoreData);
-        return this;
-    }
 }

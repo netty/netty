@@ -16,7 +16,6 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.internal.UnstableApi;
 
@@ -26,12 +25,6 @@ public final class KQueueChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Boolean> TCP_NOPUSH = valueOf(KQueueChannelOption.class, "TCP_NOPUSH");
     public static final ChannelOption<AcceptFilter> SO_ACCEPTFILTER =
             valueOf(KQueueChannelOption.class, "SO_ACCEPTFILTER");
-    /**
-     * If this is {@code true} then the {@link RecvBufferAllocator.Handle#guess()} will be overridden to always attempt
-     * to read as many bytes as kqueue says are available.
-     */
-    public static final ChannelOption<Boolean> RCV_ALLOC_TRANSPORT_PROVIDES_GUESS =
-            valueOf(KQueueChannelOption.class, "RCV_ALLOC_TRANSPORT_PROVIDES_GUESS");
 
     @SuppressWarnings({ "unused", "deprecation" })
     private KQueueChannelOption() {

@@ -51,10 +51,4 @@ public class FixedRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAlloca
     public Handle newHandle() {
         return new HandleImpl(bufferSize);
     }
-
-    @Override
-    public FixedRecvBufferAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
-        super.respectMaybeMoreData(respectMaybeMoreData);
-        return this;
-    }
 }

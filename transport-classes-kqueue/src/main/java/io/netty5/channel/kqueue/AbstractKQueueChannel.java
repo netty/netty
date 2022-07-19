@@ -38,9 +38,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
-import static io.netty5.channel.kqueue.KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS;
 import static io.netty5.channel.unix.Limits.SSIZE_MAX;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static java.lang.Math.min;
@@ -49,34 +49,53 @@ import static java.util.Objects.requireNonNull;
 abstract class AbstractKQueueChannel<P extends UnixChannel>
         extends AbstractChannel<P, SocketAddress, SocketAddress> implements UnixChannel {
 
+    final BsdSocket socket;
+
+    protected volatile boolean active;
+
+    protected boolean readPending;
+
+    private long numberBytesPending;
+
+    /**
+     * kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes (see kqueue man:
+     * https://www.freebsd.org/cgi/man.cgi?kqueue). However, in order to respect auto read we support reading to stop if
+     * auto read is off. If auto read is on we force reading to continue to avoid a {@link StackOverflowError} between
+     * channelReadComplete and reading from the channel. It is expected that the {@link KQueueSocketChannel}
+     * implementations will track if all data was not read, and will force a EVFILT_READ ready event.
+     * <p>
+     * It is assumed EOF is handled externally by checking {@link #eof}.
+     */
+    private final Predicate<RecvBufferAllocator.Handle> maybeMoreData = h -> {
+        if (h.lastBytesRead() > 0) {
+            numberBytesPending -= h.lastBytesRead();
+        }
+        return numberBytesPending != 0;
+    };
+
     private final Runnable readReadyRunnable = new Runnable() {
         @Override
         public void run() {
             readReadyRunnablePending = false;
-            readReady(recvBufAllocHandle());
+            //RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
+            //allocHandle.reset();
+            //allocHandle.attemptedBytesRead((int) Math.max(numberBytesPending, 128));
+            readReady(numberBytesPending);
         }
     };
 
-    /**
-     * The future of the current connection attempt.  If not null, subsequent
-     * connection attempts will fail.
-     */
     private KQueueRegistration registration;
 
-    final BsdSocket socket;
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
-    boolean readReadyRunnablePending;
-    boolean inputClosedSeenErrorOnRead;
+    private boolean readReadyRunnablePending;
+    private boolean inputClosedSeenErrorOnRead;
 
-    protected volatile boolean active;
+    private boolean maybeMoreDataToRead;
 
-    private volatile boolean transportProvidesGuess;
+    private boolean eof;
+
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
-
-    boolean readPending;
-    boolean maybeMoreDataToRead;
-    private KQueueRecvBufferAllocatorHandle allocHandle;
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -108,9 +127,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     @Override
     @SuppressWarnings("unchecked")
     protected  <T> T getExtendedOption(ChannelOption<T> option) {
-        if (option == RCV_ALLOC_TRANSPORT_PROVIDES_GUESS) {
-            return (T) Boolean.valueOf(getRcvAllocTransportProvidesGuess());
-        }
         try {
             if (option instanceof IntegerUnixChannelOption) {
                 IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
@@ -130,31 +146,25 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     @Override
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (option == RCV_ALLOC_TRANSPORT_PROVIDES_GUESS) {
-            setRcvAllocTransportProvidesGuess((Boolean) value);
-        } else {
-            try {
-                if (option instanceof IntegerUnixChannelOption) {
-                    IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
-                    socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
-                    return;
-                } else if (option instanceof RawUnixChannelOption) {
-                    RawUnixChannelOption opt = (RawUnixChannelOption) option;
-                    socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
-                    return;
-                }
-            } catch (IOException e) {
-                throw new ChannelException(e);
+        try {
+            if (option instanceof IntegerUnixChannelOption) {
+                IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                return;
+            } else if (option instanceof RawUnixChannelOption) {
+                RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                return;
             }
-            super.setExtendedOption(option, value);
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
+        super.setExtendedOption(option, value);
     }
 
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (option == RCV_ALLOC_TRANSPORT_PROVIDES_GUESS) {
-            return true;
-        } else if (option instanceof IntegerUnixChannelOption || option instanceof RawUnixChannelOption) {
+        if (option instanceof IntegerUnixChannelOption || option instanceof RawUnixChannelOption) {
             return true;
         }
         return super.isExtendedOptionSupported(option);
@@ -166,22 +176,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     protected long getMaxBytesPerGatheringWrite() {
         return maxBytesPerGatheringWrite;
-    }
-
-    /**
-     * If this is {@code true} then the {@link RecvBufferAllocator.Handle#guess()} will be overridden to always attempt
-     * to read as many bytes as kqueue says are available.
-     */
-    private void setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
-        this.transportProvidesGuess = transportProvidesGuess;
-    }
-
-    /**
-     * If this is {@code true} then the {@link RecvBufferAllocator.Handle#guess()} will be overridden to always attempt
-     * to read as many bytes as kqueue says are available.
-     */
-    private boolean getRcvAllocTransportProvidesGuess() {
-        return transportProvidesGuess;
     }
 
     @Override
@@ -233,12 +227,12 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return socket.isOpen();
     }
 
     @Override
-    protected final void doBeginRead() throws Exception {
+    protected final void doBeginRead() {
         // Channel.read() or ChannelHandlerContext.read() was called
         readPending = true;
 
@@ -254,7 +248,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    void register0(KQueueRegistration registration)  {
+    final void register0(KQueueRegistration registration)  {
         this.registration = registration;
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
@@ -271,14 +265,14 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         evSet0(registration, Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
     }
 
-    void deregister0() {
+    final void deregister0() {
         // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
         // to false to ensure a consistent state in all cases.
         readFilterEnabled = false;
         writeFilterEnabled = false;
     }
 
-    void unregisterFilters() throws Exception {
+    final void unregisterFilters() throws Exception {
         // Make sure we unregister our filters from kqueue!
         readFilter(false);
         writeFilter(false);
@@ -301,10 +295,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
      * that it owned (or was itself) the buffer.
      */
     protected final Buffer newDirectBuffer(Resource<?> holder, Buffer buf) {
-        BufferAllocator allocator = bufferAllocator();
-        if (!allocator.getAllocationType().isDirect()) {
-            allocator = DefaultBufferAllocators.offHeapAllocator();
-        }
+        BufferAllocator allocator = ioBufferAllocator();
         try (holder) {
             int readableBytes = buf.readableBytes();
             Buffer directCopy = allocator.allocate(readableBytes);
@@ -368,7 +359,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
-    final void clearReadFilter() {
+    private void clearReadFilter() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
             final EventLoop loop = executor();
@@ -390,14 +381,14 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    void readFilter(boolean readFilterEnabled) throws IOException {
+    final void readFilter(boolean readFilterEnabled) {
         if (this.readFilterEnabled != readFilterEnabled) {
             this.readFilterEnabled = readFilterEnabled;
             evSet(Native.EVFILT_READ, readFilterEnabled ? Native.EV_ADD_CLEAR_ENABLE : Native.EV_DELETE_DISABLE);
         }
     }
 
-    void writeFilter(boolean writeFilterEnabled) throws IOException {
+    final void writeFilter(boolean writeFilterEnabled) {
         if (this.writeFilterEnabled != writeFilterEnabled) {
             this.writeFilterEnabled = writeFilterEnabled;
             evSet(Native.EVFILT_WRITE, writeFilterEnabled ? Native.EV_ADD_CLEAR_ENABLE : Native.EV_DELETE_DISABLE);
@@ -422,39 +413,46 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     final void readReady(long numberBytesPending) {
-        KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
-        allocHandle.numberBytesPending(numberBytesPending);
-        readReady(allocHandle);
-    }
+        RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
+        allocHandle.reset();
+        this.numberBytesPending = numberBytesPending;
+        allocHandle.attemptedBytesRead((int) Math.min(numberBytesPending, Integer.MAX_VALUE));
 
-    abstract void readReady(KQueueRecvBufferAllocatorHandle allocHandle);
-
-    final void readReadyBefore() {
-        maybeMoreDataToRead = false;
-    }
-
-    final void readReadyFinally() {
-        maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
-
-        if (allocHandle.isReadEOF() || readPending && maybeMoreDataToRead) {
-            // trigger a read again as there may be something left to read and because of ET we
-            // will not get notified again until we read everything from the socket
-            //
-            // It is possible the last fireChannelRead call could cause the user to call read() again, or if
-            // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
-            // to false before every read operation to prevent re-entry into readReady() we will not read from
-            // the underlying OS again unless the user happens to call read again.
-            executeReadReadyRunnable();
-        } else if (!readPending && !isAutoRead()) {
-            // Check if there is a readPending which was not processed yet.
-            // This could be for two reasons:
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-            //
-            // See https://github.com/netty/netty/issues/2254
+        assert executor().inEventLoop();
+        if (shouldBreakReadReady()) {
             clearReadFilter0();
+            return;
+        }
+        maybeMoreDataToRead = false;
+
+        try {
+            readReady(allocHandle, ioBufferAllocator(), maybeMoreData);
+        } finally {
+            maybeMoreDataToRead = this.numberBytesPending != 0;
+
+            if (eof || readPending && maybeMoreDataToRead) {
+                // trigger a read again as there may be something left to read and because of ET we
+                // will not get notified again until we read everything from the socket
+                //
+                // It is possible the last fireChannelRead call could cause the user to call read() again, or if
+                // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
+                // to false before every read operation to prevent re-entry into readReady() we will not read from
+                // the underlying OS again unless the user happens to call read again.
+                executeReadReadyRunnable();
+            } else if (!readPending && !isAutoRead()) {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                clearReadFilter0();
+            }
         }
     }
+
+    abstract void readReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
+                            Predicate<RecvBufferAllocator.Handle> maybeMoreData);
 
     final void writeReady() {
         if (isConnectPending()) {
@@ -469,7 +467,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     /**
      * Shutdown the input side of the channel.
      */
-    void shutdownInput(boolean readEOF) {
+    final void shutdownInput(boolean readEOF) {
         // We need to take special care of calling finishConnect() if readEOF is true and we not
         // fullfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
         // with a ClosedChannelException as a close() will happen and so the FD is closed before we
@@ -491,31 +489,18 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     final void readEOF() {
         // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
-        final KQueueRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
-        allocHandle.readEOF();
+        final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
+        eof = true;
 
         if (isActive()) {
             // If it is still active, we need to call readReady as otherwise we may miss to
             // read pending data from the underlying file descriptor.
             // See https://github.com/netty/netty/issues/3709
-            readReady(allocHandle);
+            readReady(allocHandle, ioBufferAllocator(), maybeMoreData);
         } else {
             // Just to be safe make sure the input marked as closed.
             shutdownInput(true);
         }
-    }
-
-    @Override
-    public KQueueRecvBufferAllocatorHandle recvBufAllocHandle() {
-        if (allocHandle == null) {
-            allocHandle = new KQueueRecvBufferAllocatorHandle(super.recvBufAllocHandle()) {
-                @Override
-                protected boolean getRcvAllocTransportProvidesGuess() {
-                    return transportProvidesGuess;
-                }
-            };
-        }
-        return allocHandle;
     }
 
     @Override
@@ -528,7 +513,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    final void executeReadReadyRunnable() {
+    private void executeReadReadyRunnable() {
         if (readReadyRunnablePending || !isActive() || shouldBreakReadReady()) {
             return;
         }
@@ -536,12 +521,12 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         executor().execute(readReadyRunnable);
     }
 
-    protected final void clearReadFilter0() {
+    private void clearReadFilter0() {
         assert executor().inEventLoop();
         try {
             readPending = false;
             readFilter(false);
-        } catch (IOException e) {
+        } catch (Throwable e) {
             // When this happens there is something completely wrong with either the filedescriptor or epoll,
             // so fire the exception through the pipeline and close the Channel.
             pipeline().fireChannelExceptionCaught(e);
@@ -550,8 +535,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) throws Exception {
+    protected final boolean doFinishConnect(SocketAddress requestedRemoteAddress) throws Exception {
         if (socket.finishConnect()) {
             active = true;
             writeFilter(false);
@@ -587,7 +571,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     /**
      * Connect to the remote peer
      */
-    @SuppressWarnings("unchecked")
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) localAddress);
@@ -647,5 +630,14 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     final void closeTransportNow() {
         closeTransport(newPromise());
+    }
+
+    private BufferAllocator ioBufferAllocator() {
+        BufferAllocator alloc = bufferAllocator();
+        // We need to ensure we always allocate a direct Buffer as we can only use a direct buffer to read via JNI.
+        if (!alloc.getAllocationType().isDirect()) {
+            return DefaultBufferAllocators.offHeapAllocator();
+        }
+        return alloc;
     }
 }
