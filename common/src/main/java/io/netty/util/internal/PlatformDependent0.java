@@ -53,12 +53,13 @@ final class PlatformDependent0 {
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
     private static final Object INTERNAL_UNSAFE;
-    private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
 
     // See https://github.com/oracle/graal/blob/master/sdk/src/org.graalvm.nativeimage/src/org/graalvm/nativeimage/
     // ImageInfo.java
     private static final boolean RUNNING_IN_NATIVE_IMAGE = SystemPropertyUtil.contains(
             "org.graalvm.nativeimage.imagecode");
+
+    private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
 
     static final Unsafe UNSAFE;
 
@@ -975,7 +976,8 @@ final class PlatformDependent0 {
 
     private static boolean explicitTryReflectionSetAccessible0() {
         // we disable reflective access
-        return SystemPropertyUtil.getBoolean("io.netty.tryReflectionSetAccessible", javaVersion() < 9);
+        return SystemPropertyUtil.getBoolean("io.netty.tryReflectionSetAccessible",
+                javaVersion() < 9 || RUNNING_IN_NATIVE_IMAGE);
     }
 
     static boolean isExplicitTryReflectionSetAccessible() {
