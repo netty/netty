@@ -148,6 +148,8 @@ public final class EpollSocketChannel
     private static final Predicate<RecvBufferAllocator.Handle> MAYBE_MORE_DATA = h ->
          h.lastBytesRead() == h.attemptedBytesRead();
 
+    private static final Predicate<RecvBufferAllocator.Handle> MAYBE_MORE_DATA_RDHUP = h -> true;
+
     public EpollSocketChannel(EventLoop eventLoop) {
         this(eventLoop, (ProtocolFamily) null);
     }
@@ -553,9 +555,14 @@ public final class EpollSocketChannel
         }
     }
 
+    private static Predicate<RecvBufferAllocator.Handle> maybeMoreData(boolean receivedRdHup) {
+        return receivedRdHup ? MAYBE_MORE_DATA_RDHUP : MAYBE_MORE_DATA;
+    }
+
     private void epollInReadyBytes(RecvBufferAllocator.Handle recvAlloc, BufferAllocator bufferAllocator,
                                    boolean receivedRdHup) {
         final ChannelPipeline pipeline = pipeline();
+        Predicate<RecvBufferAllocator.Handle> maybeMoreData = maybeMoreData(receivedRdHup);
 
         Buffer buffer = null;
         boolean close = false;
@@ -595,7 +602,7 @@ public final class EpollSocketChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while ((recvAlloc.continueReading(isAutoRead(), MAYBE_MORE_DATA) || receivedRdHup)
+            } while (recvAlloc.continueReading(isAutoRead(), maybeMoreData)
                     && !isShutdown(ChannelShutdownDirection.Inbound));
 
             recvAlloc.readComplete();
@@ -1208,6 +1215,7 @@ public final class EpollSocketChannel
 
     private void epollInReadFd(RecvBufferAllocator.Handle allocHandle, boolean receivedRdHup) {
         final ChannelPipeline pipeline = pipeline();
+        Predicate<RecvBufferAllocator.Handle> maybeMoreData = maybeMoreData(receivedRdHup);
         try {
             readLoop: do {
                 // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
@@ -1226,7 +1234,7 @@ public final class EpollSocketChannel
                         pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
                         break;
                 }
-            } while ((allocHandle.continueReading(isAutoRead(), MAYBE_MORE_DATA) || receivedRdHup)
+            } while (allocHandle.continueReading(isAutoRead(), maybeMoreData)
                     && !isShutdown(ChannelShutdownDirection.Inbound));
 
             allocHandle.readComplete();
