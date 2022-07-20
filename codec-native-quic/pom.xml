@@ -158,6 +158,36 @@
       </properties>
     </profile>
     <profile>
+      <id>mac-intel-cross-compile</id>
+      <properties>
+        <jniLibName>netty_quiche_osx_x86_64</jniLibName>
+        <jni.classifier>osx-x86_64</jni.classifier>
+        <javaModuleNameWithClassifier>osx.x86_64</javaModuleNameWithClassifier>
+        <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
+        <extraCflags>-target x86_64-apple-macos10.12</extraCflags>
+        <extraCxxflags>-target x86_64-apple-macos10.12</extraCxxflags>
+        <!-- On *nix, add ASM flags to disable executable stack -->
+        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.12</cmakeAsmFlags>
+        <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=x86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64</extraCmakeFlags>
+        <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer  -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
+        <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis</cmakeCxxFlags>
+        <libssl>libssl.a</libssl>
+        <libcrypto>libcrypto.a</libcrypto>
+        <libquiche>libquiche.a</libquiche>
+        <extraLdflags>-arch x86_64 -platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget}</extraLdflags>
+        <extraConfigureArg>--host=x86_64-apple-darwin</extraConfigureArg>
+        <extraConfigureArg2>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg2>
+        <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=x86_64</bundleNativeCode>
+        <!-- Don't run tests as we can't load the x86_64 lib on a aarch64 system -->
+        <skipTests>true</skipTests>
+        <crossCompile>mac</crossCompile>
+        <quicheTarget>x86_64-apple-darwin</quicheTarget>
+        <cargoTarget>--target=${quicheTarget}</cargoTarget>
+        <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
+      </properties>
+    </profile>
+    <profile>
       <id>linux</id>
       <activation>
         <os>
