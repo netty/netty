@@ -191,7 +191,7 @@ public class HttpContentEncoderTest {
         assertThat(chunk.payload().readableBytes(), is(0));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertEquals("Netty", ((LastHttpContent<?>) chunk).trailingHeaders().get(of("X-Test")));
-        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
+        assertEquals(DecoderResult.success(), res.decoderResult());
         chunk.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -321,7 +321,7 @@ public class HttpContentEncoderTest {
         assertThat(res.payload().readableBytes(), is(0));
         assertThat(res.payload().toString(CharsetUtil.US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
-        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
+        assertEquals(DecoderResult.success(), res.decoderResult());
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 

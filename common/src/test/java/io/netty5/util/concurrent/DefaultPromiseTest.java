@@ -16,7 +16,6 @@
 
 package io.netty5.util.concurrent;
 
-import io.netty5.util.Signal;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -374,24 +373,6 @@ public class DefaultPromiseTest {
                 executor.shutdownGracefully();
             }
         }
-    }
-
-    @Test
-    public void signalUncancellableCompletionValue() {
-        DefaultPromise<Signal> promise = new DefaultPromise<>(INSTANCE);
-        promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-        assertFalse(promise.isFailed());
-    }
-
-    @Test
-    public void signalSuccessCompletionValue() {
-        DefaultPromise<Signal> promise = new DefaultPromise<>(INSTANCE);
-        promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-        assertFalse(promise.isFailed());
     }
 
     @Test

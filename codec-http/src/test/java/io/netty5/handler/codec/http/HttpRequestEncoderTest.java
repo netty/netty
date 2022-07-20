@@ -222,7 +222,7 @@ public class HttpRequestEncoderTest {
 
         @Override
         public DecoderResult decoderResult() {
-            return DecoderResult.SUCCESS;
+            return DecoderResult.success();
         }
 
         @Override
