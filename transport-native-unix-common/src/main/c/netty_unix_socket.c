@@ -536,11 +536,11 @@ static jint netty_unix_socket_finishConnect(JNIEnv* env, jclass clazz, jint fd) 
 }
 
 static jint netty_unix_socket_disconnect(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
+#ifndef __APPLE__
     struct sockaddr_storage addr;
     int len;
 
     memset(&addr, 0, sizeof(addr));
-
     // You can disconnect connection-less sockets by using AF_UNSPEC.
     // See man 2 connect.
     if (ipv6 == JNI_TRUE) {
@@ -552,11 +552,16 @@ static jint netty_unix_socket_disconnect(JNIEnv* env, jclass clazz, jint fd, jbo
         ipaddr->sin_family = AF_UNSPEC;
         len = sizeof(struct sockaddr_in);
     }
+#endif // __APPLE__
 
     int res;
     int err;
     do {
+#ifdef __APPLE__
+        res = disconnectx(fd, SAE_ASSOCID_ANY, SAE_CONNID_ANY);
+#else
         res = connect(fd, (struct sockaddr*) &addr, len);
+#endif // __APPLE__
     } while (res == -1 && ((err = errno) == EINTR));
 
     // EAFNOSUPPORT is harmless in this case.
