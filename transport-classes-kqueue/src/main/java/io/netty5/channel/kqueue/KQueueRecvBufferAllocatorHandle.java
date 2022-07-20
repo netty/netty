@@ -95,7 +95,7 @@ abstract class KQueueRecvBufferAllocatorHandle extends DelegatingHandle {
      * It is assumed EOF is handled externally by checking {@link #isReadEOF()}.
      */
     boolean maybeMoreDataToRead() {
-        return numberBytesPending != 0;
+        return numberBytesPending != 0 || lastBytesRead() > 0;
     }
 
     private int guess0() {
