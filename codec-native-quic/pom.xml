@@ -293,6 +293,7 @@
         <jniLibName>netty_quiche</jniLibName>
         <jni.classifier>${platform}</jni.classifier>
         <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
+        <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
         <bundleNativeCode>META-INF/native/${jniLibName}.dll;osname=android;processor=${androidAbi}</bundleNativeCode>
         <ndkToolchain>${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64</ndkToolchain>
         <extraLdflags>-Wl,-soname=${jniLibName}.so -Wl,--strip-debug -Wl,--exclude-libs,ALL -lm</extraLdflags>
@@ -340,6 +341,7 @@
                       </properties>
                     </itemWithProperty>
                   </itemsWithProperties>
+                  <baseDirectory>${project.basedir}</baseDirectory>
                   <goals>
                     <goal>package</goal>
                   </goals>
