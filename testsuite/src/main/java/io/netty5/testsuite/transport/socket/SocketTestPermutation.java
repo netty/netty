@@ -223,6 +223,6 @@ public class SocketTestPermutation {
     }
 
     public static boolean isJdkDomainDatagramSupported() {
-        return NioDomainSocketTestUtil.isSocketSupported();
+        return NioDomainSocketTestUtil.isDatagramSupported();
     }
 }
