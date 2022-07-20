@@ -415,6 +415,23 @@
       </properties>
     </profile>
     <profile>
+      <id>boringssl-linux-aarch64</id>
+      <activation>
+        <os>
+          <!--
+           Automatically active on linux with aarch64 as we only release static boringssl version of
+           netty-tcnative for it.
+         -->
+          <family>linux</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <properties>
+        <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
+        <tcnative.classifier />
+      </properties>
+    </profile>
+    <profile>
       <id>boringssl</id>
       <activation>
         <!--
