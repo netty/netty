@@ -341,7 +341,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             clearEpollIn0();
             return;
         }
-        maybeMoreDataToRead = true;
+        maybeMoreDataToRead = false;
         RecvBufferAllocator.Handle handle = recvBufAllocHandle();
         handle.reset();
 
