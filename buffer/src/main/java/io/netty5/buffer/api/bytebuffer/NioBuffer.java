@@ -278,6 +278,23 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     @Override
+    public Buffer writeBytes(byte[] source, int srcPos, int length) {
+        if (source.length < srcPos + length) {
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        if (writableBytes() < length && writerOffset() + length <= implicitCapacityLimit()) {
+            ensureWritable(length, 1, false);
+        }
+        if (hasWritableArray()) {
+            System.arraycopy(source, srcPos, writableArray(), writableArrayOffset(), length);
+        } else {
+            wmem.duplicate().clear().position(woff).put(source, srcPos, length);
+        }
+        woff += length;
+        return this;
+    }
+
+    @Override
     public int transferTo(WritableByteChannel channel, int length) throws IOException {
         if (!isAccessible()) {
             throw bufferIsClosed();
