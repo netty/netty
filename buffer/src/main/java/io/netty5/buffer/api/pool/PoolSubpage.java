@@ -15,6 +15,8 @@
  */
 package io.netty5.buffer.api.pool;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 import static io.netty5.buffer.api.pool.PoolChunk.IS_SUBPAGE_SHIFT;
 import static io.netty5.buffer.api.pool.PoolChunk.IS_USED_SHIFT;
 import static io.netty5.buffer.api.pool.PoolChunk.RUN_OFFSET_SHIFT;
@@ -37,6 +39,8 @@ final class PoolSubpage implements PoolSubpageMetric {
     private int bitmapLength;
     private int nextAvail;
     private int numAvail;
+
+    private final ReentrantLock lock = new ReentrantLock();
 
     /** Special constructor that creates a linked list head */
     PoolSubpage() {
@@ -216,7 +220,8 @@ final class PoolSubpage implements PoolSubpageMetric {
             numAvail = 0;
             elemSize = -1;
         } else {
-            synchronized (chunk.arena) {
+            chunk.arena.lock();
+            try {
                 if (!this.doNotDestroy) {
                     doNotDestroy = false;
                     // Not used for creating the String.
@@ -227,6 +232,8 @@ final class PoolSubpage implements PoolSubpageMetric {
                     numAvail = this.numAvail;
                     elemSize = this.elemSize;
                 }
+            } finally {
+                chunk.arena.unlock();
             }
         }
 
@@ -244,9 +251,11 @@ final class PoolSubpage implements PoolSubpageMetric {
             // It's the head.
             return 0;
         }
-
-        synchronized (chunk.arena) {
+        chunk.arena.lock();
+        try {
             return maxNumElems;
+        } finally {
+            chunk.arena.unlock();
         }
     }
 
@@ -256,9 +265,11 @@ final class PoolSubpage implements PoolSubpageMetric {
             // It's the head.
             return 0;
         }
-
-        synchronized (chunk.arena) {
+        chunk.arena.lock();
+        try {
             return numAvail;
+        } finally {
+            chunk.arena.unlock();
         }
     }
 
@@ -268,9 +279,11 @@ final class PoolSubpage implements PoolSubpageMetric {
             // It's the head.
             return -1;
         }
-
-        synchronized (chunk.arena) {
+        chunk.arena.lock();
+        try {
             return elemSize;
+        } finally {
+            chunk.arena.unlock();
         }
     }
 
@@ -283,5 +296,13 @@ final class PoolSubpage implements PoolSubpageMetric {
         if (chunk != null) {
             chunk.destroy();
         }
+    }
+
+    void lock() {
+        lock.lock();
+    }
+
+    void unlock() {
+        lock.unlock();
     }
 }

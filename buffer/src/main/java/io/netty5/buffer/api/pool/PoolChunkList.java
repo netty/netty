@@ -202,7 +202,8 @@ final class PoolChunkList implements PoolChunkListMetric {
 
     @Override
     public Iterator<PoolChunkMetric> iterator() {
-        synchronized (arena) {
+        arena.lock();
+        try {
             if (head == null) {
                 return EMPTY_METRICS;
             }
@@ -215,13 +216,16 @@ final class PoolChunkList implements PoolChunkListMetric {
                 }
             }
             return metrics.iterator();
+        } finally {
+            arena.unlock();
         }
     }
 
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        synchronized (arena) {
+        arena.lock();
+        try {
             if (head == null) {
                 return "none";
             }
@@ -234,6 +238,8 @@ final class PoolChunkList implements PoolChunkListMetric {
                 }
                 buf.append(StringUtil.NEWLINE);
             }
+        } finally {
+            arena.unlock();
         }
         return buf.toString();
     }
