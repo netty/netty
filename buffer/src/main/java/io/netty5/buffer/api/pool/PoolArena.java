@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty5.buffer.api.pool.PoolChunk.isSubpage;
 import static java.lang.Math.max;
@@ -69,6 +70,8 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
 
     // Number of thread caches backed by this arena.
     final AtomicInteger numThreadCaches = new AtomicInteger();
+
+    private final ReentrantLock lock = new ReentrantLock();
 
     protected PoolArena(PooledBufferAllocator parent, MemoryManager manager, AllocationType allocationType,
                         int pageSize, int pageShifts, int chunkSize, int cacheAlignment) {
@@ -137,7 +140,8 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
          */
         PoolSubpage head = findSubpagePoolHead(sizeIdx);
         final boolean needsNormalAllocation;
-        synchronized (head) {
+        head.lock();
+        try {
             final PoolSubpage s = head.next;
             needsNormalAllocation = s == head;
             if (!needsNormalAllocation) {
@@ -147,11 +151,16 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
                 assert handle >= 0;
                 memory = s.chunk.allocateBufferWithSubpage(handle, size, cache);
             }
+        } finally {
+            head.unlock();
         }
 
         if (needsNormalAllocation) {
-            synchronized (this) {
+            lock();
+            try {
                 memory = allocateNormal(size, sizeIdx, cache);
+            } finally {
+                unlock();
             }
         }
 
@@ -166,15 +175,18 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
             // was able to allocate out of the cache so move on
             return memory;
         }
-        synchronized (this) {
+        lock();
+        try {
             memory = allocateNormal(size, sizeIdx, cache);
             allocationsNormal++;
+        } finally {
+            unlock();
         }
         return memory;
     }
 
-    // Method must be called inside synchronized(this) { ... } block
     private UntetheredMemory allocateNormal(int size, int sizeIdx, PoolThreadCache threadCache) {
+        assert lock.isHeldByCurrentThread();
         UntetheredMemory memory = q050.allocate(size, sizeIdx, threadCache);
         if (memory != null) {
             return memory;
@@ -229,7 +241,8 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
 
     void freeChunk(PoolChunk chunk, long handle, int normCapacity, SizeClass sizeClass) {
         final boolean destroyChunk;
-        synchronized (this) {
+        lock();
+        try {
             if (sizeClass == SizeClass.Normal) {
                 ++deallocationsNormal;
             } else if (sizeClass == SizeClass.Small) {
@@ -238,6 +251,8 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
                 throw new AssertionError("Unexpected size class: " + sizeClass);
             }
             destroyChunk = !chunk.parent.free(chunk, handle, normCapacity);
+        } finally {
+            unlock();
         }
         if (destroyChunk) {
             // destroyChunk not need to be called while holding the synchronized lock.
@@ -301,8 +316,11 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     @Override
     public long numAllocations() {
         final long allocsNormal;
-        synchronized (this) {
+        lock();
+        try {
             allocsNormal = allocationsNormal;
+        } finally {
+            unlock();
         }
 
         return allocationsSmall.longValue() + allocsNormal + allocationsHuge.longValue();
@@ -314,27 +332,45 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     }
 
     @Override
-    public synchronized long numNormalAllocations() {
-        return allocationsNormal;
+    public long numNormalAllocations() {
+        lock();
+        try {
+            return allocationsNormal;
+        } finally {
+            unlock();
+        }
     }
 
     @Override
     public long numDeallocations() {
         final long deallocs;
-        synchronized (this) {
+        lock();
+        try {
             deallocs = deallocationsSmall + deallocationsNormal;
+        } finally {
+            unlock();
         }
         return deallocs + deallocationsHuge.longValue();
     }
 
     @Override
-    public synchronized long numSmallDeallocations() {
-        return deallocationsSmall;
+    public long numSmallDeallocations() {
+        lock();
+        try {
+            return deallocationsSmall;
+        } finally {
+            unlock();
+        }
     }
 
     @Override
-    public synchronized long numNormalDeallocations() {
-        return deallocationsNormal;
+    public long numNormalDeallocations() {
+        lock();
+        try {
+            return deallocationsNormal;
+        } finally {
+            unlock();
+        }
     }
 
     @Override
@@ -351,8 +387,11 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     public  long numActiveAllocations() {
         long val = allocationsSmall.longValue() + allocationsHuge.longValue()
                 - deallocationsHuge.longValue();
-        synchronized (this) {
+        lock();
+        try {
             val += allocationsNormal - (deallocationsSmall + deallocationsNormal);
+        } finally {
+            unlock();
         }
         return max(val, 0);
     }
@@ -365,8 +404,11 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     @Override
     public long numActiveNormalAllocations() {
         final long val;
-        synchronized (this) {
+        lock();
+        try {
             val = allocationsNormal - deallocationsNormal;
+        } finally {
+            unlock();
         }
         return max(val, 0);
     }
@@ -379,12 +421,15 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     @Override
     public long numActiveBytes() {
         long val = activeBytesHuge.longValue();
-        synchronized (this) {
+        lock();
+        try {
             for (int i = 0; i < chunkListMetrics.size(); i++) {
                 for (PoolChunkMetric m: chunkListMetrics.get(i)) {
                     val += m.chunkSize();
                 }
             }
+        } finally {
+            unlock();
         }
         return max(0, val);
     }
@@ -392,12 +437,15 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     @Override
     public long numPinnedBytes() {
         long val = activeBytesHuge.longValue();
-        synchronized (this) {
+        lock();
+        try {
             for (int i = 0; i < chunkListMetrics.size(); i++) {
                 for (PoolChunkMetric m: chunkListMetrics.get(i)) {
                     val += m.pinnedBytes();
                 }
             }
+        } finally {
+            unlock();
         }
         return max(0, val);
     }
@@ -407,37 +455,42 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     }
 
     @Override
-    public synchronized String toString() {
-        StringBuilder buf = new StringBuilder()
-            .append("Chunk(s) at 0~25%:")
-            .append(StringUtil.NEWLINE)
-            .append(qInit)
-            .append(StringUtil.NEWLINE)
-            .append("Chunk(s) at 0~50%:")
-            .append(StringUtil.NEWLINE)
-            .append(q000)
-            .append(StringUtil.NEWLINE)
-            .append("Chunk(s) at 25~75%:")
-            .append(StringUtil.NEWLINE)
-            .append(q025)
-            .append(StringUtil.NEWLINE)
-            .append("Chunk(s) at 50~100%:")
-            .append(StringUtil.NEWLINE)
-            .append(q050)
-            .append(StringUtil.NEWLINE)
-            .append("Chunk(s) at 75~100%:")
-            .append(StringUtil.NEWLINE)
-            .append(q075)
-            .append(StringUtil.NEWLINE)
-            .append("Chunk(s) at 100%:")
-            .append(StringUtil.NEWLINE)
-            .append(q100)
-            .append(StringUtil.NEWLINE)
-            .append("small subpages:");
-        appendPoolSubPages(buf, smallSubpagePools);
-        buf.append(StringUtil.NEWLINE);
+    public String toString() {
+        lock();
+        try {
+            StringBuilder buf = new StringBuilder()
+                    .append("Chunk(s) at 0~25%:")
+                    .append(StringUtil.NEWLINE)
+                    .append(qInit)
+                    .append(StringUtil.NEWLINE)
+                    .append("Chunk(s) at 0~50%:")
+                    .append(StringUtil.NEWLINE)
+                    .append(q000)
+                    .append(StringUtil.NEWLINE)
+                    .append("Chunk(s) at 25~75%:")
+                    .append(StringUtil.NEWLINE)
+                    .append(q025)
+                    .append(StringUtil.NEWLINE)
+                    .append("Chunk(s) at 50~100%:")
+                    .append(StringUtil.NEWLINE)
+                    .append(q050)
+                    .append(StringUtil.NEWLINE)
+                    .append("Chunk(s) at 75~100%:")
+                    .append(StringUtil.NEWLINE)
+                    .append(q075)
+                    .append(StringUtil.NEWLINE)
+                    .append("Chunk(s) at 100%:")
+                    .append(StringUtil.NEWLINE)
+                    .append(q100)
+                    .append(StringUtil.NEWLINE)
+                    .append("small subpages:");
+            appendPoolSubPages(buf, smallSubpagePools);
+            buf.append(StringUtil.NEWLINE);
 
-        return buf.toString();
+            return buf.toString();
+        } finally {
+            unlock();
+        }
     }
 
     private static void appendPoolSubPages(StringBuilder buf, PoolSubpage[] subpages) {
@@ -469,5 +522,13 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
         for (PoolChunkList list : new PoolChunkList[] {qInit, q000, q025, q050, q100}) {
             list.destroy();
         }
+    }
+
+    void lock() {
+        lock.lock();
+    }
+
+    void unlock() {
+        lock.unlock();
     }
 }
