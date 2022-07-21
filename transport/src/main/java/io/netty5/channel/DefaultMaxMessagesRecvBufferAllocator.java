@@ -18,7 +18,7 @@ package io.netty5.channel;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 
-import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
@@ -57,38 +57,6 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
     }
 
     /**
-     * Determine if future instances of {@link #newHandle()} will stop reading if we think there is no more data.
-     * @param respectMaybeMoreData
-     * <ul>
-     *     <li>{@code true} to stop reading if we think there is no more data. This may save a system call to read from
-     *          the socket, but if data has arrived in a racy fashion we may give up our {@link #maxMessagesPerRead()}
-     *          quantum and have to wait for the selector to notify us of more data.</li>
-     *     <li>{@code false} to keep reading (up to {@link #maxMessagesPerRead()}) or until there is no data when we
-     *          attempt to read.</li>
-     * </ul>
-     * @return {@code this}.
-     */
-    public DefaultMaxMessagesRecvBufferAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
-        this.respectMaybeMoreData = respectMaybeMoreData;
-        return this;
-    }
-
-    /**
-     * Get if future instances of {@link #newHandle()} will stop reading if we think there is no more data.
-     * @return
-     * <ul>
-     *     <li>{@code true} to stop reading if we think there is no more data. This may save a system call to read from
-     *          the socket, but if data has arrived in a racy fashion we may give up our {@link #maxMessagesPerRead()}
-     *          quantum and have to wait for the selector to notify us of more data.</li>
-     *     <li>{@code false} to keep reading (up to {@link #maxMessagesPerRead()}) or until there is no data when we
-     *          attempt to read.</li>
-     * </ul>
-     */
-    public final boolean respectMaybeMoreData() {
-        return respectMaybeMoreData;
-    }
-
-    /**
      * Focuses on enforcing the maximum messages per read condition for {@link #continueReading(boolean)}.
      */
     public abstract class MaxMessageHandle implements Handle {
@@ -97,8 +65,8 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
         private int totalBytesRead;
         private int attemptedBytesRead;
         private int lastBytesRead;
-        private final boolean respectMaybeMoreData = DefaultMaxMessagesRecvBufferAllocator.this.respectMaybeMoreData;
-        private final BooleanSupplier defaultMaybeMoreSupplier = () -> attemptedBytesRead == lastBytesRead;
+
+        private final Predicate<Handle> defaultMaybeMoreSupplier = h -> attemptedBytesRead == lastBytesRead;
 
         /**
          * Only {@link ChannelOption#MAX_MESSAGES_PER_READ} is used.
@@ -138,9 +106,8 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
         }
 
         @Override
-        public boolean continueReading(boolean autoRead, BooleanSupplier maybeMoreDataSupplier) {
-            return autoRead &&
-                   (!respectMaybeMoreData || maybeMoreDataSupplier.getAsBoolean()) &&
+        public boolean continueReading(boolean autoRead, Predicate<Handle> maybeMoreDataSupplier) {
+            return autoRead && maybeMoreDataSupplier.test(this) &&
                    totalMessages < maxMessagePerRead && (ignoreBytesRead || totalBytesRead > 0);
         }
 

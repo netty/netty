@@ -15,6 +15,7 @@
  */
 package io.netty5.channel.kqueue;
 
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelMetadata;
@@ -24,6 +25,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
@@ -41,6 +43,7 @@ import java.io.IOException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.SO_BACKLOG;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
@@ -72,8 +75,6 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * <td>{@link RawUnixChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
  * <td>{@link ChannelOption#TCP_FASTOPEN}</td><td>X</td><td>X</td><td>-</td>
- * </tr><tr>
- * <td>{@link KQueueChannelOption#RCV_ALLOC_TRANSPORT_PROVIDES_GUESS}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
  * <td>{@link KQueueChannelOption#SO_ACCEPTFILTER}</td><td>X</td><td>X</td><td>X</td>
  * </tr><tr>
@@ -369,46 +370,36 @@ public final class KQueueServerSocketChannel extends
     }
 
     @Override
-    void readReady(KQueueRecvBufferAllocatorHandle allocHandle) {
-        assert executor().inEventLoop();
-        if (shouldBreakReadReady()) {
-            clearReadFilter0();
-            return;
-        }
-        final ChannelPipeline pipeline = pipeline();
-        allocHandle.reset();
+    void readReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
+                   Predicate<RecvBufferAllocator.Handle> maybeMoreData) {
         allocHandle.attemptedBytesRead(1);
-        readReadyBefore();
-
+        final ChannelPipeline pipeline = pipeline();
         Throwable exception = null;
         try {
-            try {
-                do {
-                    int acceptFd = socket.accept(acceptedAddress);
-                    if (acceptFd == -1) {
-                        // this means everything was handled for now
-                        allocHandle.lastBytesRead(-1);
-                        break;
-                    }
-                    allocHandle.lastBytesRead(1);
-                    allocHandle.incMessagesRead(1);
+            do {
+                int acceptFd = socket.accept(acceptedAddress);
+                if (acceptFd == -1) {
+                    // this means everything was handled for now
+                    allocHandle.lastBytesRead(-1);
+                    break;
+                }
+                allocHandle.lastBytesRead(1);
+                allocHandle.incMessagesRead(1);
 
-                    readPending = false;
-                    pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
-                            acceptedAddress[0]));
-                } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
-            } catch (Throwable t) {
-                exception = t;
-            }
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-
-            if (exception != null) {
-                pipeline.fireChannelExceptionCaught(exception);
-            }
-            readIfIsAutoRead();
-        } finally {
-            readReadyFinally();
+                readPending = false;
+                pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
+                        acceptedAddress[0]));
+            } while (allocHandle.continueReading(isAutoRead(), maybeMoreData) &&
+                    !isShutdown(ChannelShutdownDirection.Inbound));
+        } catch (Throwable t) {
+            exception = t;
         }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+
+        if (exception != null) {
+            pipeline.fireChannelExceptionCaught(exception);
+        }
+        readIfIsAutoRead();
     }
 }

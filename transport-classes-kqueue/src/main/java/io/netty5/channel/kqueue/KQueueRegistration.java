@@ -19,7 +19,7 @@ import io.netty5.channel.unix.IovArray;
 
 
 /**
- * Registration with an {@link KQueueEventLoop}.
+ * Registration with an {@link KQueueHandler}.
  */
 interface KQueueRegistration {
 

@@ -58,6 +58,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.IP_TOS;
 import static io.netty5.channel.ChannelOption.SO_KEEPALIVE;
@@ -144,15 +145,19 @@ public final class EpollSocketChannel
 
     private volatile boolean tcpFastopen;
 
+    private static final Predicate<RecvBufferAllocator.Handle> MAYBE_MORE_DATA = h ->
+         h.lastBytesRead() == h.attemptedBytesRead();
+
+    private static final Predicate<RecvBufferAllocator.Handle> MAYBE_MORE_DATA_RDHUP = h -> true;
+
     public EpollSocketChannel(EventLoop eventLoop) {
         this(eventLoop, (ProtocolFamily) null);
     }
 
     public EpollSocketChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
-        super(null, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(),
-                LinuxSocket.newSocket(protocolFamily), false);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        flags |= Native.EPOLLRDHUP;
+        super(null, eventLoop, METADATA, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(),
+                LinuxSocket.newSocket(protocolFamily), false);
     }
 
     public EpollSocketChannel(EventLoop eventLoop, int fd, ProtocolFamily family) {
@@ -160,19 +165,19 @@ public final class EpollSocketChannel
     }
 
     private EpollSocketChannel(EventLoop eventLoop, LinuxSocket socket) {
-        super(null, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), socket, isSoErrorZero(socket));
-        flags |= Native.EPOLLRDHUP;
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
+        super(null, eventLoop, METADATA, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(),
+                socket, isSoErrorZero(socket));
     }
 
     EpollSocketChannel(EpollServerSocketChannel parent, EventLoop eventLoop,
                        LinuxSocket fd, SocketAddress remoteAddress) {
-        super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, remoteAddress);
+        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
+        super(parent, eventLoop, METADATA, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(), fd, remoteAddress);
 
         if (fd.protocolFamily() != SocketProtocolFamily.UNIX && parent != null) {
             tcpMd5SigAddresses = parent.tcpMd5SigAddresses();
         }
-        // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        flags |= Native.EPOLLRDHUP;
     }
 
     /**
@@ -519,7 +524,7 @@ public final class EpollSocketChannel
     }
 
     private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
-                                     EpollRecvBufferAllocatorHandle allocHandle) {
+                                     RecvBufferAllocator.Handle allocHandle) {
         if (buffer.readableBytes() > 0) {
             readPending = false;
             pipeline.fireChannelRead(buffer);
@@ -540,31 +545,24 @@ public final class EpollSocketChannel
     }
 
     @Override
-    EpollRecvBufferAllocatorHandle newEpollHandle(RecvBufferAllocator.Handle handle) {
-        return new EpollRecvBufferAllocatorStreamingHandle(handle);
-    }
-
-    @Override
-    void epollInReady() {
+    protected void epollInReady(RecvBufferAllocator.Handle handle, BufferAllocator recvBufferAllocator,
+                                boolean receivedRdHup) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX
                 && getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
-            epollInReadFd();
+            epollInReadFd(handle, receivedRdHup);
         } else {
-            epollInReadyBytes();
+            epollInReadyBytes(handle, recvBufferAllocator, receivedRdHup);
         }
     }
 
-    private void epollInReadyBytes() {
-        if (shouldBreakEpollInReady()) {
-            clearEpollIn0();
-            return;
-        }
-        final EpollRecvBufferAllocatorHandle recvAlloc = recvBufAllocHandle();
+    private static Predicate<RecvBufferAllocator.Handle> maybeMoreData(boolean receivedRdHup) {
+        return receivedRdHup ? MAYBE_MORE_DATA_RDHUP : MAYBE_MORE_DATA;
+    }
 
+    private void epollInReadyBytes(RecvBufferAllocator.Handle recvAlloc, BufferAllocator bufferAllocator,
+                                   boolean receivedRdHup) {
         final ChannelPipeline pipeline = pipeline();
-        final BufferAllocator bufferAllocator = bufferAllocator();
-        recvAlloc.reset();
-        epollInBefore();
+        Predicate<RecvBufferAllocator.Handle> maybeMoreData = maybeMoreData(receivedRdHup);
 
         Buffer buffer = null;
         boolean close = false;
@@ -604,7 +602,8 @@ public final class EpollSocketChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (recvAlloc.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (recvAlloc.continueReading(isAutoRead(), maybeMoreData)
+                    && !isShutdown(ChannelShutdownDirection.Inbound));
 
             recvAlloc.readComplete();
             pipeline.fireChannelReadComplete();
@@ -616,8 +615,6 @@ public final class EpollSocketChannel
             }
         } catch (Throwable t) {
             handleReadException(pipeline, buffer, t, close, recvAlloc);
-        } finally {
-            epollInFinally();
         }
     }
 
@@ -1147,7 +1144,7 @@ public final class EpollSocketChannel
     }
 
     @Override
-    boolean doConnect0(SocketAddress remote) throws Exception {
+    protected boolean doConnect0(SocketAddress remote) throws Exception {
         if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
                 isTcpFastOpenConnect()) {
             ChannelOutboundBuffer outbound = outboundBuffer();
@@ -1216,17 +1213,9 @@ public final class EpollSocketChannel
         }
     }
 
-    private void epollInReadFd() {
-        if (socket.isInputShutdown()) {
-            clearEpollIn0();
-            return;
-        }
-        final EpollRecvBufferAllocatorHandle allocHandle = recvBufAllocHandle();
-
+    private void epollInReadFd(RecvBufferAllocator.Handle allocHandle, boolean receivedRdHup) {
         final ChannelPipeline pipeline = pipeline();
-        allocHandle.reset();
-        epollInBefore();
-
+        Predicate<RecvBufferAllocator.Handle> maybeMoreData = maybeMoreData(receivedRdHup);
         try {
             readLoop: do {
                 // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
@@ -1245,7 +1234,8 @@ public final class EpollSocketChannel
                         pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
                         break;
                 }
-            } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (allocHandle.continueReading(isAutoRead(), maybeMoreData)
+                    && !isShutdown(ChannelShutdownDirection.Inbound));
 
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -1253,9 +1243,11 @@ public final class EpollSocketChannel
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
             pipeline.fireChannelExceptionCaught(t);
-        } finally {
-            readIfIsAutoRead();
-            epollInFinally();
         }
+    }
+
+    @Override
+    protected boolean maybeMoreDataToRead(RecvBufferAllocator.Handle handle) {
+        return handle.lastBytesRead() == handle.attemptedBytesRead();
     }
 }

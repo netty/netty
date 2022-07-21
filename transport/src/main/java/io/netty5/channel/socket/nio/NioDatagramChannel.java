@@ -59,7 +59,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 
@@ -107,7 +107,7 @@ public final class NioDatagramChannel
             StringUtil.simpleClassName(SocketAddress.class) + ">, " +
             StringUtil.simpleClassName(Buffer.class) + ')';
 
-    private static final BooleanSupplier TRUE_SUPPLIER = () -> true;
+    private static final Predicate<Handle> TRUE_SUPPLIER = h -> true;
 
     private final ProtocolFamily family;
 
