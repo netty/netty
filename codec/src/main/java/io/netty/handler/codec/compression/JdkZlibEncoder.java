@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
@@ -34,6 +35,10 @@ import java.util.zip.Deflater;
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
 public class JdkZlibEncoder extends ZlibEncoder {
+    /**
+     * Max size for temporary heap buffers used to copy input data to heap.
+     */
+    static final int MAX_TEMP_HEAP_BUFFER_SIZE = 65536;
 
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
@@ -194,53 +199,55 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return;
         }
 
-        int offset;
-        byte[] inAry;
-        ByteBuf heapBuf = null;
-        try {
-            if (uncompressed.hasArray()) {
-                // if it is backed by an array we not need to do a copy at all
-                inAry = uncompressed.array();
-                offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
-                // skip all bytes as we will consume all of them
-                uncompressed.skipBytes(len);
-            } else {
-                heapBuf = ctx.alloc().heapBuffer(len, len);
-                uncompressed.readBytes(heapBuf, len);
-                inAry = heapBuf.array();
-                offset = heapBuf.arrayOffset() + heapBuf.readerIndex();
-            }
-
-            if (writeHeader) {
-                writeHeader = false;
-                if (wrapper == ZlibWrapper.GZIP) {
-                    out.writeBytes(gzipHeader);
+        if (uncompressed.hasArray()) {
+            // if it is backed by an array we not need to do a copy at all
+            encodeSome(uncompressed, out);
+        } else {
+            int heapBufferSize = Math.min(len, MAX_TEMP_HEAP_BUFFER_SIZE);
+            ByteBuf heapBuf = ctx.alloc().heapBuffer(heapBufferSize, heapBufferSize);
+            try {
+                while (uncompressed.isReadable()) {
+                    uncompressed.readBytes(heapBuf, Math.min(heapBuf.writableBytes(), uncompressed.readableBytes()));
+                    encodeSome(heapBuf, out);
+                    heapBuf.clear();
                 }
-            }
-
-            if (wrapper == ZlibWrapper.GZIP) {
-                crc.update(inAry, offset, len);
-            }
-
-            deflater.setInput(inAry, offset, len);
-            for (;;) {
-                deflate(out);
-                if (deflater.needsInput()) {
-                    // Consumed everything
-                    break;
-                } else {
-                    if (!out.isWritable()) {
-                        // We did not consume everything but the buffer is not writable anymore. Increase the capacity
-                        // to make more room.
-                        out.ensureWritable(out.writerIndex());
-                    }
-                }
-            }
-        } finally {
-            if (heapBuf != null) {
+            } finally {
                 heapBuf.release();
             }
         }
+        // clear input so that we don't keep an unnecessary reference to the input array
+        deflater.setInput(EmptyArrays.EMPTY_BYTES);
+    }
+
+    private void encodeSome(ByteBuf heapBuf, ByteBuf out) {
+        byte[] inAry = heapBuf.array();
+        int offset = heapBuf.arrayOffset() + heapBuf.readerIndex();
+
+        if (writeHeader) {
+            writeHeader = false;
+            if (wrapper == ZlibWrapper.GZIP) {
+                out.writeBytes(gzipHeader);
+            }
+        }
+
+        int len = heapBuf.readableBytes();
+        if (wrapper == ZlibWrapper.GZIP) {
+            crc.update(inAry, offset, len);
+        }
+
+        deflater.setInput(inAry, offset, len);
+        for (;;) {
+            deflate(out);
+            if (!out.isWritable()) {
+                // The buffer is not writable anymore. Increase the capacity to make more room.
+                // Can't rely on needsInput here, it might return false even if there's still data to be written.
+                out.ensureWritable(out.writerIndex());
+            } else if (deflater.needsInput()) {
+                // Consumed everything
+                break;
+            }
+        }
+        heapBuf.skipBytes(len);
     }
 
     @Override
@@ -258,6 +265,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 default:
                     // no op
             }
+        }
+        // sizeEstimate might overflow if close to 2G
+        if (sizeEstimate < 0 || sizeEstimate > MAX_TEMP_HEAP_BUFFER_SIZE) {
+            // can always expand later
+            return ctx.alloc().heapBuffer(MAX_TEMP_HEAP_BUFFER_SIZE);
         }
         return ctx.alloc().heapBuffer(sizeEstimate);
     }
