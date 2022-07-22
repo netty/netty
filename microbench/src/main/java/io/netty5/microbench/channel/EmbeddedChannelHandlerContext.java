@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
@@ -211,6 +212,16 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             handleException(e);
             return channel().newFailedFuture(e);
         }
+    }
+
+    @Override
+    public final ChannelHandlerContext read(ReadBufferAllocator readBufferAllocator) {
+        try {
+            channel().read(readBufferAllocator);
+        } catch (Exception e) {
+            handleException(e);
+        }
+        return this;
     }
 
     @Override

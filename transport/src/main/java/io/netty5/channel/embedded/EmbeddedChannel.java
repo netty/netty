@@ -19,6 +19,7 @@ import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
@@ -712,7 +713,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected void doRead() throws Exception {
+    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
         // NOOP
     }
 

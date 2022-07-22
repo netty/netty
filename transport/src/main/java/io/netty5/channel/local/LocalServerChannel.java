@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannel;
 
@@ -79,7 +80,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
     }
 
     @Override
-    protected void doRead() throws Exception {
+    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
         if (acceptInProgress) {
             return;
         }

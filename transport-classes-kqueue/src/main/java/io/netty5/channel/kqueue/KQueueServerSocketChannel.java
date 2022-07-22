@@ -24,6 +24,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -367,7 +368,8 @@ public final class KQueueServerSocketChannel extends
     }
 
     @Override
-    int readReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
+    int readReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                  BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
         Throwable exception = null;
         int totalBytesRead = 0;

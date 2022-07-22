@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannel;
 
@@ -50,15 +51,15 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
     }
 
     @Override
-    protected void doRead() throws Exception {
+    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
         if (inputShutdown) {
             return;
         }
-        super.doRead();
+        super.doRead(readBufferAllocator);
     }
 
     @Override
-    protected final void readNow() {
+    protected final void readNow(ReadBufferAllocator readBufferAllocator) {
         assert executor().inEventLoop();
         final ChannelPipeline pipeline = pipeline();
         final ReadHandleFactory.ReadHandle readHandle = readHandle();
@@ -68,7 +69,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
         try {
             try {
                 do {
-                    int localRead = doReadMessages(readHandle, readBuf);
+                    int localRead = doReadMessages(readHandle, readBufferAllocator, readBuf);
                     if (localRead == 0) {
                         break;
                     }
@@ -194,7 +195,8 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
     /**
      * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(ReadHandleFactory.ReadHandle readHandle, List<Object> buf) throws Exception;
+    protected abstract int doReadMessages(ReadHandleFactory.ReadHandle readHandle,
+                                          ReadBufferAllocator readBufferAllocator, List<Object> buf) throws Exception;
 
     /**
      * Write a message to the underlying {@link java.nio.channels.Channel}.

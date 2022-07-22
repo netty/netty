@@ -901,6 +901,12 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public final ChannelPipeline read(ReadBufferAllocator readBufferAllocator) {
+        tail.read(readBufferAllocator);
+        return this;
+    }
+
+    @Override
     public final Future<Void> write(Object msg) {
         return tail.write(msg);
     }
@@ -1209,13 +1215,13 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
+        public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
             DefaultChannelPipeline pipeline = defaultChannelPipeline(ctx);
             EventExecutor executor = pipeline.transportExecutor();
             if (executor.inEventLoop()) {
-                pipeline.readTransport();
+                pipeline.readTransport(readBufferAllocator);
             } else {
-                safeExecute(executor, pipeline::readTransport, null, null);
+                safeExecute(executor, () -> pipeline.readTransport(readBufferAllocator), null, null);
             }
         }
 
@@ -1326,7 +1332,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
      * in the {@link ChannelPipeline}. If there's already a pending read operation, this method does nothing.
      * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
-    protected abstract void readTransport();
+    protected abstract void readTransport(ReadBufferAllocator readBufferAllocator);
 
     /**
      * Schedules a write operation on the transport. The given {@link Promise} will be notified once the write was

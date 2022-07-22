@@ -28,6 +28,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultChannelId;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.local.LocalAddress;
@@ -424,9 +425,9 @@ public class SslHandlerTest {
         private volatile boolean readIssued;
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
+        public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
             readIssued = true;
-            ctx.read();
+            ctx.read(readBufferAllocator);
         }
 
         public void test(final boolean dropChannelActive) throws Exception {

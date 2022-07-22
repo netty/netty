@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -61,6 +62,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     protected volatile boolean active;
 
     boolean readPending;
+
+    private ReadBufferAllocator readBufferAllocator;
 
     private EpollRegistration registration;
 
@@ -192,9 +195,10 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void doRead() throws Exception {
-        // Channel.read() or ChannelHandlerContext.read() was called
+    protected final void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
+        // Channel.read(...) or ChannelHandlerContext.read(...) was called
         readPending = true;
+        this.readBufferAllocator = readBufferAllocator;
 
         // We must set the read flag here as it is possible the user didn't read in the last read loop, the
         // executeEpollInReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
@@ -341,11 +345,17 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             clearEpollIn0();
             return;
         }
+        if (readBufferAllocator == null) {
+            // readBufferAllocator can be null in case of epollInRead() be called because of POLLERR.
+            // in this case just call read() so the user is aware that there is something to do.
+            read();
+            return;
+        }
         maybeMoreDataToRead = false;
         ReadHandleFactory.ReadHandle readHandle = readHandle();
         boolean readAll = false;
         try {
-            readAll = epollInReady(readHandle, ioBufferAllocator());
+            readAll = epollInReady(readHandle, readBufferAllocator, ioBufferAllocator());
         } finally {
             this.maybeMoreDataToRead = !readAll || receivedRdHup;
 
@@ -374,7 +384,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
      * Called once EPOLLIN event is ready to be processed
      */
     protected abstract boolean epollInReady(ReadHandleFactory.ReadHandle readHandle,
-                                            BufferAllocator recvBufferAllocator);
+                                         ReadBufferAllocator readBufferAllocator,
+                                         BufferAllocator recvBufferAllocator);
 
     private void executeEpollInReadyRunnable() {
         if (epollInReadyRunnablePending || !isActive() || shouldBreakEpollInReady()) {

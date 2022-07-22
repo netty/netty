@@ -19,6 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
@@ -100,7 +101,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
     }
 
     @Override
-    protected final void readNow() {
+    protected final void readNow(ReadBufferAllocator readBufferAllocator) {
         if (shouldBreakReadReady()) {
             clearReadPending();
             return;
@@ -114,7 +115,11 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
         try {
             boolean continueReading;
             do {
-                buffer = bufferAllocator.allocate(readHandle.estimatedBufferCapacity());
+                buffer = readBufferAllocator.allocate(bufferAllocator, readHandle.estimatedBufferCapacity());
+                if (buffer == null) {
+                    readHandle.lastRead(0, 0, 0);
+                    break;
+                }
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
 

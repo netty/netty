@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder.Cumulator;
 import org.junit.jupiter.api.BeforeEach;
@@ -478,7 +479,7 @@ public class ByteToMessageDecoderTest {
             private int readsTriggered;
 
             @Override
-            public void read(ChannelHandlerContext ctx) {
+            public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
                 readsTriggered++;
                 ctx.read();
             }

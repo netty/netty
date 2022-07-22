@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FuturePromiseFactory;
@@ -133,16 +134,24 @@ public interface ChannelOutboundInvoker extends FuturePromiseFactory {
     Future<Void> deregister();
 
     /**
-     * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
+     * Request to read data from the {@link Channel}, triggers an
      * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)} event if data was
      * read, and triggers a
      * {@link ChannelHandler#channelReadComplete(ChannelHandlerContext) channelReadComplete} event so the
-     * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
+     * handler can decide to continue reading. If there's a pending read operation already, this method does nothing.
      * <p>
      * This will result in having the
-     * {@link ChannelHandler#read(ChannelHandlerContext)}
+     * {@link ChannelHandler#read(ChannelHandlerContext, ReadBufferAllocator)}
      * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
+     *
+     * @param readBufferAllocator   The {@link ReadBufferAllocator} that should be used to allocate a {@link Buffer}
+     *                              if needed (for reading the data).
+     */
+    ChannelOutboundInvoker read(ReadBufferAllocator readBufferAllocator);
+
+    /**
+     * @see #read(ReadBufferAllocator) (using a default {@link ReadBufferAllocator}).
      */
     ChannelOutboundInvoker read();
 

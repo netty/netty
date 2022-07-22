@@ -20,6 +20,8 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.ChannelOutboundInvoker;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.StandardAllocationTypes;
 import io.netty5.channel.AbstractCoalescingBufferQueue;
@@ -177,8 +179,8 @@ public class SslHandler extends ByteToMessageDecoder {
     private static final int STATE_CLOSE_NOTIFY = 1 << 6;
     private static final int STATE_PROCESS_TASK = 1 << 7;
     /**
-     * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
-     * when {@link ChannelOption#AUTO_READ} is {@code false}.
+     * This flag is used to determine if we need to call {@link ChannelOutboundInvoker#read(ReadBufferAllocator)} to
+     * consume more data when {@link ChannelOption#AUTO_READ} is {@code false}.
      */
     private static final int STATE_FIRE_CHANNEL_READ = 1 << 8;
     private static final int STATE_UNWRAP_REENTRY = 1 << 9;
@@ -608,12 +610,12 @@ public class SslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
         if (!handshakePromise.isDone()) {
             setState(STATE_READ_DURING_HANDSHAKE);
         }
 
-        ctx.read();
+        ctx.read(readBufferAllocator);
     }
 
     private static IllegalStateException newPendingWritesNullException() {

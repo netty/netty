@@ -328,12 +328,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
         assert ctx == outboundCtx.delegatingCtx();
         if (!outboundCtx.removed) {
-            outboundHandler.read(outboundCtx);
+            outboundHandler.read(outboundCtx, readBufferAllocator);
         } else {
-            outboundCtx.read();
+            outboundCtx.read(readBufferAllocator);
         }
     }
 

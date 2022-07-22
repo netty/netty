@@ -26,6 +26,7 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
@@ -496,12 +497,13 @@ public final class KQueueSocketChannel
     }
 
     @Override
-    int readReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
+    int readReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                  BufferAllocator recvBufferAllocator) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX &&
                 getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
             return readReadyFd(readHandle);
         }
-        return readReadyBytes(readHandle, recvBufferAllocator);
+        return readReadyBytes(readHandle, readBufferAllocator, recvBufferAllocator);
     }
 
     private int readReadyFd(ReadHandleFactory.ReadHandle readHandle) {
@@ -871,7 +873,8 @@ public final class KQueueSocketChannel
         }
     }
 
-    private int readReadyBytes(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
+    private int readReadyBytes(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                               BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
         Buffer buffer = null;
         boolean close = false;
@@ -879,9 +882,14 @@ public final class KQueueSocketChannel
         try {
             boolean continueReading;
             do {
+                buffer = readBufferAllocator.allocate(recvBufferAllocator, readHandle.estimatedBufferCapacity());
+                if (buffer == null) {
+                    readHandle.lastRead(0, 0, 0);
+                    break;
+                }
                 // we use a direct buffer here as the native implementations only be able
                 // to handle direct buffers.
-                buffer = recvBufferAllocator.allocate(readHandle.estimatedBufferCapacity());
+                assert buffer.isDirect();
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
                 continueReading = readHandle.lastRead(

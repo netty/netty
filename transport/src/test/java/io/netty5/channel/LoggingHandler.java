@@ -80,9 +80,9 @@ final class LoggingHandler implements ChannelHandler {
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
         log(Event.READ);
-        ctx.read();
+        ctx.read(readBufferAllocator);
     }
 
     @Override

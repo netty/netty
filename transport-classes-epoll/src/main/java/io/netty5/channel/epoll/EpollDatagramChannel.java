@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -499,14 +500,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     @Override
-    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
+    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                                   BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
         Throwable exception = null;
         boolean readAll = false;
         try {
             readAll = socket.protocolFamily() == SocketProtocolFamily.UNIX ?
-                    doReadBufferDomainSocket(readHandle, recvBufferAllocator) :
-                    doReadBuffer(readHandle, recvBufferAllocator);
+                    doReadBufferDomainSocket(readHandle, readBufferAllocator, recvBufferAllocator) :
+                    doReadBuffer(readHandle, readBufferAllocator, recvBufferAllocator);
         } catch (Throwable error) {
             exception = error;
         }
@@ -521,14 +523,20 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     private boolean doReadBufferDomainSocket(ReadHandleFactory.ReadHandle readHandle,
+                                             ReadBufferAllocator readBufferAllocator,
                                              BufferAllocator allocator) throws Throwable {
         Buffer buf = null;
         try {
             boolean connected = isConnected();
             boolean continueReading;
             do {
-                buf = allocator.allocate(readHandle.estimatedBufferCapacity());
+                buf = readBufferAllocator.allocate(allocator, readHandle.estimatedBufferCapacity());
+                if (buf == null) {
+                    readHandle.lastRead(0, 0, 0);
+                    break;
+                }
                 int attemptedBytesRead = buf.writableBytes();
+                assert buf.isDirect();
 
                 final DatagramPacket packet;
                 if (connected) {
@@ -582,14 +590,20 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         Nothing
     }
 
-    private boolean doReadBuffer(ReadHandleFactory.ReadHandle readHandle, BufferAllocator allocator) throws Throwable {
+    private boolean doReadBuffer(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                                 BufferAllocator allocator) throws Throwable {
         try {
             boolean connected = isConnected();
             for (;;) {
                 final ReadingState state;
                 int datagramSize = getMaxDatagramPayloadSize();
 
-                Buffer buf = allocator.allocate(readHandle.estimatedBufferCapacity());
+                Buffer buf = readBufferAllocator.allocate(allocator, readHandle.estimatedBufferCapacity());
+                if (buf == null) {
+                    readHandle.lastRead(0, 0, 0);
+                    break;
+                }
+                assert buf.isDirect();
                 // Only try to use recvmmsg if its really supported by the running system.
                 int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
                         datagramSize == 0 ? 1 : buf.writableBytes() / datagramSize :

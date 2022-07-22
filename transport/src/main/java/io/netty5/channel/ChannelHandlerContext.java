@@ -129,6 +129,9 @@ public interface ChannelHandlerContext extends ChannelInboundInvoker, ChannelOut
     ChannelHandlerContext fireChannelWritabilityChanged();
 
     @Override
+    ChannelHandlerContext read(ReadBufferAllocator readBufferAllocator);
+
+    @Override
     ChannelHandlerContext read();
 
     @Override

@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
@@ -37,9 +38,9 @@ public class MessageAggregatorTest {
         int value;
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
+        public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
             value++;
-            ctx.read();
+            ctx.read(readBufferAllocator);
         }
     }
 

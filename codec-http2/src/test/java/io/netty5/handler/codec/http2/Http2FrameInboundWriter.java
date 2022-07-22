@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -192,6 +193,12 @@ final class Http2FrameInboundWriter {
         @Override
         public ChannelHandlerContext fireChannelWritabilityChanged() {
             channel.pipeline().fireChannelWritabilityChanged();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext read(ReadBufferAllocator readBufferAllocator) {
+            channel.read(readBufferAllocator);
             return this;
         }
 

@@ -116,8 +116,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     // All fields below are only called from within the EventLoop thread.
     private boolean closeInitiated;
     private Throwable initialCloseCause;
-    private boolean readBeforeActive;
+    private ReadBufferAllocator readBeforeActive;
     private ReadHandleFactory.ReadHandle readHandle;
+
     private MessageSizeEstimator.Handle estimatorHandler;
     private boolean inWriteFlushed;
     /** true if the channel has never been registered, false otherwise */
@@ -373,8 +374,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     protected final void readIfIsAutoRead() {
         assertEventLoop();
 
-        if (isAutoRead() || readBeforeActive) {
-            readBeforeActive = false;
+        if (readBeforeActive != null) {
+            ReadBufferAllocator readBufferAllocator = readBeforeActive;
+            readBeforeActive = null;
+            readTransport(readBufferAllocator);
+        } else if (isAutoRead()) {
             read();
         }
     }
@@ -817,11 +821,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         safeSetSuccess(promise);
     }
 
-    private void readTransport() {
+    private void readTransport(ReadBufferAllocator readBufferAllocator) {
         assertEventLoop();
 
         if (!isActive()) {
-            readBeforeActive = true;
+            readBeforeActive = readBufferAllocator;
             return;
         }
 
@@ -830,7 +834,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             return;
         }
         try {
-            doRead();
+            doRead(readBufferAllocator);
         } catch (final Exception e) {
             invokeLater(() -> pipeline.fireChannelExceptionCaught(e));
             closeTransport(newPromise());
@@ -1117,7 +1121,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Schedule a read operation.
      */
-    protected abstract void doRead() throws Exception;
+    protected abstract void doRead(ReadBufferAllocator readBufferAllocator) throws Exception;
 
     /**
      * Flush the content of the given buffer to the remote peer.
@@ -1695,9 +1699,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         @Override
-        protected final void readTransport() {
+        protected final void readTransport(ReadBufferAllocator readBufferAllocator) {
             AbstractChannel<?, ?, ?> channel = abstractChannel();
-            channel.readTransport();
+            channel.readTransport(readBufferAllocator);
             channel.runAfterTransportAction();
         }
 

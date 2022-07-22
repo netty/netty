@@ -24,6 +24,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -353,7 +354,8 @@ public final class EpollServerSocketChannel
     }
 
     @Override
-    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
+    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                                   BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
         Throwable exception = null;
         boolean readAll = false;

@@ -21,7 +21,7 @@ import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutputShutdownException;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.util.Resource;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelId;
@@ -32,6 +32,7 @@ import io.netty5.channel.MessageSizeEstimator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
+import io.netty5.util.Resource;
 import io.netty5.util.DefaultAttributeMap;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -151,7 +152,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
                     DefaultHttp2StreamChannel.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
 
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
-    private volatile ReadHandleFactory rcvBufAllocator = new AdaptiveReadHandleFactory();
+    private volatile ReadHandleFactory readHandleFactory = new AdaptiveReadHandleFactory();
 
     private volatile int connectTimeoutMillis = 30000;
     private volatile int writeSpinCount = 16;
@@ -183,8 +184,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     /**
      * This variable represents if a read is in progress for the current channel or was requested.
      * Note that depending upon the {@link ReadHandleFactory} behavior a read may extend beyond the
-     * {@link #readTransport()} method scope. The {@link #readTransport()} loop may
-     * drain all pending data, and then if the parent channel is reading this channel may still accept frames.
+     * {@link #readTransport(ReadBufferAllocator)} method scope. The {@link #readTransport(ReadBufferAllocator)}
+     * loop may drain all pending data, and then if the parent channel is reading this channel may still accept frames.
      */
     private ReadStatus readStatus = ReadStatus.IDLE;
 
@@ -195,6 +196,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     private boolean readCompletePending;
 
     private ReadHandleFactory.ReadHandle readHandle;
+
     private boolean writeDoneAndNoFlush;
     private boolean closeInitiated;
     private boolean readEOS;
@@ -452,7 +454,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     private ReadHandleFactory.ReadHandle readHandle() {
         if (readHandle == null) {
-            readHandle = rcvBufAllocator.newHandle();
+            readHandle = readHandleFactory.newHandle();
         }
         return readHandle;
     }
@@ -664,7 +666,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
     }
 
-    private void readTransport() {
+    private void readTransport(ReadBufferAllocator allocator) {
         if (!isActive()) {
             return;
         }
@@ -998,7 +1000,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             return (T) getBufferAllocator();
         }
         if (option == READ_HANDLE_FACTORY) {
-            return getRecvBufferAllocator();
+            return getReadHandleFactory();
         }
         if (option == AUTO_CLOSE) {
             return (T) Boolean.valueOf(isAutoClose());
@@ -1032,7 +1034,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
         } else if (option == READ_HANDLE_FACTORY) {
-            setRecvBufferAllocator((ReadHandleFactory) value);
+            setReadHandleFactory((ReadHandleFactory) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
@@ -1104,12 +1106,12 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends ReadHandleFactory> T getRecvBufferAllocator() {
-        return (T) rcvBufAllocator;
+    private <T extends ReadHandleFactory> T getReadHandleFactory() {
+        return (T) readHandleFactory;
     }
 
-    private void setRecvBufferAllocator(ReadHandleFactory allocator) {
-        rcvBufAllocator = requireNonNull(allocator, "allocator");
+    private void setReadHandleFactory(ReadHandleFactory readHandleFactory) {
+        this.readHandleFactory = requireNonNull(readHandleFactory, "readHandleFactory");
     }
 
     private boolean isAutoRead() {
@@ -1235,8 +1237,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
 
         @Override
-        protected void readTransport() {
-            defaultHttp2StreamChannel().readTransport();
+        protected void readTransport(ReadBufferAllocator readBufferAllocator) {
+            defaultHttp2StreamChannel().readTransport(readBufferAllocator);
         }
 
         @Override

@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -109,7 +110,6 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
 
     @Override
     public ChannelHandlerContext fireChannelRead(Object msg) {
-
         ctx.fireChannelRead(msg);
         return this;
     }
@@ -123,6 +123,12 @@ public abstract class DelegatingChannelHandlerContext implements ChannelHandlerC
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
         ctx.fireChannelWritabilityChanged();
+        return this;
+    }
+
+    @Override
+    public ChannelHandlerContext read(ReadBufferAllocator readBufferAllocator) {
+        ctx.read(readBufferAllocator);
         return this;
     }
 

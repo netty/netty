@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueReadHandle;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -53,6 +54,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     protected volatile boolean active;
 
     protected boolean readPending;
+
+    private ReadBufferAllocator readBufferAllocator;
 
     private long numberBytesPending;
 
@@ -212,10 +215,10 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void doRead() {
+    protected final void doRead(ReadBufferAllocator readBufferAllocator) {
         // Channel.read() or ChannelHandlerContext.read() was called
         readPending = true;
-
+        this.readBufferAllocator = readBufferAllocator;
         // We must set the read flag here as it is possible the user didn't read in the last read loop, the
         // executeReadReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
         // never get data after this.
@@ -404,8 +407,10 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
         maybeMoreDataToRead = false;
 
+        assert readBufferAllocator != null;
+
         try {
-            int readBytes = readReady(readHandle, ioBufferAllocator());
+            int readBytes = readReady(readHandle, readBufferAllocator, ioBufferAllocator());
             if (readBytes > 0) {
                 this.numberBytesPending -= readBytes;
             }
@@ -433,7 +438,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    abstract int readReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator);
+    abstract int readReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                           BufferAllocator recvBufferAllocator);
 
     final void writeReady() {
         if (isConnectPending()) {

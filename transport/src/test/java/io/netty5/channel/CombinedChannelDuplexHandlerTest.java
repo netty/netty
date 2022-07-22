@@ -378,7 +378,7 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
+        public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
             queue.add(Event.READ);
         }
 

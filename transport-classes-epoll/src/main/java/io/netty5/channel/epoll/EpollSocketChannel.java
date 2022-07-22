@@ -26,6 +26,7 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
@@ -537,15 +538,17 @@ public final class EpollSocketChannel
     }
 
     @Override
-    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
+    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                                   BufferAllocator recvBufferAllocator) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX
                 && getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
             return epollInReadFd(readHandle);
         }
-        return epollInReadyBytes(readHandle, recvBufferAllocator);
+        return epollInReadyBytes(readHandle, readBufferAllocator, recvBufferAllocator);
     }
 
-    private boolean epollInReadyBytes(ReadHandleFactory.ReadHandle readHandle, BufferAllocator bufferAllocator) {
+    private boolean epollInReadyBytes(ReadHandleFactory.ReadHandle readHandle,  ReadBufferAllocator readBufferAllocator,
+                                      BufferAllocator bufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
         Buffer buffer = null;
         boolean close = false;
@@ -555,7 +558,12 @@ public final class EpollSocketChannel
             do {
                 // we use a direct buffer here as the native implementations only be able
                 // to handle direct buffers.
-                buffer = bufferAllocator.allocate(readHandle.estimatedBufferCapacity());
+                buffer = readBufferAllocator.allocate(bufferAllocator, readHandle.estimatedBufferCapacity());
+                if (buffer == null) {
+                    readHandle.lastRead(0, 0, 0);
+                    break;
+                }
+                assert buffer.isDirect();
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
                 continueReading = readHandle.lastRead(
