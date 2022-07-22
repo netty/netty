@@ -260,7 +260,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     };
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doRead() throws Exception {
         if (readInProgress) {
             return;
         }

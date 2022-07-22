@@ -80,7 +80,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doRead() throws Exception {
         if (acceptInProgress) {
             return;
         }

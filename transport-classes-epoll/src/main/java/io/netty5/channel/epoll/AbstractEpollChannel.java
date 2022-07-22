@@ -195,7 +195,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void doBeginRead() throws Exception {
+    protected final void doRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
         readPending = true;
 

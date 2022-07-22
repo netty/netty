@@ -736,7 +736,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doRead() throws Exception {
         // NOOP
     }
 

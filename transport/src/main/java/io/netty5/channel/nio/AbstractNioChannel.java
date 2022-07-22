@@ -265,7 +265,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
         final SelectionKey selectionKey = this.selectionKey;
         if (!selectionKey.isValid()) {
