@@ -193,7 +193,10 @@ public final class QuicSslContextBuilder {
 
     /**
      * Trusted certificates for verifying the remote endpoint's certificate. The file should
-     * contain an X.509 certificate collection in PEM format. {@code null} uses the system default.
+     * contain an X.509 certificate collection in PEM format. {@code null} uses the system default
+     * which only works with Java 8u261 and later as these versions support TLS1.3,
+     * see <a href="https://www.oracle.com/java/technologies/javase/8u261-relnotes.html">
+     *     JDK 8u261 Update Release Notes</a>
      */
     public QuicSslContextBuilder trustManager(File trustCertCollectionFile) {
         try {
@@ -205,7 +208,10 @@ public final class QuicSslContextBuilder {
     }
 
     /**
-     * Trusted certificates for verifying the remote endpoint's certificate, {@code null} uses the system default.
+     * Trusted certificates for verifying the remote endpoint's certificate. {@code null} uses the system default
+     * which only works with Java 8u261 and later as these versions support TLS1.3,
+     * see <a href="https://www.oracle.com/java/technologies/javase/8u261-relnotes.html">
+     *     JDK 8u261 Update Release Notes</a>
      */
     public QuicSslContextBuilder trustManager(X509Certificate... trustCertCollection) {
         try {
@@ -216,7 +222,10 @@ public final class QuicSslContextBuilder {
     }
 
     /**
-     * Trusted manager for verifying the remote endpoint's certificate. {@code null} uses the system default.
+     * Trusted manager for verifying the remote endpoint's certificate. {@code null} uses the system default
+     * which only works with Java 8u261 and later as these versions support TLS1.3,
+     * see <a href="https://www.oracle.com/java/technologies/javase/8u261-relnotes.html">
+     *     JDK 8u261 Update Release Notes</a>
      */
     public QuicSslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
         this.trustManagerFactory = trustManagerFactory;
