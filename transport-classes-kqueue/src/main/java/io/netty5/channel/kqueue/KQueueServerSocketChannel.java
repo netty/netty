@@ -111,7 +111,7 @@ public final class KQueueServerSocketChannel extends
     }
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
-                                     SocketProtocolFamily protocolFamily) {
+                                     ProtocolFamily protocolFamily) {
         super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
                 BsdSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
