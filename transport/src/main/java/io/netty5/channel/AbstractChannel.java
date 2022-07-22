@@ -46,7 +46,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
@@ -97,11 +96,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private volatile R remoteAddress;
     private volatile boolean registered;
 
+    @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbstractChannel> AUTOREAD_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "autoRead");
-    private static final AtomicReferenceFieldUpdater<AbstractChannel, WriteBufferWaterMark> WATERMARK_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(
-                    AbstractChannel.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
 
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
     private volatile RecvBufferAllocator rcvBufAllocator;
@@ -843,7 +840,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             return;
         }
         try {
-            doBeginRead();
+            doRead();
         } catch (final Exception e) {
             invokeLater(() -> pipeline.fireChannelExceptionCaught(e));
             closeTransport(newPromise());
@@ -1130,7 +1127,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Schedule a read operation.
      */
-    protected abstract void doBeginRead() throws Exception;
+    protected abstract void doRead() throws Exception;
 
     /**
      * Flush the content of the given buffer to the remote peer.

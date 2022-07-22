@@ -245,7 +245,7 @@ public class AbstractChannelTest {
         protected void doClose() { }
 
         @Override
-        protected void doBeginRead() { }
+        protected void doRead() { }
 
         @Override
         protected void doWrite(ChannelOutboundBuffer in) throws Exception { }

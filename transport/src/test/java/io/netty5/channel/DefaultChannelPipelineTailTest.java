@@ -279,7 +279,7 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doBeginRead() throws Exception {
+        protected void doRead() throws Exception {
         }
 
         @Override

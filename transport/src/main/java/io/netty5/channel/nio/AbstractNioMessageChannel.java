@@ -51,11 +51,11 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doRead() throws Exception {
         if (inputShutdown) {
             return;
         }
-        super.doBeginRead();
+        super.doRead();
     }
 
     protected boolean continueReading(RecvBufferAllocator.Handle allocHandle) {

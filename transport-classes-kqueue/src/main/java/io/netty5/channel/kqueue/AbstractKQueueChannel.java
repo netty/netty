@@ -232,7 +232,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void doBeginRead() {
+    protected final void doRead() {
         // Channel.read() or ChannelHandlerContext.read() was called
         readPending = true;
 
