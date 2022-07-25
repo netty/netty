@@ -120,7 +120,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public boolean isActive() {
         return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
     }
@@ -644,7 +643,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     private static void processPacket(ChannelPipeline pipeline, EpollRecvByteAllocatorHandle handle,
                                       int bytesRead, DatagramPacket packet) {
-        handle.lastBytesRead(bytesRead);
+        handle.lastBytesRead(Math.max(1, bytesRead)); // Avoid signalling end-of-data for zero-sized datagrams.
         handle.incMessagesRead(1);
         pipeline.fireChannelRead(packet);
     }
@@ -652,7 +651,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private static void processPacketList(ChannelPipeline pipeline, EpollRecvByteAllocatorHandle handle,
                                           int bytesRead, RecyclableArrayList packetList) {
         int messagesRead = packetList.size();
-        handle.lastBytesRead(bytesRead);
+        handle.lastBytesRead(Math.max(1, bytesRead)); // Avoid signalling end-of-data for zero-sized datagrams.
         handle.incMessagesRead(messagesRead);
         for (int i = 0; i < messagesRead; i++) {
             pipeline.fireChannelRead(packetList.set(i, Unpooled.EMPTY_BUFFER));
@@ -673,7 +672,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             NativeDatagramPacketArray.NativeDatagramPacket msg = array.packets()[0];
 
             int bytesReceived = socket.recvmsg(msg);
-            if (bytesReceived == 0) {
+            if (!msg.hasSender()) {
                 allocHandle.lastBytesRead(-1);
                 return false;
             }
