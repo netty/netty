@@ -26,6 +26,9 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
@@ -35,10 +38,18 @@ import java.util.zip.Deflater;
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
 public class JdkZlibEncoder extends ZlibEncoder {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkZlibEncoder.class);
+
+    /**
+     * Maximum initial size for temporary heap buffers used for the compressed output. Buffer may still grow beyond
+     * this if necessary.
+     */
+    static final int MAX_INITIAL_OUTPUT_BUFFER_SIZE;
     /**
      * Max size for temporary heap buffers used to copy input data to heap.
      */
-    static final int MAX_TEMP_HEAP_BUFFER_SIZE = 65536;
+    static final int MAX_INPUT_BUFFER_SIZE;
 
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
@@ -52,6 +63,20 @@ public class JdkZlibEncoder extends ZlibEncoder {
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
     private boolean writeHeader = true;
     private static final int THREAD_POOL_DELAY_SECONDS = 10;
+
+    static {
+        MAX_INITIAL_OUTPUT_BUFFER_SIZE = SystemPropertyUtil.getInt(
+                "io.netty.jdkzlib.encoder.maxInitialOutputBufferSize",
+                65536);
+        MAX_INPUT_BUFFER_SIZE = SystemPropertyUtil.getInt(
+                "io.netty.jdkzlib.encoder.maxInputBufferSize",
+                65536);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.jdkzlib.encoder.maxInitialOutputBufferSize={}", MAX_INITIAL_OUTPUT_BUFFER_SIZE);
+            logger.debug("-Dio.netty.jdkzlib.encoder.maxInputBufferSize={}", MAX_INPUT_BUFFER_SIZE);
+        }
+    }
 
     /**
      * Creates a new zlib encoder with the default compression level ({@code 6})
@@ -203,7 +228,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             // if it is backed by an array we not need to do a copy at all
             encodeSome(uncompressed, out);
         } else {
-            int heapBufferSize = Math.min(len, MAX_TEMP_HEAP_BUFFER_SIZE);
+            int heapBufferSize = Math.min(len, MAX_INPUT_BUFFER_SIZE);
             ByteBuf heapBuf = ctx.alloc().heapBuffer(heapBufferSize, heapBufferSize);
             try {
                 while (uncompressed.isReadable()) {
@@ -267,9 +292,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
             }
         }
         // sizeEstimate might overflow if close to 2G
-        if (sizeEstimate < 0 || sizeEstimate > MAX_TEMP_HEAP_BUFFER_SIZE) {
+        if (sizeEstimate < 0 || sizeEstimate > MAX_INITIAL_OUTPUT_BUFFER_SIZE) {
             // can always expand later
-            return ctx.alloc().heapBuffer(MAX_TEMP_HEAP_BUFFER_SIZE);
+            return ctx.alloc().heapBuffer(MAX_INITIAL_OUTPUT_BUFFER_SIZE);
         }
         return ctx.alloc().heapBuffer(sizeEstimate);
     }
