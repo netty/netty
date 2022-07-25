@@ -105,10 +105,10 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             ValueConverter<V> valueConverter, NameValidator<K> nameValidator, int arraySizeHint) {
         this.valueConverter = checkNotNull(valueConverter, "valueConverter");
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
-        this.hashingStrategy = checkNotNull(nameHashingStrategy, "nameHashingStrategy");
+        hashingStrategy = checkNotNull(nameHashingStrategy, "nameHashingStrategy");
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
-        entries = new DefaultHeaders.HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
+        entries = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (entries.length - 1);
         head = new HeaderEntry<K, V>();
     }
@@ -197,52 +197,52 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public boolean containsObject(K name, Object value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, fromObject(name, value));
     }
 
     @Override
     public boolean containsBoolean(K name, boolean value) {
-        return contains(name, valueConverter.convertBoolean(value));
+        return contains(name, fromBoolean(name, value));
     }
 
     @Override
     public boolean containsByte(K name, byte value) {
-        return contains(name, valueConverter.convertByte(value));
+        return contains(name, fromByte(name, value));
     }
 
     @Override
     public boolean containsChar(K name, char value) {
-        return contains(name, valueConverter.convertChar(value));
+        return contains(name, fromChar(name, value));
     }
 
     @Override
     public boolean containsShort(K name, short value) {
-        return contains(name, valueConverter.convertShort(value));
+        return contains(name, fromShort(name, value));
     }
 
     @Override
     public boolean containsInt(K name, int value) {
-        return contains(name, valueConverter.convertInt(value));
+        return contains(name, fromInt(name, value));
     }
 
     @Override
     public boolean containsLong(K name, long value) {
-        return contains(name, valueConverter.convertLong(value));
+        return contains(name, fromLong(name, value));
     }
 
     @Override
     public boolean containsFloat(K name, float value) {
-        return contains(name, valueConverter.convertFloat(value));
+        return contains(name, fromFloat(name, value));
     }
 
     @Override
     public boolean containsDouble(K name, double value) {
-        return contains(name, valueConverter.convertDouble(value));
+        return contains(name, fromDouble(name, value));
     }
 
     @Override
     public boolean containsTimeMillis(K name, long value) {
-        return contains(name, valueConverter.convertTimeMillis(value));
+        return contains(name, fromTimeMillis(name, value));
     }
 
     @SuppressWarnings("unchecked")
@@ -324,7 +324,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T addObject(K name, Object value) {
-        return add(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return add(name, fromObject(name, value));
     }
 
     @Override
@@ -345,47 +345,47 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T addInt(K name, int value) {
-        return add(name, valueConverter.convertInt(value));
+        return add(name, fromInt(name, value));
     }
 
     @Override
     public T addLong(K name, long value) {
-        return add(name, valueConverter.convertLong(value));
+        return add(name, fromLong(name, value));
     }
 
     @Override
     public T addDouble(K name, double value) {
-        return add(name, valueConverter.convertDouble(value));
+        return add(name, fromDouble(name, value));
     }
 
     @Override
     public T addTimeMillis(K name, long value) {
-        return add(name, valueConverter.convertTimeMillis(value));
+        return add(name, fromTimeMillis(name, value));
     }
 
     @Override
     public T addChar(K name, char value) {
-        return add(name, valueConverter.convertChar(value));
+        return add(name, fromChar(name, value));
     }
 
     @Override
     public T addBoolean(K name, boolean value) {
-        return add(name, valueConverter.convertBoolean(value));
+        return add(name, fromBoolean(name, value));
     }
 
     @Override
     public T addFloat(K name, float value) {
-        return add(name, valueConverter.convertFloat(value));
+        return add(name, fromFloat(name, value));
     }
 
     @Override
     public T addByte(K name, byte value) {
-        return add(name, valueConverter.convertByte(value));
+        return add(name, fromByte(name, value));
     }
 
     @Override
     public T addShort(K name, short value) {
-        return add(name, valueConverter.convertShort(value));
+        return add(name, fromShort(name, value));
     }
 
     @Override
@@ -476,8 +476,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T setObject(K name, Object value) {
-        checkNotNull(value, "value");
-        V convertedValue = checkNotNull(valueConverter.convertObject(value), "convertedValue");
+        V convertedValue = checkNotNull(fromObject(name, value), "convertedValue");
         return set(name, convertedValue);
     }
 
@@ -493,7 +492,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
-            add0(h, i, name, valueConverter.convertObject(v));
+            add0(h, i, name, fromObject(name, v));
         }
 
         return thisT();
@@ -511,7 +510,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
-            add0(h, i, name, valueConverter.convertObject(v));
+            add0(h, i, name, fromObject(name, v));
         }
 
         return thisT();
@@ -519,47 +518,47 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T setInt(K name, int value) {
-        return set(name, valueConverter.convertInt(value));
+        return set(name, fromInt(name, value));
     }
 
     @Override
     public T setLong(K name, long value) {
-        return set(name, valueConverter.convertLong(value));
+        return set(name, fromLong(name, value));
     }
 
     @Override
     public T setDouble(K name, double value) {
-        return set(name, valueConverter.convertDouble(value));
+        return set(name, fromDouble(name, value));
     }
 
     @Override
     public T setTimeMillis(K name, long value) {
-        return set(name, valueConverter.convertTimeMillis(value));
+        return set(name, fromTimeMillis(name, value));
     }
 
     @Override
     public T setFloat(K name, float value) {
-        return set(name, valueConverter.convertFloat(value));
+        return set(name, fromFloat(name, value));
     }
 
     @Override
     public T setChar(K name, char value) {
-        return set(name, valueConverter.convertChar(value));
+        return set(name, fromChar(name, value));
     }
 
     @Override
     public T setBoolean(K name, boolean value) {
-        return set(name, valueConverter.convertBoolean(value));
+        return set(name, fromBoolean(name, value));
     }
 
     @Override
     public T setByte(K name, byte value) {
-        return set(name, valueConverter.convertByte(value));
+        return set(name, fromByte(name, value));
     }
 
     @Override
     public T setShort(K name, short value) {
-        return set(name, valueConverter.convertShort(value));
+        return set(name, fromShort(name, value));
     }
 
     @Override
@@ -604,7 +603,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Boolean getBoolean(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToBoolean(v) : null;
+            return v != null ? toBoolean(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -620,7 +619,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Byte getByte(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToByte(v) : null;
+            return v != null ? toByte(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -636,7 +635,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Character getChar(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToChar(v) : null;
+            return v != null ? toChar(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -652,7 +651,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Short getShort(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToShort(v) : null;
+            return v != null ? toShort(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -668,7 +667,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Integer getInt(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToInt(v) : null;
+            return v != null ? toInt(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -684,7 +683,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Long getLong(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToLong(v) : null;
+            return v != null ? toLong(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -700,7 +699,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Float getFloat(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToFloat(v) : null;
+            return v != null ? toFloat(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -716,7 +715,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Double getDouble(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToDouble(v) : null;
+            return v != null ? toDouble(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -732,7 +731,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Long getTimeMillis(K name) {
         V v = get(name);
         try {
-            return v != null ? valueConverter.convertToTimeMillis(v) : null;
+            return v != null ? toTimeMillis(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -748,7 +747,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Boolean getBooleanAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToBoolean(v) : null;
+            return v != null ? toBoolean(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -764,7 +763,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Byte getByteAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToByte(v) : null;
+            return v != null ? toByte(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -780,7 +779,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Character getCharAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToChar(v) : null;
+            return v != null ? toChar(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -796,7 +795,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Short getShortAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToShort(v) : null;
+            return v != null ? toShort(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -812,7 +811,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Integer getIntAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToInt(v) : null;
+            return v != null ? toInt(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -828,7 +827,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Long getLongAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToLong(v) : null;
+            return v != null ? toLong(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -844,7 +843,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Float getFloatAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToFloat(v) : null;
+            return v != null ? toFloat(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -860,7 +859,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Double getDoubleAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToDouble(v) : null;
+            return v != null ? toDouble(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -876,7 +875,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public Long getTimeMillisAndRemove(K name) {
         V v = getAndRemove(name);
         try {
-            return v != null ? valueConverter.convertToTimeMillis(v) : null;
+            return v != null ? toTimeMillis(name, v) : null;
         } catch (RuntimeException ignore) {
             return null;
         }
@@ -1039,6 +1038,159 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @SuppressWarnings("unchecked")
     private T thisT() {
         return (T) this;
+    }
+
+    private V fromObject(K name, Object value) {
+        try {
+            return valueConverter.convertObject(checkNotNull(value, "value"));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert object value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromBoolean(K name, boolean value) {
+        try {
+            return valueConverter.convertBoolean(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert boolean value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromByte(K name, byte value) {
+        try {
+            return valueConverter.convertByte(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert byte value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromChar(K name, char value) {
+        try {
+            return valueConverter.convertChar(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert char value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromShort(K name, short value) {
+        try {
+            return valueConverter.convertShort(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert short value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromInt(K name, int value) {
+        try {
+            return valueConverter.convertInt(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert int value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromLong(K name, long value) {
+        try {
+            return valueConverter.convertLong(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert long value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromFloat(K name, float value) {
+        try {
+            return valueConverter.convertFloat(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert float value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromDouble(K name, double value) {
+        try {
+            return valueConverter.convertDouble(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert double value for header '" + name + '\'', e);
+        }
+    }
+
+    private V fromTimeMillis(K name, long value) {
+        try {
+            return valueConverter.convertTimeMillis(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert millsecond value for header '" + name + '\'', e);
+        }
+    }
+
+    private boolean toBoolean(K name, V value) {
+        try {
+            return valueConverter.convertToBoolean(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to boolean for header '" + name + '\'');
+        }
+    }
+
+    private byte toByte(K name, V value) {
+        try {
+            return valueConverter.convertToByte(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to byte for header '" + name + '\'');
+        }
+    }
+
+    private char toChar(K name, V value) {
+        try {
+            return valueConverter.convertToChar(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to char for header '" + name + '\'');
+        }
+    }
+
+    private short toShort(K name, V value) {
+        try {
+            return valueConverter.convertToShort(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to short for header '" + name + '\'');
+        }
+    }
+
+    private int toInt(K name, V value) {
+        try {
+            return valueConverter.convertToInt(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to int for header '" + name + '\'');
+        }
+    }
+
+    private long toLong(K name, V value) {
+        try {
+            return valueConverter.convertToLong(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to long for header '" + name + '\'');
+        }
+    }
+
+    private float toFloat(K name, V value) {
+        try {
+            return valueConverter.convertToFloat(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to float for header '" + name + '\'');
+        }
+    }
+
+    private double toDouble(K name, V value) {
+        try {
+            return valueConverter.convertToDouble(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to convert header value to double for header '" + name + '\'');
+        }
+    }
+
+    private long toTimeMillis(K name, V value) {
+        try {
+            return valueConverter.convertToTimeMillis(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Failed to convert header value to millsecond for header '" + name + '\'');
+        }
     }
 
     /**
