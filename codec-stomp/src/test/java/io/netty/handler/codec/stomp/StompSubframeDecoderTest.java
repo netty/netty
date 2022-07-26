@@ -244,4 +244,91 @@ public class StompSubframeDecoderTest {
         assertEquals("unexpected byte in buffer 1 while expecting NULL byte",
                      lastContentFrame.decoderResult().cause().getMessage());
     }
+
+    @Test
+    void testUnescapeHeaders() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(StompTestConstants.ESCAPED_MESSAGE_FRAME.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+        assertEquals(6, headersSubFrame.headers().size());
+        assertEquals("/queue/a:", headersSubFrame.headers().get(StompHeaders.DESTINATION));
+        assertEquals("header\\\r\n:Value", headersSubFrame.headers().get("header\\\r\n:Name"));
+        assertEquals("header_\\_\r_\n_:_Value", headersSubFrame.headers().get("header_\\_\r_\n_:_Name"));
+        assertEquals(":headerValue", headersSubFrame.headers().get("headerName:"));
+
+        StompContentSubframe content = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
+
+        Object obj = channel.readInbound();
+        assertNull(obj);
+    }
+
+    @Test
+    void testNotUnescapeHeadersForConnectCommand() {
+        String expectedStompFrame = "CONNECT\n"
+                + "headerName-\\\\:headerValue-\\\\\n"
+                + "\n" + '\0';
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(expectedStompFrame.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+        assertEquals(1, headersSubFrame.headers().size());
+        assertEquals("headerValue-\\\\", headersSubFrame.headers().get("headerName-\\\\"));
+
+        StompContentSubframe content = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
+
+        Object obj = channel.readInbound();
+        assertNull(obj);
+    }
+
+    @Test
+    void testNotUnescapeHeadersForConnectedCommand() {
+        String expectedStompFrame = "CONNECTED\n"
+                + "headerName-\\\\:headerValue-\\\\\n"
+                + "\n" + '\0';
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(expectedStompFrame.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+        assertEquals(1, headersSubFrame.headers().size());
+        assertEquals("headerValue-\\\\", headersSubFrame.headers().get("headerName-\\\\"));
+
+        StompContentSubframe content = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
+
+        Object obj = channel.readInbound();
+        assertNull(obj);
+    }
+
+    @Test
+    void testInvalidEscapeHeadersSequence() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(INVALID_ESCAPED_MESSAGE_FRAME.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+
+        assertEquals("received an invalid escape header sequence 'custom_invalid\\t'",
+                     headersSubFrame.decoderResult().cause().getMessage());
+    }
 }
