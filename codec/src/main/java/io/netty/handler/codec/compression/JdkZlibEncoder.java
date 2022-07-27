@@ -45,11 +45,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * Maximum initial size for temporary heap buffers used for the compressed output. Buffer may still grow beyond
      * this if necessary.
      */
-    static final int MAX_INITIAL_OUTPUT_BUFFER_SIZE;
+    private static final int MAX_INITIAL_OUTPUT_BUFFER_SIZE;
     /**
      * Max size for temporary heap buffers used to copy input data to heap.
      */
-    static final int MAX_INPUT_BUFFER_SIZE;
+    private static final int MAX_INPUT_BUFFER_SIZE;
 
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
