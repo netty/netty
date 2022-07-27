@@ -462,7 +462,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
             }
 
             if (state != 0) {
-                throw new IllegalArgumentException("a header value must not end with '\\r' or '\\n':" + seq);
+                throw new IllegalArgumentException("a header value must not end with '\\r' or '\\n'");
             }
             return seq;
         }
@@ -478,11 +478,11 @@ public class DefaultHttpHeaders extends HttpHeaders {
                 // Check the absolutely prohibited characters.
                 switch (character) {
                 case 0x0: // NULL
-                    throw new IllegalArgumentException("a header value contains a prohibited character '\0': " + seq);
+                    throw new IllegalArgumentException("a header value contains a prohibited character '\0'");
                 case 0x0b: // Vertical tab
-                    throw new IllegalArgumentException("a header value contains a prohibited character '\\v': " + seq);
+                    throw new IllegalArgumentException("a header value contains a prohibited character '\\v'");
                 case '\f':
-                    throw new IllegalArgumentException("a header value contains a prohibited character '\\f': " + seq);
+                    throw new IllegalArgumentException("a header value contains a prohibited character '\\f'");
                 default:
                     break;
                 }
@@ -504,14 +504,14 @@ public class DefaultHttpHeaders extends HttpHeaders {
                     if (character == '\n') {
                         return 2;
                     }
-                    throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
+                    throw new IllegalArgumentException("only '\\n' is allowed after '\\r'");
                 case 2:
                     switch (character) {
                         case '\t':
                         case ' ':
                             return 0;
                         default:
-                            throw new IllegalArgumentException("only ' ' and '\\t' are allowed after '\\n': " + seq);
+                            throw new IllegalArgumentException("only ' ' and '\\t' are allowed after '\\n'");
                     }
                 default:
                     break;
