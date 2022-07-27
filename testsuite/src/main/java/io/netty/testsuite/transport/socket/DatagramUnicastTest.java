@@ -31,6 +31,7 @@ import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.opentest4j.TestAbortedException;
 
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
@@ -220,7 +221,16 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         SocketAddress address = server.localAddress();
         DatagramSocket client = new DatagramSocket();
         for (int i = 0; i < 100; i++) {
-            client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address));
+            java.net.DatagramPacket packet;
+            try {
+                packet = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address);
+            } catch (IllegalArgumentException e) {
+                if ("unsupported address type".equals(e.getMessage())) {
+                    throw new TestAbortedException("The JDK DatagramPacket does not support this address type.", e);
+                }
+                throw e;
+            }
+            client.send(packet);
             semaphore.acquire();
         }
     }
