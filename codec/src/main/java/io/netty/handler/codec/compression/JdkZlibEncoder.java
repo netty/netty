@@ -244,9 +244,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
         deflater.setInput(EmptyArrays.EMPTY_BYTES);
     }
 
-    private void encodeSome(ByteBuf heapBuf, ByteBuf out) {
-        byte[] inAry = heapBuf.array();
-        int offset = heapBuf.arrayOffset() + heapBuf.readerIndex();
+    private void encodeSome(ByteBuf in, ByteBuf out) {
+        // both in and out are heap buffers, here
+
+        byte[] inAry = in.array();
+        int offset = in.arrayOffset() + in.readerIndex();
 
         if (writeHeader) {
             writeHeader = false;
@@ -255,7 +257,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             }
         }
 
-        int len = heapBuf.readableBytes();
+        int len = in.readableBytes();
         if (wrapper == ZlibWrapper.GZIP) {
             crc.update(inAry, offset, len);
         }
@@ -272,7 +274,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 break;
             }
         }
-        heapBuf.skipBytes(len);
+        in.skipBytes(len);
     }
 
     @Override
