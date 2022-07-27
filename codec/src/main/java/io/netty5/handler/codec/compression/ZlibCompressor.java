@@ -17,6 +17,9 @@ package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.internal.SystemPropertyUtil;
+import io.netty5.util.internal.logging.InternalLogger;
+import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
@@ -30,6 +33,14 @@ import static java.util.Objects.requireNonNull;
  * Compresses a {@link Buffer} using the deflate algorithm.
  */
 public final class ZlibCompressor implements Compressor {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ZlibCompressor.class);
+
+    /**
+     * Maximum initial size for temporary heap buffers used for the compressed output. Buffer may still grow beyond
+     * this if necessary.
+     */
+    private static final int MAX_INITIAL_OUTPUT_BUFFER_SIZE;
+
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
 
@@ -46,6 +57,16 @@ public final class ZlibCompressor implements Compressor {
     }
     private State state = State.PROCESSING;
     private boolean writeHeader = true;
+
+    static {
+        MAX_INITIAL_OUTPUT_BUFFER_SIZE = SystemPropertyUtil.getInt(
+                "io.netty.jdkzlib.encoder.maxInitialOutputBufferSize",
+                65536);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.jdkzlib.encoder.maxInitialOutputBufferSize={}", MAX_INITIAL_OUTPUT_BUFFER_SIZE);
+        }
+    }
 
     private ZlibCompressor(ZlibWrapper wrapper, int compressionLevel) {
         this.wrapper = wrapper;
@@ -189,6 +210,11 @@ public final class ZlibCompressor implements Compressor {
                     // no op
             }
         }
+        // sizeEstimate might overflow if close to 2G
+        if (sizeEstimate < 0 || sizeEstimate > MAX_INITIAL_OUTPUT_BUFFER_SIZE) {
+            // can always expand later
+            sizeEstimate = MAX_INITIAL_OUTPUT_BUFFER_SIZE;
+        }
         Buffer out = allocator.allocate(sizeEstimate);
 
         try (var readableIteration = uncompressed.forEachReadable()) {
@@ -219,15 +245,13 @@ public final class ZlibCompressor implements Compressor {
             deflater.setInput(in);
             for (;;) {
                 deflate(out);
-                if (deflater.needsInput()) {
+                if (out.writableBytes() == 0) {
+                    // The buffer is not writable anymore. Increase the capacity to make more room.
+                    // Can't rely on needsInput here, it might return true even if there's still data to be written.
+                    out.ensureWritable(out.writerOffset());
+                } else if (deflater.needsInput()) {
                     // Consumed everything
                     break;
-                } else {
-                    if (out.writableBytes() == 0) {
-                        // We did not consume everything but the buffer is not writable anymore. Increase the
-                        // capacity to make more room.
-                        out.ensureWritable(out.writerOffset());
-                    }
                 }
             }
         } catch (Throwable cause) {
