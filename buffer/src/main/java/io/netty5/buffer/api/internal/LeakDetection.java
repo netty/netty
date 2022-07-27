@@ -50,8 +50,7 @@ public final class LeakDetection {
     static {
         int enabled = SystemPropertyUtil.getBoolean("io.netty5.buffer.leakDetectionEnabled", false) ? 1 : 0;
         try {
-            LEAK_DETECTION_ENABLED_UPDATER = MethodHandles.lookup().findStaticVarHandle(
-                    LeakDetection.class, "leakDetectionEnabled", int.class);
+            LEAK_DETECTION_ENABLED_UPDATER = getLeakDetectionEnabledUpdater();
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);
         }
@@ -59,6 +58,18 @@ public final class LeakDetection {
             CALLBACKS.put(LoggingLeakCallback.getInstance(), 1);
         }
         leakDetectionEnabled = enabled;
+    }
+
+    private static VarHandle getLeakDetectionEnabledUpdater() throws NoSuchFieldException, IllegalAccessException {
+        String fieldName = "leakDetectionEnabled";
+        if (SystemPropertyUtil.contains("io.netty5.buffer.leakDetection.nativeimageworkaround")) {
+            // Prevent this class from being initialized at build time when building a native-image.
+            // This is a temporary workaround that will be removed.
+            fieldName = "This should never happen, please unset the system property: " +
+                    "io.netty5.buffer.leakDetection.nativeimageworkaround";
+        }
+        return MethodHandles.lookup().findStaticVarHandle(
+                LeakDetection.class, fieldName, int.class);
     }
 
     private LeakDetection() {
