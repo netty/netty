@@ -271,8 +271,10 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                     return;
                 }
                 framePayloadLength = in.readLong();
-                // TODO: check if it's bigger than 0x7FFFFFFFFFFFFFFF, Maybe
-                // just check if it's negative?
+                if (framePayloadLength < 0) {
+                    protocolViolation(ctx, in, "invalid data frame length (negative length)");
+                    return;
+                }
 
                 if (framePayloadLength < 65536) {
                     protocolViolation(ctx, in, "invalid data frame length (not using minimal length encoding)");
@@ -396,23 +398,34 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
         // Remark: & 0xFF is necessary because Java will do signed expansion from
         // byte to int which we don't want.
-        int intMask = ((maskingKey[0] & 0xFF) << 24)
-                    | ((maskingKey[1] & 0xFF) << 16)
-                    | ((maskingKey[2] & 0xFF) << 8)
-                    | (maskingKey[3] & 0xFF);
+        long longMask = ((long) maskingKey[0] & 0xff) << 56 |
+                        ((long) maskingKey[1] & 0xff) << 48 |
+                        ((long) maskingKey[2] & 0xff) << 40 |
+                        ((long) maskingKey[3] & 0xff) << 32 |
+                        ((long) maskingKey[0] & 0xff) << 24 |
+                        ((long) maskingKey[1] & 0xff) << 16 |
+                        ((long) maskingKey[2] & 0xff) <<  8 |
+                        (long)  maskingKey[3] & 0xff;
 
         // If the byte order of our buffers it little endian we have to bring our mask
         // into the same format, because getInt() and writeInt() will use a reversed byte order
         if (order == ByteOrder.LITTLE_ENDIAN) {
-            intMask = Integer.reverseBytes(intMask);
+            longMask = Long.reverseBytes(longMask);
         }
 
-        for (; i + 3 < end; i += 4) {
-            int unmasked = frame.getInt(i) ^ intMask;
-            frame.setInt(i, unmasked);
+        for (int lim = end - 7; i < lim; i += 8) {
+            long unmasked = frame.getLong(i) ^ longMask;
+            frame.setLong(i, unmasked);
         }
+
+        if (i < end - 3) {
+            frame.setInt(i, frame.getInt(i) ^ (int) (longMask >> 32));
+            i += 4;
+        }
+
+        int maskOffset = 0;
         for (; i < end; i++) {
-            frame.setByte(i, frame.getByte(i) ^ maskingKey[i % 4]);
+            frame.setByte(i, frame.getByte(i) ^ maskingKey[maskOffset++ & 3]);
         }
     }
 
