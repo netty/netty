@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.api.AllocationType;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
@@ -36,6 +37,9 @@ import java.util.Arrays;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
@@ -582,6 +586,26 @@ public class JdkZlibTest {
         }
     }
 
+    @Test
+    public void testLargeEncode() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(createEncoder(ZlibWrapper.NONE));
+        BufferAllocator wrapped = channel.bufferAllocator();
+        channel.setBufferAllocator(new LimitedBufferAllocator(wrapped));
+
+        // construct a 128M buffer out of many times the same 1M buffer :)
+        Supplier<Buffer> smallBuffer = wrapped.constBufferSupplier(new byte[1024 * 1024]);
+        Buffer bigBuffer = wrapped.compose(
+                IntStream.range(0, 128)
+                        .mapToObj(i -> smallBuffer.get().send())
+                        .collect(Collectors.toList())
+        );
+
+        assertTrue(channel.writeOutbound(bigBuffer));
+        assertTrue(channel.finish());
+        channel.checkException();
+        assertTrue(channel.releaseOutbound());
+    }
+
     private static byte[] gzip(byte[] bytes) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         GZIPOutputStream stream = new GZIPOutputStream(out);
@@ -596,5 +620,42 @@ public class JdkZlibTest {
         stream.write(bytes);
         stream.close();
         return out.toByteArray();
+    }
+
+    private static final class LimitedBufferAllocator implements BufferAllocator {
+        private static final int MAX = 1024 * 1024;
+
+        private final BufferAllocator wrapped;
+
+        LimitedBufferAllocator(BufferAllocator wrapped) {
+            this.wrapped = wrapped;
+        }
+
+        @Override
+        public boolean isPooling() {
+            return wrapped.isPooling();
+        }
+
+        @Override
+        public AllocationType getAllocationType() {
+            return wrapped.getAllocationType();
+        }
+
+        @Override
+        public Buffer allocate(int size) {
+            Buffer buf = wrapped.allocate(size);
+            buf.implicitCapacityLimit(MAX);
+            return buf;
+        }
+
+        @Override
+        public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
+            return wrapped.constBufferSupplier(bytes);
+        }
+
+        @Override
+        public void close() {
+            wrapped.close();
+        }
     }
 }
