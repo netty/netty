@@ -25,12 +25,15 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
+import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,6 +58,38 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
             channel = cb.bind(0).sync().channel();
         } finally {
             closeChannel(channel);
+        }
+    }
+
+    @Test
+    public void testReceiveEmptyDatagrams(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testReceiveEmptyDatagrams(bootstrap, bootstrap2);
+            }
+        });
+    }
+
+    public void testReceiveEmptyDatagrams(Bootstrap sb, Bootstrap cb) throws Throwable {
+        final Semaphore semaphore = new Semaphore(0);
+        Channel server = sb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                        semaphore.release();
+                    }
+                });
+            }
+        }).bind(newSocketAddress()).sync().channel();
+
+        SocketAddress address = server.localAddress();
+        DatagramSocket client = new DatagramSocket();
+        for (int i = 0; i < 100; i++) {
+            client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address));
+            semaphore.acquire();
         }
     }
 
