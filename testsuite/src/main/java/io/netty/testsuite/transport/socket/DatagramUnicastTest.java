@@ -219,7 +219,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         }).bind(newSocketAddress()).sync().channel();
 
         SocketAddress address = server.localAddress();
-        DatagramSocket client = new DatagramSocket();
+        DatagramSocket client = new DatagramSocket(newSocketAddress());
         for (int i = 0; i < 100; i++) {
             java.net.DatagramPacket packet;
             try {
