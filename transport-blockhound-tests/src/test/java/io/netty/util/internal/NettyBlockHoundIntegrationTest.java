@@ -17,6 +17,8 @@ package io.netty.util.internal;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -42,6 +44,7 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
@@ -341,6 +344,27 @@ public class NettyBlockHoundIntegrationTest {
             group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
         }
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void pooledBufferAllocation() throws Exception {
+        FutureTask<Void> task = new FutureTask<>(() -> {
+            PooledByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
+            List<ByteBuf> buffers = new ArrayList<>();
+            for (int i = 0; i < 13; i++) {
+                int size = 8 << i;
+                buffers.add(allocator.ioBuffer(size, size));
+            }
+            for (ByteBuf buffer : buffers) {
+                buffer.release();
+            }
+            return null;
+        });
+        FastThreadLocalThread thread = new FastThreadLocalThread(task);
+        thread.start();
+        thread.join();
+        task.get();
     }
 
     @Test

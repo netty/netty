@@ -76,6 +76,26 @@ class Hidden {
             );
 
             builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolArena",
+                    "lock"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolSubpage",
+                    "lock"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolChunk",
+                    "allocateRun"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolChunk",
+                    "free"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.SslHandler",
                     "handshake"
             );
