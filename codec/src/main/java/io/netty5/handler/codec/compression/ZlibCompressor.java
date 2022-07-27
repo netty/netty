@@ -17,6 +17,7 @@ package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -254,6 +255,8 @@ public final class ZlibCompressor implements Compressor {
                     break;
                 }
             }
+            // clear input so that we don't keep an unnecessary reference to the input array
+            deflater.setInput(EmptyArrays.EMPTY_BYTES);
         } catch (Throwable cause) {
             out.close();
             throw cause;
