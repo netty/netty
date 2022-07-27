@@ -267,7 +267,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             deflate(out);
             if (!out.isWritable()) {
                 // The buffer is not writable anymore. Increase the capacity to make more room.
-                // Can't rely on needsInput here, it might return false even if there's still data to be written.
+                // Can't rely on needsInput here, it might return true even if there's still data to be written.
                 out.ensureWritable(out.writerIndex());
             } else if (deflater.needsInput()) {
                 // Consumed everything
