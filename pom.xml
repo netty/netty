@@ -1149,6 +1149,35 @@
                   <old>method java.lang.String io.netty.testsuite.util.TestUtils::testMethodName(org.junit.rules.TestName)</old>
                   <justification>This should be test-only, and we're removing support for JUnit 4.</justification>
                 </item>
+                <!-- Necessary changes to fix #12627 -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.util.AbstractReferenceCounted::setRefCnt(int) @ io.netty.handler.codec.http.multipart.MixedAttribute</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.util.AbstractReferenceCounted::setRefCnt(int) @ io.netty.handler.codec.http.multipart.MixedFileUpload</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.multipart.MixedFileUpload</old>
+                  <new>class io.netty.handler.codec.http.multipart.MixedFileUpload</new>
+                  <superClass>io.netty.handler.codec.http.multipart.AbstractMixedHttpData&lt;io.netty.handler.codec.http.multipart.FileUpload&gt;</superClass>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.multipart.MixedAttribute</old>
+                  <new>class io.netty.handler.codec.http.multipart.MixedAttribute</new>
+                  <superClass>io.netty.handler.codec.http.multipart.AbstractMixedHttpData&lt;io.netty.handler.codec.http.multipart.Attribute&gt;</superClass>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
