@@ -31,7 +31,6 @@ import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.opentest4j.TestAbortedException;
 
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
@@ -47,6 +46,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -223,9 +223,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         try {
             client = new DatagramSocket(newSocketAddress());
         } catch (IllegalArgumentException e) {
-            if ("unsupported address type".equals(e.getMessage())) {
-                throw new TestAbortedException("The JDK DatagramPacket does not support this address type.", e);
-            }
+            assumeThat(e.getMessage()).doesNotContainIgnoringCase("unsupported address type");
             throw e;
         }
         for (int i = 0; i < 100; i++) {
