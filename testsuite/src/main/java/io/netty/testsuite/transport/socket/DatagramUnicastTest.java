@@ -31,7 +31,10 @@ import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.opentest4j.TestAbortedException;
 
+import java.io.IOException;
+import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -227,7 +230,11 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             throw e;
         }
         for (int i = 0; i < 100; i++) {
-            client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address));
+            try {
+                client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address));
+            } catch (BindException e) {
+                throw new TestAbortedException("JDK sockets do not support binding to these addresses.", e);
+            }
             semaphore.acquire();
         }
     }
