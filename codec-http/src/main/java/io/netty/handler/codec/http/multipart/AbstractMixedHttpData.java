@@ -179,7 +179,7 @@ abstract class AbstractMixedHttpData<D extends HttpData> extends AbstractReferen
 
     @Override
     public void setContent(InputStream inputStream) throws IOException {
-        if (wrapped instanceof MemoryAttribute) {
+        if (wrapped instanceof AbstractMemoryHttpData) {
             // change to Disk even if we don't know the size
             wrapped.release();
             wrapped = makeDiskData();
