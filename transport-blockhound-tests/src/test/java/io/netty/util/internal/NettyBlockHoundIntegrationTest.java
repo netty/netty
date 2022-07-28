@@ -75,6 +75,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -349,9 +350,14 @@ public class NettyBlockHoundIntegrationTest {
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void pooledBufferAllocation() throws Exception {
+        AtomicLong iterationCounter = new AtomicLong();
+        PooledByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
         FutureTask<Void> task = new FutureTask<>(() -> {
-            PooledByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
             List<ByteBuf> buffers = new ArrayList<>();
+            long count;
+            do {
+                count = iterationCounter.get();
+            } while (count == 0);
             for (int i = 0; i < 13; i++) {
                 int size = 8 << i;
                 buffers.add(allocator.ioBuffer(size, size));
@@ -363,6 +369,10 @@ public class NettyBlockHoundIntegrationTest {
         });
         FastThreadLocalThread thread = new FastThreadLocalThread(task);
         thread.start();
+        do {
+            allocator.dumpStats(); // This will take internal pool locks and we'll race with the thread.
+            iterationCounter.set(1);
+        } while (thread.isAlive());
         thread.join();
         task.get();
     }
