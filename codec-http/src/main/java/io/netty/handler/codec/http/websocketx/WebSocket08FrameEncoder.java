@@ -179,45 +179,44 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 mask = ByteBuffer.allocate(4).putInt(random).array();
                 buf.writeBytes(mask);
 
-                ByteOrder srcOrder = data.order();
-                ByteOrder dstOrder = buf.order();
+                if (data.isReadable()) {
 
-                int i = data.readerIndex();
-                int end = data.writerIndex();
+                    ByteOrder srcOrder = data.order();
+                    ByteOrder dstOrder = buf.order();
 
-                if (srcOrder == dstOrder) {
-                    // Use the optimized path only when byte orders match
-                    // Remark: & 0xFF is necessary because Java will do signed expansion from
-                    // byte to int which we don't want.
-                    long longMask = ((long) mask[0] & 0xff) << 56
-                                    | ((long) mask[1] & 0xff) << 48
-                                    | ((long) mask[2] & 0xff) << 40
-                                    | ((long) mask[3] & 0xff) << 32
-                                    | ((long) mask[0] & 0xff) << 24
-                                    | ((long) mask[1] & 0xff) << 16
-                                    | ((long) mask[2] & 0xff) << 8
-                                    | (long) mask[3] & 0xff;
+                    int i = data.readerIndex();
+                    int end = data.writerIndex();
 
-                    // If the byte order of our buffers it little endian we have to bring our mask
-                    // into the same format, because getInt() and writeInt() will use a reversed byte order
-                    if (srcOrder == ByteOrder.LITTLE_ENDIAN) {
-                        longMask = Long.reverseBytes(longMask);
+                    if (srcOrder == dstOrder) {
+                        // Use the optimized path only when byte orders match
+                        // Remark: & 0xFF is necessary because Java will do signed expansion from
+                        // byte to int which we don't want.
+                        long longMask = (long) (mask[0] & 0xff) << 24
+                                        | (mask[1] & 0xff) << 16
+                                        | (mask[2] & 0xff) << 8
+                                        | (mask[3] & 0xff);
+                        longMask |= longMask << 32;
+
+                        // If the byte order of our buffers it little endian we have to bring our mask
+                        // into the same format, because getInt() and writeInt() will use a reversed byte order
+                        if (srcOrder == ByteOrder.LITTLE_ENDIAN) {
+                            longMask = Long.reverseBytes(longMask);
+                        }
+
+                        for (int lim = end - 7; i < lim; i += 8) {
+                            buf.writeLong(data.getLong(i) ^ longMask);
+                        }
+
+                        if (i < end - 3) {
+                            buf.writeInt(data.getInt(i) ^ (int) longMask);
+                            i += 4;
+                        }
                     }
-
-                    for (int lim = end - 7; i < lim; i += 8) {
-                        long longData = data.getLong(i);
-                        buf.writeLong(longData ^ longMask);
+                    int maskOffset = 0;
+                    for (; i < end; i++) {
+                        byte byteData = data.getByte(i);
+                        buf.writeByte(byteData ^ mask[maskOffset++ & 3]);
                     }
-
-                    if (i < end - 3) {
-                        buf.writeInt(data.getInt(i) ^ (int) (longMask >> 32));
-                        i += 4;
-                    }
-                }
-                int maskOffset = 0;
-                for (; i < end; i++) {
-                    byte byteData = data.getByte(i);
-                    buf.writeByte(byteData ^ mask[maskOffset++ & 3]);
                 }
                 out.add(buf);
             } else {

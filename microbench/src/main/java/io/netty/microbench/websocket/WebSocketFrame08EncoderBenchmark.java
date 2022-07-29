@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocket08FrameEncoder;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
@@ -54,7 +56,7 @@ public class WebSocketFrame08EncoderBenchmark extends AbstractMicrobenchmark {
     private ByteBuf content;
 
     private BinaryWebSocketFrame webSocketFrame;
-    @Param({ "0", "4", "8", "32", "100", "1000", "3000" })
+    @Param({ "0", "2", "4", "8", "32", "100", "1000", "3000" })
     public int contentLength;
 
     @Param({ "true", "false" })
@@ -62,6 +64,9 @@ public class WebSocketFrame08EncoderBenchmark extends AbstractMicrobenchmark {
 
     @Param({ "true" })
     public boolean masking;
+
+    @Param({ "true", "false" })
+    public boolean voidPromise;
 
     @Setup(Level.Trial)
     public void setUp() {
@@ -88,8 +93,14 @@ public class WebSocketFrame08EncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void writeWebSocketFrame() throws Exception {
-        websocketEncoder.write(context, webSocketFrame, context.voidPromise());
+    public ChannelFuture writeWebSocketFrame() throws Exception {
+        ChannelPromise promise = newPromise();
+        websocketEncoder.write(context, webSocketFrame, promise);
+        return promise;
+    }
+
+    private ChannelPromise newPromise() {
+        return voidPromise? context.voidPromise() : context.newPromise();
     }
 
     @Override

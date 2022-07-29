@@ -54,7 +54,7 @@ public class WebSocketFrame08DecoderBenchmark extends AbstractMicrobenchmark {
     private ChannelHandlerContext context;
 
     private ByteBuf websocketFrame;
-    @Param({ "0", "4", "8", "32", "100", "1000", "3000" })
+    @Param({ "0", "2", "4", "8", "32", "100", "1000", "3000" })
     public int contentLength;
 
     @Param({ "true", "false" })
@@ -89,6 +89,7 @@ public class WebSocketFrame08DecoderBenchmark extends AbstractMicrobenchmark {
         websocketFrame.release();
         websocketFrame = null;
     }
+
     @Benchmark
     public void readWebSocketFrame() throws Exception {
         websocketDecoder.channelRead(context, websocketFrame.retainedDuplicate());

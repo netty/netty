@@ -311,16 +311,18 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 return;
             }
 
-            ByteBuf payloadBuffer = null;
+            ByteBuf payloadBuffer = Unpooled.EMPTY_BUFFER;
             try {
-                payloadBuffer = readBytes(ctx.alloc(), in, toFrameLength(framePayloadLength));
+                if (framePayloadLength > 0) {
+                    payloadBuffer = readBytes(ctx.alloc(), in, toFrameLength(framePayloadLength));
+                }
 
                 // Now we have all the data, the next checkpoint must be the next
                 // frame
                 state = State.READING_FIRST;
 
                 // Unmask data if needed
-                if (frameMasked) {
+                if (frameMasked & framePayloadLength > 0) {
                     unmask(payloadBuffer);
                 }
 
@@ -398,14 +400,11 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
         // Remark: & 0xFF is necessary because Java will do signed expansion from
         // byte to int which we don't want.
-        long longMask = ((long) maskingKey[0] & 0xff) << 56 |
-                        ((long) maskingKey[1] & 0xff) << 48 |
-                        ((long) maskingKey[2] & 0xff) << 40 |
-                        ((long) maskingKey[3] & 0xff) << 32 |
-                        ((long) maskingKey[0] & 0xff) << 24 |
-                        ((long) maskingKey[1] & 0xff) << 16 |
-                        ((long) maskingKey[2] & 0xff) <<  8 |
-                        (long)  maskingKey[3] & 0xff;
+        long longMask = (long) (maskingKey[0] & 0xff) << 24
+                        | (maskingKey[1] & 0xff) << 16
+                        | (maskingKey[2] & 0xff) << 8
+                        | (maskingKey[3] & 0xff);
+        longMask |= longMask << 32;
 
         // If the byte order of our buffers it little endian we have to bring our mask
         // into the same format, because getInt() and writeInt() will use a reversed byte order
@@ -414,12 +413,11 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         }
 
         for (int lim = end - 7; i < lim; i += 8) {
-            long unmasked = frame.getLong(i) ^ longMask;
-            frame.setLong(i, unmasked);
+            frame.setLong(i, frame.getLong(i) ^ longMask);
         }
 
         if (i < end - 3) {
-            frame.setInt(i, frame.getInt(i) ^ (int) (longMask >> 32));
+            frame.setInt(i, frame.getInt(i) ^ (int) longMask);
             i += 4;
         }
 
