@@ -22,13 +22,20 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.opentest4j.TestAbortedException;
 
+import java.io.IOException;
+import java.net.BindException;
+import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -38,9 +45,11 @@ import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -186,6 +195,48 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb) throws Throwable {
         testSimpleSendWithConnect(sb, cb, Unpooled.directBuffer().writeBytes(BYTES), BYTES, 1);
         testSimpleSendWithConnect(sb, cb, Unpooled.directBuffer().writeBytes(BYTES), BYTES, 4);
+    }
+
+    @Test
+    public void testReceiveEmptyDatagrams(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testReceiveEmptyDatagrams(bootstrap, bootstrap2);
+            }
+        });
+    }
+
+    public void testReceiveEmptyDatagrams(Bootstrap sb, Bootstrap cb) throws Throwable {
+        final Semaphore semaphore = new Semaphore(0);
+        Channel server = sb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                        semaphore.release();
+                    }
+                });
+            }
+        }).bind(newSocketAddress()).sync().channel();
+
+        SocketAddress address = server.localAddress();
+        DatagramSocket client;
+        try {
+            client = new DatagramSocket(newSocketAddress());
+        } catch (IllegalArgumentException e) {
+            assumeThat(e.getMessage()).doesNotContainIgnoringCase("unsupported address type");
+            throw e;
+        }
+        for (int i = 0; i < 100; i++) {
+            try {
+                client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address));
+            } catch (BindException e) {
+                throw new TestAbortedException("JDK sockets do not support binding to these addresses.", e);
+            }
+            semaphore.acquire();
+        }
     }
 
     @SuppressWarnings("deprecation")
