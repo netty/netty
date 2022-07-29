@@ -22,14 +22,20 @@ import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.opentest4j.TestAbortedException;
 
+import java.net.BindException;
+import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -40,11 +46,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -154,7 +162,49 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         testSimpleSendWithConnect(sb, cb, DefaultBufferAllocators.offHeapAllocator().copyOf(BYTES), BYTES, 4);
     }
 
-    @SuppressWarnings("deprecation")
+    @Test
+    public void testReceiveEmptyDatagrams(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testReceiveEmptyDatagrams(bootstrap, bootstrap2);
+            }
+        });
+    }
+
+    public void testReceiveEmptyDatagrams(Bootstrap sb, Bootstrap cb) throws Throwable {
+        final Semaphore semaphore = new Semaphore(0);
+        Channel server = sb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
+                    @Override
+                    protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                        semaphore.release();
+                    }
+                });
+            }
+        }).bind(newSocketAddress()).asStage().get();
+
+        SocketAddress address = server.localAddress();
+        DatagramSocket client;
+        try {
+            client = new DatagramSocket(newSocketAddress());
+        } catch (IllegalArgumentException e) {
+            assumeThat(e.getMessage()).doesNotContainIgnoringCase("unsupported address type");
+            throw e;
+        }
+        for (int i = 0; i < 100; i++) {
+            try {
+                client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address));
+            } catch (BindException e) {
+                throw new TestAbortedException("JDK sockets do not support binding to these addresses.", e);
+            }
+            semaphore.acquire();
+        }
+        client.close();
+    }
+
     private void testSimpleSend0(Bootstrap sb, Bootstrap cb, Buffer buf, boolean bindClient,
                                 final byte[] bytes, int count) throws Throwable {
         Channel sc = null;

@@ -702,7 +702,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
     private static void processPacket(ChannelPipeline pipeline, RecvBufferAllocator.Handle handle,
                                       int bytesRead, AddressedEnvelope<?, ?> packet) {
-        handle.lastBytesRead(bytesRead);
+        handle.lastBytesRead(Math.max(1, bytesRead)); // Avoid signalling end-of-data for zero-sized datagrams.
         handle.incMessagesRead(1);
         pipeline.fireChannelRead(packet);
     }
@@ -710,7 +710,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     private static void processPacketList(ChannelPipeline pipeline, RecvBufferAllocator.Handle handle,
                                           BufferAllocator allocator, int bytesRead, RecyclableArrayList packetList) {
         int messagesRead = packetList.size();
-        handle.lastBytesRead(bytesRead);
+        handle.lastBytesRead(Math.max(1, bytesRead)); // Avoid signalling end-of-data for zero-sized datagrams.
         handle.incMessagesRead(messagesRead);
         for (int i = 0; i < messagesRead; i++) {
             pipeline.fireChannelRead(packetList.set(i, allocator.allocate(0)));
@@ -731,7 +731,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             NativeDatagramPacketArray.NativeDatagramPacket msg = array.packets()[0];
 
             int bytesReceived = socket.recvmsg(msg);
-            if (bytesReceived == 0) {
+            if (!msg.hasSender()) {
                 allocHandle.lastBytesRead(-1);
                 return false;
             }
