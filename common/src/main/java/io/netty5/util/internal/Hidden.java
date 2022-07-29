@@ -78,6 +78,26 @@ class Hidden {
                     "takeTask");
 
             builder.allowBlockingCallsInside(
+                    "io.netty5.buffer.api.pool.PoolArena",
+                    "lock"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty5.buffer.api.pool.PoolSubpage",
+                    "lock"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty5.buffer.api.pool.PoolChunk",
+                    "allocateRun"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty5.buffer.api.pool.PoolChunk",
+                    "free"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty5.util.concurrent.SingleThreadEventExecutor",
                     "addTask");
 

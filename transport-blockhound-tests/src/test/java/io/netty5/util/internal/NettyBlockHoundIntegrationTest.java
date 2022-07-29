@@ -17,6 +17,8 @@ package io.netty5.util.internal;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.pool.PooledBufferAllocator;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -40,6 +42,7 @@ import io.netty5.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty5.util.HashedWheelTimer;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 import io.netty5.util.concurrent.EventExecutor;
+import io.netty5.util.concurrent.FastThreadLocalThread;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -69,6 +72,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -336,6 +340,37 @@ public class NettyBlockHoundIntegrationTest {
                 }
                 group.shutdownGracefully();
             }
+        }
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void pooledBufferAllocation() throws Exception {
+        try (PooledBufferAllocator allocator = (PooledBufferAllocator) BufferAllocator.onHeapPooled()) {
+            AtomicLong iterationCounter = new AtomicLong();
+            FutureTask<Void> task = new FutureTask<>(() -> {
+                List<Buffer> buffers = new ArrayList<>();
+                long count;
+                do {
+                    count = iterationCounter.get();
+                } while (count == 0);
+                for (int i = 0; i < 13; i++) {
+                    int size = 8 << i;
+                    buffers.add(allocator.allocate(size));
+                }
+                for (Buffer buffer : buffers) {
+                    buffer.close();
+                }
+                return null;
+            });
+            FastThreadLocalThread thread = new FastThreadLocalThread(task);
+            thread.start();
+            do {
+                allocator.dumpStats(); // This will take internal pool locks, and we'll race with the thread.
+                iterationCounter.set(1);
+            } while (thread.isAlive());
+            thread.join();
+            task.get();
         }
     }
 
