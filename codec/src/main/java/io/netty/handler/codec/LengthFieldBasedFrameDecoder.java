@@ -442,7 +442,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
         ByteBuf frame = extractFrame(ctx, in, readerIndex, actualFrameLength);
         in.readerIndex(readerIndex + actualFrameLength);
-        frameLengthInt = -1; // start processing the next frame
+        resetFrameLengthInt(); // start processing the next frame
         return frame;
     }
 
