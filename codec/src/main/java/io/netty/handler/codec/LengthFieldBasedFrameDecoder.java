@@ -182,6 +182,9 @@ import io.netty.channel.ChannelHandlerContext;
  * | 0xCA | 0x0010 | 0xFE | "HELLO, WORLD" |      | 0xFE | "HELLO, WORLD" |
  * +------+--------+------+----------------+      +------+----------------+
  * </pre>
+ *
+ * NOTE: we use frameLengthInt variable to avoid repeated parsing frame, but sometimes we could need it.
+ * so you can call resetFrameLengthInt do it.
  * @see LengthFieldPrepender
  */
 public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
@@ -441,6 +444,13 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         in.readerIndex(readerIndex + actualFrameLength);
         frameLengthInt = -1; // start processing the next frame
         return frame;
+    }
+
+    /**
+     * allow repeat read frame
+     */
+    public void resetFrameLengthInt(){
+        this.frameLengthInt = -1;
     }
 
     /**
