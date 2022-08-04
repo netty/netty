@@ -449,10 +449,10 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     /**
      * allow repeat read frame
      */
-    public void resetFrameLengthInt(){
+    public void resetFrameLengthInt() {
         this.frameLengthInt = -1;
     }
-    
+
     /**
      * Decodes the specified region of the buffer into an unadjusted frame length.  The default implementation is
      * capable of decoding the specified region into an unsigned 8/16/24/32/64 bit integer.  Override this method to
