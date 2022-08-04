@@ -449,7 +449,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     /**
      * allow repeat read frame
      */
-    public void resetFrameLengthInt() {
+    protected void resetFrameLengthInt() {
         this.frameLengthInt = -1;
     }
 
