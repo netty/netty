@@ -182,6 +182,9 @@ import io.netty.channel.ChannelHandlerContext;
  * | 0xCA | 0x0010 | 0xFE | "HELLO, WORLD" |      | 0xFE | "HELLO, WORLD" |
  * +------+--------+------+----------------+      +------+----------------+
  * </pre>
+ *
+ * NOTE: we use frameLengthInt variable to avoid repeated parsing frame, but sometimes we could need it.
+ * so you can call resetFrameLengthInt do it.
  * @see LengthFieldPrepender
  */
 public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
@@ -443,6 +446,13 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         return frame;
     }
 
+    /**
+     * allow repeat read frame
+     */
+    public void resetFrameLengthInt(){
+        this.frameLengthInt = -1;
+    }
+    
     /**
      * Decodes the specified region of the buffer into an unadjusted frame length.  The default implementation is
      * capable of decoding the specified region into an unsigned 8/16/24/32/64 bit integer.  Override this method to
