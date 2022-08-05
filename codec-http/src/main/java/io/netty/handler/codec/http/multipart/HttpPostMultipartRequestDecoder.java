@@ -776,7 +776,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             String values = StringUtil.substringAfter(contents[i], '=');
                             Attribute attribute;
                             try {
-                                attribute = factory.createAttribute(request, name, cleanString(values));
+                                attribute = factory.createAttribute(request, cleanString(name), values);
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
                             } catch (IllegalArgumentException e) {
