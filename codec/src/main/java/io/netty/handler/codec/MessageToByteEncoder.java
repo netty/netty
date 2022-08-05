@@ -99,17 +99,21 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf buf = null;
         try {
+            // 1 消息类型是否匹配
             if (acceptOutboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
+                // 2 分配 ByteBuf 资源，使用堆外内存
                 buf = allocateBuffer(ctx, cast, preferDirect);
                 try {
+                    // 3 执行 encode 方法完成数据编码
                     encode(ctx, cast, buf);
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
 
                 if (buf.isReadable()) {
+                    // 4 向后传递写事件
                     ctx.write(buf, promise);
                 } else {
                     buf.release();

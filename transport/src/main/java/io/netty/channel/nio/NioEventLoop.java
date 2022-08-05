@@ -550,10 +550,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 if (ioRatio == 100) {
                     try {
                         if (strategy > 0) {
+                            // 处理 IO 事件
                             processSelectedKeys();
                         }
                     } finally {
-                        // Ensure we always run tasks.
+                        // Ensure we always run tasks. 处理所有任务
                         ranTasks = runAllTasks();
                     }
                 } else if (strategy > 0) {

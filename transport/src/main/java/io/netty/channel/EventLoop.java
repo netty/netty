@@ -18,6 +18,8 @@ package io.netty.channel;
 import io.netty.util.concurrent.OrderedEventExecutor;
 
 /**
+ * Reactor 线程模型的事件处理引擎，每个 EventLoop 线程维护一个 Selector 选择器和任务队列 TaskQueue，主要负责 IO 事件、普通任务和定时任务
+ *
  * Will handle all the I/O operations for a {@link Channel} once registered.
  *
  * One {@link EventLoop} instance will usually handle more than one {@link Channel} but this may depend on
