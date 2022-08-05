@@ -15,12 +15,16 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.handler.ssl.util.BouncyCastlePemReader;
 import io.netty.util.internal.ResourcesUtil;
+import org.bouncycastle.openssl.PEMParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -149,6 +153,27 @@ public abstract class SslContextTest {
     public void testPkcs1UnencryptedRsa() throws Exception {
         PrivateKey key = SslContext.toPrivateKey(
                 new File(getClass().getResource("rsa_pkcs1_unencrypted.key").getFile()), null);
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs8UnencryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(
+                new File(getClass().getResource("rsa_pkcs8_unencrypted.key").getFile()), null);
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs8AesEncryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs8_aes_encrypted.key")
+                .getFile()), "example");
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs8Des3EncryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs8_des3_encrypted.key")
+                .getFile()), "example");
         assertNotNull(key);
     }
 
