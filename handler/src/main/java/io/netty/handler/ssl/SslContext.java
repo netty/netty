@@ -26,6 +26,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.handler.ssl.util.BouncyCastlePemReader;
 import io.netty.util.internal.EmptyArrays;
 
 import java.security.Provider;
@@ -1120,6 +1121,15 @@ public abstract class SslContext {
         if (keyFile == null) {
             return null;
         }
+
+        // try BC first, if this fail fallback to original key extraction process
+        if (BouncyCastlePemReader.isAvailable()) {
+            PrivateKey pk;
+            if ((pk = BouncyCastlePemReader.getPrivateKey(keyFile, keyPassword)) != null) {
+                return pk;
+            }
+        }
+
         return getPrivateKeyFromByteBuffer(PemReader.readPrivateKey(keyFile), keyPassword);
     }
 
@@ -1131,6 +1141,15 @@ public abstract class SslContext {
         if (keyInputStream == null) {
             return null;
         }
+
+        // try BC first, if this fail fallback to original key extraction process
+        if (BouncyCastlePemReader.isAvailable()) {
+            PrivateKey pk;
+            if ((pk = BouncyCastlePemReader.getPrivateKey(keyInputStream, keyPassword)) != null) {
+                return pk;
+            }
+        }
+
         return getPrivateKeyFromByteBuffer(PemReader.readPrivateKey(keyInputStream), keyPassword);
     }
 
