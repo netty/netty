@@ -314,7 +314,8 @@ public class HttpPostMultiPartRequestDecoderTest {
         req.headers().set("content-length", content.length());
 
         HttpPostMultipartRequestDecoder test = new HttpPostMultipartRequestDecoder(req);
-        assertEquals("audio/ogg", ((FileUpload) test.getBodyHttpDatas("file").get(0)).getContentType());
+        FileUpload httpData = (FileUpload) test.getBodyHttpDatas("file").get(0);
+        assertEquals("audio/ogg", httpData.getContentType());
     }
 
     private static void commonNotBadReleaseBuffersDuringDecoding(HttpDataFactory factory, boolean inMemory)
