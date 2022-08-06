@@ -199,10 +199,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            // 检查是否重复添加 Handler
             checkMultiplicity(handler);
 
+            // 创建心的 DefaultChannelHandlerContext 节点
             newCtx = newContext(group, filterName(name, handler), handler);
 
+            // 添加新的 DefaultChannelHandler 节点到 ChannelPipeline
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -220,10 +223,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return this;
             }
         }
+        // 回调用户方法
         callHandlerAdded0(newCtx);
         return this;
     }
 
+    /**
+     * 向 ChannelPipeline 中双向链表的尾部插入新的节点，其中 HeadContext 和 TailContext 一直是链表的头和尾，新的节点被插入到 HeadContext 和 TailContext 之间。
+     *
+     * @param newCtx
+     */
     private void addLast0(AbstractChannelHandlerContext newCtx) {
         AbstractChannelHandlerContext prev = tail.prev;
         newCtx.prev = prev;
@@ -414,6 +423,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline remove(ChannelHandler handler) {
+        // getContextOrDie 用于查找需要删除的节点
         remove(getContextOrDie(handler));
         return this;
     }
@@ -453,6 +463,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         assert ctx != head && ctx != tail;
 
         synchronized (this) {
+            // 删除双向链表中的 Handler 节点
             atomicRemoveFromHandlerList(ctx);
 
             // If the registered is false it means that the channel was not registered on an eventloop yet.
@@ -474,6 +485,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return ctx;
             }
         }
+        // 回调用户函数
         callHandlerRemoved0(ctx);
         return ctx;
     }
@@ -713,10 +725,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return context0(ObjectUtil.checkNotNull(name, "name"));
     }
 
+    /**
+     * Netty 确实是从双向链表的头结点开始依次遍历，如果当前 Context 节点的 Handler 要被删除的 Handler 相同，那么便找到了要删除的 Handler，然后返回当前 Context 节点。
+     *
+     * @param handler
+     * @return
+     */
     @Override
     public final ChannelHandlerContext context(ChannelHandler handler) {
         ObjectUtil.checkNotNull(handler, "handler");
 
+        // 遍历双向链表查找
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
 
@@ -724,6 +743,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return null;
             }
 
+            // 如果 Handler 相同，返回当前的 Context 节点
             if (ctx.handler() == handler) {
                 return ctx;
             }

@@ -49,6 +49,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+    /**
+     * SelectorProvider 是 JDK NIO 中的抽象类实现，通过 openServerSocketChannel() 方法可以用于创建服务端的 ServerSocketChannel。
+     * 而且 SelectorProvider 会根据操作系统类型和版本的不同，返回不同的实现类，具体可以参考 DefaultSelectorProvider 的源码实现
+     */
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
@@ -93,6 +97,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
+        // 调用父类方法
         super(null, channel, SelectionKey.OP_ACCEPT);
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }

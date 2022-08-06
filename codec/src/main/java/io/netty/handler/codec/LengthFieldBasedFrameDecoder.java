@@ -26,6 +26,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
+ * 长度域解码器 LengthFieldBasedFrameDecoder 是解决 TCP 拆包/粘包问题最常用的 解码器。
+ *
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the length field in the message.  It is particularly useful when you
  * decode a binary message which has an integer header field that represents the
@@ -188,10 +190,27 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
 
     private final ByteOrder byteOrder;
     private final int maxFrameLength;
+    /**
+     * 长度字段的偏移量，急存放长度数据的起始位置
+     */
     private final int lengthFieldOffset;
+    /**
+     * 长度字段锁占用的字节数
+     */
     private final int lengthFieldLength;
+    /**
+     * 长度字段结束的偏移量，lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength
+     */
     private final int lengthFieldEndOffset;
+    /**
+     * 消息长度的修正值
+     * 在很多较为复杂一些的协议设计中，长度域不仅仅包含消息的长度，而且包含其他的数据，如版本号、数据类型、数据状态等，那么这时候我们需要使用 lengthAdjustment 进行修正
+     * lengthAdjustment = 包体的长度值 - 长度域的值
+     */
     private final int lengthAdjustment;
+    /**
+     * 解码后需要跳过的初始字节数，也就是消息内容字段的起始位置
+     */
     private final int initialBytesToStrip;
     private final boolean failFast;
     private boolean discardingTooLongFrame;

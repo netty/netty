@@ -236,6 +236,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (localAddress == null) {
             throw new IllegalStateException("localAddress not set");
         }
+        // 调用 JDK 底层进行端口绑定
         return doBind(localAddress);
     }
 
@@ -269,12 +270,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        // 初始化并注册 Channel，同时返回一个 ChannelFuture 实例，猜测此过程为一个异步过程。
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
+        // 判断 initAndRegister(); 是否发生异常，如果发生了一茶匙那个，直接返回
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
+        // 表示 initAndRegister(); 是否执行完毕，如果执行完毕，调用 doBind0() 进行 socket 绑定
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
@@ -283,7 +287,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
+            // 如果 initAndRegister(); 还没有i结束，添加一个 ChannelFuture 回调监听
             regFuture.addListener(new ChannelFutureListener() {
+                // 当 initAndRegister(); 执行结束后会调用 operationComplete，同样会通过 doBind0() 进行端口绑定
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     Throwable cause = future.cause();
@@ -304,10 +310,27 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
+    /**
+     * 1. 创建服务端 Channel：本质是创建 JDK 底层原生的 Channel，并初始化几个重要的属性，包括 id、unsafe、pipeline 等。
+     *  - ReflectiveChannelFactory 通过反射创建 NioServerSocketChannel 实例
+     *  - 创建 JDK 底层的 ServerSocketChannel
+     *  - 为 Channel 创建 id、unsafe、pipeline 三个重要成员变量
+     *  - 设置 Channel 为非阻塞模式
+     *
+     * 2.初始化服务端 Channel：设置 Socket 参数以及用户自定义属性，并添加两个特殊的处理器 ChannelInitializer 和 ServerBootstrapAcceptor。
+     *
+     * 3. 注册服务端 Channel：调用 JDK 底层将 Channel 注册到 Selector 上。
+     *
+     * 4. 端口绑定：调用 JDK 底层进行端口绑定，并触发 channelActive 事件，把 OP_ACCEPT 事件注册到 Channel 的事件集合中。
+     *
+     * @return
+     */
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            // 创建 Channel
             channel = channelFactory.newChannel();
+            // 初始化 Channel
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
@@ -320,6 +343,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
+        // 注册 Channel，MultithreadEventLoopGroup#register
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {

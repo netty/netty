@@ -92,6 +92,7 @@ final class ChannelHandlerMask {
         int mask = MASK_EXCEPTION_CAUGHT;
         try {
             if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
+                // 如果是 ChannelInboundHandler 实例，所有 Inbound 事件置为 1
                 mask |= MASK_ALL_INBOUND;
 
                 if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
@@ -121,6 +122,7 @@ final class ChannelHandlerMask {
             }
 
             if (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) {
+                // 如果是 ChannelOutboundHandler 实例，所有 Outbound 事件置为 1
                 mask |= MASK_ALL_OUTBOUND;
 
                 if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,

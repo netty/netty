@@ -81,6 +81,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         this.ch = ch;
         this.readInterestOp = readInterestOp;
         try {
+            // 设置 Channel 是非阻塞模式
             ch.configureBlocking(false);
         } catch (IOException e) {
             try {
@@ -377,6 +378,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
+                /**
+                 * javaChannel().register() 负责调用 JDK 底层，将 Channel 注册到 Selector 上，register() 的第三个入参传入的是 Netty 自己实现的 Channel 对象，
+                 * 调用 register() 方法会将它绑定在 JDK 底层 Channel 的 attachment 上。这样在每次 Selector 对象进行事件循环时，Netty 都可以从返回的 JDK 底层 Channel 中获得自己的 Channel 对象。
+                 */
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {
@@ -411,6 +416,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
+            // 注册 OP_ACCEPT 事件到服务端 Channel 的事件集合
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

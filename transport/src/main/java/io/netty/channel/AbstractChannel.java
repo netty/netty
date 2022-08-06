@@ -70,9 +70,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        id = newId();
-        unsafe = newUnsafe();
-        pipeline = newChannelPipeline();
+        id = newId(); // 全局唯一的 ChannelId
+        unsafe = newUnsafe(); // 用于操作底层数据的读写操作
+        pipeline = newChannelPipeline(); // 负责业务处理器的编排
     }
 
     /**
@@ -461,6 +461,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return remoteAddress0();
         }
 
+        /**
+         * Netty 会在线程池 EventLoopGroup 中选择一个 EventLoop 与当前 Channel 进行绑定，之后 Channel 生命周期内的所有 I/O 事件都由这个 EventLoop 负责处理，如 accept、connect、read、write 等 I/O 事件。
+         *
+         * @param eventLoop
+         * @param promise
+         */
         @Override
         public final void register(EventLoop eventLoop, final ChannelPromise promise) {
             ObjectUtil.checkNotNull(eventLoop, "eventLoop");
@@ -476,9 +482,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             AbstractChannel.this.eventLoop = eventLoop;
 
+            // Reactor 线程内部调用
             if (eventLoop.inEventLoop()) {
                 register0(promise);
-            } else {
+            } else { // 外部线程调用
                 try {
                     eventLoop.execute(new Runnable() {
                         @Override
@@ -505,20 +512,24 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
+                // 调用 JDK 底层的 register() 进行注册
                 doRegister();
                 neverRegistered = false;
                 registered = true;
 
                 // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                // user may already fire events through the pipeline in the ChannelFutureListener.
+                // user may already fire events through the pipeline in the ChannelFutureListener. 触发 handlerAdded 事件
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);
+                // 触发 channelRegistered 事件
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
+                // 此时 Channel 还未注册绑定地址，所以处于非活跃状态
                 if (isActive()) {
                     if (firstRegistration) {
+                        // Channel 当前状态为活跃时，触发 channelActive 事件
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
                         // This channel was registered before and autoRead() is set. This means we need to begin read

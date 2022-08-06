@@ -129,16 +129,20 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) {
+        // 设置 Socket 参数
         setChannelOptions(channel, newOptionsArray(), logger);
+        // 保存用户自定义属性
         setAttributes(channel, newAttributesArray());
 
         ChannelPipeline p = channel.pipeline();
 
+        // 获取 ServerBootStrapAcceptor 的构造参数
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions = newOptionsArray(childOptions);
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = newAttributesArray(childAttrs);
 
+        // 添加特殊的 Handler 处理器
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) {
@@ -151,6 +155,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
+                        // 添加 ServerBootstrapAcceptor 是一个异步过程，需要 EventLoop 线程负责执行。而当前 EventLoop 线程正在执行 register0() 的注册流程，
+                        // 所以等到 register0() 执行完之后才能被添加到 Pipeline 当中。完成 initChannel() 这一步之后，ServerBootstrapAcceptor 并没有被添加到 Pipeline 中
                         pipeline.addLast(new ServerBootstrapAcceptor(
                                 ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }

@@ -781,12 +781,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             throw e;
         }
 
+        // 找到 Pipeline 链表暗中下一个 Outbound 类型的 ChannelHandler 节点
         final AbstractChannelHandlerContext next = findContextOutbound(flush ?
                 (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
         final Object m = pipeline.touch(msg, next);
         EventExecutor executor = next.executor();
+        // 判断当前是否 NioEventLoop 中的线程
         if (executor.inEventLoop()) {
             if (flush) {
+                // 一位内 flush == true，所以流程走到这里
                 next.invokeWriteAndFlush(m, promise);
             } else {
                 next.invokeWrite(m, promise);
@@ -934,6 +937,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     final void callHandlerAdded() throws Exception {
         // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
         // any pipeline events ctx.handler() will miss them because the state will not allow it.
+        // Netty 会通过 CAS 修改节点的状态直至 REMOVE_COMPLETE 或者 ADD_COMPLETE，如果修改节点为 ADD_COMPLETE 状态，表示节点已经添加成功，然后会回调用户 Handler 中实现的 handlerAdded() 方法。
         if (setAddComplete()) {
             handler().handlerAdded(this);
         }
