@@ -158,7 +158,7 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             pipeline.fireChannelRead(m);
         } while (handle.continueReading());
-
+        handle.readComplete();
         pipeline.fireChannelReadComplete();
     }
 
