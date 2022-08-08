@@ -61,12 +61,6 @@ public final class DefaultBufferAllocators {
             offHeap = BufferAllocator.offHeapPooled();
             logger.debug("-Dio.netty5.allocator.type: pooled (unknown: {})", allocType);
         }
-        getRuntime().addShutdownHook(new Thread(() -> {
-            //noinspection EmptyTryBlock
-            try (onHeap; offHeap) {
-                // Left blank.
-            }
-        }));
         UncloseableBufferAllocator onHeapUnclosable = new UncloseableBufferAllocator(onHeap);
         UncloseableBufferAllocator offHeapUnclosable = new UncloseableBufferAllocator(offHeap);
         DEFAULT_PREFERRED_ALLOCATOR = directBufferPreferred? offHeapUnclosable : onHeapUnclosable;
