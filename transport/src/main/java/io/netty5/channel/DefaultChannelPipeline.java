@@ -1346,4 +1346,6 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
      * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void sendOutboundEventTransport(Object event, Promise<Void> promise);
+
+    protected abstract boolean isTransportSupportingDisconnect();
 }

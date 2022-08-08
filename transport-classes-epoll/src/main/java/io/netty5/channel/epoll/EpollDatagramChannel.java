@@ -32,7 +32,6 @@ import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
@@ -100,7 +99,6 @@ import static java.util.Objects.requireNonNull;
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel> implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -163,7 +161,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, METADATA, 0, new FixedRecvBufferAllocator(2048), fd, active);
+        super(null, eventLoop, true, 0, new FixedRecvBufferAllocator(2048), fd, active);
     }
 
     @Override

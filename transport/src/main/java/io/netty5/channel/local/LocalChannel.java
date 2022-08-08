@@ -24,7 +24,6 @@ import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
@@ -53,7 +52,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
@@ -82,7 +80,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     protected LocalChannel(LocalServerChannel parent, EventLoop eventLoop, LocalChannel peer) {
-        super(parent, eventLoop, METADATA);
+        super(parent, eventLoop, false);
         this.peer = peer;
         if (parent != null) {
             localAddress = parent.localAddress();

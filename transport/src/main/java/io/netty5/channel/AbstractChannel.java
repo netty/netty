@@ -81,7 +81,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private final ClosePromise closePromise;
     private final Runnable fireChannelWritabilityChangedTask;
     private final EventLoop eventLoop;
-    private final ChannelMetadata metadata;
+    private final boolean supportingDisconnect;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -136,12 +136,14 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Creates a new instance.
      *
-     * @param parent        the parent of this channel. {@code null} if there's no parent.
-     * @param eventLoop     the {@link EventLoop} which will be used.
-     * @param metadata      the {@link ChannelMetadata} to use.
+     * @param parent                    the parent of this channel. {@code null} if there's no parent.
+     * @param eventLoop                 the {@link EventLoop} which will be used.
+     * @param supportingDisconnect      {@code true} if and only if the channel has the {@code disconnect()}
+     *                                  operation that allows a user to disconnect and then call {
+     *                                  @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      */
-    protected AbstractChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata) {
-        this(parent, eventLoop, metadata, new AdaptiveRecvBufferAllocator());
+    protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect) {
+        this(parent, eventLoop, supportingDisconnect, new AdaptiveRecvBufferAllocator());
     }
 
     /**
@@ -149,12 +151,14 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *
      * @param parent                        the parent of this channel. {@code null} if there's no parent.
      * @param eventLoop                     the {@link EventLoop} which will be used.
-     * @param metadata                      the {@link ChannelMetadata} to use.
+     * @param supportingDisconnect          {@code true} if and only if the channel has the {@code disconnect()}
+     *                                      operation that allows a user to disconnect and then call {
+     *                                      @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      * @param defaultRecvBufferAllocator    the {@link RecvBufferAllocator} that is used by default.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop,
-                              ChannelMetadata metadata, RecvBufferAllocator defaultRecvBufferAllocator) {
-        this(parent, eventLoop, metadata, defaultRecvBufferAllocator, DefaultChannelId.newInstance());
+                              boolean supportingDisconnect, RecvBufferAllocator defaultRecvBufferAllocator) {
+        this(parent, eventLoop, supportingDisconnect, defaultRecvBufferAllocator, DefaultChannelId.newInstance());
     }
 
     /**
@@ -162,31 +166,23 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *
      * @param parent                        the parent of this channel. {@code null} if there's no parent.
      * @param eventLoop                     the {@link EventLoop} which will be used.
-     * @param metadata                      the {@link ChannelMetadata} to use.
+     * @param supportingDisconnect          {@code true} if and only if the channel has the {@code disconnect()}
+     *                                      operation that allows a user to disconnect and then call {
+     *                                      @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      * @param defaultRecvBufferAllocator    the {@link RecvBufferAllocator} that is used by default.
      * @param id                            the {@link ChannelId} which will be used.
      */
-    protected AbstractChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
+    protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                               RecvBufferAllocator defaultRecvBufferAllocator, ChannelId id) {
         this.parent = parent;
         this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", getClass());
-        this.metadata = requireNonNull(metadata, "metadata");
+        this.supportingDisconnect = supportingDisconnect;
         closePromise = new ClosePromise(eventLoop);
         outboundBuffer = new ChannelOutboundBuffer(eventLoop);
         this.id = id;
         pipeline = newChannelPipeline();
         fireChannelWritabilityChangedTask = () -> pipeline().fireChannelWritabilityChanged();
-        rcvBufAllocator = validateAndConfigure(defaultRecvBufferAllocator, metadata);
-    }
-
-    private static RecvBufferAllocator validateAndConfigure(RecvBufferAllocator defaultRecvBufferAllocator,
-                                                            ChannelMetadata metadata) {
-        requireNonNull(defaultRecvBufferAllocator, "defaultRecvBufferAllocator");
-        if (defaultRecvBufferAllocator instanceof MaxMessagesRecvBufferAllocator) {
-            ((MaxMessagesRecvBufferAllocator) defaultRecvBufferAllocator)
-                    .maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
-        }
-        return defaultRecvBufferAllocator;
+        rcvBufAllocator = requireNonNull(defaultRecvBufferAllocator, "defaultRecvBufferAllocator");
     }
 
     protected static <T extends EventLoopGroup> T validateEventLoopGroup(
@@ -202,11 +198,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     @Override
     public final ChannelId id() {
         return id;
-    }
-
-    @Override
-    public final ChannelMetadata metadata() {
-        return metadata;
     }
 
     /**
@@ -1301,6 +1292,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         DefaultFileRegion.validate(region, position);
     }
 
+    protected final boolean isSupportingDisconnect() {
+        return supportingDisconnect;
+    }
+
     @Override
     @SuppressWarnings({ "unchecked", "deprecation" })
     public final <T> T getOption(ChannelOption<T> option) {
@@ -1764,6 +1759,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.sendOutboundEventTransport(event, promise);
             channel.runAfterTransportAction();
+        }
+
+        @Override
+        protected final boolean isTransportSupportingDisconnect() {
+            return abstractChannel().isSupportingDisconnect();
         }
     }
 }

@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -128,7 +127,6 @@ public final class EpollSocketChannel
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
@@ -156,7 +154,7 @@ public final class EpollSocketChannel
 
     public EpollSocketChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, eventLoop, METADATA, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(),
+        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(),
                 LinuxSocket.newSocket(protocolFamily), false);
     }
 
@@ -166,14 +164,14 @@ public final class EpollSocketChannel
 
     private EpollSocketChannel(EventLoop eventLoop, LinuxSocket socket) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, eventLoop, METADATA, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(),
+        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(),
                 socket, isSoErrorZero(socket));
     }
 
     EpollSocketChannel(EpollServerSocketChannel parent, EventLoop eventLoop,
                        LinuxSocket fd, SocketAddress remoteAddress) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(parent, eventLoop, METADATA, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(), fd, remoteAddress);
+        super(parent, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveRecvBufferAllocator(), fd, remoteAddress);
 
         if (fd.protocolFamily() != SocketProtocolFamily.UNIX && parent != null) {
             tcpMd5SigAddresses = parent.tcpMd5SigAddresses();

@@ -18,7 +18,6 @@ package io.netty5.channel.kqueue;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -92,7 +91,6 @@ public final class KQueueServerSocketChannel extends
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN = supportedOptionsDomainSocket();
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private final EventLoopGroup childEventLoopGroup;
 
     // Will hold the remote address after accept(...) was successful.
@@ -104,7 +102,7 @@ public final class KQueueServerSocketChannel extends
     private volatile boolean enableTcpFastOpen;
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(),
                 newSocketStream(), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
@@ -112,7 +110,7 @@ public final class KQueueServerSocketChannel extends
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                      ProtocolFamily protocolFamily) {
-        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(),
                 BsdSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
@@ -128,7 +126,7 @@ public final class KQueueServerSocketChannel extends
     private KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
+        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
     }

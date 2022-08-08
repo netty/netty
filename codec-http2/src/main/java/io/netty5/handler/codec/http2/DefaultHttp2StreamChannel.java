@@ -26,7 +26,6 @@ import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelId;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
@@ -81,8 +80,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     };
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2StreamChannel.class);
-
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     /**
      * Number of bytes to consider non-payload messages. 9 is arbitrary, but also the minimum size of an HTTP/2 frame.
@@ -308,11 +305,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         // Attempt to drain any queued data from the queue and deliver it to the application before closing this
         // channel.
         doBeginRead();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override
@@ -1160,21 +1152,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         rcvBufAllocator = requireNonNull(allocator, "allocator");
     }
 
-    /**
-     * Set the {@link RecvBufferAllocator} which is used for the channel to allocate receive buffers.
-     * @param allocator the allocator to set.
-     * @param metadata Used to set the {@link ChannelMetadata#defaultMaxMessagesPerRead()} if {@code allocator}
-     * is of type {@link MaxMessagesRecvBufferAllocator}.
-     */
-    private void setRecvBufferAllocator(RecvBufferAllocator allocator, ChannelMetadata metadata) {
-        requireNonNull(allocator, "allocator");
-        requireNonNull(metadata, "metadata");
-        if (allocator instanceof MaxMessagesRecvBufferAllocator) {
-            ((MaxMessagesRecvBufferAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
-        }
-        setRecvBufferAllocator(allocator);
-    }
-
     private boolean isAutoRead() {
         return autoRead == 1;
     }
@@ -1357,6 +1334,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         @Override
         protected void sendOutboundEventTransport(Object event, Promise<Void> promise) {
             defaultHttp2StreamChannel().sendOutboundEventTransport(event, promise);
+        }
+
+        @Override
+        protected boolean isTransportSupportingDisconnect() {
+            return false;
         }
     }
 }

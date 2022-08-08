@@ -18,7 +18,6 @@ package io.netty5.channel.nio;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
@@ -125,15 +124,17 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
      *
      * @param parent                the parent {@link Channel} by which this instance was created. May be {@code null}
      * @param eventLoop             the {@link EventLoop} to use for all I/O.
-     * @param metadata              the {@link ChannelMetadata} to use.
+     * @param supportingDisconnect  {@code true} if and only if the channel has the {@code disconnect()}
+     *                              operation that allows a user to disconnect and then call {
+     *                              @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      * @param defaultRecvAllocator  the default {@link RecvBufferAllocator} to use.
      * @param ch                    the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp        the ops to set to receive data from the {@link SelectableChannel}
      */
-    protected AbstractNioChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
+    protected AbstractNioChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                  RecvBufferAllocator defaultRecvAllocator,
                                  SelectableChannel ch, int readInterestOp) {
-        super(parent, eventLoop, metadata, defaultRecvAllocator);
+        super(parent, eventLoop, supportingDisconnect, defaultRecvAllocator);
         this.ch = ch;
         this.readInterestOp = readInterestOp;
         try {

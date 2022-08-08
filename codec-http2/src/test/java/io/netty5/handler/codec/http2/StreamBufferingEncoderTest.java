@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultMessageSizeEstimator;
 import io.netty5.channel.WriteBufferWaterMark;
@@ -147,8 +146,6 @@ public class StreamBufferingEncoderTest {
         when(channel.getOption(ChannelOption.WRITE_BUFFER_WATER_MARK)).thenReturn(
                 new WriteBufferWaterMark(1024, Integer.MAX_VALUE));
         when(channel.getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR)).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
-        ChannelMetadata metadata = new ChannelMetadata(false, 16);
-        when(channel.metadata()).thenReturn(metadata);
         handler.handlerAdded(ctx);
     }
 

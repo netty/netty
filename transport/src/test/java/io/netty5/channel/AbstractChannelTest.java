@@ -199,10 +199,9 @@ public class AbstractChannelTest {
     }
 
     private static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
-        private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
 
         TestChannel(EventLoop eventLoop) {
-            super(null, eventLoop, TEST_METADATA);
+            super(null, eventLoop, false);
         }
 
         @Override

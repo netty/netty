@@ -31,7 +31,6 @@ import java.net.SocketAddress;
  */
 public abstract class AbstractServerChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
         extends AbstractChannel<P, L, R> implements ServerChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
 
@@ -40,12 +39,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
      */
     protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     Class<? extends Channel> childChannelType) {
-        this(eventLoop, childEventLoopGroup, METADATA, childChannelType);
-    }
-
-    protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ChannelMetadata metadata,
-                                    Class<? extends Channel> childChannelType) {
-        super(null, eventLoop, metadata, new ServerChannelRecvBufferAllocator());
+        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator());
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 

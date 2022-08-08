@@ -17,7 +17,6 @@ package io.netty5.channel.socket.nio;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -25,7 +24,6 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
-import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -72,7 +70,6 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, SocketAddress, SocketAddress>
                              implements io.netty5.channel.socket.ServerSocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
@@ -134,7 +131,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     public NioServerSocketChannel(
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
             ServerSocketChannel channel, ProtocolFamily family) {
-        super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(),
                 channel, SelectionKey.OP_ACCEPT);
         this.family = toJdkFamily(family);
         this.childEventLoopGroup = validateEventLoopGroup(

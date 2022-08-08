@@ -27,7 +27,6 @@ import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.FileDescriptor;
@@ -100,9 +99,9 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
 
-    AbstractKQueueChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
+    AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
                           RecvBufferAllocator defaultRecvAllocator, BsdSocket fd, boolean active) {
-        super(parent, eventLoop, metadata, defaultRecvAllocator);
+        super(parent, eventLoop, supportsDisconnect, defaultRecvAllocator);
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -113,9 +112,9 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    AbstractKQueueChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
+    AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
                           RecvBufferAllocator defaultRecvAllocator, BsdSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, metadata, defaultRecvAllocator);
+        super(parent, eventLoop, supportsDisconnect, defaultRecvAllocator);
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses

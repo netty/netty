@@ -229,15 +229,13 @@ public class DefaultChannelPipelineTailTest {
     }
 
     private abstract static class MyChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
-        private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-
         private boolean active;
         private boolean closed;
         private boolean inputShutdown;
         private boolean outputShutdown;
 
         protected MyChannel(EventLoop eventLoop) {
-            super(null, eventLoop, METADATA);
+            super(null, eventLoop, false);
         }
 
         @Override
