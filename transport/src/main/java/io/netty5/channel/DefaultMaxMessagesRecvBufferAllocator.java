@@ -68,9 +68,6 @@ public abstract class DefaultMaxMessagesRecvBufferAllocator implements MaxMessag
 
         private final Predicate<Handle> defaultMaybeMoreSupplier = h -> attemptedBytesRead == lastBytesRead;
 
-        /**
-         * Only {@link ChannelOption#MAX_MESSAGES_PER_READ} is used.
-         */
         @Override
         public void reset() {
             maxMessagePerRead = maxMessagesPerRead();

@@ -71,8 +71,8 @@ public abstract class DetectPeerCloseWithoutReadTest {
             // Ensure we read only one message per read() call and that we need multiple read()
             // calls to consume everything.
             sb.childOption(ChannelOption.AUTO_READ, false);
-            sb.childOption(ChannelOption.MAX_MESSAGES_PER_READ, 1);
-            sb.childOption(ChannelOption.RCVBUFFER_ALLOCATOR, new FixedRecvBufferAllocator(expectedBytes / 10));
+            sb.childOption(ChannelOption.RCVBUFFER_ALLOCATOR,
+                    new FixedRecvBufferAllocator(expectedBytes / 10).maxMessagesPerRead(1));
             sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
@@ -155,8 +155,8 @@ public abstract class DetectPeerCloseWithoutReadTest {
             // Ensure we read only one message per read() call and that we need multiple read()
             // calls to consume everything.
             cb.option(ChannelOption.AUTO_READ, false);
-            cb.option(ChannelOption.MAX_MESSAGES_PER_READ, 1);
-            cb.option(ChannelOption.RCVBUFFER_ALLOCATOR, new FixedRecvBufferAllocator(expectedBytes / 10));
+            cb.option(ChannelOption.RCVBUFFER_ALLOCATOR,
+                    new FixedRecvBufferAllocator(expectedBytes / 10).maxMessagesPerRead(1));
             cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
