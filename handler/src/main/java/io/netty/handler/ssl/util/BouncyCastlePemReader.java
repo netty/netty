@@ -81,7 +81,7 @@ public final class BouncyCastlePemReader {
                     logger.debug("Bouncy Castle provider available");
                     attemptedLoading = true;
                     return Boolean.TRUE;
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     logger.debug("Cannot load Bouncy Castle provider", e);
                     UNAVAILABILITY_CAUSE = e;
                     attemptedLoading = true;
@@ -100,6 +100,12 @@ public final class BouncyCastlePemReader {
      * @return generated {@link PrivateKey}.
      */
     public static PrivateKey getPrivateKey(InputStream keyInputStream, String keyPassword) {
+        if (!isAvailable()) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Bouncy castle provider is unavailable.", unavailabilityCause());
+            }
+            return null;
+        }
         try {
             PEMParser parser = newParser(keyInputStream);
             return getPrivateKey(parser, keyPassword);
@@ -118,6 +124,12 @@ public final class BouncyCastlePemReader {
      * @return generated {@link PrivateKey}.
      */
     public static PrivateKey getPrivateKey(File keyFile, String keyPassword) {
+        if (!isAvailable()) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Bouncy castle provider is unavailable.", unavailabilityCause());
+            }
+            return null;
+        }
         try {
             PEMParser parser = newParser(keyFile);
             return getPrivateKey(parser, keyPassword);
@@ -133,11 +145,6 @@ public final class BouncyCastlePemReader {
 
     private static PrivateKey getPrivateKey(PEMParser pemParser, String keyPassword) throws IOException,
             PKCSException, OperatorCreationException {
-        if (!isAvailable()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Bouncy castle provider is unavailable.", unavailabilityCause());
-            }
-        }
         try {
             Object object = pemParser.readObject();
             if (logger.isDebugEnabled()) {
@@ -193,20 +200,10 @@ public final class BouncyCastlePemReader {
     }
 
     private static PEMParser newParser(File keyFile) throws FileNotFoundException {
-        if (!isAvailable()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Bouncy castle provider is unavailable.", unavailabilityCause());
-            }
-        }
         return new PEMParser(new FileReader(keyFile));
     }
 
     private static PEMParser newParser(InputStream keyInputStream) {
-        if (!isAvailable()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Bouncy castle provider is unavailable.", unavailabilityCause());
-            }
-        }
         return new PEMParser(new InputStreamReader(keyInputStream, CharsetUtil.US_ASCII));
     }
 
