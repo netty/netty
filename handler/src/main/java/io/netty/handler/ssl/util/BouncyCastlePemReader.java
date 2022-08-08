@@ -70,9 +70,9 @@ public final class BouncyCastlePemReader {
     }
 
     private static void tryLoading() {
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override
-            public Boolean run() {
+            public Void run() {
                 try {
                     Class<Provider> bcProviderClass
                       = (Class<Provider>) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider",
@@ -80,12 +80,12 @@ public final class BouncyCastlePemReader {
                     bcProvider = bcProviderClass.getConstructor().newInstance();
                     logger.debug("Bouncy Castle provider available");
                     attemptedLoading = true;
-                    return Boolean.TRUE;
                 } catch (Throwable e) {
                     logger.debug("Cannot load Bouncy Castle provider", e);
                     UNAVAILABILITY_CAUSE = e;
                     attemptedLoading = true;
-                    return Boolean.FALSE;
+                } finally {
+                    return null;
                 }
             }
         });
