@@ -1346,4 +1346,12 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
      * This method is guaranteed to be called from the {@link #transportExecutor()}.
      */
     protected abstract void sendOutboundEventTransport(Object event, Promise<Void> promise);
+
+    /**
+     * Returns {@code true} if and only if the transport has the {@code disconnect()}
+     * operation that allows a user to disconnect and then connect again.
+     *
+     * @return {@code true} if disconnecting is supported by the transport.
+     */
+    protected abstract boolean isTransportSupportingDisconnect();
 }

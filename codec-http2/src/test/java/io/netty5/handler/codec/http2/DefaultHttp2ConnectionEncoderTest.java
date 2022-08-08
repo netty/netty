@@ -18,7 +18,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
@@ -110,10 +109,8 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        ChannelMetadata metadata = new ChannelMetadata(false, 16);
         when(channel.isActive()).thenReturn(true);
         when(channel.pipeline()).thenReturn(pipeline);
-        when(channel.metadata()).thenReturn(metadata);
 
         when(writer.configuration()).thenReturn(writerConfig);
         when(writerConfig.frameSizePolicy()).thenReturn(frameSizePolicy);

@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -106,7 +105,6 @@ public final class KQueueSocketChannel
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
@@ -125,7 +123,7 @@ public final class KQueueSocketChannel
     }
 
     public KQueueSocketChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
-        super(null, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), BsdSocket.newSocket(protocolFamily), false);
+        super(null, eventLoop, false, new AdaptiveRecvBufferAllocator(), BsdSocket.newSocket(protocolFamily), false);
         enableTcpNoDelayIfSupported();
         calculateMaxBytesPerGatheringWrite();
     }
@@ -135,14 +133,14 @@ public final class KQueueSocketChannel
     }
 
     private KQueueSocketChannel(EventLoop eventLoop, BsdSocket fd) {
-        super(null, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, isSoErrorZero(fd));
+        super(null, eventLoop, false, new AdaptiveRecvBufferAllocator(), fd, isSoErrorZero(fd));
         enableTcpNoDelayIfSupported();
         calculateMaxBytesPerGatheringWrite();
     }
 
     KQueueSocketChannel(KQueueServerSocketChannel parent, EventLoop eventLoop,
                         BsdSocket fd, SocketAddress remoteAddress) {
-        super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, remoteAddress);
+        super(parent, eventLoop, false, new AdaptiveRecvBufferAllocator(), fd, remoteAddress);
         enableTcpNoDelayIfSupported();
         calculateMaxBytesPerGatheringWrite();
     }

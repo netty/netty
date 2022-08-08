@@ -24,7 +24,6 @@ import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
@@ -98,7 +97,6 @@ public final class NioDatagramChannel
         implements io.netty5.channel.socket.DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -177,7 +175,7 @@ public final class NioDatagramChannel
      * Create a new instance from the given {@link DatagramChannel}.
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket, ProtocolFamily family) {
-        super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, SelectionKey.OP_READ);
+        super(null, eventLoop, true, new FixedRecvBufferAllocator(2048), socket, SelectionKey.OP_READ);
         this.family = toJdkFamily(family);
     }
 

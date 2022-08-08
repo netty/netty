@@ -28,7 +28,6 @@ import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.FileDescriptor;
@@ -74,15 +73,15 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
 
-    AbstractEpollChannel(EventLoop eventLoop, ChannelMetadata metadata, int initialFlag,
+    AbstractEpollChannel(EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
                          RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd) {
-        this(null, eventLoop, metadata, initialFlag, defaultRecvAllocator, fd, false);
+        this(null, eventLoop, supportingDisconnect, initialFlag, defaultRecvAllocator, fd, false);
     }
 
     @SuppressWarnings("unchecked")
-    AbstractEpollChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata, int initialFlag,
+    AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
                          RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, boolean active) {
-        super(parent, eventLoop, metadata, defaultRecvAllocator);
+        super(parent, eventLoop, supportingDisconnect, defaultRecvAllocator);
         flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         this.active = active;
@@ -95,9 +94,9 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @SuppressWarnings("unchecked")
-    AbstractEpollChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata, int initialFlag,
+    AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
                          RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, metadata, defaultRecvAllocator);
+        super(parent, eventLoop, supportingDisconnect, defaultRecvAllocator);
         flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         active = true;

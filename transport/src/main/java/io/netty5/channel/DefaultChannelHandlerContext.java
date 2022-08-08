@@ -620,7 +620,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public Future<Void> disconnect() {
-        if (!channel().metadata().hasDisconnect()) {
+        if (!pipeline.isTransportSupportingDisconnect()) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
             // So far, UDP/IP is the only transport that has such behavior.
             return close();

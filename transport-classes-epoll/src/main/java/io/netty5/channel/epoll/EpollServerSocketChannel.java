@@ -18,7 +18,6 @@ package io.netty5.channel.epoll;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -96,8 +95,6 @@ public final class EpollServerSocketChannel
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
-
     private static Predicate<RecvBufferAllocator.Handle> MAYBE_MORE_DATA = h -> h.lastBytesRead() > 0;
 
     private final EventLoopGroup childEventLoopGroup;
@@ -112,14 +109,14 @@ public final class EpollServerSocketChannel
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, METADATA, 0, new ServerChannelRecvBufferAllocator(), LinuxSocket.newSocketStream());
+        super(eventLoop, false, 0, new ServerChannelRecvBufferAllocator(), LinuxSocket.newSocketStream());
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     ProtocolFamily protocolFamily) {
-        super(null, eventLoop, METADATA, 0, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, 0, new ServerChannelRecvBufferAllocator(),
                 LinuxSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
@@ -133,7 +130,7 @@ public final class EpollServerSocketChannel
     private EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(null, eventLoop, METADATA, 0, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
+        super(null, eventLoop, false, 0, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 EpollSocketChannel.class);
     }

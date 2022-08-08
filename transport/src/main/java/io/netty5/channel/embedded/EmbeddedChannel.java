@@ -26,7 +26,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelPipeline;
@@ -59,9 +58,6 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     private enum State { OPEN, ACTIVE, CLOSED }
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
-
-    private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
-    private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
     private final FutureListener<Void> recordExceptionListener = this::recordException;
 
@@ -175,12 +171,8 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, new EmbeddedEventLoop(), metadata(hasDisconnect), new AdaptiveRecvBufferAllocator(), channelId);
+        super(parent, new EmbeddedEventLoop(), hasDisconnect, new AdaptiveRecvBufferAllocator(), channelId);
         setup(register, handlers);
-    }
-
-    private static ChannelMetadata metadata(boolean hasDisconnect) {
-        return hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
@@ -522,7 +514,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     @Override
     public final Future<Void> disconnect() {
         Future<Void> future = super.disconnect();
-        finishPendingTasks(!metadata().hasDisconnect());
+        finishPendingTasks(!isSupportingDisconnect());
         return future;
     }
 
@@ -725,7 +717,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
 
     @Override
     protected void doDisconnect() throws Exception {
-        if (!metadata().hasDisconnect()) {
+        if (!isSupportingDisconnect()) {
             doClose();
         }
     }

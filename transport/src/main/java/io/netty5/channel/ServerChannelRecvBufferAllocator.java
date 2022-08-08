@@ -20,7 +20,7 @@ package io.netty5.channel;
  */
 public final class ServerChannelRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAllocator {
     public ServerChannelRecvBufferAllocator() {
-        super(1, true);
+        super(16, true);
     }
 
     @Override

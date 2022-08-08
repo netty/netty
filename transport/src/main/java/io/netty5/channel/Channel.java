@@ -188,11 +188,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     boolean isShutdown(ChannelShutdownDirection direction);
 
     /**
-     * Return the {@link ChannelMetadata} of the {@link Channel} which describe the nature of the {@link Channel}.
-     */
-    ChannelMetadata metadata();
-
-    /**
      * Returns the local address where this channel is bound to.  The returned
      * {@link SocketAddress} is supposed to be down-cast into more concrete
      * type such as {@link InetSocketAddress} to retrieve the detailed

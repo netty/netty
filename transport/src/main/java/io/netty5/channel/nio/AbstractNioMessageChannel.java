@@ -16,7 +16,6 @@
 package io.netty5.channel.nio;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -42,12 +41,12 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
 
     /**
      * @see AbstractNioChannel#AbstractNioChannel(Channel, EventLoop,
-     * ChannelMetadata, RecvBufferAllocator, SelectableChannel, int)
+     * boolean, RecvBufferAllocator, SelectableChannel, int)
      */
-    protected AbstractNioMessageChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
+    protected AbstractNioMessageChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                         RecvBufferAllocator defaultRecvAllocator,
                                         SelectableChannel ch, int readInterestOp) {
-        super(parent, eventLoop, metadata, defaultRecvAllocator, ch, readInterestOp);
+        super(parent, eventLoop, supportingDisconnect, defaultRecvAllocator, ch, readInterestOp);
     }
 
     @Override

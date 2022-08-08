@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -142,7 +141,6 @@ public class Http2ConnectionHandlerTest {
 
         promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        when(channel.metadata()).thenReturn(new ChannelMetadata(false));
         Throwable fakeException = new RuntimeException("Fake exception");
         when(encoder.connection()).thenReturn(connection);
         when(decoder.connection()).thenReturn(connection);

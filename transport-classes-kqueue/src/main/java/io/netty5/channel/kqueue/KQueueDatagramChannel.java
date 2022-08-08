@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
@@ -102,8 +101,6 @@ public final class KQueueDatagramChannel
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
-
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -132,7 +129,7 @@ public final class KQueueDatagramChannel
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
-        super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048),
+        super(null, eventLoop, true, new FixedRecvBufferAllocator(2048),
                 BsdSocket.newDatagramSocket(protocolFamily), false);
     }
 
@@ -141,7 +138,7 @@ public final class KQueueDatagramChannel
     }
 
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
-        super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, active);
+        super(null, eventLoop, true, new FixedRecvBufferAllocator(2048), socket, active);
     }
 
     @SuppressWarnings("unchecked")

@@ -21,7 +21,6 @@ import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
@@ -42,7 +41,6 @@ import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
  */
 public abstract class AbstractNioByteChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
         extends AbstractNioChannel<P, L, R> {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
@@ -60,7 +58,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
     protected AbstractNioByteChannel(P parent, EventLoop eventLoop, SelectableChannel ch) {
-        super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), ch, SelectionKey.OP_READ);
+        super(parent, eventLoop, false, new AdaptiveRecvBufferAllocator(), ch, SelectionKey.OP_READ);
     }
 
     final boolean shouldBreakReadReady() {
