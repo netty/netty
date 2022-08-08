@@ -57,7 +57,7 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
  *
  * <p>Outbound streams are supported via the {@link Http2StreamChannelBootstrap}.
  *
- * <p>{@link ChannelOption#MAX_MESSAGES_PER_READ} and {@link ChannelOption#AUTO_READ} are supported.
+ * <p>{@link ChannelOption#AUTO_READ} is supported.
  *
  * <h3>Resources</h3>
  *

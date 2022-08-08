@@ -52,7 +52,6 @@ import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty5.channel.ChannelOption.AUTO_READ;
 import static io.netty5.channel.ChannelOption.BUFFER_ALLOCATOR;
 import static io.netty5.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
-import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty5.channel.ChannelOption.RCVBUFFER_ALLOCATOR;
@@ -1314,9 +1313,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
         }
-        if (option == MAX_MESSAGES_PER_READ) {
-            return (T) Integer.valueOf(getMaxMessagesPerRead());
-        }
         if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
         }
@@ -1366,8 +1362,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == CONNECT_TIMEOUT_MILLIS) {
             setConnectTimeoutMillis((Integer) value);
-        } else if (option == MAX_MESSAGES_PER_READ) {
-            setMaxMessagesPerRead((Integer) value);
         } else if (option == WRITE_SPIN_COUNT) {
             setWriteSpinCount((Integer) value);
         } else if (option == BUFFER_ALLOCATOR) {
@@ -1422,7 +1416,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(
-                AUTO_READ, WRITE_BUFFER_WATER_MARK, CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ,
+                AUTO_READ, WRITE_BUFFER_WATER_MARK, CONNECT_TIMEOUT_MILLIS,
                 WRITE_SPIN_COUNT, BUFFER_ALLOCATOR, RCVBUFFER_ALLOCATOR, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
                 MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
     }
@@ -1445,38 +1439,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private void setConnectTimeoutMillis(int connectTimeoutMillis) {
         checkPositiveOrZero(connectTimeoutMillis, "connectTimeoutMillis");
         this.connectTimeoutMillis = connectTimeoutMillis;
-    }
-
-    /**
-     * <p>
-     * @throws IllegalStateException if {@link #getRecvBufferAllocator()} does not return an object of type
-     * {@link MaxMessagesRecvBufferAllocator}.
-     */
-    @Deprecated
-    private int getMaxMessagesPerRead() {
-        try {
-            MaxMessagesRecvBufferAllocator allocator = getRecvBufferAllocator();
-            return allocator.maxMessagesPerRead();
-        } catch (ClassCastException e) {
-            throw new IllegalStateException("getRecvBufferAllocator() must return an object of type " +
-                    "MaxMessagesRecvBufferAllocator", e);
-        }
-    }
-
-    /**
-     * <p>
-     * @throws IllegalStateException if {@link #getRecvBufferAllocator()} does not return an object of type
-     * {@link MaxMessagesRecvBufferAllocator}.
-     */
-    @Deprecated
-    private void setMaxMessagesPerRead(int maxMessagesPerRead) {
-        try {
-            MaxMessagesRecvBufferAllocator allocator = getRecvBufferAllocator();
-            allocator.maxMessagesPerRead(maxMessagesPerRead);
-        } catch (ClassCastException e) {
-            throw new IllegalStateException("getRecvBufferAllocator() must return an object of type " +
-                    "MaxMessagesRecvBufferAllocator", e);
-        }
     }
 
     /**

@@ -19,6 +19,7 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -28,6 +29,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.ServerChannelRecvBufferAllocator;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.util.concurrent.Future;
@@ -1039,7 +1041,7 @@ public class LocalChannelTest {
         cb.group(serverGroup)
                 .channel(LocalChannel.class)
                 .option(ChannelOption.AUTO_READ, autoRead)
-                .option(ChannelOption.MAX_MESSAGES_PER_READ, 1)
+                .option(ChannelOption.RCVBUFFER_ALLOCATOR, new AdaptiveRecvBufferAllocator().maxMessagesPerRead(1))
                 .handler(new ChannelReadHandler(countDownLatch, autoRead));
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
@@ -1109,7 +1111,7 @@ public class LocalChannelTest {
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
                 .option(ChannelOption.AUTO_READ, autoRead)
-                .option(ChannelOption.MAX_MESSAGES_PER_READ, 1)
+                .option(ChannelOption.RCVBUFFER_ALLOCATOR, new ServerChannelRecvBufferAllocator().maxMessagesPerRead(1))
                 .handler(new ChannelReadHandler(countDownLatch, autoRead))
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
