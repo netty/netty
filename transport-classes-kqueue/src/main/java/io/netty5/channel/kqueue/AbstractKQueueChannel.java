@@ -493,10 +493,10 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         eof = true;
 
         if (isActive()) {
-            // If it is still active, we need to call readReady as otherwise we may miss to
+            // If it is still active, we need to call read() as otherwise we may miss to
             // read pending data from the underlying file descriptor.
             // See https://github.com/netty/netty/issues/3709
-            readReady(allocHandle, ioBufferAllocator(), maybeMoreData);
+            read();
         } else {
             // Just to be safe make sure the input marked as closed.
             shutdownInput(true);
