@@ -24,8 +24,8 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.RecvBufferAllocator;
-import io.netty5.channel.ServerChannelRecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.SO_BACKLOG;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
@@ -102,7 +101,7 @@ public final class KQueueServerSocketChannel extends
     private volatile boolean enableTcpFastOpen;
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
                 newSocketStream(), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
@@ -110,7 +109,7 @@ public final class KQueueServerSocketChannel extends
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                      ProtocolFamily protocolFamily) {
-        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
                 BsdSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
@@ -126,7 +125,7 @@ public final class KQueueServerSocketChannel extends
     private KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(), socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
     }
@@ -368,36 +367,35 @@ public final class KQueueServerSocketChannel extends
     }
 
     @Override
-    void readReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
-                   Predicate<RecvBufferAllocator.Handle> maybeMoreData) {
-        allocHandle.attemptedBytesRead(1);
+    int readReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
         Throwable exception = null;
+        int totalBytesRead = 0;
         try {
             do {
                 int acceptFd = socket.accept(acceptedAddress);
                 if (acceptFd == -1) {
                     // this means everything was handled for now
-                    allocHandle.lastBytesRead(-1);
+                    readHandle.lastRead(0, 0, 0);
                     break;
                 }
-                allocHandle.lastBytesRead(1);
-                allocHandle.incMessagesRead(1);
-
+                readHandle.lastRead(0, 0, 1);
+                totalBytesRead++;
                 readPending = false;
                 pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
                         acceptedAddress[0]));
-            } while (allocHandle.continueReading(isAutoRead(), maybeMoreData) &&
+            } while (readHandle.continueReading(isAutoRead()) &&
                     !isShutdown(ChannelShutdownDirection.Inbound));
         } catch (Throwable t) {
             exception = t;
         }
-        allocHandle.readComplete();
+        readHandle.readComplete();
         pipeline.fireChannelReadComplete();
 
         if (exception != null) {
             pipeline.fireChannelExceptionCaught(exception);
         }
         readIfIsAutoRead();
+        return totalBytesRead;
     }
 }

@@ -16,18 +16,22 @@
 package io.netty5.channel;
 
 /**
- * {@link MaxMessagesRecvBufferAllocator} implementation which should be used for {@link ServerChannel}s.
+ * {@link MaxMessagesReadHandleFactory} implementation which should be used for {@link ServerChannel}s.
  */
-public final class ServerChannelRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAllocator {
-    public ServerChannelRecvBufferAllocator() {
-        super(16, true);
+public final class ServerChannelReadHandleFactory extends MaxMessagesReadHandleFactory {
+    public ServerChannelReadHandleFactory() {
+        this(16);
+    }
+
+    public ServerChannelReadHandleFactory(int maxMessagesPerRead) {
+        super(maxMessagesPerRead);
     }
 
     @Override
-    public Handle newHandle() {
-        return new MaxMessageHandle() {
+    public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
+        return new MaxMessageReadHandle(maxMessagesPerRead) {
             @Override
-            public int guess() {
+            public int estimatedBufferCapacity() {
                 return 128;
             }
         };

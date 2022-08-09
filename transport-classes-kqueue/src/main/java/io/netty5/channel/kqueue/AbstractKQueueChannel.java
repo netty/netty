@@ -20,7 +20,8 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueGuessRecvBufferAllocatorReadHandle;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.RawUnixChannelOption;
@@ -37,7 +38,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.function.Predicate;
 
 import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.Limits.SSIZE_MAX;
@@ -56,29 +56,10 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     private long numberBytesPending;
 
-    /**
-     * kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes (see kqueue man:
-     * https://www.freebsd.org/cgi/man.cgi?kqueue). However, in order to respect auto read we support reading to stop if
-     * auto read is off. If auto read is on we force reading to continue to avoid a {@link StackOverflowError} between
-     * channelReadComplete and reading from the channel. It is expected that the {@link KQueueSocketChannel}
-     * implementations will track if all data was not read, and will force a EVFILT_READ ready event.
-     * <p>
-     * It is assumed EOF is handled externally by checking {@link #eof}.
-     */
-    private final Predicate<RecvBufferAllocator.Handle> maybeMoreData = h -> {
-        if (h.lastBytesRead() > 0) {
-            numberBytesPending -= h.lastBytesRead();
-        }
-        return numberBytesPending != 0;
-    };
-
     private final Runnable readReadyRunnable = new Runnable() {
         @Override
         public void run() {
             readReadyRunnablePending = false;
-            //RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-            //allocHandle.reset();
-            //allocHandle.attemptedBytesRead((int) Math.max(numberBytesPending, 128));
             readReady(numberBytesPending);
         }
     };
@@ -100,8 +81,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     private volatile SocketAddress remoteAddress;
 
     AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
-                          RecvBufferAllocator defaultRecvAllocator, BsdSocket fd, boolean active) {
-        super(parent, eventLoop, supportsDisconnect, defaultRecvAllocator);
+                          ReadHandleFactory defaultReadHandleFactory, BsdSocket fd, boolean active) {
+        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory);
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -113,8 +94,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
-                          RecvBufferAllocator defaultRecvAllocator, BsdSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, supportsDisconnect, defaultRecvAllocator);
+                          ReadHandleFactory defaultReadHandleFactory, BsdSocket fd, SocketAddress remote) {
+        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory);
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
@@ -242,7 +223,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
         // If auto read was toggled off on the last read loop then we may not be notified
         // again if we didn't consume all the data. So we force a read operation here if there maybe more data or
-        // eof was received
+        // eof was received.
         if (maybeMoreDataToRead || eof) {
             executeReadReadyRunnable();
         }
@@ -316,17 +297,14 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
      * Read bytes into the given {@link Buffer} and return the amount.
      */
     protected final int doReadBytes(Buffer buffer) throws Exception {
-        recvBufAllocHandle().attemptedBytesRead(buffer.writableBytes());
         try (var iterator = buffer.forEachWritable()) {
             var component = iterator.first();
             if (component == null) {
-                recvBufAllocHandle().lastBytesRead(0);
                 return 0;
             }
             long address = component.writableNativeAddress();
             assert address != 0;
             int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
-            recvBufAllocHandle().lastBytesRead(localReadAmount);
             if (localReadAmount > 0) {
                 component.skipWritableBytes(localReadAmount);
             }
@@ -413,11 +391,12 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     final void readReady(long numberBytesPending) {
-        RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-        allocHandle.reset();
+        ReadHandleFactory.ReadHandle readHandle = readHandle();
         this.numberBytesPending = numberBytesPending;
-        allocHandle.attemptedBytesRead((int) Math.min(numberBytesPending, Integer.MAX_VALUE));
-
+        if (readHandle instanceof KQueueGuessRecvBufferAllocatorReadHandle) {
+            ((KQueueGuessRecvBufferAllocatorReadHandle) readHandle)
+                    .bufferCapacity(Math.min(128, (int) Math.min(numberBytesPending, 8 * 1024 * 1024)));
+        }
         assert executor().inEventLoop();
         if (shouldBreakReadReady()) {
             clearReadFilter0();
@@ -426,7 +405,10 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         maybeMoreDataToRead = false;
 
         try {
-            readReady(allocHandle, ioBufferAllocator(), maybeMoreData);
+            int readBytes = readReady(readHandle, ioBufferAllocator());
+            if (readBytes > 0) {
+                this.numberBytesPending -= readBytes;
+            }
         } finally {
             maybeMoreDataToRead = this.numberBytesPending != 0;
 
@@ -451,8 +433,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    abstract void readReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
-                            Predicate<RecvBufferAllocator.Handle> maybeMoreData);
+    abstract int readReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator);
 
     final void writeReady() {
         if (isConnectPending()) {
@@ -489,7 +470,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     final void readEOF() {
         // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
-        final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
         eof = true;
 
         if (isActive()) {
@@ -550,7 +530,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void doBind(SocketAddress local) throws Exception {
         if (local instanceof InetSocketAddress) {

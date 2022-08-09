@@ -17,7 +17,7 @@ package io.netty5.channel.socket.nio;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
@@ -28,8 +28,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.RecvBufferAllocator;
-import io.netty5.channel.RecvBufferAllocator.Handle;
+import io.netty5.channel.ReadHandleFactory.ReadHandle;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.concurrent.Future;
@@ -105,7 +104,7 @@ public final class NioDatagramChannel
             StringUtil.simpleClassName(SocketAddress.class) + ">, " +
             StringUtil.simpleClassName(Buffer.class) + ')';
 
-    private static final Predicate<Handle> TRUE_SUPPLIER = h -> true;
+    private static final Predicate<ReadHandle> TRUE_SUPPLIER = h -> true;
 
     private final ProtocolFamily family;
 
@@ -175,7 +174,7 @@ public final class NioDatagramChannel
      * Create a new instance from the given {@link DatagramChannel}.
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket, ProtocolFamily family) {
-        super(null, eventLoop, true, new FixedRecvBufferAllocator(2048), socket, SelectionKey.OP_READ);
+        super(null, eventLoop, true, new FixedReadHandleFactory(2048), socket, SelectionKey.OP_READ);
         this.family = toJdkFamily(family);
     }
 
@@ -378,27 +377,23 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doReadMessages(List<Object> buf) throws Exception {
-        RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-
-        return doReadBufferMessages(allocHandle, buf);
-    }
-
-    private int doReadBufferMessages(Handle allocHandle, List<Object> buf) throws IOException {
-        Buffer data = allocHandle.allocate(bufferAllocator());
-        allocHandle.attemptedBytesRead(data.writableBytes());
+    protected int doReadMessages(ReadHandle readHandle, List<Object> buf) throws Exception {
+        Buffer data = bufferAllocator().allocate(readHandle.estimatedBufferCapacity());
+        int attemptedBytesRead = data.writableBytes();
         boolean free = true;
         try {
             ReceiveDatagram receiveDatagram = new ReceiveDatagram(javaChannel());
             data.forEachWritable(0, receiveDatagram);
             SocketAddress remoteAddress = receiveDatagram.remoteAddress;
             if (remoteAddress == null) {
+                readHandle.lastRead(attemptedBytesRead, 0, 0);
                 return 0;
             }
-
-            allocHandle.lastBytesRead(receiveDatagram.bytesReceived);
-            data.skipWritableBytes(allocHandle.lastBytesRead());
+            int actualBytesRead = receiveDatagram.bytesReceived;
+            data.skipWritableBytes(actualBytesRead);
             buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
+
+            readHandle.lastRead(attemptedBytesRead, actualBytesRead, 1);
             free = false;
             return 1;
         } finally {
@@ -645,13 +640,6 @@ public final class NioDatagramChannel
             return false;
         }
         return super.closeOnReadError(cause);
-    }
-
-    @Override
-    protected boolean continueReading(RecvBufferAllocator.Handle allocHandle) {
-        // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-        // as we read anything).
-        return allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER);
     }
 
     private static final class ReceiveDatagram implements WritableComponentProcessor<IOException> {

@@ -21,15 +21,15 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class DefaultMaxMessagesRecvBufferAllocatorTest {
+public class MaxMessagesReadHandleFactoryTest {
 
-    private DefaultMaxMessagesRecvBufferAllocator newAllocator(boolean ignoreReadBytes) {
-        return new DefaultMaxMessagesRecvBufferAllocator(2, ignoreReadBytes) {
+    private MaxMessagesReadHandleFactory newAllocator() {
+        return new MaxMessagesReadHandleFactory(2) {
             @Override
-            public Handle newHandle() {
-                return new MaxMessageHandle() {
+            public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
+                return new MaxMessageReadHandle(maxMessagesPerRead) {
                     @Override
-                    public int guess() {
+                    public int estimatedBufferCapacity() {
                         return 0;
                     }
                 };
@@ -38,38 +38,35 @@ public class DefaultMaxMessagesRecvBufferAllocatorTest {
     }
 
     @Test
-    public void testRespectReadBytes() {
-        DefaultMaxMessagesRecvBufferAllocator allocator = newAllocator(false);
-        RecvBufferAllocator.Handle handle = allocator.newHandle();
+    public void testRespectMaxMessages() {
+        MaxMessagesReadHandleFactory allocator = newAllocator();
+        ReadHandleFactory.ReadHandle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        handle.reset();
-        handle.incMessagesRead(1);
+        handle.lastRead(0, 0, 1);
+        assertTrue(handle.continueReading(true));
+        handle.lastRead(0, 0, 1);
         assertFalse(handle.continueReading(true));
 
-        handle.reset();
-        handle.incMessagesRead(1);
-        handle.attemptedBytesRead(1);
-        handle.lastBytesRead(1);
+        handle.readComplete();
+        handle.lastRead(1, 1, 1);
         assertTrue(handle.continueReading(true));
         channel.finish();
     }
 
     @Test
     public void testIgnoreReadBytes() {
-        DefaultMaxMessagesRecvBufferAllocator allocator = newAllocator(true);
-        RecvBufferAllocator.Handle handle = allocator.newHandle();
+        MaxMessagesReadHandleFactory allocator = newAllocator();
+        ReadHandleFactory.ReadHandle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        handle.reset();
-        handle.incMessagesRead(1);
+        handle.lastRead(0, 0, 1);
         assertTrue(handle.continueReading(true));
-        handle.incMessagesRead(1);
+        handle.lastRead(0, 0, 1);
         assertFalse(handle.continueReading(true));
 
-        handle.reset();
-        handle.attemptedBytesRead(0);
-        handle.lastBytesRead(0);
+        handle.readComplete();
+        handle.lastRead(0, 0, 0);
         assertTrue(handle.continueReading(true));
         channel.finish();
     }

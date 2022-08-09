@@ -20,7 +20,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -121,7 +121,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 // Enable GRO and also ensure we can read everything with one read as otherwise
                 // we will drop things on the floor.
                 sb.option(EpollChannelOption.UDP_GRO, true);
-                sb.option(ChannelOption.RCVBUFFER_ALLOCATOR, new FixedRecvBufferAllocator(bufferCapacity));
+                sb.option(ChannelOption.READ_HANDLE_FACTORY, new FixedReadHandleFactory(bufferCapacity));
             }
             sc = sb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override

@@ -20,7 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
@@ -74,14 +74,13 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     private volatile SocketAddress remoteAddress;
 
     AbstractEpollChannel(EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
-                         RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd) {
-        this(null, eventLoop, supportingDisconnect, initialFlag, defaultRecvAllocator, fd, false);
+                         ReadHandleFactory defaultReadHandleFactory, LinuxSocket fd) {
+        this(null, eventLoop, supportingDisconnect, initialFlag, defaultReadHandleFactory, fd, false);
     }
 
-    @SuppressWarnings("unchecked")
     AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
-                         RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, boolean active) {
-        super(parent, eventLoop, supportingDisconnect, defaultRecvAllocator);
+                         ReadHandleFactory defaultReadHandleFactory, LinuxSocket fd, boolean active) {
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory);
         flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         this.active = active;
@@ -93,10 +92,9 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    @SuppressWarnings("unchecked")
     AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
-                         RecvBufferAllocator defaultRecvAllocator, LinuxSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, supportingDisconnect, defaultRecvAllocator);
+                         ReadHandleFactory defaultReadHandleFactory, LinuxSocket fd, SocketAddress remote) {
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory);
         flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         active = true;
@@ -205,7 +203,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
 
         // If EPOLL ET mode is enabled and auto read was toggled off on the last read loop then we may not be notified
         // again if we didn't consume all the data. So we force a read operation here if there maybe more data or
-        // RDHUP was received
+        // RDHUP was received.
         if (maybeMoreDataToRead || receivedRdHup) {
             executeEpollInReadyRunnable();
         }
@@ -275,18 +273,20 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     /**
      * Read bytes into the given {@link Buffer} and return the amount.
      */
-    protected final void doReadBytes(Buffer buffer) throws Exception {
-        recvBufAllocHandle().attemptedBytesRead(buffer.writableBytes());
-        buffer.forEachWritable(0, (index, component) -> {
+    protected final int doReadBytes(Buffer buffer) throws Exception {
+        try (var iterator = buffer.forEachWritable()) {
+            var component = iterator.first();
+            if (component == null) {
+                return 0;
+            }
             long address = component.writableNativeAddress();
             assert address != 0;
             int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
-            recvBufAllocHandle().lastBytesRead(localReadAmount);
             if (localReadAmount > 0) {
                 component.skipWritableBytes(localReadAmount);
             }
-            return false;
-        });
+            return localReadAmount;
+        }
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
@@ -342,13 +342,12 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             return;
         }
         maybeMoreDataToRead = false;
-        RecvBufferAllocator.Handle handle = recvBufAllocHandle();
-        handle.reset();
-
+        ReadHandleFactory.ReadHandle readHandle = readHandle();
+        boolean readAll = false;
         try {
-            epollInReady(handle, ioBufferAllocator(), receivedRdHup);
+            readAll = epollInReady(readHandle, ioBufferAllocator());
         } finally {
-            this.maybeMoreDataToRead = maybeMoreDataToRead(handle) || receivedRdHup;
+            this.maybeMoreDataToRead = !readAll || receivedRdHup;
 
             if (receivedRdHup || readPending && maybeMoreDataToRead) {
                 // trigger a read again as there may be something left to read and because of epoll ET we
@@ -374,10 +373,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     /**
      * Called once EPOLLIN event is ready to be processed
      */
-    protected abstract void epollInReady(RecvBufferAllocator.Handle handle, BufferAllocator recvBufferAllocator,
-                                         boolean receivedRdHup);
-
-    protected abstract boolean maybeMoreDataToRead(RecvBufferAllocator.Handle handle);
+    protected abstract boolean epollInReady(ReadHandleFactory.ReadHandle readHandle,
+                                            BufferAllocator recvBufferAllocator);
 
     private void executeEpollInReadyRunnable() {
         if (epollInReadyRunnablePending || !isActive() || shouldBreakEpollInReady()) {

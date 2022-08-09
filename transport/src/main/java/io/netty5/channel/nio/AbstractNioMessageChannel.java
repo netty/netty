@@ -20,7 +20,7 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannel;
 
 import java.io.IOException;
@@ -41,12 +41,12 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
 
     /**
      * @see AbstractNioChannel#AbstractNioChannel(Channel, EventLoop,
-     * boolean, RecvBufferAllocator, SelectableChannel, int)
+     * boolean, ReadHandleFactory, SelectableChannel, int)
      */
     protected AbstractNioMessageChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
-                                        RecvBufferAllocator defaultRecvAllocator,
+                                        ReadHandleFactory defaultReadHandleFactory,
                                         SelectableChannel ch, int readInterestOp) {
-        super(parent, eventLoop, supportingDisconnect, defaultRecvAllocator, ch, readInterestOp);
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, ch, readInterestOp);
     }
 
     @Override
@@ -57,23 +57,18 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
         super.doRead();
     }
 
-    protected boolean continueReading(RecvBufferAllocator.Handle allocHandle) {
-        return allocHandle.continueReading(isAutoRead());
-    }
-
     @Override
     protected final void readNow() {
         assert executor().inEventLoop();
         final ChannelPipeline pipeline = pipeline();
-        final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-        allocHandle.reset();
+        final ReadHandleFactory.ReadHandle readHandle = readHandle();
 
         boolean closed = false;
         Throwable exception = null;
         try {
             try {
                 do {
-                    int localRead = doReadMessages(readBuf);
+                    int localRead = doReadMessages(readHandle, readBuf);
                     if (localRead == 0) {
                         break;
                     }
@@ -81,9 +76,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
                         closed = true;
                         break;
                     }
-
-                    allocHandle.incMessagesRead(localRead);
-                } while (continueReading(allocHandle) && !isShutdown(ChannelShutdownDirection.Inbound));
+                } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
             } catch (Throwable t) {
                 exception = t;
             }
@@ -94,7 +87,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
                 pipeline.fireChannelRead(readBuf.get(i));
             }
             readBuf.clear();
-            allocHandle.readComplete();
+            readHandle.readComplete();
             pipeline.fireChannelReadComplete();
 
             if (exception != null) {
@@ -201,7 +194,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
     /**
      * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(List<Object> buf) throws Exception;
+    protected abstract int doReadMessages(ReadHandleFactory.ReadHandle readHandle, List<Object> buf) throws Exception;
 
     /**
      * Write a message to the underlying {@link java.nio.channels.Channel}.

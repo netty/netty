@@ -22,7 +22,8 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.ServerChannelRecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
@@ -131,7 +132,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     public NioServerSocketChannel(
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
             ServerSocketChannel channel, ProtocolFamily family) {
-        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
                 channel, SelectionKey.OP_ACCEPT);
         this.family = toJdkFamily(family);
         this.childEventLoopGroup = validateEventLoopGroup(
@@ -237,12 +238,13 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     }
 
     @Override
-    protected int doReadMessages(List<Object> buf) throws Exception {
+    protected int doReadMessages(ReadHandleFactory.ReadHandle readHandle, List<Object> buf) throws Exception {
         SocketChannel ch = SocketUtils.accept(javaChannel());
 
         try {
             if (ch != null) {
                 buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch, family));
+                readHandle.lastRead(0, 0, 1);
                 return 1;
             }
         } catch (Throwable t) {
@@ -254,7 +256,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
                 logger.warn("Failed to close a socket.", t2);
             }
         }
-
+        readHandle.lastRead(0, 0, 0);
         return 0;
     }
 

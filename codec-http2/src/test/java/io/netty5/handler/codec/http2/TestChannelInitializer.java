@@ -15,16 +15,13 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
 
 /**
  * Channel initializer useful in tests.
@@ -45,64 +42,32 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
             handler = null;
         }
         if (maxReads != null) {
-            channel.setOption(ChannelOption.RCVBUFFER_ALLOCATOR, new TestNumReadsRecvBufferAllocator(maxReads));
+            channel.setOption(ChannelOption.READ_HANDLE_FACTORY, new TestNumReadsReadHandleFactory(maxReads));
         }
     }
 
     /**
      * Designed to read a single byte at a time to control the number of reads done at a fine granularity.
      */
-    static final class TestNumReadsRecvBufferAllocator implements RecvBufferAllocator {
+    static final class TestNumReadsReadHandleFactory implements ReadHandleFactory {
         private final AtomicInteger numReads;
-        private TestNumReadsRecvBufferAllocator(AtomicInteger numReads) {
+        private TestNumReadsReadHandleFactory(AtomicInteger numReads) {
             this.numReads = numReads;
         }
 
         @Override
-        public Handle newHandle() {
-            return new Handle() {
-                private int attemptedBytesRead;
-                private int lastBytesRead;
+        public ReadHandle newHandle() {
+            return new ReadHandle() {
                 private int numMessagesRead;
 
                 @Override
-                public Buffer allocate(BufferAllocator alloc) {
-                    return alloc.allocate(guess());
-                }
-
-                @Override
-                public int guess() {
+                public int estimatedBufferCapacity() {
                     return 1; // only ever allocate buffers of size 1 to ensure the number of reads is controlled.
                 }
 
                 @Override
-                public void reset() {
-                    numMessagesRead = 0;
-                }
-
-                @Override
-                public void incMessagesRead(int numMessages) {
-                    numMessagesRead += numMessages;
-                }
-
-                @Override
-                public void lastBytesRead(int bytes) {
-                    lastBytesRead = bytes;
-                }
-
-                @Override
-                public int lastBytesRead() {
-                    return lastBytesRead;
-                }
-
-                @Override
-                public void attemptedBytesRead(int bytes) {
-                    attemptedBytesRead = bytes;
-                }
-
-                @Override
-                public int attemptedBytesRead() {
-                    return attemptedBytesRead;
+                public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
+                    this.numMessagesRead += numMessagesRead;
                 }
 
                 @Override
@@ -111,13 +76,8 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead, Predicate<Handle> maybeMoreDataSupplier) {
-                    return continueReading(autoRead);
-                }
-
-                @Override
                 public void readComplete() {
-                    // Nothing needs to be done or adjusted after each read cycle is completed.
+                    numMessagesRead = 0;
                 }
             };
         }

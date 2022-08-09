@@ -17,7 +17,7 @@ package io.netty5.channel.nio;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.AdaptiveRecvBufferAllocator;
+import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -25,7 +25,7 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.util.internal.StringUtil;
 
@@ -58,7 +58,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
     protected AbstractNioByteChannel(P parent, EventLoop eventLoop, SelectableChannel ch) {
-        super(parent, eventLoop, false, new AdaptiveRecvBufferAllocator(), ch, SelectionKey.OP_READ);
+        super(parent, eventLoop, false, new AdaptiveReadHandleFactory(), ch, SelectionKey.OP_READ);
     }
 
     final boolean shouldBreakReadReady() {
@@ -79,14 +79,14 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
     }
 
     private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
-            RecvBufferAllocator.Handle allocHandle) {
+            ReadHandleFactory.ReadHandle readHandle) {
         if (buffer.readableBytes() > 0) {
             readPending = false;
             pipeline.fireChannelRead(buffer);
         } else {
             buffer.close();
         }
-        allocHandle.readComplete();
+        readHandle.readComplete();
         pipeline.fireChannelReadComplete();
         pipeline.fireChannelExceptionCaught(cause);
 
@@ -107,20 +107,22 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
         }
         final ChannelPipeline pipeline = pipeline();
         final BufferAllocator bufferAllocator = bufferAllocator();
-        final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-        allocHandle.reset();
+        final ReadHandleFactory.ReadHandle readHandle = readHandle();
 
         Buffer buffer = null;
         boolean close = false;
         try {
             do {
-                buffer = allocHandle.allocate(bufferAllocator);
-                allocHandle.lastBytesRead(doReadBytes(buffer));
-                if (allocHandle.lastBytesRead() <= 0) {
+                buffer = bufferAllocator.allocate(readHandle.estimatedBufferCapacity());
+                int attemptedBytesRead = buffer.writableBytes();
+                int actualBytesRead = doReadBytes(buffer);
+
+                readHandle.lastRead(attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+                if (actualBytesRead <= 0) {
                     // nothing was read. release the buffer.
                     Resource.dispose(buffer);
                     buffer = null;
-                    close = allocHandle.lastBytesRead() < 0;
+                    close = actualBytesRead < 0;
                     if (close) {
                         // There is nothing left to read as we received an EOF.
                         readPending = false;
@@ -128,13 +130,12 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
                     break;
                 }
 
-                allocHandle.incMessagesRead(1);
                 readPending = false;
                 pipeline.fireChannelRead(buffer);
                 buffer = null;
-            } while (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
-            allocHandle.readComplete();
+            readHandle.readComplete();
             pipeline.fireChannelReadComplete();
 
             if (close) {
@@ -143,7 +144,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
                 readIfIsAutoRead();
             }
         } catch (Throwable t) {
-            handleReadException(pipeline, buffer, t, close, allocHandle);
+            handleReadException(pipeline, buffer, t, close, readHandle);
         } finally {
             // Check if there is a readPending which was not processed yet.
             // This could be for two reasons:

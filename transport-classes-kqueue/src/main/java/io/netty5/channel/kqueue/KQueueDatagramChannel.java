@@ -25,8 +25,8 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.FixedRecvBufferAllocator;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -57,7 +57,6 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 import static io.netty5.channel.ChannelOption.IP_TOS;
@@ -116,8 +115,6 @@ public final class KQueueDatagramChannel
                     StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
                     StringUtil.simpleClassName(Buffer.class) + ')';
 
-    private static final Predicate<RecvBufferAllocator.Handle> TRUE_SUPPLIER = h -> true;
-
     private volatile boolean connected;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
@@ -129,7 +126,7 @@ public final class KQueueDatagramChannel
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
-        super(null, eventLoop, true, new FixedRecvBufferAllocator(2048),
+        super(null, eventLoop, true, new FixedReadHandleFactory(2048),
                 BsdSocket.newDatagramSocket(protocolFamily), false);
     }
 
@@ -138,7 +135,7 @@ public final class KQueueDatagramChannel
     }
 
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
-        super(null, eventLoop, true, new FixedRecvBufferAllocator(2048), socket, active);
+        super(null, eventLoop, true, new FixedReadHandleFactory(2048), socket, active);
     }
 
     @SuppressWarnings("unchecked")
@@ -486,22 +483,22 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    void readReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
-                   Predicate<RecvBufferAllocator.Handle> maybeMoreData) {
+    int readReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
 
         Throwable exception = null;
         Buffer buffer = null;
+        int totalReadyBytes = 0;
         try {
             boolean connected = isConnected();
             do {
-                buffer = allocHandle.allocate(recvBufferAllocator);
-                allocHandle.attemptedBytesRead(buffer.writableBytes());
-
+                buffer = recvBufferAllocator.allocate(readHandle.estimatedBufferCapacity());
+                int attemptedBytesRead = buffer.writableBytes();
+                final int actualBytesRead;
                 final DatagramPacket packet;
                 if (connected) {
                     try {
-                        allocHandle.lastBytesRead(doReadBytes(buffer));
+                        actualBytesRead = doReadBytes(buffer);
                     } catch (Errors.NativeIoException e) {
                         // We need to correctly translate connect errors to match NIO behaviour.
                         if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
@@ -511,12 +508,14 @@ public final class KQueueDatagramChannel
                         }
                         throw e;
                     }
-                    if (allocHandle.lastBytesRead() <= 0) {
+                    readHandle.lastRead(attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+                    if (actualBytesRead <= 0) {
                         // nothing was read, release the buffer.
                         buffer.close();
                         buffer = null;
                         break;
                     }
+                    totalReadyBytes += actualBytesRead;
                     packet = new DatagramPacket(buffer, localAddress(), remoteAddress());
                 } else {
                     SocketAddress localAddress = null;
@@ -553,29 +552,25 @@ public final class KQueueDatagramChannel
                     }
 
                     if (remoteAddress == null) {
-                        allocHandle.lastBytesRead(-1);
+                        readHandle.lastRead(attemptedBytesRead, -1, 0);
                         buffer.close();
                         break;
                     }
                     if (localAddress == null) {
                         localAddress = localAddress();
                     }
-                    allocHandle.lastBytesRead(bytesRead);
-                    buffer.skipWritableBytes(allocHandle.lastBytesRead());
+                    readHandle.lastRead(attemptedBytesRead, bytesRead, 1);
+                    totalReadyBytes += bytesRead;
+                    buffer.skipWritableBytes(bytesRead);
 
                     packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                 }
-
-                allocHandle.incMessagesRead(1);
 
                 readPending = false;
                 pipeline.fireChannelRead(packet);
 
                 buffer = null;
-
-            // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-            // as we read anything).
-            } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
+            } while (readHandle.continueReading(isAutoRead()));
         } catch (Throwable t) {
             if (buffer != null) {
                 buffer.close();
@@ -583,7 +578,7 @@ public final class KQueueDatagramChannel
             exception = t;
         }
 
-        allocHandle.readComplete();
+        readHandle.readComplete();
         pipeline.fireChannelReadComplete();
 
         if (exception != null) {
@@ -591,6 +586,7 @@ public final class KQueueDatagramChannel
         } else {
             readIfIsAutoRead();
         }
+        return totalReadyBytes;
     }
 
     private <V> Future<V> newMulticastNotSupportedFuture() {

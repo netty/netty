@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.channel.AdaptiveRecvBufferAllocator;
+import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutputShutdownException;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -29,7 +29,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.MessageSizeEstimator;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty5.util.DefaultAttributeMap;
@@ -59,7 +59,7 @@ import static io.netty5.channel.ChannelOption.BUFFER_ALLOCATOR;
 import static io.netty5.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
-import static io.netty5.channel.ChannelOption.RCVBUFFER_ALLOCATOR;
+import static io.netty5.channel.ChannelOption.READ_HANDLE_FACTORY;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
@@ -151,7 +151,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
                     DefaultHttp2StreamChannel.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
 
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
-    private volatile RecvBufferAllocator rcvBufAllocator = new AdaptiveRecvBufferAllocator();
+    private volatile ReadHandleFactory rcvBufAllocator = new AdaptiveReadHandleFactory();
 
     private volatile int connectTimeoutMillis = 30000;
     private volatile int writeSpinCount = 16;
@@ -182,7 +182,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     /**
      * This variable represents if a read is in progress for the current channel or was requested.
-     * Note that depending upon the {@link RecvBufferAllocator} behavior a read may extend beyond the
+     * Note that depending upon the {@link ReadHandleFactory} behavior a read may extend beyond the
      * {@link #readTransport()} method scope. The {@link #readTransport()} loop may
      * drain all pending data, and then if the parent channel is reading this channel may still accept frames.
      */
@@ -194,7 +194,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     private boolean firstFrameWritten;
     private boolean readCompletePending;
 
-    private RecvBufferAllocator.Handle recvHandle;
+    private ReadHandleFactory.ReadHandle readHandle;
     private boolean writeDoneAndNoFlush;
     private boolean closeInitiated;
     private boolean readEOS;
@@ -417,16 +417,16 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             // If a read is in progress or has been requested, there cannot be anything in the queue,
             // otherwise we would have drained it from the queue and processed it during the read cycle.
             assert inboundBuffer == null || inboundBuffer.isEmpty();
-            final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-            doRead0(frame, allocHandle);
+            final ReadHandleFactory.ReadHandle readHandle = readHandle();
+            doRead0(frame, readHandle);
             // We currently don't need to check for readEOS because the parent channel and child channel are limited
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
             // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
             // cost of additional readComplete notifications on the rare path.
-            if (allocHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound)) {
+            if (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound)) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
-                notifyReadComplete(allocHandle, true);
+                notifyReadComplete(readHandle, true);
             }
         } else {
             if (inboundBuffer == null) {
@@ -439,7 +439,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     void fireChildReadComplete() {
         assert executor().inEventLoop();
         assert readStatus != ReadStatus.IDLE || !readCompletePending;
-        notifyReadComplete(recvBufAllocHandle(), false);
+        notifyReadComplete(readHandle(), false);
     }
 
     private void connectTransport(final SocketAddress remoteAddress,
@@ -450,12 +450,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         promise.setFailure(new UnsupportedOperationException());
     }
 
-    private RecvBufferAllocator.Handle recvBufAllocHandle() {
-        if (recvHandle == null) {
-            recvHandle = rcvBufAllocator.newHandle();
-            recvHandle.reset();
+    private ReadHandleFactory.ReadHandle readHandle() {
+        if (readHandle == null) {
+            readHandle = rcvBufAllocator.newHandle();
         }
-        return recvHandle;
+        return readHandle;
     }
 
     private void registerTransport(Promise<Void> promise) {
@@ -701,8 +700,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
                 flush();
                 break;
             }
-            final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-            allocHandle.reset();
+            final ReadHandleFactory.ReadHandle allocHandle = readHandle();
             boolean continueReading = false;
             do {
                 doRead0((Http2Frame) message, allocHandle);
@@ -748,7 +746,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
     }
 
-    void notifyReadComplete(RecvBufferAllocator.Handle allocHandle, boolean forceReadComplete) {
+    void notifyReadComplete(ReadHandleFactory.ReadHandle allocHandle, boolean forceReadComplete) {
         if (!readCompletePending && !forceReadComplete) {
             return;
         }
@@ -776,7 +774,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
     }
 
-    private void doRead0(Http2Frame frame, RecvBufferAllocator.Handle allocHandle) {
+    private void doRead0(Http2Frame frame, ReadHandleFactory.ReadHandle allocHandle) {
         if (isShutdown(ChannelShutdownDirection.Inbound)) {
             // Let's drop data and header frames in the case of shutdown input. Other frames are still valid for
             // HTTP2.
@@ -799,9 +797,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             bytes = MIN_HTTP2_FRAME_SIZE;
         }
         // Update before firing event through the pipeline to be consistent with other Channel implementation.
-        allocHandle.attemptedBytesRead(bytes);
-        allocHandle.lastBytesRead(bytes);
-        allocHandle.incMessagesRead(1);
+        allocHandle.lastRead(bytes, bytes, 1);
 
         boolean shutdownInput = isShutdownNeeded(frame);
         pipeline().fireChannelRead(frame);
@@ -1000,7 +996,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         if (option == BUFFER_ALLOCATOR) {
             return (T) getBufferAllocator();
         }
-        if (option == RCVBUFFER_ALLOCATOR) {
+        if (option == READ_HANDLE_FACTORY) {
             return getRecvBufferAllocator();
         }
         if (option == AUTO_CLOSE) {
@@ -1034,8 +1030,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             setWriteSpinCount((Integer) value);
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
-        } else if (option == RCVBUFFER_ALLOCATOR) {
-            setRecvBufferAllocator((RecvBufferAllocator) value);
+        } else if (option == READ_HANDLE_FACTORY) {
+            setRecvBufferAllocator((ReadHandleFactory) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
@@ -1052,7 +1048,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     public boolean isOptionSupported(ChannelOption<?> option) {
         return option == AUTO_READ || option == WRITE_BUFFER_WATER_MARK || option == CONNECT_TIMEOUT_MILLIS ||
                 option == WRITE_SPIN_COUNT || option == BUFFER_ALLOCATOR ||
-                option == RCVBUFFER_ALLOCATOR || option == AUTO_CLOSE || option == MESSAGE_SIZE_ESTIMATOR ||
+                option == READ_HANDLE_FACTORY || option == AUTO_CLOSE || option == MESSAGE_SIZE_ESTIMATOR ||
                 option == MAX_MESSAGES_PER_WRITE || option == ALLOW_HALF_CLOSURE;
     }
 
@@ -1107,11 +1103,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends RecvBufferAllocator> T getRecvBufferAllocator() {
+    private <T extends ReadHandleFactory> T getRecvBufferAllocator() {
         return (T) rcvBufAllocator;
     }
 
-    private void setRecvBufferAllocator(RecvBufferAllocator allocator) {
+    private void setRecvBufferAllocator(ReadHandleFactory allocator) {
         rcvBufAllocator = requireNonNull(allocator, "allocator");
     }
 

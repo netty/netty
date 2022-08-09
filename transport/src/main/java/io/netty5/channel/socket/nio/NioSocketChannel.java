@@ -23,7 +23,6 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.RecvBufferAllocator;
 import io.netty5.channel.nio.AbstractNioByteChannel;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
@@ -268,9 +267,7 @@ public class NioSocketChannel
 
     @Override
     protected int doReadBytes(Buffer buffer) throws Exception {
-        final RecvBufferAllocator.Handle allocHandle = recvBufAllocHandle();
-        allocHandle.attemptedBytesRead(buffer.writableBytes());
-        return buffer.transferFrom(javaChannel(), allocHandle.attemptedBytesRead());
+        return buffer.transferFrom(javaChannel(), buffer.writableBytes());
     }
 
     @Override
