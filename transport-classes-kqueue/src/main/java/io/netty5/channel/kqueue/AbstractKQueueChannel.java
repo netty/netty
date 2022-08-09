@@ -241,8 +241,9 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         readFilter(true);
 
         // If auto read was toggled off on the last read loop then we may not be notified
-        // again if we didn't consume all the data. So we force a read operation here if there maybe more data.
-        if (maybeMoreDataToRead) {
+        // again if we didn't consume all the data. So we force a read operation here if there maybe more data or
+        // eof was received
+        if (maybeMoreDataToRead || eof) {
             executeReadReadyRunnable();
         }
     }
