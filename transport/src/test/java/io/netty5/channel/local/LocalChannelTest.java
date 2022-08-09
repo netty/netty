@@ -25,6 +25,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.DefaultMaxMessagesRecvBufferAllocator;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandler;
@@ -1190,6 +1191,76 @@ public class LocalChannelTest {
         public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             ctx.fireChannelExceptionCaught(cause);
             ctx.close();
+        }
+    }
+
+    @Test
+    public void testReadCompleteCalledOnHandle() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(sharedGroup)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                });
+
+        CountDownLatch serverLatch = new CountDownLatch(1);
+        CountDownLatch childLatch = new CountDownLatch(1);
+
+        sb.group(sharedGroup)
+                .channel(LocalServerChannel.class)
+                .option(ChannelOption.RCVBUFFER_ALLOCATOR, new ReadCompleteRecvAllocator(serverLatch))
+                .childHandler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                })
+                .childOption(ChannelOption.RCVBUFFER_ALLOCATOR, new ReadCompleteRecvAllocator(childLatch));
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            try {
+                cc = cb.connect(TEST_ADDRESS).asStage().get();
+                cc.writeAndFlush("msg").asStage().get();
+            } finally {
+                closeChannel(cc);
+            }
+
+            serverLatch.await();
+            childLatch.await();
+        } finally {
+            closeChannel(sc);
+        }
+    }
+
+    private static final class ReadCompleteRecvAllocator extends DefaultMaxMessagesRecvBufferAllocator {
+        private final CountDownLatch latch;
+        ReadCompleteRecvAllocator(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public Handle newHandle() {
+            return new MaxMessageHandle() {
+                @Override
+                public int guess() {
+                    return 128;
+                }
+
+                @Override
+                public void readComplete() {
+                    super.readComplete();
+                    latch.countDown();
+                }
+            };
         }
     }
 }

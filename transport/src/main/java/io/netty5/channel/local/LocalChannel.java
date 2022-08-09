@@ -230,6 +230,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
             pipeline.fireChannelRead(received);
         } while (handle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
+        handle.readComplete();
         pipeline.fireChannelReadComplete();
         readIfIsAutoRead();
     }
