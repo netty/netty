@@ -298,7 +298,7 @@ public class LocalChannel extends AbstractChannel {
             }
             pipeline.fireChannelRead(received);
         } while (handle.continueReading());
-
+        handle.readComplete();
         pipeline.fireChannelReadComplete();
     }
 
