@@ -15,16 +15,12 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.handler.ssl.util.BouncyCastlePemReader;
 import io.netty.util.internal.ResourcesUtil;
-import org.bouncycastle.openssl.PEMParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;

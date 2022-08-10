@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.netty.handler.ssl.util;
+package io.netty.handler.ssl;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -44,7 +44,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
 import org.bouncycastle.pkcs.PKCSException;
 
-public final class BouncyCastlePemReader {
+final class BouncyCastlePemReader {
     private static Throwable UNAVAILABILITY_CAUSE;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);

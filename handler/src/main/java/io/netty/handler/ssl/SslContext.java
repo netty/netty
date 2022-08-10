@@ -26,7 +26,6 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.handler.ssl.util.BouncyCastlePemReader;
 import io.netty.util.internal.EmptyArrays;
 
 import java.security.Provider;
