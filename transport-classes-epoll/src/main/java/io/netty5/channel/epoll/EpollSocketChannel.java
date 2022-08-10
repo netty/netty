@@ -551,13 +551,15 @@ public final class EpollSocketChannel
         boolean close = false;
         boolean readMore = false;
         try {
+            boolean continueReading;
             do {
                 // we use a direct buffer here as the native implementations only be able
                 // to handle direct buffers.
                 buffer = bufferAllocator.allocate(readHandle.estimatedBufferCapacity());
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
-                readHandle.lastRead(attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+                continueReading = readHandle.lastRead(
+                        attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
                 readMore = attemptedBytesRead == actualBytesRead;
                 if (actualBytesRead <= 0) {
                     // nothing was read, release the buffer.
@@ -588,7 +590,7 @@ public final class EpollSocketChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (readHandle.continueReading() && readMore &&
+            } while (continueReading && readMore &&
                     !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
@@ -1203,6 +1205,7 @@ public final class EpollSocketChannel
     private boolean epollInReadFd(ReadHandleFactory.ReadHandle readHandle) {
         final ChannelPipeline pipeline = pipeline();
         try {
+            boolean continueReading;
             readLoop: do {
                 int readFd = socket.recvFd();
                 switch(readFd) {
@@ -1214,13 +1217,12 @@ public final class EpollSocketChannel
                         closeTransport(newPromise());
                         return true;
                     default:
-                        readHandle.lastRead(0, 0, 1);
+                        continueReading = readHandle.lastRead(0, 0, 1);
                         readPending = false;
                         pipeline.fireChannelRead(new FileDescriptor(readFd));
                         break;
                 }
-            } while (readHandle.continueReading()
-                    && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
             pipeline.fireChannelReadComplete();

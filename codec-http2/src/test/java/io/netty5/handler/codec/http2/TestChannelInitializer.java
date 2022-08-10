@@ -58,7 +58,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
         @Override
         public ReadHandle newHandle() {
             return new ReadHandle() {
-                private int numMessagesRead;
+                private int totalNumMessagesRead;
 
                 @Override
                 public int estimatedBufferCapacity() {
@@ -66,18 +66,16 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 }
 
                 @Override
-                public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
-                    this.numMessagesRead += numMessagesRead;
-                }
-
-                @Override
-                public boolean continueReading() {
-                    return numMessagesRead < numReads.get();
+                public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
+                    if (numMessagesRead > 0) {
+                        this.totalNumMessagesRead += numMessagesRead;
+                    }
+                    return totalNumMessagesRead < numReads.get();
                 }
 
                 @Override
                 public void readComplete() {
-                    numMessagesRead = 0;
+                    totalNumMessagesRead = 0;
                 }
             };
         }

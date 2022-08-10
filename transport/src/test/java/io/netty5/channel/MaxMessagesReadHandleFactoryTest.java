@@ -43,14 +43,11 @@ public class MaxMessagesReadHandleFactoryTest {
         ReadHandleFactory.ReadHandle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        handle.lastRead(0, 0, 1);
-        assertTrue(handle.continueReading());
-        handle.lastRead(0, 0, 1);
-        assertFalse(handle.continueReading());
+        assertTrue(handle.lastRead(0, 0, 1));
+        assertFalse(handle.lastRead(0, 0, 1));
 
         handle.readComplete();
-        handle.lastRead(1, 1, 1);
-        assertTrue(handle.continueReading());
+        assertTrue(handle.lastRead(1, 1, 1));
         channel.finish();
     }
 
@@ -60,14 +57,11 @@ public class MaxMessagesReadHandleFactoryTest {
         ReadHandleFactory.ReadHandle handle = allocator.newHandle();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        handle.lastRead(0, 0, 1);
-        assertTrue(handle.continueReading());
-        handle.lastRead(0, 0, 1);
-        assertFalse(handle.continueReading());
+        assertTrue(handle.lastRead(0, 0, 1));
+        assertFalse(handle.lastRead(0, 0, 1));
 
         handle.readComplete();
-        handle.lastRead(0, 0, 0);
-        assertTrue(handle.continueReading());
+        assertTrue(handle.lastRead(0, 0, 0));
         channel.finish();
     }
 }

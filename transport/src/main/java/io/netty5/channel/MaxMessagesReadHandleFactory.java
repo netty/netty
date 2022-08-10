@@ -45,7 +45,7 @@ public abstract class MaxMessagesReadHandleFactory implements ReadHandleFactory 
     protected abstract MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead);
 
     /**
-     * Focuses on enforcing the maximum messages per read condition for {@link #continueReading(boolean)}.
+     * Focuses on enforcing the maximum messages per read condition for {@link #lastRead(int, int, int)}.
      */
     protected abstract static class MaxMessageReadHandle implements ReadHandle {
         private final int maxMessagesPerRead;
@@ -56,14 +56,10 @@ public abstract class MaxMessagesReadHandleFactory implements ReadHandleFactory 
         }
 
         @Override
-        public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
+        public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
             if (numMessagesRead > 0) {
                 totalMessages += numMessagesRead;
             }
-        }
-
-        @Override
-        public boolean continueReading() {
             return totalMessages < maxMessagesPerRead;
         }
 
