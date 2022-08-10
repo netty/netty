@@ -229,9 +229,11 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             assumeThat(e.getMessage()).doesNotContainIgnoringCase("unsupported address type");
             throw e;
         }
+        SocketAddress sendAddress = address instanceof InetSocketAddress ?
+                sendToAddress((InetSocketAddress) address) : address;
         for (int i = 0; i < 100; i++) {
             try {
-                client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, address));
+                client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, sendAddress));
             } catch (BindException e) {
                 throw new TestAbortedException("JDK sockets do not support binding to these addresses.", e);
             }
