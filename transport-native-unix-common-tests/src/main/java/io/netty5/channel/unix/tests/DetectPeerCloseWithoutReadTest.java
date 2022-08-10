@@ -25,7 +25,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.FixedRecvBufferAllocator;
+import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import org.junit.jupiter.api.Test;
@@ -71,8 +71,8 @@ public abstract class DetectPeerCloseWithoutReadTest {
             // Ensure we read only one message per read() call and that we need multiple read()
             // calls to consume everything.
             sb.childOption(ChannelOption.AUTO_READ, false);
-            sb.childOption(ChannelOption.RCVBUFFER_ALLOCATOR,
-                    new FixedRecvBufferAllocator(expectedBytes / 10).maxMessagesPerRead(1));
+            sb.childOption(ChannelOption.READ_HANDLE_FACTORY,
+                    new FixedReadHandleFactory(1, expectedBytes / 10));
             sb.childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
@@ -155,8 +155,8 @@ public abstract class DetectPeerCloseWithoutReadTest {
             // Ensure we read only one message per read() call and that we need multiple read()
             // calls to consume everything.
             cb.option(ChannelOption.AUTO_READ, false);
-            cb.option(ChannelOption.RCVBUFFER_ALLOCATOR,
-                    new FixedRecvBufferAllocator(expectedBytes / 10).maxMessagesPerRead(1));
+            cb.option(ChannelOption.READ_HANDLE_FACTORY,
+                    new FixedReadHandleFactory(1, expectedBytes / 10));
             cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {

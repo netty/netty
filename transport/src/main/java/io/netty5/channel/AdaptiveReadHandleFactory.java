@@ -23,7 +23,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 /**
- * The {@link RecvBufferAllocator} that automatically increases and
+ * The {@link ReadHandleFactory} that automatically increases and
  * decreases the predicted buffer size on feed back.
  * <p>
  * It gradually increases the expected number of readable bytes if the previous
@@ -32,7 +32,7 @@ import static java.lang.Math.min;
  * amount of the allocated buffer two times consecutively.  Otherwise, it keeps
  * returning the same prediction.
  */
-public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAllocator {
+public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
 
     static final int DEFAULT_MINIMUM = 64;
     // Use an initial value that is bigger than the common MTU of 1500
@@ -61,12 +61,6 @@ public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAll
         }
     }
 
-    /**
-     * @deprecated There is state for {@link #maxMessagesPerRead()} which is typically based upon channel type.
-     */
-    @Deprecated
-    public static final AdaptiveRecvBufferAllocator DEFAULT = new AdaptiveRecvBufferAllocator();
-
     private static int getSizeTableIndex(final int size) {
         for (int low = 0, high = SIZE_TABLE.length - 1;;) {
             if (high < low) {
@@ -91,14 +85,17 @@ public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAll
         }
     }
 
-    private final class HandleImpl extends MaxMessageHandle {
+    private static final class ReadHandleImpl extends MaxMessageReadHandle {
         private final int minIndex;
         private final int maxIndex;
         private int index;
         private int nextReceiveBufferSize;
         private boolean decreaseNow;
 
-        HandleImpl(int minIndex, int maxIndex, int initial) {
+        private int totalBytesRead;
+
+        ReadHandleImpl(int maxMessagesPerRead, int minIndex, int maxIndex, int initial) {
+            super(maxMessagesPerRead);
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
 
@@ -107,19 +104,22 @@ public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAll
         }
 
         @Override
-        public void lastBytesRead(int bytes) {
+        public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
             // If we read as much as we asked for we should check if we need to ramp up the size of our next guess.
             // This helps adjust more quickly when large amounts of data is pending and can avoid going back to
             // the selector to check for more data. Going back to the selector can add significant latency for large
             // data transfers.
-            if (bytes == attemptedBytesRead()) {
-                record(bytes);
+            if (attemptedBytesRead == actualBytesRead) {
+                record(actualBytesRead);
             }
-            super.lastBytesRead(bytes);
+            if (actualBytesRead > 0) {
+                totalBytesRead += actualBytesRead;
+            }
+            super.lastRead(attemptedBytesRead, actualBytesRead, numMessagesRead);
         }
 
         @Override
-        public int guess() {
+        public int estimatedBufferCapacity() {
             return nextReceiveBufferSize;
         }
 
@@ -142,6 +142,12 @@ public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAll
         @Override
         public void readComplete() {
             record(totalBytesRead());
+            totalBytesRead = 0;
+            super.readComplete();
+        }
+
+        private int totalBytesRead() {
+            return totalBytesRead < 0 ? Integer.MAX_VALUE : totalBytesRead;
         }
     }
 
@@ -154,18 +160,31 @@ public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAll
      * parameters, the expected buffer size starts from {@code 1024}, does not
      * go down below {@code 64}, and does not go up above {@code 65536}.
      */
-    public AdaptiveRecvBufferAllocator() {
-        this(DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);
+    public AdaptiveReadHandleFactory() {
+        this(1);
+    }
+
+    /**
+     * Creates a new predictor with the default parameters.  With the default
+     * parameters, the expected buffer size starts from {@code 1024}, does not
+     * go down below {@code 64}, and does not go up above {@code 65536}.
+     *
+     * @param maxMessagesPerRead    the maximum number of messages to read per read loop invocation.
+     */
+    public AdaptiveReadHandleFactory(int maxMessagesPerRead) {
+        this(maxMessagesPerRead, DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);
     }
 
     /**
      * Creates a new predictor with the specified parameters.
      *
-     * @param minimum  the inclusive lower bound of the expected buffer size
-     * @param initial  the initial buffer size when no feedback was received
-     * @param maximum  the inclusive upper bound of the expected buffer size
+     * @param maxMessagesPerRead    the maximum number of messages to read per read loop invocation.
+     * @param minimum               the inclusive lower bound of the expected buffer size
+     * @param initial               the initial buffer size when no feedback was received
+     * @param maximum               the inclusive upper bound of the expected buffer size
      */
-    public AdaptiveRecvBufferAllocator(int minimum, int initial, int maximum) {
+    public AdaptiveReadHandleFactory(int maxMessagesPerRead, int minimum, int initial, int maximum) {
+        super(maxMessagesPerRead);
         checkPositive(minimum, "minimum");
         if (initial < minimum) {
             throw new IllegalArgumentException("initial: " + initial);
@@ -192,7 +211,7 @@ public class AdaptiveRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAll
     }
 
     @Override
-    public Handle newHandle() {
-        return new HandleImpl(minIndex, maxIndex, initial);
+    public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
+        return new ReadHandleImpl(maxMessagesPerRead, minIndex, maxIndex, initial);
     }
 }

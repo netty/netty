@@ -24,8 +24,8 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.RecvBufferAllocator;
-import io.netty5.channel.ServerChannelRecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -46,7 +46,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.SO_BACKLOG;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
@@ -95,8 +94,6 @@ public final class EpollServerSocketChannel
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
 
-    private static Predicate<RecvBufferAllocator.Handle> MAYBE_MORE_DATA = h -> h.lastBytesRead() > 0;
-
     private final EventLoopGroup childEventLoopGroup;
     // Will hold the remote address after accept(...) was successful.
     // We need 24 bytes for the address as maximum + 1 byte for storing the length.
@@ -109,14 +106,14 @@ public final class EpollServerSocketChannel
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, false, 0, new ServerChannelRecvBufferAllocator(), LinuxSocket.newSocketStream());
+        super(eventLoop, false, 0, new ServerChannelReadHandleFactory(), LinuxSocket.newSocketStream());
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     ProtocolFamily protocolFamily) {
-        super(null, eventLoop, false, 0, new ServerChannelRecvBufferAllocator(),
+        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(),
                 LinuxSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
@@ -130,7 +127,7 @@ public final class EpollServerSocketChannel
     private EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(null, eventLoop, false, 0, new ServerChannelRecvBufferAllocator(), socket, isSoErrorZero(socket));
+        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(), socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 EpollSocketChannel.class);
     }
@@ -356,43 +353,36 @@ public final class EpollServerSocketChannel
     }
 
     @Override
-    protected void epollInReady(RecvBufferAllocator.Handle allocHandle, BufferAllocator recvBufferAllocator,
-                                boolean receivedRdHup) {
+    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
-        allocHandle.attemptedBytesRead(1);
         Throwable exception = null;
+        boolean readAll = false;
         try {
             do {
-                // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                // RecvBufferAllocator.Handle knows if it should try to read again or not when autoRead is
-                // enabled.
-                allocHandle.lastBytesRead(socket.accept(acceptedAddress));
-                if (allocHandle.lastBytesRead() == -1) {
+                int acceptedFd = socket.accept(acceptedAddress);
+                readHandle.lastRead(0, 0, acceptedFd == -1 ? 0 : 1);
+
+                if (acceptedFd == -1) {
                     // this means everything was handled for now
+                    readAll = true;
                     break;
                 }
-                allocHandle.incMessagesRead(1);
-
                 readPending = false;
-                pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
+                pipeline.fireChannelRead(newChildChannel(acceptedFd, acceptedAddress, 1,
                         acceptedAddress[0]));
-            } while (allocHandle.continueReading(isAutoRead(), MAYBE_MORE_DATA)
+            } while (readHandle.continueReading(isAutoRead())
                     && !isShutdown(ChannelShutdownDirection.Inbound));
         } catch (Throwable t) {
             exception = t;
         }
-        allocHandle.readComplete();
+        readHandle.readComplete();
         pipeline.fireChannelReadComplete();
 
         if (exception != null) {
             pipeline.fireChannelExceptionCaught(exception);
         }
         readIfIsAutoRead();
-    }
-
-    @Override
-    protected boolean maybeMoreDataToRead(RecvBufferAllocator.Handle handle) {
-        return handle.lastBytesRead() > 0;
+        return readAll;
     }
 
     @Override

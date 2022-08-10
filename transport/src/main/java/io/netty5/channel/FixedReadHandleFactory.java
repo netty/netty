@@ -18,22 +18,22 @@ package io.netty5.channel;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
 /**
- * The {@link RecvBufferAllocator} that always yields the same buffer
- * size prediction.  This predictor ignores the feed back from the I/O thread.
+ * The {@link ReadHandleFactory} that always yields the same buffer
+ * size prediction. This handle ignores the feedback from the I/O thread.
  */
-public class FixedRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAllocator {
-
+public class FixedReadHandleFactory extends MaxMessagesReadHandleFactory {
     private final int bufferSize;
 
-    private final class HandleImpl extends MaxMessageHandle {
+    private static final class ReadHandleImpl extends MaxMessageReadHandle {
         private final int bufferSize;
 
-        HandleImpl(int bufferSize) {
+        ReadHandleImpl(int maxMessagesPerRead, int bufferSize) {
+            super(maxMessagesPerRead);
             this.bufferSize = bufferSize;
         }
 
         @Override
-        public int guess() {
+        public int estimatedBufferCapacity() {
             return bufferSize;
         }
     }
@@ -42,13 +42,17 @@ public class FixedRecvBufferAllocator extends DefaultMaxMessagesRecvBufferAlloca
      * Creates a new predictor that always returns the same prediction of
      * the specified buffer size.
      */
-    public FixedRecvBufferAllocator(int bufferSize) {
-        checkPositive(bufferSize, "bufferSize");
-        this.bufferSize = bufferSize;
+    public FixedReadHandleFactory(int bufferSize) {
+        this.bufferSize = checkPositive(bufferSize, "bufferSize");
+    }
+
+    public FixedReadHandleFactory(int maxMessagesPerRead, int bufferSize) {
+        super(maxMessagesPerRead);
+        this.bufferSize = checkPositive(bufferSize, "bufferSize");
     }
 
     @Override
-    public Handle newHandle() {
-        return new HandleImpl(bufferSize);
+    public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
+        return new ReadHandleImpl(maxMessagesPerRead, bufferSize);
     }
 }

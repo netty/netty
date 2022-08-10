@@ -17,15 +17,13 @@ package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -33,7 +31,6 @@ import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,14 +55,14 @@ public class SocketReadPendingTest extends AbstractSocketTest {
               .option(ChannelOption.AUTO_READ, true)
               .childOption(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
-              .childOption(ChannelOption.RCVBUFFER_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
+              .childOption(ChannelOption.READ_HANDLE_FACTORY, new TestNumReadsReadHandleFactory(2))
               .childHandler(serverInitializer);
 
             serverChannel = sb.bind().asStage().get();
 
             cb.option(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
-              .option(ChannelOption.RCVBUFFER_ALLOCATOR, new TestNumReadsRecvBufferAllocator(2))
+              .option(ChannelOption.READ_HANDLE_FACTORY, new TestNumReadsReadHandleFactory(2))
               .handler(clientInitializer);
             clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
 
@@ -135,57 +132,25 @@ public class SocketReadPendingTest extends AbstractSocketTest {
     /**
      * Designed to read a single byte at a time to control the number of reads done at a fine granularity.
      */
-    private static final class TestNumReadsRecvBufferAllocator implements RecvBufferAllocator {
+    private static final class TestNumReadsReadHandleFactory implements ReadHandleFactory {
         private final int numReads;
-        TestNumReadsRecvBufferAllocator(int numReads) {
+        TestNumReadsReadHandleFactory(int numReads) {
             this.numReads = numReads;
         }
 
         @Override
-        public Handle newHandle() {
-            return new Handle() {
-                private int attemptedBytesRead;
-                private int lastBytesRead;
+        public ReadHandle newHandle() {
+            return new ReadHandle() {
                 private int numMessagesRead;
 
                 @Override
-                public Buffer allocate(BufferAllocator alloc) {
-                    return alloc.allocate(guess());
-                }
-
-                @Override
-                public int guess() {
+                public int estimatedBufferCapacity() {
                     return 1; // only ever allocate buffers of size 1 to ensure the number of reads is controlled.
                 }
 
                 @Override
-                public void reset() {
-                    numMessagesRead = 0;
-                }
-
-                @Override
-                public void incMessagesRead(int numMessages) {
-                    numMessagesRead += numMessages;
-                }
-
-                @Override
-                public void lastBytesRead(int bytes) {
-                    lastBytesRead = bytes;
-                }
-
-                @Override
-                public int lastBytesRead() {
-                    return lastBytesRead;
-                }
-
-                @Override
-                public void attemptedBytesRead(int bytes) {
-                    attemptedBytesRead = bytes;
-                }
-
-                @Override
-                public int attemptedBytesRead() {
-                    return attemptedBytesRead;
+                public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
+                    this.numMessagesRead += numMessagesRead;
                 }
 
                 @Override
@@ -194,13 +159,8 @@ public class SocketReadPendingTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead, Predicate<Handle> maybeMoreDataSupplier) {
-                    return continueReading(autoRead);
-                }
-
-                @Override
                 public void readComplete() {
-                    // Nothing needs to be done or adjusted after each read cycle is completed.
+                    numMessagesRead = 0;
                 }
             };
         }

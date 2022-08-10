@@ -27,7 +27,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
@@ -219,18 +219,19 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     private void readInbound() {
-        RecvBufferAllocator.Handle handle = recvBufAllocHandle();
-        handle.reset();
+        ReadHandleFactory.ReadHandle readHandle = readHandle();
         ChannelPipeline pipeline = pipeline();
         do {
             Object received = inboundBuffer.poll();
             if (received == null) {
+                readHandle.lastRead(0, 0, 0);
                 break;
             }
+            readHandle.lastRead(0, 0, 1);
             pipeline.fireChannelRead(received);
-        } while (handle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+        } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
-        handle.readComplete();
+        readHandle.readComplete();
         pipeline.fireChannelReadComplete();
         readIfIsAutoRead();
     }

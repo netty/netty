@@ -20,8 +20,8 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.FixedRecvBufferAllocator;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
@@ -61,7 +61,6 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
 
@@ -115,7 +114,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
-    private static final Predicate<RecvBufferAllocator.Handle> TRUE_SUPPLIER = h -> true;
 
     private volatile boolean activeOnOpen;
     private volatile int maxDatagramSize;
@@ -161,7 +159,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, true, 0, new FixedRecvBufferAllocator(2048), fd, active);
+        super(null, eventLoop, true, 0, new FixedReadHandleFactory(2048), fd, active);
     }
 
     @Override
@@ -501,41 +499,44 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     @Override
-    protected void epollInReady(RecvBufferAllocator.Handle handle, BufferAllocator recvBufferAllocator,
-                                boolean receivedRdHup) {
+    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, BufferAllocator recvBufferAllocator) {
         final ChannelPipeline pipeline = pipeline();
-        Throwable exception = socket.protocolFamily() == SocketProtocolFamily.UNIX ?
-                doReadBufferDomainSocket(handle, recvBufferAllocator) : doReadBuffer(handle, recvBufferAllocator);
-        handle.readComplete();
+        Throwable exception = null;
+        boolean readAll = false;
+        try {
+            readAll = socket.protocolFamily() == SocketProtocolFamily.UNIX ?
+                    doReadBufferDomainSocket(readHandle, recvBufferAllocator) :
+                    doReadBuffer(readHandle, recvBufferAllocator);
+        } catch (Throwable error) {
+            exception = error;
+        }
+        readHandle.readComplete();
         pipeline.fireChannelReadComplete();
 
         if (exception != null) {
             pipeline.fireChannelExceptionCaught(exception);
         }
         readIfIsAutoRead();
+        return readAll;
     }
 
-    @Override
-    protected boolean maybeMoreDataToRead(RecvBufferAllocator.Handle handle) {
-        return handle.lastBytesRead() > 0;
-    }
-
-    private Throwable doReadBufferDomainSocket(RecvBufferAllocator.Handle allocHandle,
-                                               BufferAllocator allocator) {
+    private boolean doReadBufferDomainSocket(ReadHandleFactory.ReadHandle readHandle,
+                                             BufferAllocator allocator) throws Throwable {
         Buffer buf = null;
         try {
             boolean connected = isConnected();
             do {
-                buf = allocHandle.allocate(allocator);
-                allocHandle.attemptedBytesRead(buf.writableBytes());
+                buf = allocator.allocate(readHandle.estimatedBufferCapacity());
+                int attemptedBytesRead = buf.writableBytes();
 
                 final DatagramPacket packet;
                 if (connected) {
-                    doReadBytes(buf);
-                    if (allocHandle.lastBytesRead() <= 0) {
+                    int actualBytesRead = doReadBytes(buf);
+                    readHandle.lastRead(attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+                    if (actualBytesRead <= 0) {
                         // nothing was read, release the buffer.
                         buf.close();
-                        break;
+                        return true;
                     }
                     packet = new DatagramPacket(buf, localAddress(), remoteAddress());
                 } else {
@@ -544,47 +545,44 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
 
                     if (remoteAddress == null) {
-                        allocHandle.lastBytesRead(-1);
+                        readHandle.lastRead(attemptedBytesRead, -1, 0);
                         buf.close();
-                        break;
+                        return true;
                     }
                     DomainSocketAddress localAddress = remoteAddress.localAddress();
                     if (localAddress == null) {
                         localAddress = (DomainSocketAddress) localAddress();
                     }
-                    allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                    buf.skipWritableBytes(allocHandle.lastBytesRead());
-
+                    int actualBytesRead = remoteAddress.receivedAmount();
+                    readHandle.lastRead(attemptedBytesRead, actualBytesRead, 1);
+                    buf.skipWritableBytes(actualBytesRead);
                     packet = new DatagramPacket(buf, localAddress, remoteAddress);
                 }
-
-                allocHandle.incMessagesRead(1);
 
                 readPending = false;
                 pipeline().fireChannelRead(packet);
 
                 buf = null;
 
-                // We use the TRUE_SUPPLIER as it is also ok to read less than what we did try to read (as long
-                // as we read anything).
-            } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
+                // Continue reading
+            } while (readHandle.continueReading(isAutoRead()));
+            return false;
         } catch (Throwable t) {
             if (buf != null) {
                 buf.close();
             }
-            return t;
+            throw t;
         }
-        return null;
     }
 
-    private Throwable doReadBuffer(RecvBufferAllocator.Handle allocHandle, BufferAllocator allocator) {
+    private boolean doReadBuffer(ReadHandleFactory.ReadHandle readHandle, BufferAllocator allocator) throws Throwable {
         try {
             boolean connected = isConnected();
             do {
                 final boolean read;
                 int datagramSize = getMaxDatagramPayloadSize();
 
-                Buffer buf = allocHandle.allocate(allocator);
+                Buffer buf = allocator.allocate(readHandle.estimatedBufferCapacity());
                 // Only try to use recvmmsg if its really supported by the running system.
                 int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
                         datagramSize == 0 ? 1 : buf.writableBytes() / datagramSize :
@@ -592,13 +590,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 try {
                     if (numDatagram <= 1) {
                         if (!connected || isUdpGro()) {
-                            read = recvmsg(allocHandle, allocator, cleanDatagramPacketArray(), buf);
+                            read = recvmsg(readHandle, allocator, cleanDatagramPacketArray(), buf);
                         } else {
-                            read = connectedRead(allocHandle, buf, datagramSize);
+                            read = connectedRead(readHandle, buf, datagramSize);
                         }
                     } else {
                         // Try to use scattering reads via recvmmsg(...) syscall.
-                        read = scatteringRead(allocHandle, allocator, cleanDatagramPacketArray(),
+                        read = scatteringRead(readHandle, allocator, cleanDatagramPacketArray(),
                                               buf, datagramSize, numDatagram);
                     }
                 } catch (NativeIoException e) {
@@ -611,30 +609,27 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 if (read) {
                     readPending = false;
                 } else {
-                    break;
+                    return true;
                 }
-            // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-            // as we read anything).
-            } while (allocHandle.continueReading(isAutoRead(), TRUE_SUPPLIER));
+            // Continue reading
+            } while (readHandle.continueReading(isAutoRead()));
+            return false;
         } catch (Throwable t) {
-            return t;
+            throw t;
         }
-        return null;
     }
 
-    private boolean connectedRead(RecvBufferAllocator.Handle allocHandle, Buffer buf,
+    private boolean connectedRead(ReadHandleFactory.ReadHandle allocHandle, Buffer buf,
                                   int maxDatagramPacketSize) throws Exception {
         try {
-            int writable = maxDatagramPacketSize != 0 ? Math.min(buf.writableBytes(), maxDatagramPacketSize)
+            int attemptedBytesRead = maxDatagramPacketSize != 0 ? Math.min(buf.writableBytes(), maxDatagramPacketSize)
                     : buf.writableBytes();
-            allocHandle.attemptedBytesRead(writable);
 
             int initialWritableBytes = buf.writableBytes();
             buf.forEachWritable(0, (index, component) -> {
                 long address = component.writableNativeAddress();
                 assert address != 0;
                 int bytesRead = socket.readAddress(address, 0, component.writableBytes());
-                allocHandle.lastBytesRead(bytesRead);
                 if (bytesRead <= 0) {
                     return false;
                 }
@@ -643,15 +638,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             });
             final int totalBytesRead = initialWritableBytes - buf.writableBytes();
             if (totalBytesRead == 0) {
+                allocHandle.lastRead(attemptedBytesRead, totalBytesRead, 0);
                 // nothing was read, release the buffer.
                 return false;
             }
-            if (maxDatagramPacketSize > 0) {
-                allocHandle.lastBytesRead(totalBytesRead);
-            }
-            DatagramPacket packet = new DatagramPacket(buf, localAddress(), remoteAddress());
-            allocHandle.incMessagesRead(1);
 
+            allocHandle.lastRead(attemptedBytesRead, totalBytesRead, 1);
+
+            DatagramPacket packet = new DatagramPacket(buf, localAddress(), remoteAddress());
             pipeline().fireChannelRead(packet);
             buf = null;
             return true;
@@ -698,24 +692,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private static void processPacket(ChannelPipeline pipeline, RecvBufferAllocator.Handle handle,
-                                      int bytesRead, AddressedEnvelope<?, ?> packet) {
-        handle.lastBytesRead(Math.max(1, bytesRead)); // Avoid signalling end-of-data for zero-sized datagrams.
-        handle.incMessagesRead(1);
+    private static void processPacket(ChannelPipeline pipeline, ReadHandleFactory.ReadHandle readHandle,
+                                      int attemptedBytesRead, int bytesRead, AddressedEnvelope<?, ?> packet) {
+        // Avoid signalling end-of-data for zero-sized datagrams.
+        readHandle.lastRead(attemptedBytesRead, Math.max(1, bytesRead), 1);
         pipeline.fireChannelRead(packet);
     }
 
-    private static void processPacketList(ChannelPipeline pipeline, RecvBufferAllocator.Handle handle,
-                                          BufferAllocator allocator, int bytesRead, RecyclableArrayList packetList) {
+    private static void processPacketList(ChannelPipeline pipeline, ReadHandleFactory.ReadHandle readHandle,
+                                          BufferAllocator allocator, int attemptedBytesRead, int bytesRead,
+                                          RecyclableArrayList packetList) {
         int messagesRead = packetList.size();
-        handle.lastBytesRead(Math.max(1, bytesRead)); // Avoid signalling end-of-data for zero-sized datagrams.
-        handle.incMessagesRead(messagesRead);
+        // Avoid signalling end-of-data for zero-sized datagrams.
+        readHandle.lastRead(attemptedBytesRead, Math.max(1, bytesRead), messagesRead);
         for (int i = 0; i < messagesRead; i++) {
             pipeline.fireChannelRead(packetList.set(i, allocator.allocate(0)));
         }
     }
 
-    private boolean recvmsg(RecvBufferAllocator.Handle allocHandle, BufferAllocator allocator,
+    private boolean recvmsg(ReadHandleFactory.ReadHandle readHandle, BufferAllocator allocator,
                             NativeDatagramPacketArray array, Buffer buf) throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
@@ -724,20 +719,20 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             boolean added = array.addWritable(buf, 0, null);
             assert added;
 
-            allocHandle.attemptedBytesRead(buf.writerOffset() - initialWriterOffset);
+            int attemptedBytesRead = buf.writerOffset() - initialWriterOffset;
 
             NativeDatagramPacketArray.NativeDatagramPacket msg = array.packets()[0];
 
             int bytesReceived = socket.recvmsg(msg);
             if (!msg.hasSender()) {
-                allocHandle.lastBytesRead(-1);
+                readHandle.lastRead(attemptedBytesRead, -1, 0);
                 return false;
             }
             buf.writerOffset(initialWriterOffset + bytesReceived);
             InetSocketAddress local = (InetSocketAddress) localAddress();
             DatagramPacket packet = msg.newDatagramPacket(buf, local);
             if (!(packet instanceof SegmentedDatagramPacket)) {
-                processPacket(pipeline(), allocHandle, bytesReceived, packet);
+                processPacket(pipeline(), readHandle, attemptedBytesRead, bytesReceived, packet);
                 buf = null;
             } else {
                 // Its important we process all received data out of the NativeDatagramPacketArray
@@ -749,7 +744,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // it into the RecyclableArrayList.
                 buf = null;
 
-                processPacketList(pipeline(), allocHandle, allocator, bytesReceived, datagramPackets);
+                processPacketList(pipeline(), readHandle, allocator, attemptedBytesRead,
+                        bytesReceived, datagramPackets);
                 datagramPackets.recycle();
                 datagramPackets = null;
             }
@@ -760,7 +756,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private boolean scatteringRead(RecvBufferAllocator.Handle allocHandle, BufferAllocator allocator,
+    private boolean scatteringRead(ReadHandleFactory.ReadHandle allocHandle, BufferAllocator allocator,
                                    NativeDatagramPacketArray array, Buffer buf, int datagramSize, int numDatagram)
             throws IOException {
         RecyclableArrayList datagramPackets = null;
@@ -772,13 +768,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 }
             }
 
-            allocHandle.attemptedBytesRead(buf.writerOffset() - initialWriterOffset);
+            int attemptedBytesRead = buf.writerOffset() - initialWriterOffset;
 
             NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
 
             int received = socket.recvmmsg(packets, 0, array.count());
             if (received == 0) {
-                allocHandle.lastBytesRead(-1);
+                allocHandle.lastRead(attemptedBytesRead, -1, 0);
                 return false;
             }
             int bytesReceived = received * datagramSize;
@@ -788,7 +784,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(buf, local);
                 if (!(packet instanceof SegmentedDatagramPacket)) {
-                    processPacket(pipeline(), allocHandle, datagramSize, packet);
+                    processPacket(pipeline(), allocHandle, attemptedBytesRead, datagramSize, packet);
                     buf = null;
                     return true;
                 }
@@ -805,7 +801,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             buf.close();
             buf = null;
 
-            processPacketList(pipeline(), allocHandle, allocator, bytesReceived, datagramPackets);
+            processPacketList(pipeline(), allocHandle, allocator, attemptedBytesRead, bytesReceived, datagramPackets);
             datagramPackets.recycle();
             datagramPackets = null;
             return true;
@@ -1180,7 +1176,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
      * {@code recvmmsg} should be used when reading from the underlying socket. When {@code recvmmsg} is used
      * we may be able to read multiple {@link io.netty5.channel.socket.DatagramPacket}s with one syscall and so
      * greatly improve the performance. This number will be used to split {@link Buffer}s returned by the used
-     * {@link RecvBufferAllocator}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value
+     * {@link ReadHandleFactory}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value
      * will enable it.
      */
     private void setMaxDatagramPayloadSize(int maxDatagramSize) {

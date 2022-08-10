@@ -25,8 +25,8 @@ public class KQueueRcvAllocatorOverrideSocketSslEchoTest extends KQueueSocketSsl
     protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2,
                              BufferAllocator bufferAllocator) {
         super.configure(bootstrap, bootstrap2, bufferAllocator);
-        bootstrap.option(ChannelOption.RCVBUFFER_ALLOCATOR, new KQueueGuessRecvBufferAllocator());
-        bootstrap.childOption(ChannelOption.RCVBUFFER_ALLOCATOR, new KQueueGuessRecvBufferAllocator());
-        bootstrap2.option(ChannelOption.RCVBUFFER_ALLOCATOR, new KQueueGuessRecvBufferAllocator());
+        bootstrap.option(ChannelOption.READ_HANDLE_FACTORY, new KQueueReadHandleFactory());
+        bootstrap.childOption(ChannelOption.READ_HANDLE_FACTORY, new KQueueReadHandleFactory());
+        bootstrap2.option(ChannelOption.READ_HANDLE_FACTORY, new KQueueReadHandleFactory());
     }
 }

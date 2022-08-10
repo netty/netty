@@ -39,7 +39,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
      */
     protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     Class<? extends Channel> childChannelType) {
-        super(null, eventLoop, false, new ServerChannelRecvBufferAllocator());
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory());
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 

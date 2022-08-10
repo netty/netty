@@ -54,7 +54,7 @@ import static io.netty5.channel.ChannelOption.BUFFER_ALLOCATOR;
 import static io.netty5.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
-import static io.netty5.channel.ChannelOption.RCVBUFFER_ALLOCATOR;
+import static io.netty5.channel.ChannelOption.READ_HANDLE_FACTORY;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
@@ -100,7 +100,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "autoRead");
 
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
-    private volatile RecvBufferAllocator rcvBufAllocator;
+    private volatile ReadHandleFactory readHandleFactory;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
@@ -117,7 +117,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private boolean closeInitiated;
     private Throwable initialCloseCause;
     private boolean readBeforeActive;
-    private RecvBufferAllocator.Handle recvHandle;
+    private ReadHandleFactory.ReadHandle readHandle;
     private MessageSizeEstimator.Handle estimatorHandler;
     private boolean inWriteFlushed;
     /** true if the channel has never been registered, false otherwise */
@@ -142,7 +142,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *                                  @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect) {
-        this(parent, eventLoop, supportingDisconnect, new AdaptiveRecvBufferAllocator());
+        this(parent, eventLoop, supportingDisconnect, new AdaptiveReadHandleFactory());
     }
 
     /**
@@ -153,11 +153,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * @param supportingDisconnect          {@code true} if and only if the channel has the {@code disconnect()}
      *                                      operation that allows a user to disconnect and then call {
      *                                      @link Channel#connect(SocketAddress)} again, such as UDP/IP.
-     * @param defaultRecvBufferAllocator    the {@link RecvBufferAllocator} that is used by default.
+     * @param defaultReadHandleFactory      the {@link ReadHandleFactory} that is used by default.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop,
-                              boolean supportingDisconnect, RecvBufferAllocator defaultRecvBufferAllocator) {
-        this(parent, eventLoop, supportingDisconnect, defaultRecvBufferAllocator, DefaultChannelId.newInstance());
+                              boolean supportingDisconnect, ReadHandleFactory defaultReadHandleFactory) {
+        this(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, DefaultChannelId.newInstance());
     }
 
     /**
@@ -168,11 +168,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * @param supportingDisconnect          {@code true} if and only if the channel has the {@code disconnect()}
      *                                      operation that allows a user to disconnect and then call {
      *                                      @link Channel#connect(SocketAddress)} again, such as UDP/IP.
-     * @param defaultRecvBufferAllocator    the {@link RecvBufferAllocator} that is used by default.
+     * @param defaultReadHandleFactory      the {@link ReadHandleFactory} that is used by default.
      * @param id                            the {@link ChannelId} which will be used.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
-                              RecvBufferAllocator defaultRecvBufferAllocator, ChannelId id) {
+                              ReadHandleFactory defaultReadHandleFactory, ChannelId id) {
         this.parent = parent;
         this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", getClass());
         this.supportingDisconnect = supportingDisconnect;
@@ -181,7 +181,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         this.id = id;
         pipeline = newChannelPipeline();
         fireChannelWritabilityChangedTask = () -> pipeline().fireChannelWritabilityChanged();
-        rcvBufAllocator = requireNonNull(defaultRecvBufferAllocator, "defaultRecvBufferAllocator");
+        readHandleFactory = requireNonNull(defaultReadHandleFactory, "defaultReadHandleFactory");
     }
 
     protected static <T extends EventLoopGroup> T validateEventLoopGroup(
@@ -383,13 +383,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         assert eventLoop.inEventLoop();
     }
 
-    protected RecvBufferAllocator.Handle recvBufAllocHandle() {
+    protected final ReadHandleFactory.ReadHandle readHandle() {
         assertEventLoop();
 
-        if (recvHandle == null) {
-            recvHandle = getRecvBufferAllocator().newHandle();
+        if (readHandle == null) {
+            readHandle = getReadHandleFactory().newHandle();
         }
-        return recvHandle;
+        return readHandle;
     }
 
     private void registerTransport(final Promise<Void> promise) {
@@ -1314,8 +1314,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (option == BUFFER_ALLOCATOR) {
             return (T) getBufferAllocator();
         }
-        if (option == RCVBUFFER_ALLOCATOR) {
-            return getRecvBufferAllocator();
+        if (option == READ_HANDLE_FACTORY) {
+            return getReadHandleFactory();
         }
         if (option == AUTO_CLOSE) {
             return (T) Boolean.valueOf(isAutoClose());
@@ -1347,7 +1347,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public final <T> Channel setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
@@ -1361,8 +1360,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             setWriteSpinCount((Integer) value);
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
-        } else if (option == RCVBUFFER_ALLOCATOR) {
-            setRecvBufferAllocator((RecvBufferAllocator) value);
+        } else if (option == READ_HANDLE_FACTORY) {
+            setReadHandleFactory((ReadHandleFactory) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
@@ -1412,7 +1411,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(
                 AUTO_READ, WRITE_BUFFER_WATER_MARK, CONNECT_TIMEOUT_MILLIS,
-                WRITE_SPIN_COUNT, BUFFER_ALLOCATOR, RCVBUFFER_ALLOCATOR, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
+                WRITE_SPIN_COUNT, BUFFER_ALLOCATOR, READ_HANDLE_FACTORY, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
                 MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
     }
 
@@ -1478,12 +1477,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends RecvBufferAllocator> T getRecvBufferAllocator() {
-        return (T) rcvBufAllocator;
+    private <T extends ReadHandleFactory> T getReadHandleFactory() {
+        return (T) readHandleFactory;
     }
 
-    private void setRecvBufferAllocator(RecvBufferAllocator allocator) {
-        rcvBufAllocator = requireNonNull(allocator, "allocator");
+    private void setReadHandleFactory(ReadHandleFactory readHandleFactory) {
+        this.readHandleFactory = requireNonNull(readHandleFactory, "readHandleFactory");
     }
 
     protected final boolean isAutoRead() {

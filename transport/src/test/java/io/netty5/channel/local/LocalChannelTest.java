@@ -19,18 +19,18 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.AdaptiveRecvBufferAllocator;
+import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.DefaultMaxMessagesRecvBufferAllocator;
+import io.netty5.channel.MaxMessagesReadHandleFactory;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.ServerChannelRecvBufferAllocator;
+import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.util.concurrent.Future;
@@ -1042,7 +1042,7 @@ public class LocalChannelTest {
         cb.group(serverGroup)
                 .channel(LocalChannel.class)
                 .option(ChannelOption.AUTO_READ, autoRead)
-                .option(ChannelOption.RCVBUFFER_ALLOCATOR, new AdaptiveRecvBufferAllocator().maxMessagesPerRead(1))
+                .option(ChannelOption.READ_HANDLE_FACTORY, new AdaptiveReadHandleFactory(1))
                 .handler(new ChannelReadHandler(countDownLatch, autoRead));
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
@@ -1112,7 +1112,7 @@ public class LocalChannelTest {
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
                 .option(ChannelOption.AUTO_READ, autoRead)
-                .option(ChannelOption.RCVBUFFER_ALLOCATOR, new ServerChannelRecvBufferAllocator().maxMessagesPerRead(1))
+                .option(ChannelOption.READ_HANDLE_FACTORY, new ServerChannelReadHandleFactory(1))
                 .handler(new ChannelReadHandler(countDownLatch, autoRead))
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
@@ -1213,14 +1213,14 @@ public class LocalChannelTest {
 
         sb.group(sharedGroup)
                 .channel(LocalServerChannel.class)
-                .option(ChannelOption.RCVBUFFER_ALLOCATOR, new ReadCompleteRecvAllocator(serverLatch))
+                .option(ChannelOption.READ_HANDLE_FACTORY, new ReadCompleteReadAllocator(serverLatch))
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) {
                         // NOOP
                     }
                 })
-                .childOption(ChannelOption.RCVBUFFER_ALLOCATOR, new ReadCompleteRecvAllocator(childLatch));
+                .childOption(ChannelOption.READ_HANDLE_FACTORY, new ReadCompleteReadAllocator(childLatch));
 
         Channel sc = null;
         Channel cc = null;
@@ -1241,17 +1241,17 @@ public class LocalChannelTest {
         }
     }
 
-    private static final class ReadCompleteRecvAllocator extends DefaultMaxMessagesRecvBufferAllocator {
+    private static final class ReadCompleteReadAllocator extends MaxMessagesReadHandleFactory {
         private final CountDownLatch latch;
-        ReadCompleteRecvAllocator(CountDownLatch latch) {
+        ReadCompleteReadAllocator(CountDownLatch latch) {
             this.latch = latch;
         }
 
         @Override
-        public Handle newHandle() {
-            return new MaxMessageHandle() {
+        public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
+            return new MaxMessageReadHandle(maxMessagesPerRead) {
                 @Override
-                public int guess() {
+                public int estimatedBufferCapacity() {
                     return 128;
                 }
 

@@ -22,7 +22,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannel;
 
 import java.net.SocketAddress;
@@ -104,18 +104,19 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
     }
 
     private void readInbound() {
-        RecvBufferAllocator.Handle handle = recvBufAllocHandle();
-        handle.reset();
+        ReadHandleFactory.ReadHandle readHandle = readHandle();
         ChannelPipeline pipeline = pipeline();
         do {
             Object m = inboundBuffer.poll();
             if (m == null) {
+                readHandle.lastRead(0, 0, 0);
                 break;
             }
+            readHandle.lastRead(0, 0, 1);
             pipeline.fireChannelRead(m);
-        } while (handle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+        } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
 
-        handle.readComplete();
+        readHandle.readComplete();
         pipeline.fireChannelReadComplete();
         readIfIsAutoRead();
     }
