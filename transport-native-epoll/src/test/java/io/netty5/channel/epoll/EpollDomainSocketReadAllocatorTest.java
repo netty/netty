@@ -26,6 +26,6 @@ public class EpollDomainSocketReadAllocatorTest extends DomainSocketReadAllocato
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.socketWithFastOpen();
+        return EpollSocketTestPermutation.INSTANCE.domainSocket();
     }
 }
