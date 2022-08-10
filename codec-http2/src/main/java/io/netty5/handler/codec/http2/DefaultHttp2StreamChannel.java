@@ -423,7 +423,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
             // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
             // cost of additional readComplete notifications on the rare path.
-            if (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound)) {
+            if (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound)) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
                 notifyReadComplete(readHandle, true);
@@ -704,7 +704,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             boolean continueReading = false;
             do {
                 doRead0((Http2Frame) message, allocHandle);
-            } while ((readEOS || (continueReading = allocHandle.continueReading(isAutoRead())))
+            } while ((readEOS || (continueReading = allocHandle.continueReading()))
                     && (message = pollQueuedMessage()) != null);
 
             if (continueReading && handler.isParentReadInProgress() && !readEOS) {

@@ -154,7 +154,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead) {
+                public boolean continueReading() {
                     return numMessagesRead < numReads;
                 }
 

@@ -370,8 +370,7 @@ public final class EpollServerSocketChannel
                 readPending = false;
                 pipeline.fireChannelRead(newChildChannel(acceptedFd, acceptedAddress, 1,
                         acceptedAddress[0]));
-            } while (readHandle.continueReading(isAutoRead())
-                    && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
         } catch (Throwable t) {
             exception = t;
         }

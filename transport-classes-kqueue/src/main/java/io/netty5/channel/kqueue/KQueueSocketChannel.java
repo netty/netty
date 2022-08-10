@@ -528,7 +528,7 @@ public final class KQueueSocketChannel
                         pipeline.fireChannelRead(new FileDescriptor(recvFd));
                         break;
                 }
-            } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -913,7 +913,7 @@ public final class KQueueSocketChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (readHandle.continueReading(isAutoRead())
+            } while (readHandle.continueReading()
                     && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();

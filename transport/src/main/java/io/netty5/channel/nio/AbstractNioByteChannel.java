@@ -133,7 +133,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
                 readPending = false;
                 pipeline.fireChannelRead(buffer);
                 buffer = null;
-            } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
             pipeline.fireChannelReadComplete();

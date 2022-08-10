@@ -570,7 +570,7 @@ public final class KQueueDatagramChannel
                 pipeline.fireChannelRead(packet);
 
                 buffer = null;
-            } while (readHandle.continueReading(isAutoRead()));
+            } while (readHandle.continueReading());
         } catch (Throwable t) {
             if (buffer != null) {
                 buffer.close();

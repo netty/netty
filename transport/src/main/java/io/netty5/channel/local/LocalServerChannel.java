@@ -114,7 +114,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
             }
             readHandle.lastRead(0, 0, 1);
             pipeline.fireChannelRead(m);
-        } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+        } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
 
         readHandle.readComplete();
         pipeline.fireChannelReadComplete();

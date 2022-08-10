@@ -565,7 +565,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 buf = null;
 
                 // Continue reading
-            } while (readHandle.continueReading(isAutoRead()));
+            } while (readHandle.continueReading());
             return false;
         } catch (Throwable t) {
             if (buf != null) {
@@ -612,7 +612,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     return true;
                 }
             // Continue reading
-            } while (readHandle.continueReading(isAutoRead()));
+            } while (readHandle.continueReading());
             return false;
         } catch (Throwable t) {
             throw t;

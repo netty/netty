@@ -71,7 +71,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead) {
+                public boolean continueReading() {
                     return numMessagesRead < numReads.get();
                 }
 
