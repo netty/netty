@@ -21,7 +21,7 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.ReadHandleFactory;
-import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueGuessRecvBufferAllocatorReadHandle;
+import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueReadHandle;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.RawUnixChannelOption;
@@ -393,8 +393,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     final void readReady(long numberBytesPending) {
         ReadHandleFactory.ReadHandle readHandle = readHandle();
         this.numberBytesPending = numberBytesPending;
-        if (readHandle instanceof KQueueGuessRecvBufferAllocatorReadHandle) {
-            ((KQueueGuessRecvBufferAllocatorReadHandle) readHandle)
+        if (readHandle instanceof KQueueReadHandle) {
+            ((KQueueReadHandle) readHandle)
                     .bufferCapacity(Math.min(128, (int) Math.min(numberBytesPending, 8 * 1024 * 1024)));
         }
         assert executor().inEventLoop();

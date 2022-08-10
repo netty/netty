@@ -31,13 +31,13 @@ public final class KQueueReadHandleFactory extends MaxMessagesReadHandleFactory 
 
     @Override
     public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
-        return new KQueueGuessRecvBufferAllocatorReadHandle(maxMessagesPerRead);
+        return new KQueueReadHandle(maxMessagesPerRead);
     }
 
-    static final class KQueueGuessRecvBufferAllocatorReadHandle extends MaxMessageReadHandle {
+    static final class KQueueReadHandle extends MaxMessageReadHandle {
         private int capacity = 512;
 
-        KQueueGuessRecvBufferAllocatorReadHandle(int maxMessagesPerRead) {
+        KQueueReadHandle(int maxMessagesPerRead) {
             super(maxMessagesPerRead);
         }
 

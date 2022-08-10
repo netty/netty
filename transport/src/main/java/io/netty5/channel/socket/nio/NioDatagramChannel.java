@@ -57,7 +57,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 
@@ -103,8 +102,6 @@ public final class NioDatagramChannel
             StringUtil.simpleClassName(Buffer.class) + ", " +
             StringUtil.simpleClassName(SocketAddress.class) + ">, " +
             StringUtil.simpleClassName(Buffer.class) + ')';
-
-    private static final Predicate<ReadHandle> TRUE_SUPPLIER = h -> true;
 
     private final ProtocolFamily family;
 
