@@ -384,7 +384,7 @@ public final class KQueueServerSocketChannel extends
                 readPending = false;
                 pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
                         acceptedAddress[0]));
-            } while (readHandle.continueReading(isAutoRead()) &&
+            } while (readHandle.continueReading() &&
                     !isShutdown(ChannelShutdownDirection.Inbound));
         } catch (Throwable t) {
             exception = t;

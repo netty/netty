@@ -76,7 +76,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
                         closed = true;
                         break;
                     }
-                } while (readHandle.continueReading(isAutoRead()) && !isShutdown(ChannelShutdownDirection.Inbound));
+                } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
             } catch (Throwable t) {
                 exception = t;
             }

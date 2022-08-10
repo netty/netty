@@ -18,8 +18,7 @@ package io.netty5.channel;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
 /**
- * Base implementation of {@link ReadHandleFactory} which respects {@link ChannelOption#AUTO_READ}
- * and allows to limit the number of messages read per read loop.
+ * Base implementation of {@link ReadHandleFactory} which allows to limit the number of messages read per read loop.
  */
 public abstract class MaxMessagesReadHandleFactory implements ReadHandleFactory {
     private final int maxMessagesPerRead;
@@ -64,8 +63,8 @@ public abstract class MaxMessagesReadHandleFactory implements ReadHandleFactory 
         }
 
         @Override
-        public boolean continueReading(boolean autoRead) {
-            return autoRead && totalMessages < maxMessagesPerRead;
+        public boolean continueReading() {
+            return totalMessages < maxMessagesPerRead;
         }
 
         @Override

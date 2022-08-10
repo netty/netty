@@ -38,17 +38,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketAutoReadTest extends AbstractSocketTest {
     @Test
-    public void testAutoReadOffDuringReadOnlyReadsOne(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testAutoReadOffDuringReadOnlyReadsOne);
+    public void testAutoReadOffDuringRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, this::testAutoReadOffDuringRead);
     }
 
-    public void testAutoReadOffDuringReadOnlyReadsOne(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAutoReadOffDuringReadOnlyReadsOne(true, sb, cb);
-        testAutoReadOffDuringReadOnlyReadsOne(false, sb, cb);
+    public void testAutoReadOffDuringRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testAutoReadOffDuringRead(true, sb, cb);
+        testAutoReadOffDuringRead(false, sb, cb);
     }
 
-    private static void testAutoReadOffDuringReadOnlyReadsOne(boolean readOutsideEventLoopThread,
-                                                           ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    private static void testAutoReadOffDuringRead(boolean readOutsideEventLoopThread,
+                                                  ServerBootstrap sb, Bootstrap cb) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -123,7 +123,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
 
         AutoReadHandler(boolean callRead) {
             this.callRead = callRead;
-            latch2 = new CountDownLatch(callRead ? 3 : 2);
+            latch2 = new CountDownLatch(1);
         }
 
         @Override
@@ -155,7 +155,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
 
         void assertSingleReadSecondTry() throws InterruptedException {
             assertTrue(latch2.await(5, TimeUnit.SECONDS));
-            assertEquals(callRead ? 3 : 2, count.get());
+            assertEquals(3, count.get());
         }
     }
 
@@ -178,8 +178,9 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public boolean continueReading(boolean autoRead) {
-                    return autoRead;
+                public boolean continueReading() {
+                    // Reading until there is nothing left to read.
+                    return true;
                 }
 
                 @Override

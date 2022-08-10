@@ -588,7 +588,7 @@ public final class EpollSocketChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (readHandle.continueReading(isAutoRead()) && readMore &&
+            } while (readHandle.continueReading() && readMore &&
                     !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
@@ -1219,7 +1219,7 @@ public final class EpollSocketChannel
                         pipeline.fireChannelRead(new FileDescriptor(readFd));
                         break;
                 }
-            } while (readHandle.continueReading(isAutoRead())
+            } while (readHandle.continueReading()
                     && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();

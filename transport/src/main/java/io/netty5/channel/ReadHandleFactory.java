@@ -49,11 +49,10 @@ public interface ReadHandleFactory {
         /**
          * Determine if the current read loop should continue.
          *
-         * @param autoRead {@code true} if {@link ChannelOption#AUTO_READ} is used, {@code false} otherwise.
          * @return {@code true} if the read loop should continue reading. {@code false}
          * if the read loop is complete.
          */
-        boolean continueReading(boolean autoRead);
+        boolean continueReading();
 
         /**
          * Method that must be called once the read loop was completed.
