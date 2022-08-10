@@ -58,7 +58,21 @@ openssl pkcs12 -export -in mutual_auth_server.pem -inkey mutual_auth_server.key 
 openssl pkcs12 -export -in mutual_auth_invalid_client.pem -inkey mutual_auth_invalid_client.key -certfile mutual_auth_invalid_client_cert_chain.pem -out mutual_auth_invalid_client.p12 -password pass:example
 openssl pkcs12 -export -in mutual_auth_client.pem -inkey mutual_auth_client.key -certfile mutual_auth_client_cert_chain.pem -out mutual_auth_client.p12 -password pass:example
 
+#PKCS#1
+openssl genrsa -out rsa_pkcs8_unencrypted.key 2048
+openssl genrsa -des3 -out rsa_pkcs8_des3_encrypted.key -passout pass:example 2048
+openssl genrsa -aes128 -out rsa_pkcs8_aes_encrypted.key -passout pass:example 2048
+# If using OpenSSL >3 use -traditional with openssl genrsa to generate traditional PKCS#1 keys
+openssl genrsa -traditional -out rsa_pkcs1_unencrypted.key 2048
+openssl genrsa -traditional -des3 -out rsa_pkcs1_des3_encrypted.key -passout pass:example 2048
+openssl genrsa -traditional -aes128 -out rsa_pkcs1_aes_encrypted.key -passout pass:example 2048
+openssl dsaparam -out dsaparam.pem 2048
+openssl gendsa -out dsa_pkcs1_unencrypted.key dsaparam.pem
+openssl gendsa -des3 -out dsa_pkcs1_des3_encrypted.key -passout pass:example dsaparam.pem
+openssl gendsa -aes128 -out dsa_pkcs1_aes_encrypted.key -passout pass:example dsaparam.pem
+
 # Clean up intermediate files
 rm intermediate.csr
 rm mutual_auth_ca.key mutual_auth_invalid_client.key mutual_auth_client.key mutual_auth_server.key mutual_auth_invalid_intermediate_ca.key mutual_auth_intermediate_ca.key
 rm mutual_auth_invalid_client.pem mutual_auth_client.pem mutual_auth_server.pem mutual_auth_client_cert_chain.pem mutual_auth_invalid_intermediate_ca.pem mutual_auth_intermediate_ca.pem mutual_auth_invalid_client_cert_chain.pem
+rm dsaparam.pem
