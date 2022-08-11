@@ -259,7 +259,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
             }
         }
         readHandle.lastRead(0, 0, 0);
-        return -1;
+        return 0;
     }
 
     // Unnecessary stuff
