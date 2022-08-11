@@ -29,6 +29,7 @@
  */
 package io.netty5.handler.codec.http.headers;
 
+import io.netty5.util.internal.UnstableApi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -70,7 +71,8 @@ import static java.util.Objects.requireNonNull;
  * @param <K> The type of key.
  * @param <V> The type of value.
  */
-abstract class MultiMap<K, V> {
+@UnstableApi
+public abstract class MultiMap<K, V> {
     final BucketHead<K, V>[] entries;
     @Nullable
     BucketHead<K, V> lastBucketHead;
@@ -547,7 +549,7 @@ abstract class MultiMap<K, V> {
         }
     }
 
-    private abstract class EntryIterator<T> implements Iterator<T> {
+    protected abstract class EntryIterator<T> implements Iterator<T> {
         @Nullable
         private MultiMapEntry<K, V> previous;
         @Nullable
@@ -563,6 +565,13 @@ abstract class MultiMap<K, V> {
         @Override
         public boolean hasNext() {
             return current != null;
+        }
+
+        /**
+         * @return The object that would be returned by a following {@link #next()} call, or {@code null}.
+         */
+        public T peekNext() {
+            return current == null ? null : extractNextFromEntry(current);
         }
 
         @Override

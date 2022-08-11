@@ -65,6 +65,12 @@
       <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- Annotations for IDE integration and analysis -->
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jzlib</artifactId>
@@ -99,6 +105,12 @@
       <groupId>com.github.luben</groupId>
       <artifactId>zstd-jni</artifactId>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-codec-http</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
     </dependency>
   </dependencies>
 </project>

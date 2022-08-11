@@ -30,6 +30,7 @@
 package io.netty5.handler.codec.http.headers;
 
 import io.netty5.util.AsciiString;
+import io.netty5.util.internal.UnstableApi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,10 +57,11 @@ import static java.util.Collections.emptyIterator;
 /**
  * Default implementation of {@link HttpHeaders}.
  */
-final class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> implements HttpHeaders {
-    private final boolean validateNames;
-    private final boolean validateCookies;
-    private final boolean validateValues;
+@UnstableApi
+public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> implements HttpHeaders {
+    protected final boolean validateNames;
+    protected final boolean validateCookies;
+    protected final boolean validateValues;
 
     /**
      * Create a new instance.
@@ -70,7 +72,7 @@ final class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> impl
      * @param validateCookies {@code true} to validate cookie contents when parsing.
      * @param validateValues {@code true} to validate header values.
      */
-    DefaultHttpHeaders(final int arraySizeHint, final boolean validateNames, final boolean validateCookies,
+    protected DefaultHttpHeaders(final int arraySizeHint, final boolean validateNames, final boolean validateCookies,
                        final boolean validateValues) {
         super(arraySizeHint);
         this.validateNames = validateNames;
@@ -602,7 +604,7 @@ final class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> impl
      *
      * @param name The filed-name to validate.
      */
-    private static void validateHeaderName(final CharSequence name) {
+    protected static void validateHeaderName(final CharSequence name) {
         validateToken(name);
     }
 
