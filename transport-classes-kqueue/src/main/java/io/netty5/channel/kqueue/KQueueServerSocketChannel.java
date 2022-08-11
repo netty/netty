@@ -372,6 +372,7 @@ public final class KQueueServerSocketChannel extends
         Throwable exception = null;
         int totalBytesRead = 0;
         try {
+            boolean continueReading;
             do {
                 int acceptFd = socket.accept(acceptedAddress);
                 if (acceptFd == -1) {
@@ -379,12 +380,12 @@ public final class KQueueServerSocketChannel extends
                     readHandle.lastRead(0, 0, 0);
                     break;
                 }
-                readHandle.lastRead(0, 0, 1);
+                continueReading = readHandle.lastRead(0, 0, 1);
                 totalBytesRead++;
                 readPending = false;
                 pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
                         acceptedAddress[0]));
-            } while (readHandle.continueReading() &&
+            } while (continueReading &&
                     !isShutdown(ChannelShutdownDirection.Inbound));
         } catch (Throwable t) {
             exception = t;

@@ -106,15 +106,16 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
     private void readInbound() {
         ReadHandleFactory.ReadHandle readHandle = readHandle();
         ChannelPipeline pipeline = pipeline();
+        boolean continueReading;
         do {
             Object m = inboundBuffer.poll();
             if (m == null) {
                 readHandle.lastRead(0, 0, 0);
                 break;
             }
-            readHandle.lastRead(0, 0, 1);
+            continueReading = readHandle.lastRead(0, 0, 1);
             pipeline.fireChannelRead(m);
-        } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+        } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 
         readHandle.readComplete();
         pipeline.fireChannelReadComplete();

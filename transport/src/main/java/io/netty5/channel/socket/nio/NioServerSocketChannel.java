@@ -244,8 +244,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
         try {
             if (ch != null) {
                 buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch, family));
-                readHandle.lastRead(0, 0, 1);
-                return 1;
+                if (readHandle.lastRead(0, 0, 1)) {
+                    return 1;
+                }
+                return 0;
             }
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted socket.", t);

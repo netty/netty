@@ -384,15 +384,17 @@ public final class NioDatagramChannel
             SocketAddress remoteAddress = receiveDatagram.remoteAddress;
             if (remoteAddress == null) {
                 readHandle.lastRead(attemptedBytesRead, 0, 0);
-                return 0;
+                return -1;
             }
             int actualBytesRead = receiveDatagram.bytesReceived;
             data.skipWritableBytes(actualBytesRead);
             buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
-
-            readHandle.lastRead(attemptedBytesRead, actualBytesRead, 1);
             free = false;
-            return 1;
+
+            if (readHandle.lastRead(attemptedBytesRead, actualBytesRead, 1)) {
+                return 1;
+            }
+            return 0;
         } finally {
             if (free) {
                 data.close();

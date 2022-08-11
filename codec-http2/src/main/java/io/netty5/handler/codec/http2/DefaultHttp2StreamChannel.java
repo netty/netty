@@ -418,12 +418,12 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             // otherwise we would have drained it from the queue and processed it during the read cycle.
             assert inboundBuffer == null || inboundBuffer.isEmpty();
             final ReadHandleFactory.ReadHandle readHandle = readHandle();
-            doRead0(frame, readHandle);
+            boolean continueReading = doRead0(frame, readHandle);
             // We currently don't need to check for readEOS because the parent channel and child channel are limited
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
             // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
             // cost of additional readComplete notifications on the rare path.
-            if (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound)) {
+            if (continueReading && !isShutdown(ChannelShutdownDirection.Inbound)) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
                 notifyReadComplete(readHandle, true);
@@ -701,10 +701,10 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
                 break;
             }
             final ReadHandleFactory.ReadHandle allocHandle = readHandle();
-            boolean continueReading = false;
+            boolean continueReading;
             do {
-                doRead0((Http2Frame) message, allocHandle);
-            } while ((readEOS || (continueReading = allocHandle.continueReading()))
+                continueReading = doRead0((Http2Frame) message, allocHandle);
+            } while ((readEOS || continueReading)
                     && (message = pollQueuedMessage()) != null);
 
             if (continueReading && handler.isParentReadInProgress() && !readEOS) {
@@ -774,13 +774,13 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
     }
 
-    private void doRead0(Http2Frame frame, ReadHandleFactory.ReadHandle allocHandle) {
+    private boolean doRead0(Http2Frame frame, ReadHandleFactory.ReadHandle allocHandle) {
         if (isShutdown(ChannelShutdownDirection.Inbound)) {
             // Let's drop data and header frames in the case of shutdown input. Other frames are still valid for
             // HTTP2.
             if (frame instanceof Http2DataFrame || frame instanceof Http2HeadersFrame) {
                 Resource.dispose(frame);
-                return;
+                return allocHandle.lastRead(0, 0, 0);
             }
         }
         final int bytes;
@@ -797,13 +797,14 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             bytes = MIN_HTTP2_FRAME_SIZE;
         }
         // Update before firing event through the pipeline to be consistent with other Channel implementation.
-        allocHandle.lastRead(bytes, bytes, 1);
+        boolean continueReading =  allocHandle.lastRead(bytes, bytes, 1);
 
         boolean shutdownInput = isShutdownNeeded(frame);
         pipeline().fireChannelRead(frame);
         if (shutdownInput) {
             shutdownTransport(ChannelShutdownDirection.Inbound, newPromise());
         }
+        return continueReading;
     }
 
     private boolean isShutdownNeeded(Http2Frame frame) {

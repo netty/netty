@@ -491,6 +491,7 @@ public final class KQueueDatagramChannel
         int totalReadyBytes = 0;
         try {
             boolean connected = isConnected();
+            boolean continueReading;
             do {
                 buffer = recvBufferAllocator.allocate(readHandle.estimatedBufferCapacity());
                 int attemptedBytesRead = buffer.writableBytes();
@@ -508,7 +509,8 @@ public final class KQueueDatagramChannel
                         }
                         throw e;
                     }
-                    readHandle.lastRead(attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+                    continueReading = readHandle.lastRead(
+                            attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
                     if (actualBytesRead <= 0) {
                         // nothing was read, release the buffer.
                         buffer.close();
@@ -559,7 +561,7 @@ public final class KQueueDatagramChannel
                     if (localAddress == null) {
                         localAddress = localAddress();
                     }
-                    readHandle.lastRead(attemptedBytesRead, bytesRead, 1);
+                    continueReading = readHandle.lastRead(attemptedBytesRead, bytesRead, 1);
                     totalReadyBytes += bytesRead;
                     buffer.skipWritableBytes(bytesRead);
 
@@ -570,7 +572,7 @@ public final class KQueueDatagramChannel
                 pipeline.fireChannelRead(packet);
 
                 buffer = null;
-            } while (readHandle.continueReading());
+            } while (continueReading);
         } catch (Throwable t) {
             if (buffer != null) {
                 buffer.close();

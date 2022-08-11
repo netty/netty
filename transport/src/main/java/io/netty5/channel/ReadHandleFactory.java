@@ -43,16 +43,9 @@ public interface ReadHandleFactory {
          * @param actualBytesRead       The number of bytes from the previous read operation. This may be negative if a
          *                              read error occurs.
          * @param numMessagesRead       The number of messages read.
+         * @return                      {@code true} if the read loop should continue reading, {@code false} otherwise.
          */
-        void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead);
-
-        /**
-         * Determine if the current read loop should continue.
-         *
-         * @return {@code true} if the read loop should continue reading. {@code false}
-         * if the read loop is complete.
-         */
-        boolean continueReading();
+        boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead);
 
         /**
          * Method that must be called once the read loop was completed.

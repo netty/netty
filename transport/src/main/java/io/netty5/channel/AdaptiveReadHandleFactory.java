@@ -104,7 +104,7 @@ public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
         }
 
         @Override
-        public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
+        public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
             // If we read as much as we asked for we should check if we need to ramp up the size of our next guess.
             // This helps adjust more quickly when large amounts of data is pending and can avoid going back to
             // the selector to check for more data. Going back to the selector can add significant latency for large
@@ -115,7 +115,7 @@ public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
             if (actualBytesRead > 0) {
                 totalBytesRead += actualBytesRead;
             }
-            super.lastRead(attemptedBytesRead, actualBytesRead, numMessagesRead);
+            return super.lastRead(attemptedBytesRead, actualBytesRead, numMessagesRead);
         }
 
         @Override

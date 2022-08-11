@@ -173,12 +173,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
-                    // NOOP
-                }
-
-                @Override
-                public boolean continueReading() {
+                public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
                     // Reading until there is nothing left to read.
                     return true;
                 }

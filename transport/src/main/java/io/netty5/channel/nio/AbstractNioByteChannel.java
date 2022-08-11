@@ -112,12 +112,14 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
         Buffer buffer = null;
         boolean close = false;
         try {
+            boolean continueReading;
             do {
                 buffer = bufferAllocator.allocate(readHandle.estimatedBufferCapacity());
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
 
-                readHandle.lastRead(attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+                continueReading = readHandle.lastRead(
+                        attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
                 if (actualBytesRead <= 0) {
                     // nothing was read. release the buffer.
                     Resource.dispose(buffer);
@@ -133,7 +135,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
                 readPending = false;
                 pipeline.fireChannelRead(buffer);
                 buffer = null;
-            } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
             pipeline.fireChannelReadComplete();

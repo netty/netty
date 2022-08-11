@@ -141,7 +141,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
         @Override
         public ReadHandle newHandle() {
             return new ReadHandle() {
-                private int numMessagesRead;
+                private int totalNumMessagesRead;
 
                 @Override
                 public int estimatedBufferCapacity() {
@@ -149,18 +149,16 @@ public class SocketReadPendingTest extends AbstractSocketTest {
                 }
 
                 @Override
-                public void lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
-                    this.numMessagesRead += numMessagesRead;
-                }
-
-                @Override
-                public boolean continueReading() {
-                    return numMessagesRead < numReads;
+                public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
+                    if (numMessagesRead > 0) {
+                        this.totalNumMessagesRead += numMessagesRead;
+                    }
+                    return totalNumMessagesRead < numReads;
                 }
 
                 @Override
                 public void readComplete() {
-                    numMessagesRead = 0;
+                    totalNumMessagesRead = 0;
                 }
             };
         }

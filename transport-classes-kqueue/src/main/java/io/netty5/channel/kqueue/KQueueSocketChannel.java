@@ -508,6 +508,7 @@ public final class KQueueSocketChannel
         final ChannelPipeline pipeline = pipeline();
         int totalBytesRead = 0;
         try {
+            boolean continueReading;
             readLoop: do {
                 // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
                 // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
@@ -522,13 +523,13 @@ public final class KQueueSocketChannel
                         closeTransportNow();
                         return totalBytesRead;
                     default:
-                        readHandle.lastRead(0, 0, 1);
+                        continueReading = readHandle.lastRead(0, 0, 1);
                         totalBytesRead ++;
                         readPending = false;
                         pipeline.fireChannelRead(new FileDescriptor(recvFd));
                         break;
                 }
-            } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
             pipeline.fireChannelReadComplete();
@@ -876,13 +877,15 @@ public final class KQueueSocketChannel
         boolean close = false;
         int totalBytesRead = 0;
         try {
+            boolean continueReading;
             do {
                 // we use a direct buffer here as the native implementations only be able
                 // to handle direct buffers.
                 buffer = recvBufferAllocator.allocate(readHandle.estimatedBufferCapacity());
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
-                readHandle.lastRead(attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+                continueReading = readHandle.lastRead(
+                        attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
                 if (actualBytesRead <= 0) {
                     // nothing was read, release the buffer.
                     Resource.dispose(buffer);
@@ -913,8 +916,7 @@ public final class KQueueSocketChannel
                     //   was "wrapped" by this Channel implementation.
                     break;
                 }
-            } while (readHandle.continueReading()
-                    && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 
             readHandle.readComplete();
             pipeline.fireChannelReadComplete();

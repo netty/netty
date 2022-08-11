@@ -358,9 +358,10 @@ public final class EpollServerSocketChannel
         Throwable exception = null;
         boolean readAll = false;
         try {
+            boolean continueReading;
             do {
                 int acceptedFd = socket.accept(acceptedAddress);
-                readHandle.lastRead(0, 0, acceptedFd == -1 ? 0 : 1);
+                continueReading = readHandle.lastRead(0, 0, acceptedFd == -1 ? 0 : 1);
 
                 if (acceptedFd == -1) {
                     // this means everything was handled for now
@@ -370,7 +371,7 @@ public final class EpollServerSocketChannel
                 readPending = false;
                 pipeline.fireChannelRead(newChildChannel(acceptedFd, acceptedAddress, 1,
                         acceptedAddress[0]));
-            } while (readHandle.continueReading() && !isShutdown(ChannelShutdownDirection.Inbound));
+            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
         } catch (Throwable t) {
             exception = t;
         }
