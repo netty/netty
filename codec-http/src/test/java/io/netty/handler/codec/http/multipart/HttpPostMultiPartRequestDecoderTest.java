@@ -300,6 +300,25 @@ public class HttpPostMultiPartRequestDecoderTest {
         commonNotBadReleaseBuffersDuringDecoding(factory, false);
     }
 
+    @Test
+    public void testDecodeFullHttpRequestWithOptionalParameters() {
+        String content = "\n--861fbeab-cd20-470c-9609-d40a0f704466\r\n" +
+                "content-disposition: form-data; " +
+                "name=\"file\"; filename=\"myfile.ogg\"\r\n" +
+                "content-type: audio/ogg; codecs=opus; charset=UTF8\r\ncontent-transfer-encoding: binary\r\n" +
+                "\r\n\u0001\u0002\u0003\u0004\r\n--861fbeab-cd20-470c-9609-d40a0f704466--\r\n\",\n";
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII));
+        req.headers().set("content-type", "multipart/form-data; boundary=861fbeab-cd20-470c-9609-d40a0f704466");
+        req.headers().set("content-length", content.length());
+
+        HttpPostMultipartRequestDecoder test = new HttpPostMultipartRequestDecoder(req);
+        FileUpload httpData = (FileUpload) test.getBodyHttpDatas("file").get(0);
+        assertEquals("audio/ogg", httpData.getContentType());
+        test.destroy();
+    }
+
     private static void commonNotBadReleaseBuffersDuringDecoding(HttpDataFactory factory, boolean inMemory)
             throws IOException {
         int nbItems = 20;
