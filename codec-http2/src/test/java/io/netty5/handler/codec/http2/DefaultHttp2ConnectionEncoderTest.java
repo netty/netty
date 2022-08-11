@@ -24,7 +24,7 @@ import io.netty5.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
-import junit.framework.AssertionFailedError;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -170,7 +170,10 @@ public class DefaultHttp2ConnectionEncoderTest {
                 .when(ctx).newSucceededFuture();
         doAnswer((Answer<Future<Void>>) in -> ImmediateEventExecutor.INSTANCE.newFailedFuture(in.getArgument(0)))
                 .when(ctx).newFailedFuture(any(Throwable.class));
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        when(ctx.flush()).thenAnswer(in -> {
+            fail("forbidden");
+            return null;
+        });
         when(channel.bufferAllocator()).thenReturn(onHeapAllocator());
         when(channel.bufferAllocator()).thenReturn(DefaultBufferAllocators.preferredAllocator());
         doAnswer((Answer<Future<Void>>) in -> ImmediateEventExecutor.INSTANCE.newFailedFuture(in.getArgument(0)))

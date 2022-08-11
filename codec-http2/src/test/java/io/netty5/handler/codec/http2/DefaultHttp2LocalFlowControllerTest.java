@@ -19,7 +19,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Promise;
-import junit.framework.AssertionFailedError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -36,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.eq;
@@ -82,7 +82,10 @@ public class DefaultHttp2LocalFlowControllerTest {
         if (allowFlush) {
             when(ctx.flush()).then((Answer<ChannelHandlerContext>) invocationOnMock -> ctx);
         } else {
-            when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+            when(ctx.flush()).then(in -> {
+                fail("forbidden");
+                return null;
+            });
         }
         when(ctx.executor()).thenReturn(executor);
     }

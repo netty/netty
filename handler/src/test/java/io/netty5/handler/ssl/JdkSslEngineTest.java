@@ -22,10 +22,11 @@ import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.internal.EmptyArrays;
-import org.junit.AssumptionViolatedException;
+
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.TestAbortedException;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
@@ -183,7 +184,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            throw new AssumptionViolatedException("Not expected", e);
+            throw new TestAbortedException("Not expected", e);
         }
     }
 
@@ -201,7 +202,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            throw new AssumptionViolatedException("Not expected", e);
+            throw new TestAbortedException("Not expected", e);
         }
     }
 
@@ -254,7 +255,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            throw new AssumptionViolatedException("Not expected", e);
+            throw new TestAbortedException("Not expected", e);
         }
     }
 
@@ -274,7 +275,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            throw new AssumptionViolatedException("Not expected", e);
+            throw new TestAbortedException("Not expected", e);
         }
     }
 
@@ -299,7 +300,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
-            throw new AssumptionViolatedException("Not expected", e);
+            throw new TestAbortedException("Not expected", e);
         }
     }
 
