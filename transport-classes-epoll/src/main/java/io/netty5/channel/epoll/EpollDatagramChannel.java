@@ -642,6 +642,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         } catch (Throwable t) {
             throw t;
         }
+        return false;
     }
 
     private ReadingState connectedRead(ReadHandleFactory.ReadHandle allocHandle, Buffer buf,
