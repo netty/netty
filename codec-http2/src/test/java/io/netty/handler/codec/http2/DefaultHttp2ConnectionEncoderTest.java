@@ -30,7 +30,6 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import junit.framework.AssertionFailedError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -217,7 +216,13 @@ public class DefaultHttp2ConnectionEncoderTest {
                 return newSucceededFuture();
             }
         }).when(ctx).newSucceededFuture();
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        when(ctx.flush()).thenAnswer(new Answer<ChannelHandlerContext>() {
+            @Override
+            public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
+                fail("forbidden");
+                return null;
+            }
+        });
         when(channel.alloc()).thenReturn(PooledByteBufAllocator.DEFAULT);
 
         // Use a server-side connection so we can test server push.
