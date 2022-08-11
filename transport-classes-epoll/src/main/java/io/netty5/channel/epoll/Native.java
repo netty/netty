@@ -122,13 +122,6 @@ public final class Native {
      */
     static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER =
             (TCP_FASTOPEN_MODE & TFO_ENABLED_SERVER_MASK) == TFO_ENABLED_SERVER_MASK;
-    /**
-     * @deprecated Use {@link Epoll#isTcpFastOpenClientSideAvailable()}
-     * or {@link Epoll#isTcpFastOpenServerSideAvailable()}.
-     */
-    @Deprecated
-    public static final boolean IS_SUPPORTING_TCP_FASTOPEN = IS_SUPPORTING_TCP_FASTOPEN_CLIENT ||
-            IS_SUPPORTING_TCP_FASTOPEN_SERVER;
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
 

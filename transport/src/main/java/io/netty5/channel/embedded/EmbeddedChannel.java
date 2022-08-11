@@ -233,14 +233,6 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     /**
-     * @deprecated use {@link #inboundMessages()}
-     */
-    @Deprecated
-    public Queue<Object> lastInboundBuffer() {
-        return inboundMessages();
-    }
-
-    /**
      * Returns the {@link Queue} which holds all the {@link Object}s that were written by this {@link Channel}.
      */
     public Queue<Object> outboundMessages() {
@@ -248,14 +240,6 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
             outboundMessages = new ArrayDeque<>();
         }
         return outboundMessages;
-    }
-
-    /**
-     * @deprecated use {@link #outboundMessages()}
-     */
-    @Deprecated
-    public Queue<Object> lastOutboundBuffer() {
-        return outboundMessages();
     }
 
     /**

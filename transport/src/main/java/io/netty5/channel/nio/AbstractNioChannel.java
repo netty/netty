@@ -170,58 +170,14 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     /**
-     * @deprecated No longer supported.
-     * No longer supported.
-     */
-    @Deprecated
-    protected boolean isReadPending() {
-        return readPending;
-    }
-
-    /**
-     * @deprecated Use {@link #clearReadPending()} if appropriate instead.
-     * No longer supported.
-     */
-    @Deprecated
-    protected void setReadPending(final boolean readPending) {
-        if (isRegistered()) {
-            EventLoop eventLoop = executor();
-            if (eventLoop.inEventLoop()) {
-                setReadPending0(readPending);
-            } else {
-                eventLoop.execute(() -> setReadPending0(readPending));
-            }
-        } else {
-            // Best effort if we are not registered yet clear readPending.
-            // NB: We only set the boolean field instead of calling clearReadPending0(), because the SelectionKey is
-            // not set yet so it would produce an assertion failure.
-            this.readPending = readPending;
-        }
-    }
-
-    /**
      * Set read pending to {@code false}.
      */
     protected final void clearReadPending() {
-        if (isRegistered()) {
-            EventLoop eventLoop = executor();
-            if (eventLoop.inEventLoop()) {
-                clearReadPending0();
-            } else {
-                eventLoop.execute(clearReadPendingRunnable);
-            }
+        EventLoop eventLoop = executor();
+        if (eventLoop.inEventLoop()) {
+            clearReadPending0();
         } else {
-            // Best effort if we are not registered yet clear readPending. This happens during channel initialization.
-            // NB: We only set the boolean field instead of calling clearReadPending0(), because the SelectionKey is
-            // not set yet so it would produce an assertion failure.
-            readPending = false;
-        }
-    }
-
-    private void setReadPending0(boolean readPending) {
-        this.readPending = readPending;
-        if (!readPending) {
-            removeReadOp();
+            eventLoop.execute(clearReadPendingRunnable);
         }
     }
 

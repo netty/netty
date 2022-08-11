@@ -115,20 +115,6 @@ public final class Errors {
         throw newConnectException0(method, err);
     }
 
-    /**
-     * @deprecated Use {@link #handleConnectErrno(String, int)}.
-     * @param method The native method name which caused the errno.
-     * @param err the negative value of the errno.
-     * @throws IOException The errno translated into an exception.
-     */
-    @Deprecated
-    public static void throwConnectException(String method, int err) throws IOException {
-        if (err == ERROR_EALREADY_NEGATIVE) {
-            throw new ConnectionPendingException();
-        }
-        throw newConnectException0(method, err);
-    }
-
     private static IOException newConnectException0(String method, int err) {
         if (err == ERROR_ENETUNREACH_NEGATIVE) {
             return new NoRouteToHostException();

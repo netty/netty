@@ -50,9 +50,6 @@ public class Socket extends FileDescriptor {
 
     private static volatile boolean isIpv6Preferred;
 
-    @Deprecated
-    public static final int UDS_SUN_PATH_SIZE = 100;
-
     private final SocketProtocolFamily protocolFamily;
 
     protected final boolean ipv6;
