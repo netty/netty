@@ -19,7 +19,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -89,7 +89,7 @@ public interface HttpSetCookie extends HttpCookiePair {
      * Checks to see if this {@link HttpSetCookie} can only be accessed via HTTP.
      * If this returns true, the {@link HttpSetCookie} cannot be accessed through
      * client side script - But only if the browser supports it.
-     * For more information, please look <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>
+     * For more information, please look <a href="https://www.owasp.org/index.php/HTTPOnly">here</a>
      *
      * @return True if this {@link HttpSetCookie} is HTTP-only or false if it isn't
      */

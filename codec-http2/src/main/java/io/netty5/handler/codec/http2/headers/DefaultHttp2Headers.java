@@ -30,8 +30,8 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
     /**
      * Create a new instance.
      *
-     * @param arraySizeHint   A hint as to how large the hash data structure should be. The next positive power of two will
-     *                        be used. An upper bound may be enforced.
+     * @param arraySizeHint   A hint as to how large the hash data structure should be. The next positive power of two
+     *                        will be used. An upper bound may be enforced.
      * @param validateNames   {@code true} to validate header names.
      * @param validateCookies {@code true} to validate cookie contents when parsing.
      * @param validateValues  {@code true} to validate header values.

@@ -19,7 +19,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -105,7 +105,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
      * <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-value</a>.
      * @param secure the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">secure-av</a>.
      * @param httpOnly the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">httponly-av</a> (see
-     * <a href="http://www.owasp.org/index.php/HTTPOnly">HTTP-only</a>).
+     * <a href="https://www.owasp.org/index.php/HTTPOnly">HTTP-only</a>).
      */
     public DefaultHttpSetCookie(final CharSequence name, final CharSequence value,
                                 final boolean wrapped, final boolean secure, final boolean httpOnly) {
@@ -127,7 +127,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
      * <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-value</a>.
      * @param secure the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">secure-av</a>.
      * @param httpOnly the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">httponly-av</a> (see
-     * <a href="http://www.owasp.org/index.php/HTTPOnly">HTTP-only</a>).
+     * <a href="https://www.owasp.org/index.php/HTTPOnly">HTTP-only</a>).
      * @param sameSite the
      * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-5.3.7">SameSite attribute</a>.
      */
