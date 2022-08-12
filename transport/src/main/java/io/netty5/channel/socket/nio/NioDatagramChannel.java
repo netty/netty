@@ -29,7 +29,6 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.ReadHandleFactory.ReadHandle;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.concurrent.Future;
@@ -375,11 +374,10 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doReadMessages(ReadHandle readHandle, ReadBufferAllocator readBufferAllocator, List<Object> buf)
-            throws Exception {
-        Buffer data = readBufferAllocator.allocate(bufferAllocator(), readHandle.estimatedBufferCapacity());
+    protected int doReadMessages(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception {
+        Buffer data = readBufferAllocator.allocate(bufferAllocator(), readSink.estimatedBufferCapacity());
         if (data == null) {
-            readHandle.lastRead(0, 0, 0);
+            readSink.read(0, 0, null);
             return 0;
         }
         int attemptedBytesRead = data.writableBytes();
@@ -389,17 +387,17 @@ public final class NioDatagramChannel
             data.forEachWritable(0, receiveDatagram);
             SocketAddress remoteAddress = receiveDatagram.remoteAddress;
             if (remoteAddress == null) {
-                readHandle.lastRead(attemptedBytesRead, 0, 0);
+                readSink.read(attemptedBytesRead, 0, null);
                 return -1;
             }
             int actualBytesRead = receiveDatagram.bytesReceived;
             data.skipWritableBytes(actualBytesRead);
-            buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
-            free = false;
-
-            if (readHandle.lastRead(attemptedBytesRead, actualBytesRead, 1)) {
+            if (readSink.read(attemptedBytesRead, actualBytesRead,
+                    new DatagramPacket(data, localAddress(), remoteAddress))) {
+                free = false;
                 return 1;
             }
+            free = false;
             return 0;
         } finally {
             if (free) {
@@ -631,20 +629,6 @@ public final class NioDatagramChannel
         } catch (SocketException | UnsupportedOperationException e) {
             return newFailedFuture(e);
         }
-    }
-
-    void clearReadPending0() {
-        clearReadPending();
-    }
-
-    @Override
-    protected boolean closeOnReadError(Throwable cause) {
-        // We do not want to close on SocketException when using DatagramChannel as we usually can continue receiving.
-        // See https://github.com/netty/netty/issues/5893
-        if (cause instanceof SocketException) {
-            return false;
-        }
-        return super.closeOnReadError(cause);
     }
 
     private static final class ReceiveDatagram implements WritableComponentProcessor<IOException> {

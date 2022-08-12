@@ -18,12 +18,10 @@ package io.netty5.channel.local;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.AbstractServerChannel;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannel;
 
 import java.net.SocketAddress;
@@ -80,7 +78,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
     }
 
     @Override
-    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
+    protected void doRead(boolean wasReadPendingAlready) throws Exception {
         if (acceptInProgress) {
             return;
         }
@@ -91,7 +89,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
             return;
         }
 
-        readInbound();
+        readNow();
     }
 
     LocalChannel serve(final LocalChannel peer) {
@@ -104,23 +102,18 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
         return child;
     }
 
-    private void readInbound() {
-        ReadHandleFactory.ReadHandle readHandle = readHandle();
-        ChannelPipeline pipeline = pipeline();
+    @Override
+    protected boolean doReadNow(ReadBufferAllocator allocator, ReadSink readSink) {
         boolean continueReading;
         do {
             Object m = inboundBuffer.poll();
             if (m == null) {
-                readHandle.lastRead(0, 0, 0);
+                readSink.read(0, 0, null);
                 break;
             }
-            continueReading = readHandle.lastRead(0, 0, 1);
-            pipeline.fireChannelRead(m);
+            continueReading = readSink.read(0, 0, m);
         } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
-
-        readHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-        readIfIsAutoRead();
+        return false;
     }
 
     /**
@@ -136,7 +129,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
         if (acceptInProgress) {
             acceptInProgress = false;
 
-            readInbound();
+            readNow();
         }
     }
 

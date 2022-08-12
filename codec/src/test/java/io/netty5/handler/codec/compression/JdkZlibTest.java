@@ -590,7 +590,7 @@ public class JdkZlibTest {
     public void testLargeEncode() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(createEncoder(ZlibWrapper.NONE));
         BufferAllocator wrapped = channel.bufferAllocator();
-        channel.setBufferAllocator(new LimitedBufferAllocator(wrapped));
+        channel.setOption(ChannelOption.BUFFER_ALLOCATOR, new LimitedBufferAllocator(wrapped));
 
         // construct a 128M buffer out of many times the same 1M buffer :)
         Supplier<Buffer> smallBuffer = wrapped.constBufferSupplier(new byte[1024 * 1024]);

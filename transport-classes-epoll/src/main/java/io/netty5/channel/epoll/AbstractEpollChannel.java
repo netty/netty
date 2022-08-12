@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -51,25 +50,20 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         extends AbstractChannel<P, SocketAddress, SocketAddress> implements UnixChannel {
     protected final LinuxSocket socket;
 
-    private final Runnable epollInReadyRunnable = new Runnable() {
+    private final Runnable readNowRunnable = new Runnable() {
         @Override
         public void run() {
-            epollInReadyRunnablePending = false;
-            epollInReady();
+            readNowRunnablePending = false;
+            readNow();
         }
     };
 
     protected volatile boolean active;
 
-    boolean readPending;
-
-    private ReadBufferAllocator readBufferAllocator;
-
     private EpollRegistration registration;
 
     private int flags = Native.EPOLLET;
-    private boolean inputClosedSeenErrorOnRead;
-    private boolean epollInReadyRunnablePending;
+    private boolean readNowRunnablePending;
     private boolean maybeMoreDataToRead;
 
     private boolean receivedRdHup;
@@ -159,9 +153,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     @Override
     protected void doClose() throws Exception {
         active = false;
-        // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
-        // socket which has not even been connected yet. This has been observed to block during unit tests.
-        inputClosedSeenErrorOnRead = true;
         socket.close();
     }
 
@@ -184,7 +175,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
-        epollInReadyRunnablePending = false;
+        readNowRunnablePending = false;
         this.registration = registration;
     }
 
@@ -195,47 +186,19 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
-        // Channel.read(...) or ChannelHandlerContext.read(...) was called
-        readPending = true;
-        this.readBufferAllocator = readBufferAllocator;
-
-        // We must set the read flag here as it is possible the user didn't read in the last read loop, the
-        // executeEpollInReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
-        // never get data after this.
-        setFlag(Native.EPOLLIN);
+    protected final void doRead(boolean wasReadPendingAlready) throws Exception {
+        if (!wasReadPendingAlready) {
+            // We must set the read flag here as it is possible the user didn't read in the last read loop, the
+            // executeEpollInReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
+            // never get data after this.
+            setFlag(Native.EPOLLIN);
+        }
 
         // If EPOLL ET mode is enabled and auto read was toggled off on the last read loop then we may not be notified
         // again if we didn't consume all the data. So we force a read operation here if there maybe more data or
         // RDHUP was received.
         if (maybeMoreDataToRead || receivedRdHup) {
-            executeEpollInReadyRunnable();
-        }
-    }
-
-    final boolean shouldBreakEpollInReady() {
-        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || isAllowHalfClosure());
-    }
-
-    private void clearEpollIn() {
-        // Only clear if registered with an EventLoop as otherwise
-        if (isRegistered()) {
-            final EventLoop loop = executor();
-            if (loop.inEventLoop()) {
-                clearEpollIn0();
-            } else {
-                // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
-                loop.execute(() -> {
-                    if (!readPending && !isAutoRead()) {
-                        // Still no read triggered so clear it now
-                        clearEpollIn0();
-                    }
-                });
-            }
-        } else  {
-            // The EventLoop is not registered atm so just update the flags so the correct value
-            // will be used once the channel is registered
-            flags &= ~Native.EPOLLIN;
+            executeReadNowRunnable();
         }
     }
 
@@ -341,25 +304,21 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     final void epollInReady() {
-        if (shouldBreakEpollInReady()) {
-            clearEpollIn0();
-            return;
-        }
-        if (readBufferAllocator == null) {
-            // readBufferAllocator can be null in case of epollInRead() be called because of POLLERR.
-            // in this case just call read() so the user is aware that there is something to do.
-            read();
-            return;
-        }
-        maybeMoreDataToRead = false;
-        ReadHandleFactory.ReadHandle readHandle = readHandle();
-        boolean readAll = false;
-        try {
-            readAll = epollInReady(readHandle, readBufferAllocator, ioBufferAllocator());
-        } finally {
-            this.maybeMoreDataToRead = !readAll || receivedRdHup;
+        readNow();
+    }
 
-            if (receivedRdHup || readPending && maybeMoreDataToRead) {
+    @Override
+    protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink)
+            throws Exception {
+        maybeMoreDataToRead = false;
+        ReadState readState = null;
+        try {
+            readState = epollInReady(readBufferAllocator, ioBufferAllocator(), readSink);
+            return readState == ReadState.Closed;
+        } finally {
+            this.maybeMoreDataToRead = readState == ReadState.Partial || receivedRdHup;
+
+            if (receivedRdHup || isReadPending() && maybeMoreDataToRead) {
                 // trigger a read again as there may be something left to read and because of epoll ET we
                 // will not get notified again until we read everything from the socket
                 //
@@ -367,32 +326,29 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
                 // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
                 // to false before every read operation to prevent re-entry into epollInReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
-                executeEpollInReadyRunnable();
-            } else if (!readPending && !isAutoRead()) {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                clearEpollIn();
+                executeReadNowRunnable();
             }
         }
+    }
+
+    enum ReadState {
+        All,
+        Partial,
+        Closed
     }
 
     /**
      * Called once EPOLLIN event is ready to be processed
      */
-    protected abstract boolean epollInReady(ReadHandleFactory.ReadHandle readHandle,
-                                         ReadBufferAllocator readBufferAllocator,
-                                         BufferAllocator recvBufferAllocator);
+    protected abstract ReadState epollInReady(ReadBufferAllocator readBufferAllocator,
+                                              BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception;
 
-    private void executeEpollInReadyRunnable() {
-        if (epollInReadyRunnablePending || !isActive() || shouldBreakEpollInReady()) {
+    private void executeReadNowRunnable() {
+        if (readNowRunnablePending || !isActive()) {
             return;
         }
-        epollInReadyRunnablePending = true;
-        executor().execute(epollInReadyRunnable);
+        readNowRunnablePending = true;
+        executor().execute(readNowRunnable);
     }
 
     /**
@@ -402,6 +358,9 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
         receivedRdHup = true;
 
+        // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
+        clearEpollRdHup();
+
         if (isActive()) {
             // If it is still active, we need to call read() as otherwise we may miss to
             // read pending data from the underlying file descriptor.
@@ -409,11 +368,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             read();
         } else {
             // Just to be safe make sure the input marked as closed.
-            shutdownInput(true);
+            shutdownReadSide();
         }
-
-        // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
-        clearEpollRdHup();
     }
 
     /**
@@ -428,30 +384,10 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    /**
-     * Shutdown the input side of the channel.
-     */
-    protected final void shutdownInput(boolean rdHup) {
-        if (!socket.isInputShutdown()) {
-            if (isAllowHalfClosure()) {
-                clearEpollIn();
-                shutdownTransport(ChannelShutdownDirection.Inbound, newPromise());
-            } else {
-                closeTransport(newPromise());
-            }
-        } else if (!rdHup) {
-            inputClosedSeenErrorOnRead = true;
-        }
-    }
-
     @Override
-    protected final void writeFlushed() {
+    protected boolean isWriteFlushedScheduled() {
         // Flush immediately only when there's no pending flush.
-        // If there's a pending flush operation, event loop will call forceFlush() later,
-        // and thus there's no need to call it now.
-        if (!isFlagSet(Native.EPOLLOUT)) {
-            super.writeFlushed();
-        }
+        return isFlagSet(Native.EPOLLOUT);
     }
 
     /**
@@ -462,21 +398,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             // pending connect which is now complete so handle it.
             finishConnect();
         } else if (!socket.isOutputShutdown()) {
-            // directly call super.flush0() to force a flush now
-            super.writeFlushed();
-        }
-    }
-
-    private void clearEpollIn0() {
-        assert executor().inEventLoop();
-        try {
-            readPending = false;
-            clearFlag(Native.EPOLLIN);
-        } catch (IOException e) {
-            // When this happens there is something completely wrong with either the filedescriptor or epoll,
-            // so fire the exception through the pipeline and close the Channel.
-            pipeline().fireChannelExceptionCaught(e);
-            closeTransport(newPromise());
+            // directly call writeFlushedNow() to force a flush now
+            writeFlushedNow();
         }
     }
 
@@ -619,8 +542,16 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void autoReadCleared() {
-        clearEpollIn();
+    protected final void doClearScheduledRead() {
+        assert executor().inEventLoop();
+        try {
+            clearFlag(Native.EPOLLIN);
+        } catch (IOException e) {
+            // When this happens there is something completely wrong with either the filedescriptor or epoll,
+            // so fire the exception through the pipeline and close the Channel.
+            pipeline().fireChannelExceptionCaught(e);
+            closeTransport(newPromise());
+        }
     }
 
     private BufferAllocator ioBufferAllocator() {

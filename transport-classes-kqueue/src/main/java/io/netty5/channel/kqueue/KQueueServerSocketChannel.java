@@ -20,12 +20,10 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
@@ -368,37 +366,21 @@ public final class KQueueServerSocketChannel extends
     }
 
     @Override
-    int readReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                  BufferAllocator recvBufferAllocator) {
-        final ChannelPipeline pipeline = pipeline();
-        Throwable exception = null;
+    int readReady(ReadBufferAllocator readBufferAllocator, BufferAllocator recvBufferAllocator,
+                  ReadSink readSink) throws Exception {
         int totalBytesRead = 0;
-        try {
-            boolean continueReading;
-            do {
-                int acceptFd = socket.accept(acceptedAddress);
-                if (acceptFd == -1) {
-                    // this means everything was handled for now
-                    readHandle.lastRead(0, 0, 0);
-                    break;
-                }
-                continueReading = readHandle.lastRead(0, 0, 1);
-                totalBytesRead++;
-                readPending = false;
-                pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
-                        acceptedAddress[0]));
-            } while (continueReading &&
-                    !isShutdown(ChannelShutdownDirection.Inbound));
-        } catch (Throwable t) {
-            exception = t;
-        }
-        readHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-
-        if (exception != null) {
-            pipeline.fireChannelExceptionCaught(exception);
-        }
-        readIfIsAutoRead();
+        boolean continueReading;
+        do {
+            int acceptFd = socket.accept(acceptedAddress);
+            if (acceptFd == -1) {
+                // this means everything was handled for now
+                readSink.read(0, 0, null);
+                break;
+            }
+            totalBytesRead++;
+            continueReading = readSink.read(0, 0,
+                    newChildChannel(acceptFd, acceptedAddress, 1, acceptedAddress[0]));
+        } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
         return totalBytesRead;
     }
 }

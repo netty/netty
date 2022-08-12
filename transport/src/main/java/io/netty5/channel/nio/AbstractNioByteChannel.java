@@ -23,14 +23,11 @@ import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.util.internal.StringUtil;
 
-import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
@@ -49,7 +46,6 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
     // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
     // meantime.
     private final Runnable flushTask = this::writeFlushed;
-    private boolean inputClosedSeenErrorOnRead;
 
     /**
      * Create a new instance
@@ -62,106 +58,41 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
         super(parent, eventLoop, false, new AdaptiveReadHandleFactory(), ch, SelectionKey.OP_READ);
     }
 
-    final boolean shouldBreakReadReady() {
-        return isShutdown(ChannelShutdownDirection.Inbound) &&
-                (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
-    }
-
-    private void closeOnRead() {
-        if (!isShutdown(ChannelShutdownDirection.Inbound)) {
-            if (isAllowHalfClosure()) {
-                shutdownTransport(ChannelShutdownDirection.Inbound, newPromise());
-            } else {
-                closeTransport(newPromise());
-            }
-        } else {
-            inputClosedSeenErrorOnRead = true;
-        }
-    }
-
-    private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
-            ReadHandleFactory.ReadHandle readHandle) {
-        if (buffer.readableBytes() > 0) {
-            readPending = false;
-            pipeline.fireChannelRead(buffer);
-        } else {
-            buffer.close();
-        }
-        readHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-        pipeline.fireChannelExceptionCaught(cause);
-
-        // If oom will close the read event, release connection.
-        // See https://github.com/netty/netty/issues/10434
-        if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-            closeOnRead();
-        } else {
-            readIfIsAutoRead();
-        }
-    }
-
     @Override
-    protected final void readNow(ReadBufferAllocator readBufferAllocator) {
-        if (shouldBreakReadReady()) {
-            clearReadPending();
-            return;
-        }
-        final ChannelPipeline pipeline = pipeline();
+    protected final boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception {
         final BufferAllocator bufferAllocator = bufferAllocator();
-        final ReadHandleFactory.ReadHandle readHandle = readHandle();
 
         Buffer buffer = null;
         boolean close = false;
         try {
             boolean continueReading;
             do {
-                buffer = readBufferAllocator.allocate(bufferAllocator, readHandle.estimatedBufferCapacity());
+                buffer = readBufferAllocator.allocate(bufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readHandle.lastRead(0, 0, 0);
+                    readSink.read(0, 0, null);
                     break;
                 }
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
-
-                continueReading = readHandle.lastRead(
-                        attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
                 if (actualBytesRead <= 0) {
                     // nothing was read. release the buffer.
                     Resource.dispose(buffer);
                     buffer = null;
+                    readSink.read(attemptedBytesRead, actualBytesRead, null);
                     close = actualBytesRead < 0;
-                    if (close) {
-                        // There is nothing left to read as we received an EOF.
-                        readPending = false;
-                    }
                     break;
                 }
 
-                readPending = false;
-                pipeline.fireChannelRead(buffer);
+                continueReading = readSink.read(attemptedBytesRead, actualBytesRead, buffer);
                 buffer = null;
             } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-
-            if (close) {
-                closeOnRead();
-            } else {
-                readIfIsAutoRead();
-            }
+            return close;
         } catch (Throwable t) {
-            handleReadException(pipeline, buffer, t, close, readHandle);
-        } finally {
-            // Check if there is a readPending which was not processed yet.
-            // This could be for two reasons:
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-            //
-            // See https://github.com/netty/netty/issues/2254
-            if (!readPending && !isAutoRead()) {
-                removeReadOp();
+            if (buffer != null) {
+                buffer.close();
             }
+            throw t;
         }
     }
 

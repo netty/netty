@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueReadHandle;
@@ -53,35 +52,29 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     protected volatile boolean active;
 
-    protected boolean readPending;
+    private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
-    private ReadBufferAllocator readBufferAllocator;
+    private volatile SocketAddress localAddress;
+    private volatile SocketAddress remoteAddress;
 
-    private long numberBytesPending;
-
-    private final Runnable readReadyRunnable = new Runnable() {
+    private final Runnable readNowRunnable = new Runnable() {
         @Override
         public void run() {
-            readReadyRunnablePending = false;
-            readReady(numberBytesPending);
+            readNowRunnablePending = false;
+            readNow();
         }
     };
+
+    private long numberBytesPending;
 
     private KQueueRegistration registration;
 
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
-    private boolean readReadyRunnablePending;
-    private boolean inputClosedSeenErrorOnRead;
-
+    private boolean readNowRunnablePending;
     private boolean maybeMoreDataToRead;
 
     private boolean eof;
-
-    private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
-
-    private volatile SocketAddress localAddress;
-    private volatile SocketAddress remoteAddress;
 
     AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
                           ReadHandleFactory defaultReadHandleFactory, BsdSocket fd, boolean active) {
@@ -153,17 +146,12 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         return super.isExtendedOptionSupported(option);
     }
 
-    protected void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
+    protected final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
         this.maxBytesPerGatheringWrite = min(SSIZE_MAX, maxBytesPerGatheringWrite);
     }
 
-    protected long getMaxBytesPerGatheringWrite() {
+    protected final long getMaxBytesPerGatheringWrite() {
         return maxBytesPerGatheringWrite;
-    }
-
-    @Override
-    protected final void autoReadCleared() {
-        clearReadFilter();
     }
 
     static boolean isSoErrorZero(BsdSocket fd) {
@@ -174,7 +162,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    protected KQueueRegistration registration() {
+    protected final KQueueRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -192,9 +180,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     @Override
     protected void doClose() throws Exception {
         active = false;
-        // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
-        // socket which has not even been connected yet. This has been observed to block during unit tests.
-        inputClosedSeenErrorOnRead = true;
         socket.close();
     }
 
@@ -203,7 +188,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         doClose();
     }
 
-    @SuppressWarnings("unchecked")
     final void resetCachedAddresses() {
         cacheAddresses(localAddress, null);
         remoteAddress = null;
@@ -215,20 +199,19 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void doRead(ReadBufferAllocator readBufferAllocator) {
-        // Channel.read() or ChannelHandlerContext.read() was called
-        readPending = true;
-        this.readBufferAllocator = readBufferAllocator;
-        // We must set the read flag here as it is possible the user didn't read in the last read loop, the
-        // executeReadReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
-        // never get data after this.
-        readFilter(true);
+    protected final void doRead(boolean wasReadPendingAlready) {
+        if (!wasReadPendingAlready) {
+            // We must set the read flag here as it is possible the user didn't read in the last read loop, the
+            // executeReadReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
+            // never get data after this.
+            readFilter(true);
+        }
 
         // If auto read was toggled off on the last read loop then we may not be notified
-        // again if we didn't consume all the data. So we force a read operation here if there maybe more data or
+        // again if we didn't consume all the data. So we force a read operation here if there may be more data or
         // eof was received.
         if (maybeMoreDataToRead || eof) {
-            executeReadReadyRunnable();
+            executeReadNowRunnable();
         }
     }
 
@@ -237,7 +220,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
-        readReadyRunnablePending = false;
+        readNowRunnablePending = false;
 
         // Add the write event first so we get notified of connection refused on the client side!
         if (writeFilterEnabled) {
@@ -336,32 +319,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         return WRITE_STATUS_SNDBUF_FULL;
     }
 
-    final boolean shouldBreakReadReady() {
-        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
-    }
-
-    private void clearReadFilter() {
-        // Only clear if registered with an EventLoop as otherwise
-        if (isRegistered()) {
-            final EventLoop loop = executor();
-            if (loop.inEventLoop()) {
-                clearReadFilter0();
-            } else {
-                // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
-                loop.execute(() -> {
-                    if (readPending && !isAutoRead()) {
-                        // Still no read triggered so clear it now
-                        clearReadFilter0();
-                    }
-                });
-            }
-        } else  {
-            // The EventLoop is not registered atm so just update the flags so the correct value
-            // will be used once the channel is registered
-            readFilterEnabled = false;
-        }
-    }
-
     final void readFilter(boolean readFilterEnabled) {
         if (this.readFilterEnabled != readFilterEnabled) {
             this.readFilterEnabled = readFilterEnabled;
@@ -395,29 +352,34 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
 
     final void readReady(long numberBytesPending) {
         ReadHandleFactory.ReadHandle readHandle = readHandle();
-        this.numberBytesPending = numberBytesPending;
         if (readHandle instanceof KQueueReadHandle) {
             ((KQueueReadHandle) readHandle)
                     .bufferCapacity(Math.min(128, (int) Math.min(numberBytesPending, 8 * 1024 * 1024)));
         }
-        assert executor().inEventLoop();
-        if (shouldBreakReadReady()) {
-            clearReadFilter0();
-            return;
-        }
+        this.numberBytesPending = numberBytesPending;
+        readNow();
+    }
+
+    @Override
+    protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink)
+            throws Exception {
         maybeMoreDataToRead = false;
 
         assert readBufferAllocator != null;
 
         try {
-            int readBytes = readReady(readHandle, readBufferAllocator, ioBufferAllocator());
+            int readBytes = readReady(readBufferAllocator, ioBufferAllocator(), readSink);
             if (readBytes > 0) {
                 this.numberBytesPending -= readBytes;
+            } else if (readBytes == -1) {
+                this.numberBytesPending = 0;
+                // Inbound should be shutdown.
+                return true;
             }
         } finally {
             maybeMoreDataToRead = this.numberBytesPending != 0;
 
-            if (eof || readPending && maybeMoreDataToRead) {
+            if (eof || isReadPending() && maybeMoreDataToRead) {
                 // trigger a read again as there may be something left to read and because of ET we
                 // will not get notified again until we read everything from the socket
                 //
@@ -425,52 +387,22 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
                 // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
                 // to false before every read operation to prevent re-entry into readReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
-                executeReadReadyRunnable();
-            } else if (!readPending && !isAutoRead()) {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                clearReadFilter0();
+                executeReadNowRunnable();
             }
         }
+        return false;
     }
 
-    abstract int readReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                           BufferAllocator recvBufferAllocator);
+    abstract int readReady(ReadBufferAllocator readBufferAllocator,
+                           BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception;
 
     final void writeReady() {
         if (isConnectPending()) {
             // pending connect which is now complete so handle it.
             finishConnect();
         } else if (!socket.isOutputShutdown()) {
-            // directly call super.flush0() to force a flush now
-            super.writeFlushed();
-        }
-    }
-
-    /**
-     * Shutdown the input side of the channel.
-     */
-    final void shutdownInput(boolean readEOF) {
-        // We need to take special care of calling finishConnect() if readEOF is true and we not
-        // fullfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
-        // with a ClosedChannelException as a close() will happen and so the FD is closed before we
-        // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
-        // we observe the correct exception in case of a connect failure.
-        if (readEOF && isConnectPending()) {
-            finishConnect();
-        }
-        if (!socket.isInputShutdown()) {
-            if (isAllowHalfClosure()) {
-                shutdownTransport(ChannelShutdownDirection.Inbound, newPromise());
-            } else {
-                closeTransport(newPromise());
-            }
-        } else if (!readEOF) {
-            inputClosedSeenErrorOnRead = true;
+            // directly call writeFlushedNow() to force a flush now
+            writeFlushedNow();
         }
     }
 
@@ -484,40 +416,31 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             // See https://github.com/netty/netty/issues/3709
             read();
         } else {
+            // We need to take special care of calling finishConnect() if readEOF is true and we not
+            // fullfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
+            // with a ClosedChannelException as a close() will happen and so the FD is closed before we
+            // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
+            // we observe the correct exception in case of a connect failure.
+            if (isConnectPending()) {
+                finishConnect();
+            }
             // Just to be safe make sure the input marked as closed.
-            shutdownInput(true);
+            shutdownReadSide();
         }
     }
 
     @Override
-    protected final void writeFlushed() {
+    protected boolean isWriteFlushedScheduled() {
         // Flush immediately only when there's no pending flush.
-        // If there's a pending flush operation, event loop will call forceFlush() later,
-        // and thus there's no need to call it now.
-        if (!writeFilterEnabled) {
-            super.writeFlushed();
-        }
+        return writeFilterEnabled;
     }
 
-    private void executeReadReadyRunnable() {
-        if (readReadyRunnablePending || !isActive() || shouldBreakReadReady()) {
+    private void executeReadNowRunnable() {
+        if (readNowRunnablePending || !isActive()) {
             return;
         }
-        readReadyRunnablePending = true;
-        executor().execute(readReadyRunnable);
-    }
-
-    private void clearReadFilter0() {
-        assert executor().inEventLoop();
-        try {
-            readPending = false;
-            readFilter(false);
-        } catch (Throwable e) {
-            // When this happens there is something completely wrong with either the filedescriptor or epoll,
-            // so fire the exception through the pipeline and close the Channel.
-            pipeline().fireChannelExceptionCaught(e);
-            closeTransport(newPromise());
-        }
+        readNowRunnablePending = true;
+        executor().execute(readNowRunnable);
     }
 
     @Override
@@ -611,6 +534,11 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     @Override
     protected SocketAddress remoteAddress0() {
         return remoteAddress;
+    }
+
+    @Override
+    protected final void doClearScheduledRead() {
+        readFilter(false);
     }
 
     final void closeTransportNow() {

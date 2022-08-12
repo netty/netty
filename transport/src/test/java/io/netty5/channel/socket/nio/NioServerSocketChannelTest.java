@@ -20,34 +20,15 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
-import java.nio.channels.ServerSocketChannel;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServerSocketChannel> {
-
-    @Test
-    public void testCloseOnError() throws Exception {
-        ServerSocketChannel jdkChannel = ServerSocketChannel.open();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-
-        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group, jdkChannel);
-        try {
-            serverSocketChannel.register().asStage().sync();
-            serverSocketChannel.bind(new InetSocketAddress(0)).asStage().sync();
-            assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
-            assertTrue(serverSocketChannel.closeOnReadError(new IllegalArgumentException()));
-            serverSocketChannel.close().asStage().sync();
-        } finally {
-            group.shutdownGracefully();
-        }
-    }
 
     @Test
     public void testIsActiveFalseAfterClose() throws Exception {

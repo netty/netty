@@ -21,13 +21,11 @@ import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -516,103 +514,59 @@ public final class EpollSocketChannel
         }
     }
 
-    private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
-                                     ReadHandleFactory.ReadHandle readHandle) {
-        if (buffer.readableBytes() > 0) {
-            readPending = false;
-            pipeline.fireChannelRead(buffer);
-        } else {
-            buffer.close();
-        }
-        readHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-        pipeline.fireChannelExceptionCaught(cause);
-
-        // If oom will close the read event, release connection.
-        // See https://github.com/netty/netty/issues/10434
-        if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-            shutdownInput(false);
-        } else {
-            readIfIsAutoRead();
-        }
-    }
-
     @Override
-    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                                   BufferAllocator recvBufferAllocator) {
+    protected ReadState epollInReady(ReadBufferAllocator readBufferAllocator, BufferAllocator recvBufferAllocator,
+                                     ReadSink readSink) throws Exception {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX
                 && getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
-            return epollInReadFd(readHandle);
+            return epollInReadFd(readSink);
         }
-        return epollInReadyBytes(readHandle, readBufferAllocator, recvBufferAllocator);
+        return epollInReadyBytes(readBufferAllocator, recvBufferAllocator, readSink);
     }
 
-    private boolean epollInReadyBytes(ReadHandleFactory.ReadHandle readHandle,  ReadBufferAllocator readBufferAllocator,
-                                      BufferAllocator bufferAllocator) {
-        final ChannelPipeline pipeline = pipeline();
+    private ReadState epollInReadyBytes(ReadBufferAllocator readBufferAllocator,
+                                        BufferAllocator bufferAllocator, ReadSink readSink) throws Exception {
         Buffer buffer = null;
-        boolean close = false;
-        boolean readMore = false;
+        boolean readMore;
         try {
             boolean continueReading;
             do {
                 // we use a direct buffer here as the native implementations only be able
                 // to handle direct buffers.
-                buffer = readBufferAllocator.allocate(bufferAllocator, readHandle.estimatedBufferCapacity());
+                buffer = readBufferAllocator.allocate(bufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readHandle.lastRead(0, 0, 0);
-                    break;
+                    readSink.read(0, 0, null);
+                    return ReadState.Partial;
                 }
                 assert buffer.isDirect();
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
-                continueReading = readHandle.lastRead(
-                        attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+
                 readMore = attemptedBytesRead == actualBytesRead;
                 if (actualBytesRead <= 0) {
                     // nothing was read, release the buffer.
                     Resource.dispose(buffer);
                     buffer = null;
-                    close = actualBytesRead < 0;
-                    if (close) {
-                        // There is nothing left to read as we received an EOF.
-                        readPending = false;
+                    readSink.read(attemptedBytesRead, actualBytesRead, null);
+
+                    if (actualBytesRead < 0) {
+                        return ReadState.Closed;
                     }
-                    break;
+                    return ReadState.All;
                 }
-                readPending = false;
-                pipeline.fireChannelRead(buffer);
+                continueReading = readSink.read(attemptedBytesRead, actualBytesRead, buffer);
                 buffer = null;
-
-                if (shouldBreakEpollInReady()) {
-                    // We need to do this for two reasons:
-                    //
-                    // - If the input was shutdown in between (which may be the case when the user did it in the
-                    //   fireChannelRead(...) method we should not try to read again to not produce any
-                    //   miss-leading exceptions.
-                    //
-                    // - If the user closes the channel we need to ensure we not try to read from it again as
-                    //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
-                    //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
-                    //   reading data from a filedescriptor that belongs to another socket then the socket that
-                    //   was "wrapped" by this Channel implementation.
-                    break;
-                }
-            } while (continueReading && readMore &&
-                    !isShutdown(ChannelShutdownDirection.Inbound));
-
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-
-            if (close) {
-                shutdownInput(false);
-            } else {
-                readIfIsAutoRead();
+            } while (continueReading && readMore && !isShutdown(ChannelShutdownDirection.Inbound));
+            if (readMore) {
+                return ReadState.Partial;
             }
+            return ReadState.All;
         } catch (Throwable t) {
-            handleReadException(pipeline, buffer, t, close, readHandle);
+            if (buffer != null) {
+                buffer.close();
+            }
+            throw t;
         }
-        return !readMore;
     }
 
     private final class EpollSocketWritableByteChannel extends SocketWritableByteChannel {
@@ -1210,35 +1164,26 @@ public final class EpollSocketChannel
         }
     }
 
-    private boolean epollInReadFd(ReadHandleFactory.ReadHandle readHandle) {
-        final ChannelPipeline pipeline = pipeline();
-        try {
-            boolean continueReading;
-            readLoop: do {
-                int readFd = socket.recvFd();
-                switch(readFd) {
-                    case 0:
-                        readHandle.lastRead(0, 0, 0);
-                        break readLoop;
-                    case -1:
-                        readHandle.lastRead(0, 0, 0);
-                        closeTransport(newPromise());
-                        return true;
-                    default:
-                        continueReading = readHandle.lastRead(0, 0, 1);
-                        readPending = false;
-                        pipeline.fireChannelRead(new FileDescriptor(readFd));
-                        break;
-                }
-            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
+    private ReadState epollInReadFd(ReadSink readSink)
+            throws Exception {
+        boolean continueReading;
+        do {
+            int readFd = socket.recvFd();
+            switch(readFd) {
+                case 0:
+                    readSink.read(0, 0, null);
+                    return ReadState.All;
+                case -1:
+                    readSink.read(0, 0, null);
+                    closeTransport(newPromise());
+                    return ReadState.Closed;
+                default:
+                    continueReading = readSink.read(0, 0, new FileDescriptor(readFd));
+                    break;
+            }
+        } while (continueReading
+                && !isShutdown(ChannelShutdownDirection.Inbound));
 
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-        } catch (Throwable t) {
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-            pipeline.fireChannelExceptionCaught(t);
-        }
-        return false;
+        return ReadState.Partial;
     }
 }

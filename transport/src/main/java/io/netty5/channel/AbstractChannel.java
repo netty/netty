@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
+import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.AlreadyConnectedException;
@@ -46,6 +47,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Consumer;
 
 import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
@@ -82,10 +84,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private final EventLoop eventLoop;
     private final boolean supportingDisconnect;
 
-    /** Cache for the string representation of this channel */
-    private boolean strValActive;
-    private String strVal;
-
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbstractChannel> WRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "writable");
@@ -94,6 +92,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private volatile L localAddress;
     private volatile R remoteAddress;
     private volatile boolean registered;
+
+    private volatile ReadBufferAllocator readPending;
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbstractChannel> AUTOREAD_UPDATER =
@@ -113,17 +113,24 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
     private volatile boolean allowHalfClosure;
 
+    /** Cache for the string representation of this channel */
+    private boolean strValActive;
+    private String strVal;
+
     // All fields below are only called from within the EventLoop thread.
     private boolean closeInitiated;
     private Throwable initialCloseCause;
     private ReadBufferAllocator readBeforeActive;
-    private ReadHandleFactory.ReadHandle readHandle;
+
+    private ReadSink readSink;
 
     private MessageSizeEstimator.Handle estimatorHandler;
     private boolean inWriteFlushed;
     /** true if the channel has never been registered, false otherwise */
     private boolean neverRegistered = true;
     private boolean neverActive = true;
+
+    private boolean inputClosedSeenErrorOnRead;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -208,7 +215,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     @Override
-    public BufferAllocator bufferAllocator() {
+    public final BufferAllocator bufferAllocator() {
         return bufferAllocator;
     }
 
@@ -383,17 +390,21 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    protected final void assertEventLoop() {
+    private void assertEventLoop() {
         assert eventLoop.inEventLoop();
     }
 
     protected final ReadHandleFactory.ReadHandle readHandle() {
+        return readSink().readHandle;
+    }
+
+    private ReadSink readSink() {
         assertEventLoop();
 
-        if (readHandle == null) {
-            readHandle = getReadHandleFactory().newHandle();
+        if (readSink == null) {
+            readSink = new ReadSink(getReadHandleFactory().newHandle());
         }
-        return readHandle;
+        return readSink;
     }
 
     private void registerTransport(final Promise<Void> promise) {
@@ -444,9 +455,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *
      * @return {@code true} if {@link ChannelPipeline#fireChannelActive()} was called, {@code false} otherwise.
      */
-    protected final boolean fireChannelActiveIfNotActiveBefore() {
-        assertEventLoop();
-
+    private boolean fireChannelActiveIfNotActiveBefore() {
         if (neverActive) {
             neverActive = false;
             pipeline().fireChannelActive();
@@ -753,7 +762,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    protected void deregisterTransport(final Promise<Void> promise) {
+    private void deregisterTransport(final Promise<Void> promise) {
         assertEventLoop();
 
         deregister(promise, false);
@@ -797,6 +806,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (fireChannelInactive) {
             pipeline.fireChannelInactive();
         }
+        // Ensure we also clear all scheduled reads so its possible to schedule again if the Channel is re-registered.
+        clearScheduledRead();
+
         // Some transports like local and AIO does not allow the deregistration of
         // an open channel. Their doDeregister() calls close(). Consequently,
         // close() calls deregister() again - no need to fire channelUnregistered, so check
@@ -833,12 +845,110 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // Input was shutdown so not try to read.
             return;
         }
+        boolean wasReadPending = readPending != null;
+        readPending = readBufferAllocator;
         try {
-            doRead(readBufferAllocator);
+            doRead(wasReadPending);
         } catch (final Exception e) {
             invokeLater(() -> pipeline.fireChannelExceptionCaught(e));
             closeTransport(newPromise());
         }
+    }
+
+    /**
+     * Try reading from the underlying transport now.
+     */
+    protected final void readNow() {
+        assert executor().inEventLoop();
+
+        if (isShutdown(ChannelShutdownDirection.Inbound) && (inputClosedSeenErrorOnRead || !isAllowHalfClosure())) {
+            // There is nothing to read anymore.
+            clearScheduledRead();
+            return;
+        }
+        ReadBufferAllocator readBufferAllocator = readPending;
+        if (readBufferAllocator == null) {
+            readBufferAllocator = DefaultChannelPipeline.DEFAULT_READ_BUFFER_ALLOCATOR;
+        }
+
+        final boolean closed;
+        try {
+            ReadSink readSink = readSink();
+            try {
+                closed = doReadNow(readBufferAllocator, readSink);
+            } catch (Throwable cause) {
+                if (readSink.completeFailure(readHandle(), cause)) {
+                    shutdownReadSide();
+                } else {
+                    closeTransport(newPromise());
+                }
+                return;
+            }
+            readSink.complete(readHandle());
+        } finally {
+            // Check if there is a readPending which was not processed yet.
+            // This could be for two reasons:
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+            //
+            // See https://github.com/netty/netty/issues/2254
+            if (!isReadPending() && !isAutoRead()) {
+                clearScheduledRead();
+            }
+        }
+
+        if (closed) {
+            shutdownReadSide();
+        } else {
+            readIfIsAutoRead();
+        }
+    }
+
+    protected final void shutdownReadSide() {
+        if (!isShutdown(ChannelShutdownDirection.Inbound)) {
+            if (isAllowHalfClosure()) {
+                shutdownTransport(ChannelShutdownDirection.Inbound, newPromise());
+            } else {
+                closeTransport(newPromise());
+            }
+        } else {
+            inputClosedSeenErrorOnRead = true;
+        }
+    }
+
+    private void clearScheduledRead() {
+        assertEventLoop();
+        readPending = null;
+        doClearScheduledRead();
+    }
+
+    /**
+     * Clear any previous scheduled read. By default this method does nothing but implementations might override it to
+     * add extra logic.
+     */
+    protected void doClearScheduledRead() {
+        // Do nothing by default
+    }
+
+    /**
+     * Read messages now from the transport and so propagate these through the {@link ChannelPipeline}.
+     *
+     * <strong>This method should never be called directly by sub-classes, use {@link #readNow()}.</strong>
+     *
+     * @param readSink      the {@link Consumer} that should be called with methods that are read from the transport
+     *                      to propagate these.
+     * @return {@code true} if the channel should be shutdown / closed.
+     */
+    protected abstract boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception;
+
+    /**
+     * Returns {@code true} if a read is currently scheduled and pending for later execution.
+     *
+     * @return if a read is pending.
+     */
+    protected final boolean isReadPending() {
+        assertEventLoop();
+        return readPending != null;
     }
 
     private void writeTransport(Object msg, Promise<Void> promise) {
@@ -904,9 +1014,33 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     /**
-     * Write previous flushed messages.
+     * Returns {@code true} if flushed messages should not be tried to write when calling {@link #flush()}. Instead
+     * these will be written once {@link #writeFlushedNow()} is called, which is typically done once the underlying
+     * transport becomes writable again.
+     *
+     * @return {@code true} if write will be done later on by calling {@link #writeFlushedNow()},
+     * {@code false} otherwise.
      */
-    protected void writeFlushed() {
+    protected boolean isWriteFlushedScheduled() {
+        return false;
+    }
+
+    /**
+     * Writing previous flushed messages if {@link #isWriteFlushedScheduled()} returns {@code false}. If {
+     */
+    protected final void writeFlushed() {
+        assertEventLoop();
+
+        if (isWriteFlushedScheduled()) {
+            return;
+        }
+        writeFlushedNow();
+    }
+
+    /**
+     * Writing previous flushed messages now.
+     */
+    protected final void writeFlushedNow() {
         assertEventLoop();
 
         if (inWriteFlushed) {
@@ -952,7 +1086,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    protected final void handleWriteError(Throwable t) {
+    private void handleWriteError(Throwable t) {
         assertEventLoop();
 
         if (t instanceof IOException && isAutoClose()) {
@@ -993,7 +1127,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         promise.setSuccess(null);
     }
 
-    protected final boolean ensureOpen(Promise<Void> promise) {
+    private boolean ensureOpen(Promise<Void> promise) {
         if (isOpen()) {
             return true;
         }
@@ -1005,7 +1139,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
      */
-    protected final void safeSetSuccess(Promise<Void> promise) {
+    private void safeSetSuccess(Promise<Void> promise) {
         if (!promise.trySuccess(null)) {
             logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
         }
@@ -1014,13 +1148,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
      */
-    protected final void safeSetFailure(Promise<Void> promise, Throwable cause) {
+    private void safeSetFailure(Promise<Void> promise, Throwable cause) {
         if (!promise.tryFailure(cause)) {
             logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
     }
 
-    protected final void closeIfClosed() {
+    private void closeIfClosed() {
         assertEventLoop();
 
         if (isOpen()) {
@@ -1120,8 +1254,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     /**
      * Schedule a read operation.
+     *
+     * @param wasReadPendingAlready {@code true} if a read was already pending when {@link #read()} was called.
      */
-    protected abstract void doRead(ReadBufferAllocator readBufferAllocator) throws Exception;
+    protected abstract void doRead(boolean wasReadPendingAlready) throws Exception;
 
     /**
      * Flush the content of the given buffer to the remote peer.
@@ -1300,7 +1436,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     @Override
-    @SuppressWarnings({ "unchecked", "deprecation" })
+    @SuppressWarnings("unchecked")
     public final <T> T getOption(ChannelOption<T> option) {
         requireNonNull(option, "option");
         if (option == AUTO_READ) {
@@ -1425,7 +1561,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return Collections.unmodifiableSet(supportedOptionsSet);
     }
 
-    protected <T> void validate(ChannelOption<T> option, T value) {
+    private <T> void validate(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
         option.validate(value);
     }
@@ -1475,7 +1611,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return bufferAllocator;
     }
 
-    public void setBufferAllocator(BufferAllocator bufferAllocator) {
+    private void setBufferAllocator(BufferAllocator bufferAllocator) {
         requireNonNull(bufferAllocator, "bufferAllocator");
         this.bufferAllocator = bufferAllocator;
     }
@@ -1498,15 +1634,19 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (autoRead && !oldAutoRead) {
             read();
         } else if (!autoRead && oldAutoRead) {
-            autoReadCleared();
+            readPending = null;
+            if (executor().inEventLoop()) {
+                clearScheduledRead();
+            } else {
+                executor().execute(() -> {
+                    if (!isReadPending() && !isAutoRead()) {
+                        // Still no read triggered so clear it now
+                        clearScheduledRead();
+                    }
+                });
+            }
         }
     }
-
-    /**
-     * Is called once {@link #setAutoRead(boolean)} is called with {@code false} and {@link #isAutoRead()} was
-     * {@code true} before.
-     */
-    protected void autoReadCleared() { }
 
     private boolean isAutoClose() {
         return autoClose;
@@ -1729,6 +1869,73 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         @Override
         protected final boolean isTransportSupportingDisconnect() {
             return abstractChannel().isSupportingDisconnect();
+        }
+    }
+
+    /**
+     * Sink that will be used by {@link #doReadNow(ReadBufferAllocator, ReadSink)} implementations.
+     */
+    protected final class ReadSink {
+        final ReadHandleFactory.ReadHandle readHandle;
+
+        private boolean readSomething;
+
+        ReadSink(ReadHandleFactory.ReadHandle readHandle) {
+            this.readHandle = readHandle;
+        }
+
+        /**
+         * Process the read message and fire it through the {@link ChannelPipeline}
+         *
+         * @param attemptedBytesRead    The number of  bytes the read operation did attempt to read.
+         * @param actualBytesRead       The number of bytes from the previous read operation. This may be negative if a
+         *                              read error occurs.
+         * @param message               the read message or {@code null} if none was read.
+         * @return                      {@code true} if the read loop should continue reading, {@code false} otherwise.
+         */
+        public boolean read(int attemptedBytesRead, int actualBytesRead, Object message) {
+            if (message == null) {
+                readHandle.lastRead(attemptedBytesRead, actualBytesRead, 0);
+                return false;
+            } else {
+                readSomething = true;
+                readPending = null;
+                boolean continueReading = readHandle.lastRead(attemptedBytesRead, actualBytesRead, 1);
+                pipeline().fireChannelRead(message);
+                return continueReading;
+            }
+        }
+
+        /**
+         * Guess the capacity for the next receive buffer that is probably large enough to read all inbound data and
+         * small enough not to waste its space.
+         */
+        public int estimatedBufferCapacity() {
+            return readHandle().estimatedBufferCapacity();
+        }
+
+        void complete(ReadHandleFactory.ReadHandle readHandle) {
+            // Check if something was read as in this case we wall need to call the *ReadComplete methods.
+            if (readSomething) {
+                readSomething = false;
+                readHandle.readComplete();
+                pipeline().fireChannelReadComplete();
+            }
+        }
+
+        boolean completeFailure(ReadHandleFactory.ReadHandle readHandle, Throwable cause) {
+            complete(readHandle);
+            pipeline().fireChannelExceptionCaught(cause);
+
+            if (cause instanceof PortUnreachableException) {
+                return false;
+            }
+            // If oom will close the read event, release connection.
+            // See https://github.com/netty/netty/issues/10434
+            if (cause instanceof IOException && !(AbstractChannel.this instanceof ServerChannel)) {
+                return true;
+            }
+            return false;
         }
     }
 }

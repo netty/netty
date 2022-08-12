@@ -408,11 +408,6 @@ public class NioSocketChannel
         return super.isExtendedOptionSupported(option);
     }
 
-    @Override
-    protected void autoReadCleared() {
-        clearReadPending();
-    }
-
     private volatile int maxBytesPerGatheringWrite = Integer.MAX_VALUE;
 
     void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {

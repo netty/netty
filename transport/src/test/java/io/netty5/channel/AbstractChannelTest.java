@@ -244,7 +244,12 @@ public class AbstractChannelTest {
         protected void doClose() { }
 
         @Override
-        protected void doRead(ReadBufferAllocator readBufferAllocator) { }
+        protected void doRead(boolean wasReadPendingAlready) { }
+
+        @Override
+        protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) {
+            return false;
+        }
 
         @Override
         protected void doWrite(ChannelOutboundBuffer in) throws Exception { }
