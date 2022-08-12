@@ -240,8 +240,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
      * Read bytes into the given {@link Buffer} and return the amount.
      */
     protected final int doReadBytes(Buffer buffer) throws Exception {
-        try (var iterator = buffer.forEachWritable()) {
-            var component = iterator.first();
+        try (var iterator = buffer.forEachComponent()) {
+            var component = iterator.firstWritable();
             if (component == null) {
                 return 0;
             }
@@ -257,15 +257,17 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
         int initialReaderOffset = buf.readerOffset();
-        buf.forEachReadable(0, (index, component) -> {
-            long address = component.readableNativeAddress();
-            assert address != 0;
-            int written = socket.writeAddress(address, 0, component.readableBytes());
-            if (written > 0) {
-                component.skipReadableBytes(written);
+        try (var iterator = buf.forEachComponent()) {
+            var component = iterator.firstReadable();
+            if (component != null) {
+                long address = component.readableNativeAddress();
+                assert address != 0;
+                int written = socket.writeAddress(address, 0, component.readableBytes());
+                if (written > 0) {
+                    component.skipReadableBytes(written);
+                }
             }
-            return false;
-        });
+        }
         int readerOffset = buf.readerOffset();
         if (initialReaderOffset < readerOffset) {
             buf.readerOffset(initialReaderOffset); // Restore read offset for ChannelOutboundBuffer.
@@ -285,7 +287,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
 
         IovArray array = registration().cleanIovArray();
-        data.forEachReadable(0, array);
+        array.addReadable(data);
         int count = array.count();
         assert count != 0;
         if (remoteAddress == null) {

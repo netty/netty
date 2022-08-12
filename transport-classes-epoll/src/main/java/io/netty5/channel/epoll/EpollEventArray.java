@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 /**
  * This is an internal datastructure which can be directly passed to epoll_wait to reduce the overhead.
- *
+ * <pre>{@code
  * typedef union epoll_data {
  *     void        *ptr;
  *     int          fd;
@@ -35,7 +35,7 @@ import java.nio.ByteBuffer;
  *     uint32_t     events;      // Epoll events
  *     epoll_data_t data;        // User data variable
  * };
- *
+ *}</pre>
  * We use {@code fd} if the {@code epoll_data union} to store the actual file descriptor of an
  * {@link AbstractEpollChannel} and so be able to map it later.
  */

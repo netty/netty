@@ -70,13 +70,14 @@ final class Utf8Validator implements ByteProcessor {
 
     public void check(Buffer buffer) {
         checking = true;
-        buffer.forEachReadable(0, (index, component) -> {
-            ByteCursor cursor = component.openCursor();
-            while (cursor.readByte()) {
-                process(cursor.getByte());
+        try (var iterator = buffer.forEachComponent()) {
+            for (var component = iterator.firstReadable(); component != null; component = component.nextReadable()) {
+                ByteCursor cursor = component.openCursor();
+                while (cursor.readByte()) {
+                    process(cursor.getByte());
+                }
             }
-            return true;
-        });
+        }
     }
 
     public void finish() {

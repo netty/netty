@@ -60,8 +60,8 @@ class BufferChecksum implements Checksum {
         int readerOffset = b.readerOffset();
         b.readerOffset(off);
         try {
-            try (var iteration = b.forEachReadable()) {
-                for (var c = iteration.first(); c != null; c = c.next()) {
+            try (var iteration = b.forEachComponent()) {
+                for (var c = iteration.firstReadable(); c != null; c = c.nextReadable()) {
                     ByteBuffer componentBuffer = c.readableBuffer();
                     if (componentBuffer.remaining() > len) {
                         componentBuffer.limit(componentBuffer.position() + len);

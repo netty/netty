@@ -58,8 +58,8 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
                     }
                 }
                 buffer.writeBytes(src.duplicate());
-                try (var iterator = buffer.forEachReadable()) {
-                    var component = iterator.first();
+                try (var iterator = buffer.forEachComponent()) {
+                    var component = iterator.firstReadable();
                     ByteBuffer nioBuffer = component.readableBuffer();
                     written = fd.write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
                     assert component.next() == null;

@@ -328,12 +328,12 @@ public class Http2ConnectionRoundtripTest {
             int padding = (Integer) in.getArguments()[3];
             int processedBytes = buf.readableBytes() + padding;
 
-            try (var iterator = buf.forEachReadable()) {
-                for (var component = iterator.first(); component != null; component = component.next()) {
-                    assertTrue(component.hasReadableArray());
-                    out.write(component.readableArray(),
-                              component.readableArrayOffset(),
-                              component.readableArrayLength());
+            try (var iterator = buf.forEachComponent()) {
+                for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
+                    assertTrue(c.hasReadableArray());
+                    out.write(c.readableArray(),
+                              c.readableArrayOffset(),
+                              c.readableArrayLength());
                 }
             }
             serverDataLatch.countDown();
@@ -898,12 +898,12 @@ public class Http2ConnectionRoundtripTest {
             int padding = (Integer) in.getArguments()[3];
             int processedBytes = buf.readableBytes() + padding;
 
-            try (var iterator = buf.forEachReadable()) {
-                for (var component = iterator.first(); component != null; component = component.next()) {
-                    assertTrue(component.hasReadableArray());
-                    out.write(component.readableArray(),
-                              component.readableArrayOffset(),
-                              component.readableArrayLength());
+            try (var iterator = buf.forEachComponent()) {
+                for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
+                    assertTrue(c.hasReadableArray());
+                    out.write(c.readableArray(),
+                              c.readableArrayOffset(),
+                              c.readableArrayLength());
                 }
             }
             return processedBytes;

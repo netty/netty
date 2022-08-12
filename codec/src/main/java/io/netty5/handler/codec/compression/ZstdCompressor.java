@@ -195,11 +195,11 @@ public final class ZstdCompressor implements Compressor {
         out.ensureWritable(bufSize);
         try {
             assert out.countWritableComponents() == 1;
-            try (var writableIteration = out.forEachWritable()) {
-                var writableComponent = writableIteration.first();
-                try (var readableIteration = in.forEachReadable()) {
-                    for (var readableComponent = readableIteration.first();
-                         readableComponent != null; readableComponent = readableComponent.next()) {
+            try (var writableIteration = out.forEachComponent()) {
+                var writableComponent = writableIteration.firstWritable();
+                try (var readableIteration = in.forEachComponent()) {
+                    for (var readableComponent = readableIteration.firstReadable();
+                         readableComponent != null; readableComponent = readableComponent.nextReadable()) {
                         final int compressedLength;
                         if (in.isDirect() && out.isDirect()) {
                             ByteBuffer inNioBuffer = readableComponent.readableBuffer();

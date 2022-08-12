@@ -396,40 +396,41 @@ public final class ChannelOutboundBuffer {
         ByteBuffer[] nioBuffers = cache.buffers;
 
         Entry entry = flushedEntry;
-        while (isFlushedEntry(entry) && entry.msg instanceof Buffer) {
+        flush: while (isFlushedEntry(entry) && entry.msg instanceof Buffer) {
             if (!entry.cancelled) {
                 Buffer buf = (Buffer) entry.msg;
                 if (buf.readableBytes() > 0) {
-                    int count = buf.forEachReadable(0, (index, component) -> {
-                        ByteBuffer byteBuffer = component.readableBuffer();
-                        if (cache.bufferCount > 0 && cache.dataSize + byteBuffer.remaining() > maxBytes) {
-                            // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least
-                            // one entry we stop populate the ByteBuffer array. This is done for 2 reasons:
-                            // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one
-                            // writev(...) call and so will return 'EINVAL', which will raise an IOException.
-                            // On Linux it may work depending on the architecture and kernel but to be safe we also
-                            // enforce the limit here.
-                            // 2. There is no sense in putting more data in the array than is likely to be accepted
-                            // by the OS.
-                            //
-                            // See also:
-                            // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
-                            // - https://linux.die.net//man/2/writev
-                            return false;
+                    try (var iterator = buf.forEachComponent()) {
+                        for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
+                            ByteBuffer byteBuffer = c.readableBuffer();
+                            if (cache.bufferCount > 0 && cache.dataSize + byteBuffer.remaining() > maxBytes) {
+                                // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least
+                                // one entry we stop populate the ByteBuffer array. This is done for 2 reasons:
+                                // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one
+                                // writev(...) call and so will return 'EINVAL', which will raise an IOException.
+                                // On Linux it may work depending on the architecture and kernel but to be safe we also
+                                // enforce the limit here.
+                                // 2. There is no sense in putting more data in the array than is likely to be accepted
+                                // by the OS.
+                                //
+                                // See also:
+                                // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
+                                // - https://linux.die.net//man/2/writev
+                                break flush;
+                            }
+                            cache.dataSize += byteBuffer.remaining();
+                            ByteBuffer[] buffers = cache.buffers;
+                            int bufferCount = cache.bufferCount;
+                            if (buffers.length == bufferCount && bufferCount < maxCount) {
+                                buffers = cache.buffers = expandNioBufferArray(buffers, bufferCount + 1, bufferCount);
+                            }
+                            buffers[cache.bufferCount] = byteBuffer;
+                            bufferCount++;
+                            cache.bufferCount = bufferCount;
+                            if (maxCount <= bufferCount) {
+                                break flush;
+                            }
                         }
-                        cache.dataSize += byteBuffer.remaining();
-                        ByteBuffer[] buffers = cache.buffers;
-                        int bufferCount = cache.bufferCount;
-                        if (buffers.length == bufferCount && bufferCount < maxCount) {
-                            buffers = cache.buffers = expandNioBufferArray(buffers, bufferCount + 1, bufferCount);
-                        }
-                        buffers[cache.bufferCount] = byteBuffer;
-                        bufferCount++;
-                        cache.bufferCount = bufferCount;
-                        return bufferCount < maxCount;
-                    });
-                    if (count < 0) {
-                        break;
                     }
                 }
             }

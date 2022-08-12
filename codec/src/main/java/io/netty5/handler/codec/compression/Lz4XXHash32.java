@@ -115,9 +115,9 @@ public final class Lz4XXHash32 extends BufferChecksum {
         } else {
             int oldOffset = b.readerOffset();
             b.readerOffset(off);
-            try (var readableIteration = b.forEachReadable()) {
-                for (var readableComponent = readableIteration.first();
-                     readableComponent != null; readableComponent = readableComponent.next()) {
+            try (var readableIteration = b.forEachComponent()) {
+                for (var readableComponent = readableIteration.firstReadable();
+                     readableComponent != null; readableComponent = readableComponent.nextReadable()) {
                     if (readableComponent.hasReadableArray()) {
                         value = XXHASH32.hash(readableComponent.readableArray(),
                                 readableComponent.readableArrayOffset(), len, seed);

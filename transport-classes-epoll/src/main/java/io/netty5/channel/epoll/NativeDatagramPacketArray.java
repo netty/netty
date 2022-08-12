@@ -16,6 +16,7 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferComponent;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.channel.socket.DatagramPacket;
@@ -69,18 +70,24 @@ final class NativeDatagramPacketArray {
         if (iovArrayStart == Limits.IOV_MAX) {
             return false;
         }
-        return 0 != buf.forEachWritable(0, (index, component) -> {
-            int writableBytes = component.writableBytes();
-            int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-            if (iovArray.process(component, byteCount)) {
-                NativeDatagramPacket p = packets[count];
-                p.init(iovArray.memoryAddress(iovArrayStart), iovArray.count() - iovArrayStart, segmentLen, recipient);
-                count++;
-                component.skipWritableBytes(byteCount);
-                return true;
+        try (var iterator = buf.forEachComponent()) {
+            var first = iterator.firstWritable();
+            if (first == null) {
+                return false;
             }
-            return false;
-        });
+            for (var c = first; c != null; c = c.nextWritable()) {
+                int writableBytes = c.writableBytes();
+                int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
+                if (iovArray.addWritable(c, byteCount)) {
+                    NativeDatagramPacket p = packets[count];
+                    p.init(iovArray.memoryAddress(iovArrayStart), iovArray.count() - iovArrayStart, segmentLen,
+                           recipient);
+                    count++;
+                    c.skipWritableBytes(byteCount);
+                }
+            }
+            return true;
+        }
     }
 
     boolean addReadable(Buffer buf, int segmentLen, InetSocketAddress recipient) {
@@ -96,19 +103,24 @@ final class NativeDatagramPacketArray {
         if (iovArrayStart == Limits.IOV_MAX) {
             return false;
         }
-        return 0 != buf.forEachReadable(0, (index, component) -> {
-            int writableBytes = component.readableBytes();
-            int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-            if (iovArray.process(component, byteCount)) {
-                NativeDatagramPacket p = packets[count];
-                long packetAddr = iovArray.memoryAddress(iovArrayStart);
-                p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
-                count++;
-                component.skipReadableBytes(byteCount);
-                return true;
+        try (var iterator = buf.forEachComponent()) {
+            var first = iterator.firstReadable();
+            if (first == null) {
+                return false;
             }
-            return false;
-        });
+            for (var c = first; c != null; c = c.nextReadable()) {
+                int writableBytes = c.readableBytes();
+                int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
+                if (iovArray.addReadable(c, byteCount)) {
+                    NativeDatagramPacket p = packets[count];
+                    long packetAddr = iovArray.memoryAddress(iovArrayStart);
+                    p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
+                    count++;
+                    c.skipReadableBytes(byteCount);
+                }
+            }
+            return true;
+        }
     }
 
     void add(ChannelOutboundBuffer buffer, boolean connected, int maxMessagesPerWrite) throws Exception {
@@ -140,7 +152,7 @@ final class NativeDatagramPacketArray {
         iovArray.release();
     }
 
-    private final class MyMessageProcessor implements MessageProcessor {
+    private final class MyMessageProcessor implements MessageProcessor<RuntimeException> {
         private boolean connected;
         private int maxMessagesPerWrite;
 

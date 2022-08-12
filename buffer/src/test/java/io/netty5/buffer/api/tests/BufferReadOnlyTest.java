@@ -116,6 +116,17 @@ public class BufferReadOnlyTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    void readOnlyBuffersHaveNoWritableBytes(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer buf = allocator.allocate(8)) {
+            assertThat(buf.writableBytes()).isEqualTo(8);
+            buf.makeReadOnly();
+            assertThat(buf.writableBytes()).isZero();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void compactOnReadOnlyBufferMustThrow(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {

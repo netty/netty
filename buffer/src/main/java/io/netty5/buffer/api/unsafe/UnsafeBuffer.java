@@ -19,19 +19,14 @@ import io.netty5.buffer.api.AllocatorControl;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
+import io.netty5.buffer.api.BufferComponent;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.ByteCursor;
 import io.netty5.buffer.api.ComponentIterator;
-import io.netty5.buffer.api.ComponentIterator.Next;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
-import io.netty5.buffer.api.ReadableComponent;
-import io.netty5.buffer.api.ReadableComponentProcessor;
-import io.netty5.buffer.api.WritableComponent;
-import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
-import io.netty5.buffer.api.internal.SingleComponentIterator;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.buffer.api.internal.Statics.UncheckedLoadByte;
 import io.netty5.util.internal.PlatformDependent;
@@ -58,7 +53,8 @@ import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
 @UnsafeAccess
 final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
-        implements ReadableComponent, WritableComponent, NotReadOnlyReadableComponent, ComponentIterator.Next {
+        implements BufferComponent, NotReadOnlyReadableComponent, ComponentIterator<UnsafeBuffer>,
+                   ComponentIterator.Next {
     private static final int CLOSED_SIZE = -1;
     private static final boolean ACCESS_UNALIGNED = PlatformDependent.isUnaligned();
     private static final boolean FLIP_BYTES = ByteOrder.BIG_ENDIAN != ByteOrder.nativeOrder();
@@ -665,6 +661,11 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     @Override
+    public long baseNativeAddress() {
+        return nativeAddress();
+    }
+
+    @Override
     public long readableNativeAddress() {
         return nativeAddressWithOffset(nativeAddress(), roff);
     }
@@ -710,7 +711,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     public int writableArrayLength() {
-        return capacity() - woff;
+        return writableBytes();
     }
 
     @Override
@@ -730,56 +731,20 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     @Override
-    public <N extends Next> N next() {
+    public UnsafeBuffer first() {
+        return this;
+    }
+
+    @Override
+    public <N extends Next & BufferComponent> N next() {
         return null; // There is no "next" component in our external-iteration of components.
     }
     // </editor-fold>
 
+    @SuppressWarnings("unchecked")
     @Override
-    public <E extends Exception> int forEachReadable(int initialIndex, ReadableComponentProcessor<E> processor)
-            throws E {
-        if (!isAccessible()) {
-            throw bufferIsClosed();
-        }
-        int readableBytes = readableBytes();
-        if (readableBytes == 0) {
-            return 0;
-        }
-        checkRead(readerOffset(), readableBytes);
-        try {
-            return processor.process(initialIndex, this)? 1 : -1;
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    @Override
-    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
-        return new SingleComponentIterator<>(acquire(), readableBytes() > 0 ? this : null);
-    }
-
-    @Override
-    public <E extends Exception> int forEachWritable(int initialIndex, WritableComponentProcessor<E> processor)
-            throws E {
-        if (!isAccessible()) {
-            throw bufferIsClosed();
-        }
-        int writableBytes = writableBytes();
-        if (writableBytes == 0) {
-            return 0;
-        }
-        checkWrite(writerOffset(), writableBytes, false);
-        try {
-            return processor.process(initialIndex, this)? 1 : -1;
-        } finally {
-            Reference.reachabilityFence(this);
-        }
-    }
-
-    @Override
-    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
-        checkWrite(writerOffset(), writableBytes(), false);
-        return new SingleComponentIterator<>(acquire(), writableBytes() > 0 ? this : null);
+    public <T extends BufferComponent & Next> ComponentIterator<T> forEachComponent() {
+        return (ComponentIterator<T>) acquire();
     }
 
     // <editor-fold defaultstate="collapsed" desc="Primitive accessors implementation.">

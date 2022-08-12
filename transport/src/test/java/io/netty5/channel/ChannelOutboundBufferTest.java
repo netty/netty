@@ -106,11 +106,11 @@ public class ChannelOutboundBufferTest {
             for (int i = 0; i < buffer.nioBufferCount(); i++) {
                 if (i == 0) {
                     assertEquals(1, buf.countReadableComponents());
-                    buf.forEachReadable(0, (index, component) -> {
-                        assertEquals(0, index, "Expected buffer to only have a single component.");
+                    try (var iteration = buf.forEachComponent()) {
+                        var component = iteration.firstReadable();
                         assertEquals(buffers[0], component.readableBuffer());
-                        return true;
-                    });
+                        assertNull(component.nextReadable(), "Expected buffer to only have a single component.");
+                    }
                 } else {
                     assertNull(buffers[i]);
                 }
@@ -130,14 +130,14 @@ public class ChannelOutboundBufferTest {
             ByteBuffer[] buffers = buffer.nioBuffers();
             assertEquals(64, buffer.nioBufferCount());
             assertEquals(1, buf.countReadableComponents());
-            buf.forEachReadable(0, (index, component) -> {
-                assertEquals(0, index);
+            try (var iteration = buf.forEachComponent()) {
+                var component = iteration.firstReadable();
                 ByteBuffer expected = component.readableBuffer();
                 for (int i = 0; i < buffer.nioBufferCount(); i++) {
                     assertEquals(expected, buffers[i]);
                 }
-                return true;
-            });
+                assertNull(component.nextReadable());
+            }
             buf.close();
         });
     }
@@ -156,8 +156,8 @@ public class ChannelOutboundBufferTest {
             ByteBuffer[] buffers = buffer.nioBuffers();
             assertEquals(65, buffer.nioBufferCount());
             assertEquals(1, buf.countReadableComponents());
-            buf.forEachReadable(0, (index, component) -> {
-                assertEquals(0, index);
+            try (var iteration = buf.forEachComponent()) {
+                var component = iteration.firstReadable();
                 ByteBuffer expected = component.readableBuffer();
                 for (int i = 0; i < buffer.nioBufferCount(); i++) {
                     if (i < 65) {
@@ -166,8 +166,8 @@ public class ChannelOutboundBufferTest {
                         assertNull(buffers[i]);
                     }
                 }
-                return true;
-            });
+                assertNull(component.nextReadable());
+            }
             buf.close();
         });
     }
@@ -187,14 +187,14 @@ public class ChannelOutboundBufferTest {
             final int maxCount = 10;    // less than comp.nioBufferCount()
             ByteBuffer[] buffers = buffer.nioBuffers(maxCount, Integer.MAX_VALUE);
             assertTrue(buffer.nioBufferCount() <= maxCount, "Should not be greater than maxCount");
-            buf.forEachReadable(0, (index, component) -> {
-                assertEquals(0, index);
+            try (var iteration = buf.forEachComponent()) {
+                var component = iteration.firstReadable();
                 ByteBuffer expected = component.readableBuffer();
                 for (int i = 0; i < buffer.nioBufferCount(); i++) {
                     assertEquals(expected, buffers[i]);
                 }
-                return true;
-            });
+                assertNull(component.nextReadable());
+            }
             buf.close();
         });
     }

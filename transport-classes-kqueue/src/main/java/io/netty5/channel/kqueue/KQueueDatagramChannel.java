@@ -34,7 +34,6 @@ import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.RawUnixChannelOption;
-import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.channel.unix.UnixChannelUtil;
@@ -365,7 +364,7 @@ public final class KQueueDatagramChannel
 
         if (data.countReadableComponents() > 1) {
             IovArray array = registration().cleanArray();
-            data.forEachReadable(0, array);
+            array.addReadable(data);
             int count = array.count();
             assert count != 0;
 
@@ -385,30 +384,25 @@ public final class KQueueDatagramChannel
             }
             return writtenBytes > 0;
         } else {
-            if (remoteAddress == null) {
-                data.forEachReadable(0, (index, component) -> {
-                    int written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
-                    component.skipReadableBytes(written);
+            try (var iteration = data.forEachComponent()) {
+                var component = iteration.firstReadable();
+                if (component == null) {
                     return false;
-                });
-            } else {
-                if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                }
+                final int written;
+                if (remoteAddress == null) {
+                    written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
+                } else if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
                     byte[] path = ((DomainSocketAddress) remoteAddress).path().getBytes(UTF_8);
-                    data.forEachReadable(0, (index, component) -> {
-                        int written = socket.sendToAddressDomainSocket(
-                                component.readableNativeAddress(), 0, component.readableBytes(), path);
-                        component.skipReadableBytes(written);
-                        return false;
-                    });
+                    written = socket.sendToAddressDomainSocket(
+                            component.readableNativeAddress(), 0, component.readableBytes(), path);
                 } else {
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
-                    data.forEachReadable(0, (index, component) -> {
-                        int written = socket.sendToAddress(component.readableNativeAddress(), 0,
-                                component.readableBytes(), inetSocketAddress.getAddress(), inetSocketAddress.getPort());
-                        component.skipReadableBytes(written);
-                        return false;
-                    });
+                    written = socket.sendToAddress(
+                            component.readableNativeAddress(), 0, component.readableBytes(),
+                            inetSocketAddress.getAddress(), inetSocketAddress.getPort());
                 }
+                component.skipReadableBytes(written);
             }
             return data.readableBytes() < initialReadableBytes;
         }
@@ -526,24 +520,29 @@ public final class KQueueDatagramChannel
                     SocketAddress localAddress = null;
                     SocketAddress remoteAddress = null;
                     if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-                        final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
-                        buffer.forEachWritable(0, recvFrom);
-                        DomainDatagramSocketAddress recvAddress = recvFrom.remoteAddress();
+                        DomainDatagramSocketAddress recvAddress = null;
+                        try (var iteration = buffer.forEachComponent()) {
+                            var c = iteration.firstWritable();
+                            if (c != null) {
+                                recvAddress = socket.recvFromAddressDomainSocket(
+                                        c.writableNativeAddress(), 0, c.writableBytes());
+                            }
+                        }
                         if (recvAddress != null) {
                             remoteAddress = recvAddress;
                             actualBytesRead = recvAddress.receivedAmount();
                             localAddress = recvAddress.localAddress();
                         }
                     } else {
-                        try (var iterator = buffer.forEachWritable()) {
-                            var component = iterator.first();
+                        try (var iterator = buffer.forEachComponent()) {
+                            var component = iterator.firstWritable();
                             long addr = component.writableNativeAddress();
                             DatagramSocketAddress datagramSocketAddress;
                             if (addr != 0) {
                                 // has a memory address so use optimized call
-                                datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
+                            datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
                             } else {
-                                ByteBuffer nioData = component.writableBuffer();
+                            ByteBuffer nioData = component.writableBuffer();
                                 datagramSocketAddress = socket.recvFrom(
                                         nioData, nioData.position(), nioData.limit());
                             }

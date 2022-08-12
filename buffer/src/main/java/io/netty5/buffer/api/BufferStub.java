@@ -258,25 +258,8 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public <E extends Exception> int forEachReadable(int initialIndex,
-                                                     ReadableComponentProcessor<E> processor) throws E {
-        return delegate.forEachReadable(initialIndex, processor);
-    }
-
-    @Override
-    public <T extends ReadableComponent & Next> ComponentIterator<T> forEachReadable() {
-        return delegate.forEachReadable();
-    }
-
-    @Override
-    public <E extends Exception> int forEachWritable(int initialIndex,
-                                                     WritableComponentProcessor<E> processor) throws E {
-        return delegate.forEachWritable(initialIndex, processor);
-    }
-
-    @Override
-    public <T extends WritableComponent & Next> ComponentIterator<T> forEachWritable() {
-        return delegate.forEachWritable();
+    public <T extends BufferComponent & Next> ComponentIterator<T> forEachComponent() {
+        return delegate.forEachComponent();
     }
 
     @Override

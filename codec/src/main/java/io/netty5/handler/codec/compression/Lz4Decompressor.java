@@ -169,10 +169,10 @@ public final class Lz4Decompressor implements Decompressor {
 
     private void decompress(Buffer compressed, Buffer uncompressed) {
         assert compressed.countReadableComponents() == 1;
-        try (var writableIteration = uncompressed.forEachWritable()) {
-            var writableComponent = writableIteration.first();
-            try (var readableIteration = compressed.forEachReadable()) {
-                var readableComponent = readableIteration.first();
+        try (var writableIteration = uncompressed.forEachComponent()) {
+            var writableComponent = writableIteration.firstWritable();
+            try (var readableIteration = compressed.forEachComponent()) {
+                var readableComponent = readableIteration.firstReadable();
                 decompressor.decompress(
                         readableComponent.readableBuffer(), writableComponent.writableBuffer());
             }

@@ -16,10 +16,6 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.ReadableComponent;
-import io.netty5.buffer.api.ReadableComponentProcessor;
-import io.netty5.buffer.api.WritableComponent;
-import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.internal.PlatformDependent;
 
@@ -37,8 +33,7 @@ import java.util.Objects;
  * <p>
  * Instances of this class are single-threaded, and each {@link SslHandler} will have their own instance.
  */
-class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
-                               WritableComponentProcessor<RuntimeException> {
+class EngineWrapper {
     /**
      * Used for handshakes with engines that require off-heap buffers.
      */
@@ -111,7 +106,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
             int count = in.countReadableComponents();
             assert count > 0 : "Input buffer has readable bytes, but no readable components: " + in;
             inputs = count == 1? singleReadableBuffer : new ByteBuffer[count];
-            int prepared = in.forEachReadable(0, this);
+            int prepared = prepareReadable(in);
             assert prepared == count : "Expected to prepare " + count + " buffers, but got " + prepared;
         } else {
             inputs = singleReadableBuffer;
@@ -130,7 +125,7 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
             int count = out.countWritableComponents();
             assert count > 0 : "Output buffer has writable space, but no writable components: " + out;
             outputs = count == 1? singleWritableBuffer : new ByteBuffer[count];
-            int prepared = out.forEachWritable(0, this);
+            int prepared = prepareWritable(out);
             assert prepared == count : "Expected to prepare " + count + " buffers, but got " + prepared;
         } else {
             inputs = singleWritableBuffer;
@@ -141,6 +136,32 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
             outputs[0] = cachedWritingBuffer.position(0).limit(writable);
             writeBack = true;
         }
+    }
+
+    private int prepareReadable(Buffer in) {
+        int index = 0;
+        try (var iterator = in.forEachComponent()) {
+            for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
+                // Some SSLEngine implementations require their input buffers be mutable. Let's try to accommodate.
+                // See https://bugs.openjdk.java.net/browse/JDK-8283577 for the details.
+                ByteBuffer byteBuffer = Statics.tryGetWritableBufferFromReadableComponent(c);
+                if (byteBuffer == null) {
+                    byteBuffer = c.readableBuffer();
+                }
+                inputs[index++] = byteBuffer;
+            }
+        }
+        return index;
+    }
+
+    private int prepareWritable(Buffer out) {
+        int index = 0;
+        try (var iterator = out.forEachComponent()) {
+            for (var c = iterator.firstWritable(); c != null; c = c.nextWritable()) {
+                outputs[index++] = c.writableBuffer();
+            }
+        }
+        return index;
     }
 
     private ByteBuffer allocateCachingBuffer(int capacity) {
@@ -219,24 +240,6 @@ class EngineWrapper implements ReadableComponentProcessor<RuntimeException>,
         // First, we null-out the ByteBuffer references (above), then we fence the Buffer instances (below).
         Reference.reachabilityFence(in);
         Reference.reachabilityFence(out);
-    }
-
-    @Override
-    public boolean process(int index, ReadableComponent component) {
-        // Some SSLEngine implementations require their input buffers be mutable. Let's try to accommodate.
-        // See https://bugs.openjdk.java.net/browse/JDK-8283577 for the details.
-        ByteBuffer byteBuffer = Statics.tryGetWritableBufferFromReadableComponent(component);
-        if (byteBuffer == null) {
-            byteBuffer = component.readableBuffer();
-        }
-        inputs[index] = byteBuffer;
-        return true;
-    }
-
-    @Override
-    public boolean process(int index, WritableComponent component) {
-        outputs[index] = component.writableBuffer();
-        return true;
     }
 
     @Override

@@ -32,8 +32,7 @@ public interface BufferAllocator extends SafeCloseable {
     /**
      * Produces a {@link BufferAllocator} that allocates unpooled, on-heap buffers.
      * On-heap buffers have a {@code byte[]} internally, and their
-     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
-     * {@linkplain WritableComponent#writableNativeAddress() writable} native addresses are zero.
+     * {@linkplain BufferComponent#readableNativeAddress() buffer component} native addresses are zero.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      * <p>
@@ -50,8 +49,7 @@ public interface BufferAllocator extends SafeCloseable {
     /**
      * Produces a {@link BufferAllocator} that allocates unpooled, off-heap buffers.
      * Off-heap buffers a native memory pointer internally, which can be obtained from their
-     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
-     * {@linkplain WritableComponent#writableNativeAddress() writable} native address methods.
+     * {@linkplain BufferComponent#readableNativeAddress() buffer component} native address methods.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      * <p>
@@ -68,8 +66,7 @@ public interface BufferAllocator extends SafeCloseable {
     /**
      * Produces a pooling {@link BufferAllocator} that allocates and recycles on-heap buffers.
      * On-heap buffers have a {@code byte[]} internally, and their
-     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
-     * {@linkplain WritableComponent#writableNativeAddress() writable} native addresses are zero.
+     * {@linkplain BufferComponent#readableNativeAddress() buffer component} native addresses are zero.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      * <p>
@@ -86,8 +83,7 @@ public interface BufferAllocator extends SafeCloseable {
     /**
      * Produces a pooling {@link BufferAllocator} that allocates and recycles off-heap buffers.
      * Off-heap buffers a native memory pointer internally, which can be obtained from their
-     * {@linkplain ReadableComponent#readableNativeAddress() readable} and
-     * {@linkplain WritableComponent#writableNativeAddress() writable} native address methods.
+     * {@linkplain BufferComponent#readableNativeAddress() buffer component} native address methods.
      * <p>
      * The concrete {@link Buffer} implementation is chosen by {@link MemoryManager#instance()}.
      * <p>
@@ -262,13 +258,14 @@ public interface BufferAllocator extends SafeCloseable {
         int bytesToCopy = buffer.remaining();
         final Buffer copy = allocate(bytesToCopy);
         final ByteBuffer duplicate = buffer.duplicate();
-        copy.forEachWritable(0, (i, component) -> {
-            ByteBuffer dest = component.writableBuffer();
-            int length = Math.min(dest.capacity(), duplicate.remaining());
-            Statics.bbput(dest, 0, duplicate, duplicate.position(), length);
-            duplicate.position(length + duplicate.position());
-            return true;
-        });
+        try (var iteration = copy.forEachComponent()) {
+            for (var c = iteration.firstWritable(); c != null; c = c.nextWritable()) {
+                ByteBuffer dest = c.writableBuffer();
+                int length = Math.min(dest.capacity(), duplicate.remaining());
+                Statics.bbput(dest, 0, duplicate, duplicate.position(), length);
+                duplicate.position(length + duplicate.position());
+            }
+        }
         copy.skipWritableBytes(bytesToCopy);
         return copy;
     }

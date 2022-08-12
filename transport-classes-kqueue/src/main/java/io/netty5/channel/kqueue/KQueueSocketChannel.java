@@ -452,7 +452,7 @@ public final class KQueueSocketChannel
                 if (initialData.readableBytes() > 0) {
                     IovArray iov = new IovArray();
                     try {
-                        initialData.forEachReadable(0, iov);
+                        iov.addReadable(initialData);
                         int bytesSent = socket.connectx(
                                 (InetSocketAddress) localAddress, (InetSocketAddress) remoteAddress, iov, true);
                         writeFilter(true);
@@ -559,10 +559,12 @@ public final class KQueueSocketChannel
             return doWriteBytes(in, buf);
         }
         ByteBuffer[] nioBuffers = new ByteBuffer[readableComponents];
-        buf.forEachReadable(0, (index, component) -> {
-            nioBuffers[index] = component.readableBuffer();
-            return true;
-        });
+        int index = 0;
+        try (var iteration = buf.forEachComponent()) {
+            for (var c = iteration.firstReadable(); c != null; c = c.nextReadable()) {
+                nioBuffers[index++] = c.readableBuffer();
+            }
+        }
         return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
                 getMaxBytesPerGatheringWrite());
     }

@@ -16,10 +16,7 @@
 package io.netty5.channel.unix;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.ReadableComponent;
-import io.netty5.buffer.api.ReadableComponentProcessor;
-import io.netty5.buffer.api.WritableComponent;
-import io.netty5.buffer.api.WritableComponentProcessor;
+import io.netty5.buffer.api.BufferComponent;
 import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.util.internal.PlatformDependent;
 
@@ -52,8 +49,7 @@ import static java.lang.Math.min;
  * <a href="https://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
  * >Efficient JNI programming IV: Wrapping native data objects</a>.
  */
-public final class IovArray implements MessageProcessor, ReadableComponentProcessor<RuntimeException>,
-                                       WritableComponentProcessor<RuntimeException> {
+public final class IovArray implements MessageProcessor<RuntimeException> {
 
     /** The size of an address which should be 8 for 64 bits and 4 for 32 bits. */
     private static final int ADDRESS_SIZE = addressSize();
@@ -194,26 +190,30 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
 
     @Override
     public boolean processMessage(Object msg) {
-        if (msg instanceof io.netty5.buffer.api.Buffer) {
-            var buffer = (io.netty5.buffer.api.Buffer) msg;
+        if (msg instanceof Buffer) {
+            var buffer = (Buffer) msg;
             if (buffer.readableBytes() == 0) {
                 return true;
             }
-            return buffer.forEachReadable(0, this) >= 0;
+            return addReadable(buffer);
         }
         return false;
     }
 
-    private static int idx(int index) {
-        return IOV_SIZE * index;
+    public boolean addReadable(Buffer buffer) {
+        boolean addedAny = false;
+        try (var iteration = buffer.forEachComponent()) {
+            for (var c = iteration.firstReadable(); c != null; c = c.nextReadable()) {
+                if (!addReadable(c, c.readableBytes())) {
+                    break;
+                }
+                addedAny = true;
+            }
+        }
+        return addedAny;
     }
 
-    @Override
-    public boolean process(int index, ReadableComponent component) {
-        return process(component, component.readableBytes());
-    }
-
-    public boolean process(ReadableComponent component, int byteCount) {
+    public boolean addReadable(BufferComponent component, int byteCount) {
         if (count == IOV_MAX) {
             // No more room!
             return false;
@@ -223,12 +223,20 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
         return add(memoryAddress, nativeAddress, byteCount);
     }
 
-    @Override
-    public boolean process(int index, WritableComponent component) {
-        return process(component, component.writableBytes());
+    public boolean addWritable(Buffer buffer) {
+        boolean addedAny = false;
+        try (var iteration = buffer.forEachComponent()) {
+            for (var c = iteration.firstWritable(); c != null; c = c.nextWritable()) {
+                if (!addWritable(c, c.writableBytes())) {
+                    break;
+                }
+                addedAny = true;
+            }
+        }
+        return addedAny;
     }
 
-    public boolean process(WritableComponent component, int byteCount) {
+    public boolean addWritable(BufferComponent component, int byteCount) {
         if (count == IOV_MAX) {
             // No more room!
             return false;
@@ -236,5 +244,9 @@ public final class IovArray implements MessageProcessor, ReadableComponentProces
         long nativeAddress = component.writableNativeAddress();
         assert nativeAddress != 0;
         return add(memoryAddress, nativeAddress, byteCount);
+    }
+
+    private static int idx(int index) {
+        return IOV_SIZE * index;
     }
 }

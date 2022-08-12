@@ -201,8 +201,8 @@ public final class LzfDecompressor implements Decompressor {
 
                     if (isCompressed) {
                         if (in.countReadableComponents() == 1) {
-                            try (var readableIteration = in.forEachReadable()) {
-                                var readableComponent = readableIteration.first();
+                            try (var readableIteration = in.forEachComponent()) {
+                                var readableComponent = readableIteration.firstReadable();
                                 if (readableComponent.hasReadableArray()) {
                                     byte[] inputArray = readableComponent.readableArray();
                                     int inPos = readableComponent.readableArrayOffset();

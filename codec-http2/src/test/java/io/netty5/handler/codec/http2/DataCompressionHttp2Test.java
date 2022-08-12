@@ -311,10 +311,10 @@ public class DataCompressionHttp2Test {
             int padding = (Integer) in.getArguments()[3];
             int processedBytes = buf.readableBytes() + padding;
 
-            try (var iterator = buf.forEachReadable()) {
-                for (var component = iterator.first(); component != null; component = component.next()) {
-                    byte[] bytes = new byte[component.readableBytes()];
-                    component.readableBuffer().get(bytes);
+            try (var iterator = buf.forEachComponent()) {
+                for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
+                    byte[] bytes = new byte[c.readableBytes()];
+                    c.readableBuffer().get(bytes);
                     serverOut.write(bytes);
                 }
             }

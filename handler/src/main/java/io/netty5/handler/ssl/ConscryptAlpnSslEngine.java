@@ -18,8 +18,6 @@ package io.netty5.handler.ssl;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.buffer.api.StandardAllocationTypes;
-import io.netty5.buffer.api.WritableComponent;
-import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty5.util.internal.EmptyArrays;
@@ -172,24 +170,23 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine implements VectoredUn
 
         @Override
         public AllocatedBuffer allocateDirectBuffer(int capacity) {
-            return new BufferAdapter(alloc.allocate(capacity));
+            return new BufferAdapter(alloc, capacity);
         }
     }
 
-    private static final class BufferAdapter extends AllocatedBuffer
-            implements WritableComponentProcessor<RuntimeException> {
+    private static final class BufferAdapter extends AllocatedBuffer {
         private final Buffer nettyBuffer;
-        private ByteBuffer buffer;
+        private final ByteBuffer buffer;
 
-        BufferAdapter(Buffer nettyBuffer) {
-            this.nettyBuffer = nettyBuffer;
-            nettyBuffer.forEachWritable(0, this); // Capture internal writable ByteBuffer.
-        }
+        BufferAdapter(io.netty5.buffer.api.BufferAllocator allocator, int capacity) {
+            nettyBuffer = allocator.allocate(capacity);
 
-        @Override
-        public boolean process(int index, WritableComponent component) {
-            buffer = component.writableBuffer();
-            return false;
+            // Capture internal writable ByteBuffer.
+            // It is fine for the ByteBuffer to outlive the iteration here, because we own the Netty buffer,
+            // and control its lifetime.
+            try (var iteration = nettyBuffer.forEachComponent()) {
+                buffer = iteration.firstWritable().writableBuffer();
+            }
         }
 
         @Override

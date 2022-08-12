@@ -232,30 +232,38 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     public void heapBufferMustHaveZeroAddress(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
+            assertThat(buf.countComponents()).isOne();
             assertThat(buf.countReadableComponents()).isZero();
             assertThat(buf.countWritableComponents()).isOne();
-            buf.forEachWritable(0, (index, component) -> {
-                assertThat(component.writableNativeAddress()).isZero();
-                return true;
-            });
+            try (var iterarion = buf.forEachComponent()) {
+                for (var component = iterarion.first(); component != null; component = component.next()) {
+                    assertThat(component.baseNativeAddress()).isZero();
+                    assertThat(component.readableNativeAddress()).isZero();
+                    assertThat(component.writableNativeAddress()).isZero();
+                }
+            }
             buf.writeInt(42);
+            assertThat(buf.countComponents()).isOne();
             assertThat(buf.countReadableComponents()).isOne();
             assertThat(buf.countWritableComponents()).isOne();
-            buf.forEachReadable(0, (index, component) -> {
-                assertThat(component.readableNativeAddress()).isZero();
-                return true;
-            });
-            buf.forEachWritable(0, (index, component) -> {
-                assertThat(component.writableNativeAddress()).isZero();
-                return true;
-            });
+            try (var iterarion = buf.forEachComponent()) {
+                for (var component = iterarion.first(); component != null; component = component.next()) {
+                    assertThat(component.baseNativeAddress()).isZero();
+                    assertThat(component.readableNativeAddress()).isZero();
+                    assertThat(component.writableNativeAddress()).isZero();
+                }
+            }
             buf.writeInt(42);
+            assertThat(buf.countComponents()).isOne();
             assertThat(buf.countReadableComponents()).isOne();
             assertThat(buf.countWritableComponents()).isZero();
-            buf.forEachReadable(0, (index, component) -> {
-                assertThat(component.readableNativeAddress()).isZero();
-                return true;
-            });
+            try (var iterarion = buf.forEachComponent()) {
+                for (var component = iterarion.first(); component != null; component = component.next()) {
+                    assertThat(component.baseNativeAddress()).isZero();
+                    assertThat(component.readableNativeAddress()).isZero();
+                    assertThat(component.writableNativeAddress()).isZero();
+                }
+            }
         }
     }
 
@@ -264,30 +272,38 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     public void directBufferMustHaveNonZeroAddress(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
+            assertThat(buf.countComponents()).isOne();
             assertThat(buf.countReadableComponents()).isZero();
             assertThat(buf.countWritableComponents()).isOne();
-            buf.forEachWritable(0, (index, component) -> {
-                assertThat(component.writableNativeAddress()).isNotZero();
-                return true;
-            });
+            try (var iterarion = buf.forEachComponent()) {
+                for (var component = iterarion.first(); component != null; component = component.next()) {
+                    assertThat(component.baseNativeAddress()).isNotZero();
+                    assertThat(component.readableNativeAddress()).isNotZero();
+                    assertThat(component.writableNativeAddress()).isNotZero();
+                }
+            }
             buf.writeInt(42);
+            assertThat(buf.countComponents()).isOne();
             assertThat(buf.countReadableComponents()).isOne();
             assertThat(buf.countWritableComponents()).isOne();
-            buf.forEachReadable(0, (index, component) -> {
-                assertThat(component.readableNativeAddress()).isNotZero();
-                return true;
-            });
-            buf.forEachWritable(0, (index, component) -> {
-                assertThat(component.writableNativeAddress()).isNotZero();
-                return true;
-            });
+            try (var iterarion = buf.forEachComponent()) {
+                for (var component = iterarion.first(); component != null; component = component.next()) {
+                    assertThat(component.baseNativeAddress()).isNotZero();
+                    assertThat(component.readableNativeAddress()).isNotZero();
+                    assertThat(component.writableNativeAddress()).isNotZero();
+                }
+            }
             buf.writeInt(42);
+            assertThat(buf.countComponents()).isOne();
             assertThat(buf.countReadableComponents()).isOne();
             assertThat(buf.countWritableComponents()).isZero();
-            buf.forEachReadable(0, (index, component) -> {
-                assertThat(component.readableNativeAddress()).isNotZero();
-                return true;
-            });
+            try (var iterarion = buf.forEachComponent()) {
+                for (var component = iterarion.first(); component != null; component = component.next()) {
+                    assertThat(component.baseNativeAddress()).isNotZero();
+                    assertThat(component.readableNativeAddress()).isNotZero();
+                    assertThat(component.writableNativeAddress()).isNotZero();
+                }
+            }
         }
     }
 
@@ -301,32 +317,34 @@ public class BufferBulkAccessTest extends BufferTestSupport {
             assertThat(buf.writableBytes()).isEqualTo(8);
             assertThat(buf.readableBytes()).isZero();
 
-            buf.forEachWritable(0, (index, component) -> {
-                assertThat(component.writableBytes()).isEqualTo(8);
-                long addr = component.writableNativeAddress();
-                assertThat(addr).isNotZero();
-                component.writableBuffer().putInt(0x01020304);
-                component.skipWritableBytes(4);
-                assertThat(component.writableBytes()).isEqualTo(4);
-                assertThat(component.writableNativeAddress()).isEqualTo(addr + 4);
-                return true;
-            });
+            try (var iteration = buf.forEachComponent()) {
+                for (var component = iteration.first(); component != null; component = component.next()) {
+                    assertThat(component.writableBytes()).isEqualTo(8);
+                    long addr = component.writableNativeAddress();
+                    assertThat(addr).isNotZero();
+                    component.writableBuffer().putInt(0x01020304);
+                    component.skipWritableBytes(4);
+                    assertThat(component.writableBytes()).isEqualTo(4);
+                    assertThat(component.writableNativeAddress()).isEqualTo(addr + 4);
+                }
+            }
 
             assertThat(buf.writableBytes()).isEqualTo(4);
             assertThat(buf.readableBytes()).isEqualTo(4);
 
-            buf.forEachReadable(0, (index, component) -> {
-                assertThat(component.readableBytes()).isEqualTo(4);
-                long addr = component.readableNativeAddress();
-                assertThat(addr).isNotZero();
-                assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x01);
-                component.skipReadableBytes(1);
-                assertThat(component.readableBytes()).isEqualTo(3);
-                assertThat(component.readableNativeAddress()).isEqualTo(addr + 1);
-                assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x02);
-                component.skipReadableBytes(1);
-                return true;
-            });
+            try (var iteration = buf.forEachComponent()) {
+                for (var component = iteration.first(); component != null; component = component.next()) {
+                    assertThat(component.readableBytes()).isEqualTo(4);
+                    long addr = component.readableNativeAddress();
+                    assertThat(addr).isNotZero();
+                    assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x01);
+                    component.skipReadableBytes(1);
+                    assertThat(component.readableBytes()).isEqualTo(3);
+                    assertThat(component.readableNativeAddress()).isEqualTo(addr + 1);
+                    assertThat(component.readableBuffer().get()).isEqualTo((byte) 0x02);
+                    component.skipReadableBytes(1);
+                }
+            }
 
             assertThat(buf.readableBytes()).isEqualTo(2);
             assertThat(buf.readShort()).isEqualTo((short) 0x0304);
