@@ -481,7 +481,7 @@ public class ByteToMessageDecoderTest {
             @Override
             public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
                 readsTriggered++;
-                ctx.read();
+                ctx.read(readBufferAllocator);
             }
         }
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
