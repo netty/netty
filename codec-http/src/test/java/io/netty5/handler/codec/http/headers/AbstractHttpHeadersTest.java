@@ -270,7 +270,7 @@ public abstract class AbstractHttpHeadersTest {
 
     @Test
     void testAddHeadersSlowPath() {
-        final HttpHeaders headers = new ReadOnlyHttpHeaders("name", "value");
+        final HttpHeaders headers = newHeaders().add("name", "value");
 
         final HttpHeaders headers2 = newHeaders().add(headers);
 
