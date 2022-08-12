@@ -246,3 +246,11 @@ decompression for Java., which can be obtained at:
     * license/LICENSE.brotli4j.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://github.com/hyperxpro/Brotli4j
+
+This product contains a modified portion of 'ServiceTalk', a Java framework
+reactive web services, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.servicetalk.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/apple/servicetalk
