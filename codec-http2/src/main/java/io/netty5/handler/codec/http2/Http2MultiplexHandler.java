@@ -20,8 +20,10 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelOutboundInvoker;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ServerChannel;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty5.util.Resource;
@@ -50,8 +52,8 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
  * Http2GoAwayFrame} and {@link Http2ResetFrame}, as soon as they occur. Although {@code
  * Http2GoAwayFrame} and {@code Http2ResetFrame} signify that the remote is ignoring further
  * communication, closing of the channel is delayed until any inbound queue is drained with {@link
- * Channel#read()}, which follows the default behavior of channels in Netty. Applications are
- * free to close the channel in response to such events if they don't have use for any queued
+ * ChannelOutboundInvoker#read(ReadBufferAllocator)}, which follows the default behavior of channels in Netty.
+ * Applications are free to close the channel in response to such events if they don't have use for any queued
  * messages. Any connection level events like {@link Http2SettingsFrame} and {@link Http2GoAwayFrame}
  * will be processed internally and also propagated down the pipeline for other handlers to act on.
  *

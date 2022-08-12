@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
@@ -238,9 +239,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     }
 
     @Override
-    protected int doReadMessages(ReadHandleFactory.ReadHandle readHandle, List<Object> buf) throws Exception {
+    protected int doReadMessages(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
+                                 List<Object> buf) throws Exception {
         SocketChannel ch = SocketUtils.accept(javaChannel());
-
         try {
             if (ch != null) {
                 buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch, family));
@@ -248,6 +249,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
                     return 1;
                 }
                 return 0;
+            } else {
+                readHandle.lastRead(0, 0, 0);
             }
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted socket.", t);

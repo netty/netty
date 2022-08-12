@@ -21,8 +21,10 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelOutboundInvoker;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.internal.DelegatingChannelHandlerContext;
 import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
@@ -91,8 +93,8 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     private boolean singleDecode;
     private boolean first;
     /**
-     * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
-     * when {@link ChannelOption#AUTO_READ} is {@code false}.
+     * This flag is used to determine if we need to call {@link ChannelOutboundInvoker#read(ReadBufferAllocator)}
+     * to consume more data when {@link ChannelOption#AUTO_READ} is {@code false}.
      */
     private boolean firedChannelRead;
     private int numReads;

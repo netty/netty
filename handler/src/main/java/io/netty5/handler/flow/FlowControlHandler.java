@@ -16,6 +16,7 @@
 package io.netty5.handler.flow;
 
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.MessageToByteEncoder;
 import io.netty5.util.Resource;
@@ -129,13 +130,13 @@ public class FlowControlHandler implements ChannelHandler {
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
         if (dequeue(ctx, 1) == 0) {
             // It seems no messages were consumed. We need to read() some
             // messages from upstream and once one arrives it need to be
             // relayed to downstream to keep the flow going.
             shouldConsume = true;
-            ctx.read();
+            ctx.read(readBufferAllocator);
         }
     }
 
@@ -176,7 +177,7 @@ public class FlowControlHandler implements ChannelHandler {
      * consuming that number of messages regardless of the channel's auto
      * reading configuration.
      *
-     * @see #read(ChannelHandlerContext)
+     * @see ChannelHandler#read(ChannelHandlerContext, ReadBufferAllocator)
      * @see #channelRead(ChannelHandlerContext, Object)
      */
     private int dequeue(ChannelHandlerContext ctx, int minConsume) {

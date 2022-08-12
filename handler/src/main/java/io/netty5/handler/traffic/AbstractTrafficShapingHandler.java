@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.FileRegion;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Future;
@@ -537,10 +538,10 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
         if (isHandlerActive(ctx)) {
             // For Global Traffic (and Read when using EventLoop in pipeline) : check if READ_SUSPENDED is False
-            ctx.read();
+            ctx.read(readBufferAllocator);
         }
     }
 

@@ -277,7 +277,7 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doRead() throws Exception {
+        protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
         }
 
         @Override

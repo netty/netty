@@ -18,6 +18,7 @@ package io.netty5.channel.nio;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
@@ -45,10 +46,12 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
     private final SelectableChannel ch;
+    private final Runnable clearReadPendingRunnable = this::clearReadPending0;
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
     boolean readPending;
-    private final Runnable clearReadPendingRunnable = this::clearReadPending0;
+
+    private ReadBufferAllocator readBufferAllocator;
 
     private final NioProcessor nioProcessor = new NioProcessor() {
         @Override
@@ -106,7 +109,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
                 // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
                 // to a spin loop
                 if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                    readNow();
+                    readNow(readBufferAllocator);
                 }
             } catch (CancelledKeyException ignored) {
                 closeTransportNow();
@@ -223,15 +226,16 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     @Override
-    protected void doRead() throws Exception {
+    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
         final SelectionKey selectionKey = this.selectionKey;
         if (!selectionKey.isValid()) {
+            // No valid anymore
             return;
         }
 
         readPending = true;
-
+        this.readBufferAllocator = readBufferAllocator;
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
             selectionKey.interestOps(interestOps | readInterestOp);
@@ -290,7 +294,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
         }
     }
 
-    protected abstract void readNow();
+    protected abstract void readNow(ReadBufferAllocator readBufferAllocator);
 
     private void closeTransportNow() {
         closeTransport(newPromise());

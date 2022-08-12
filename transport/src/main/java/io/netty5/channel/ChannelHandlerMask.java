@@ -163,7 +163,7 @@ final class ChannelHandlerMask {
             if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class)) {
                 mask &= ~MASK_DEREGISTER;
             }
-            if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
+            if (isSkippable(handlerType, "read", ChannelHandlerContext.class, ReadBufferAllocator.class)) {
                 mask &= ~MASK_READ;
             }
             if (isSkippable(handlerType, "write", ChannelHandlerContext.class, Object.class)) {

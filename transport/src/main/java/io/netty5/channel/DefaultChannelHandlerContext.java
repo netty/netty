@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.util.ResourceLeakHint;
 import io.netty5.util.concurrent.EventExecutor;
@@ -57,6 +58,8 @@ import static io.netty5.channel.ChannelHandlerMask.mask;
 import static java.util.Objects.requireNonNull;
 
 final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
+
+    private static final ReadBufferAllocator DEFAULT_READ_BUFFER_ALLOCATOR = BufferAllocator::allocate;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelHandlerContext.class);
 
@@ -787,7 +790,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelHandlerContext read() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeRead();
+            findAndInvokeRead(DEFAULT_READ_BUFFER_ALLOCATOR);
         } else {
             Tasks tasks = invokeTasks();
             executor.execute(tasks.invokeReadTask);
@@ -798,18 +801,37 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeRead() {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_READ);
         if (ctx != null) {
-            ctx.invokeRead();
+            ctx.invokeRead(DEFAULT_READ_BUFFER_ALLOCATOR);
         }
     }
 
-    private void invokeRead() {
+    @Override
+    public ChannelHandlerContext read(ReadBufferAllocator readBufferAllocator) {
+        requireNonNull(readBufferAllocator, "");
+        EventExecutor executor = originalExecutor();
+        if (executor.inEventLoop()) {
+            findAndInvokeRead(readBufferAllocator);
+        } else {
+            executor.execute(() -> findAndInvokeRead(readBufferAllocator));
+        }
+        return this;
+    }
+
+    private void findAndInvokeRead(ReadBufferAllocator allocator) {
+        DefaultChannelHandlerContext ctx = findContextOutbound(MASK_READ);
+        if (ctx != null) {
+            ctx.invokeRead(allocator);
+        }
+    }
+
+    private void invokeRead(ReadBufferAllocator allocator) {
         Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
         if (failed != null) {
             return;
         }
 
         try {
-            handler().read(this);
+            handler().read(this, allocator);
         } catch (Throwable t) {
             handleOutboundHandlerException(t, false);
         } finally {

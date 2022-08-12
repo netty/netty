@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerMask.Skip;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
@@ -238,7 +239,7 @@ public interface ChannelHandler {
      * Invoked when the last message read by the current read operation has been consumed by
      * {@link #channelRead(ChannelHandlerContext, Object)}.  If {@link ChannelOption#AUTO_READ} is off, no further
      * attempt to read an inbound data from the current {@link Channel} will be made until
-     * {@link ChannelHandlerContext#read()} is called.
+     * {@link ChannelOutboundInvoker#read(ReadBufferAllocator)} is called.
      */
     @Skip
     default void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
@@ -354,11 +355,17 @@ public interface ChannelHandler {
     }
 
     /**
-     * Intercepts {@link ChannelHandlerContext#read()}.
+     * Called once a read operation is made from the current registered {@link EventLoop}.
+     * If the {@link ChannelHandler} implementation queues the read and another read happens it is free to
+     * drop the first {@link ReadBufferAllocator} and just use the last one.
+     *
+     * @param ctx                   the {@link ChannelHandlerContext} for which the read operation is made
+     * @param readBufferAllocator   The {@link ReadBufferAllocator} that should be used to allocate a {@link Buffer}
+     *                              if needed (for reading the data).
      */
     @Skip
-    default void read(ChannelHandlerContext ctx) {
-        ctx.read();
+    default void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
+        ctx.read(readBufferAllocator);
     }
 
     /**

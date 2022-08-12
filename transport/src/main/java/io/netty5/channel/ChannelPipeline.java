@@ -146,7 +146,7 @@ import java.util.NoSuchElementException;
  *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress)}</li>
  *     <li>{@link ChannelHandlerContext#write(Object)}</li>
  *     <li>{@link ChannelHandlerContext#flush()}</li>
- *     <li>{@link ChannelHandlerContext#read()}</li>
+ *     <li>{@link ChannelOutboundInvoker#read(ReadBufferAllocator)}</li>
  *     <li>{@link ChannelHandlerContext#disconnect()}</li>
  *     <li>{@link ChannelHandlerContext#close()}</li>
  *     <li>{@link ChannelHandlerContext#shutdown(ChannelShutdownDirection)}</li>
@@ -607,6 +607,12 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline flush();
+
+    @Override
+    ChannelPipeline read(ReadBufferAllocator readBufferAllocator);
+
+    @Override
+    ChannelPipeline read();
 
     /**
      * The number of the outbound bytes that are buffered / queued in this {@link ChannelPipeline}. This number will

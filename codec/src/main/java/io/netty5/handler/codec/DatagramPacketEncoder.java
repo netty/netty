@@ -19,6 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.bytes.ByteArrayEncoder;
 import io.netty5.util.concurrent.Future;
@@ -118,8 +119,8 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
-        encoder.read(ctx);
+    public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
+        encoder.read(ctx, readBufferAllocator);
     }
 
     @Override
