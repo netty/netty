@@ -30,7 +30,6 @@
 package io.netty5.handler.codec.http.headers;
 
 import io.netty5.util.AsciiString;
-import io.netty5.util.internal.UnstableApi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,8 +55,10 @@ import static java.util.Collections.emptyIterator;
 
 /**
  * Default implementation of {@link HttpHeaders}.
+ *
+ * @apiNote It is an implementation detail that this class extends {@link MultiMap}. The multi-map itself is not part
+ * of the public API for this class. Only the methods declared in {@link HttpHeaders} are considered public API.
  */
-@UnstableApi
 public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> implements HttpHeaders {
     protected final boolean validateNames;
     protected final boolean validateCookies;
@@ -72,7 +73,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
      * @param validateCookies {@code true} to validate cookie contents when parsing.
      * @param validateValues {@code true} to validate header values.
      */
-    protected DefaultHttpHeaders(final int arraySizeHint, final boolean validateNames, final boolean validateCookies,
+    public DefaultHttpHeaders(final int arraySizeHint, final boolean validateNames, final boolean validateCookies,
                        final boolean validateValues) {
         super(arraySizeHint);
         this.validateNames = validateNames;
@@ -94,7 +95,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             return null;
         }
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(COOKIE, e.getKey())) {
                 HttpCookiePair cookiePair = parseCookiePair(e.value, name);
@@ -115,7 +115,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         final BucketHead<CharSequence, CharSequence> bucketHead = entries[i];
         if (bucketHead != null) {
             MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-            assert e != null;
             do {
                 if (e.keyHash == keyHash && contentEqualsIgnoreCase(SET_COOKIE, e.getKey())) {
                     HttpSetCookie setCookie = HeaderUtils.parseSetCookie(e.value, name, validateCookies);
@@ -137,7 +136,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             return emptyIterator();
         }
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(COOKIE, e.getKey())) {
                 return new CookiesIterator(keyHash, e);
@@ -155,7 +153,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             return emptyIterator();
         }
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(COOKIE, e.getKey())) {
                 return new CookiesByNameIterator(keyHash, e, name);
@@ -173,7 +170,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             return emptyIterator();
         }
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(SET_COOKIE, e.getKey())) {
                 return new SetCookiesIterator(e);
@@ -191,7 +187,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             return emptyIterator();
         }
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(SET_COOKIE, e.getKey())) {
                 HttpSetCookie setCookie = HeaderUtils.parseSetCookie(e.value, name, validateCookies);
@@ -213,7 +208,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             return emptyIterator();
         }
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(SET_COOKIE, e.getKey())) {
                 // In the future we could attempt to delay full parsing of the cookie until after the domain/path have
@@ -238,7 +232,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         final BucketHead<CharSequence, CharSequence> bucketHead = entries[index(keyHash)];
         if (bucketHead != null) {
             MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-            assert e != null;
             do {
                 if (e.keyHash == keyHash && contentEqualsIgnoreCase(COOKIE, e.getKey())) {
                     e.value = e.value + "; " + encoded;
@@ -269,7 +262,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         final int beforeSize = size();
         List<CharSequence> cookiesToAdd = null;
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(COOKIE, e.getKey())) {
                 CharSequence newHeaderValue = HeaderUtils.removeCookiePairs(e.value, name);
@@ -310,7 +302,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         }
         int sizeBefore = size();
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(SET_COOKIE, e.getKey()) &&
                     isSetCookieNameMatches(e.value, name)) {
@@ -334,7 +325,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         }
         int sizeBefore = size();
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == keyHash && contentEqualsIgnoreCase(SET_COOKIE, e.getKey())) {
                 // In the future we could attempt to delay full parsing of the cookie until after the domain/path have
@@ -726,7 +716,6 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         }
         final int sizeBefore = size();
         MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
-        assert e != null;
         do {
             if (e.keyHash == nameHash && equals(name, e.getKey()) &&
                     (caseSensitive ? contentEquals(value, e.value) : contentEqualsIgnoreCase(value, e.value))) {

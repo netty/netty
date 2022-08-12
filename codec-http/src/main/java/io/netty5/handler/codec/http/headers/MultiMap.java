@@ -30,6 +30,7 @@
 package io.netty5.handler.codec.http.headers;
 
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -72,6 +73,7 @@ import static java.util.Objects.requireNonNull;
  * @param <V> The type of value.
  */
 @UnstableApi
+@Internal
 public abstract class MultiMap<K, V> {
     final BucketHead<K, V>[] entries;
     @Nullable
@@ -93,6 +95,7 @@ public abstract class MultiMap<K, V> {
      * @param key The key to create the hash code for.
      * @return a hash code for {@code key} used as an index in this {@link MultiMap}.
      */
+    @Internal
     protected abstract int hashCode(K key);
 
     /**
@@ -102,6 +105,7 @@ public abstract class MultiMap<K, V> {
      * @param key2 The second key.
      * @return {@code true} if {@code key1} and {@code key2} are equal.
      */
+    @Internal
     protected abstract boolean equals(K key1, K key2);
 
     /**
@@ -112,6 +116,7 @@ public abstract class MultiMap<K, V> {
      * @return {@code true} if the {@link #hashCode(Object)} and {@link #equals(Object, Object)} strategy are compatible
      * with {@code multiMap}.
      */
+    @Internal
     protected abstract boolean isKeyEqualityCompatible(MultiMap<? extends K, ? extends V> multiMap);
 
     /**
@@ -119,6 +124,7 @@ public abstract class MultiMap<K, V> {
      *
      * @param key The key which will be inserted.
      */
+    @Internal
     protected abstract K validateKey(K key);
 
     /**
@@ -126,6 +132,7 @@ public abstract class MultiMap<K, V> {
      *
      * @param value The value which will be inserted.
      */
+    @Internal
     protected abstract V validateValue(V value);
 
     /**
@@ -134,6 +141,7 @@ public abstract class MultiMap<K, V> {
      * @param value the value to generate a hash code for.
      * @return a hash code for {@code value} using during equality comparisons and {@link #hashCode(Object)}.
      */
+    @Internal
     protected abstract int hashCodeForValue(V value);
 
     /**
@@ -143,6 +151,7 @@ public abstract class MultiMap<K, V> {
      * @param value2 The second value.
      * @return {@code true} if {@code value1} and {@code value2} are equal.
      */
+    @Internal
     protected abstract boolean equalsForValue(V value1, V value2);
 
     /**
@@ -176,10 +185,12 @@ public abstract class MultiMap<K, V> {
         return names;
     }
 
+    @Internal
     public final int size() {
         return size;
     }
 
+    @Internal
     public final boolean isEmpty() {
         return lastBucketHead == null;
     }
@@ -219,6 +230,7 @@ public abstract class MultiMap<K, V> {
         return emptyIterator();
     }
 
+    @Internal
     public final boolean contains(final K key, final V value) {
         return contains(key, value, this::equalsForValue);
     }
@@ -549,6 +561,7 @@ public abstract class MultiMap<K, V> {
         }
     }
 
+    @Internal
     protected abstract class EntryIterator<T> implements Iterator<T> {
         @Nullable
         private MultiMapEntry<K, V> previous;
@@ -683,7 +696,6 @@ public abstract class MultiMap<K, V> {
         BucketHead<K, V> prevBucketHead;
         @Nullable
         BucketHead<K, V> nextBucketHead;
-        @Nullable
         MultiMapEntry<K, V> entry;
 
         BucketHead(@Nullable final BucketHead<K, V> prevBucketHead, final @Nullable MultiMapEntry<K, V> entry) {

@@ -29,6 +29,7 @@
  */
 package io.netty5.handler.codec.http.headers;
 
+import io.netty5.util.AsciiString;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -57,6 +58,11 @@ public interface HttpHeaders extends Iterable<Entry<CharSequence, CharSequence>>
     /**
      * Create a header instance with the given size hint, and the given validation checks turned on.
      *
+     * @param sizeHint A hint as to how large the hash data structure should be.
+     *                 The next positive power of two will be used. An upper bound may be enforced.
+     * @param checkNames {@code true} to validate header names.
+     * @param checkCookies {@code true} to validate cookie contents when parsing.
+     * @param checkValues {@code true} to validate header values.
      * @return A new empty header instance with the given configuration.
      */
     static HttpHeaders newHeaders(int sizeHint, boolean checkNames, boolean checkCookies, boolean checkValues) {
@@ -148,18 +154,22 @@ public interface HttpHeaders extends Iterable<Entry<CharSequence, CharSequence>>
      * @param value the header value of the header to find.
      * @return {@code true} if a {@code name}, {@code value} pair exists.
      */
-    boolean contains(CharSequence name, CharSequence value);
+    default boolean contains(CharSequence name, CharSequence value) {
+        return AsciiString.contentEquals(get(name), value);
+    }
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
      * <p>
-     * Case insensitive compare is done on the value.
+     * Case-insensitive compare is done on the value.
      *
      * @param name the name of the header to find.
      * @param value the value of the header to find.
      * @return {@code true} if found.
      */
-    boolean containsIgnoreCase(CharSequence name, CharSequence value);
+    default boolean containsIgnoreCase(CharSequence name, CharSequence value) {
+        return AsciiString.contentEqualsIgnoreCase(get(name), value);
+    }
 
     /**
      * Returns the number of headers in this object.
@@ -173,7 +183,9 @@ public interface HttpHeaders extends Iterable<Entry<CharSequence, CharSequence>>
      *
      * @return {@code true} if {@link #size()} equals {@code 0}.
      */
-    boolean isEmpty();
+    default boolean isEmpty() {
+        return size() == 0;
+    }
 
     /**
      * Returns a {@link Set} of all header names in this object. The returned {@link Set} cannot be modified.
@@ -312,7 +324,13 @@ public interface HttpHeaders extends Iterable<Entry<CharSequence, CharSequence>>
      * @param values the values of the header.
      * @return {@code this}.
      */
-    HttpHeaders set(CharSequence name, CharSequence... values);
+    default HttpHeaders set(CharSequence name, CharSequence... values) {
+        remove(name);
+        for (CharSequence value : values) {
+            add(name, value);
+        }
+        return this;
+    }
 
     /**
      * Clears the current header entries and copies all header entries of the specified {@code headers} object.

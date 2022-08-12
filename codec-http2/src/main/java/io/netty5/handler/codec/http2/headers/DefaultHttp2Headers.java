@@ -16,7 +16,8 @@
 package io.netty5.handler.codec.http2.headers;
 
 import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
-import io.netty5.util.internal.UnstableApi;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.MultiMap;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -25,7 +26,12 @@ import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-@UnstableApi
+/**
+ * Default implementation of {@link Http2Headers}.
+ *
+ * @apiNote It is an implementation detail that this class extends {@link MultiMap}. The multi-map itself is not part
+ * of the public API for this class. Only the methods declared in {@link HttpHeaders} are considered public API.
+ */
 public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Headers {
     /**
      * Create a new instance.
