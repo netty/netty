@@ -529,7 +529,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                         // nothing was read, release the buffer.
                         buf.close();
                         readSink.processRead(attemptedBytesRead, actualBytesRead, null);
-                        return ReadState.Closed;
+
+                        return actualBytesRead == 0 ? ReadState.All : ReadState.Closed;
                     }
                     packet = new DatagramPacket(buf, localAddress(), remoteAddress());
                 } else {

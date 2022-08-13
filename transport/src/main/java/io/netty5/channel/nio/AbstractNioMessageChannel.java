@@ -25,16 +25,12 @@ import io.netty5.channel.ReadHandleFactory;
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
 public abstract class AbstractNioMessageChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
         extends AbstractNioChannel<P, L, R> {
-    private final List<Object> readBuf = new ArrayList<>();
 
     /**
      * @see AbstractNioChannel#AbstractNioChannel(Channel, EventLoop,
