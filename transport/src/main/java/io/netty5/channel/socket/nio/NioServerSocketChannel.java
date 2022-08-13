@@ -241,7 +241,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
         SocketChannel ch = SocketUtils.accept(javaChannel());
         try {
             if (ch != null) {
-                if (readSink.read(0, 0,
+                if (readSink.processRead(0, 0,
                         new NioSocketChannel(this, childEventLoopGroup().next(), ch, family))) {
                     return 1;
                 }
@@ -256,7 +256,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
                 logger.warn("Failed to close a socket.", t2);
             }
         }
-        readSink.read(0, 0, null);
+        readSink.processRead(0, 0, null);
         return 0;
     }
 

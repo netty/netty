@@ -108,10 +108,10 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
         do {
             Object m = inboundBuffer.poll();
             if (m == null) {
-                readSink.read(0, 0, null);
+                readSink.processRead(0, 0, null);
                 break;
             }
-            continueReading = readSink.read(0, 0, m);
+            continueReading = readSink.processRead(0, 0, m);
         } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
         return false;
     }

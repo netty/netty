@@ -535,7 +535,7 @@ public final class EpollSocketChannel
                 // to handle direct buffers.
                 buffer = readBufferAllocator.allocate(bufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     return ReadState.Partial;
                 }
                 assert buffer.isDirect();
@@ -547,14 +547,14 @@ public final class EpollSocketChannel
                     // nothing was read, release the buffer.
                     Resource.dispose(buffer);
                     buffer = null;
-                    readSink.read(attemptedBytesRead, actualBytesRead, null);
+                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
 
                     if (actualBytesRead < 0) {
                         return ReadState.Closed;
                     }
                     return ReadState.All;
                 }
-                continueReading = readSink.read(attemptedBytesRead, actualBytesRead, buffer);
+                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
                 buffer = null;
             } while (continueReading && readMore && !isShutdown(ChannelShutdownDirection.Inbound));
             if (readMore) {
@@ -1171,14 +1171,14 @@ public final class EpollSocketChannel
             int readFd = socket.recvFd();
             switch(readFd) {
                 case 0:
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     return ReadState.All;
                 case -1:
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     closeTransport(newPromise());
                     return ReadState.Closed;
                 default:
-                    continueReading = readSink.read(0, 0, new FileDescriptor(readFd));
+                    continueReading = readSink.processRead(0, 0, new FileDescriptor(readFd));
                     break;
             }
         } while (continueReading

@@ -358,11 +358,11 @@ public final class EpollServerSocketChannel
         do {
             int acceptedFd = socket.accept(acceptedAddress);
             if (acceptedFd == -1) {
-                readSink.read(0, 0, null);
+                readSink.processRead(0, 0, null);
                 // this means everything was handled for now
                 return ReadState.All;
             }
-            continueReading = readSink.read(0, 0,
+            continueReading = readSink.processRead(0, 0,
                     newChildChannel(acceptedFd, acceptedAddress, 1, acceptedAddress[0]));
         } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
         return ReadState.Partial;

@@ -492,7 +492,7 @@ public final class KQueueDatagramChannel
             do {
                 buffer = readBufferAllocator.allocate(recvBufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     break;
                 }
                 assert buffer.isDirect();
@@ -516,7 +516,7 @@ public final class KQueueDatagramChannel
                         // nothing was read, release the buffer.
                         buffer.close();
 
-                        readSink.read(attemptedBytesRead, actualBytesRead, null);
+                        readSink.processRead(attemptedBytesRead, actualBytesRead, null);
                         // Signal closure
                         if (actualBytesRead == -1) {
                             totalReadyBytes = -1;
@@ -559,7 +559,7 @@ public final class KQueueDatagramChannel
                     }
 
                     if (remoteAddress == null) {
-                        readSink.read(attemptedBytesRead, 0, null);
+                        readSink.processRead(attemptedBytesRead, 0, null);
                         buffer.close();
                         break;
                     }
@@ -571,7 +571,7 @@ public final class KQueueDatagramChannel
 
                     packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                 }
-                continueReading = readSink.read(
+                continueReading = readSink.processRead(
                         attemptedBytesRead, actualBytesRead, packet);
                 buffer = null;
             } while (continueReading);

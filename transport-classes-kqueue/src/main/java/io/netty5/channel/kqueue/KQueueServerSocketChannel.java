@@ -374,11 +374,11 @@ public final class KQueueServerSocketChannel extends
             int acceptFd = socket.accept(acceptedAddress);
             if (acceptFd == -1) {
                 // this means everything was handled for now
-                readSink.read(0, 0, null);
+                readSink.processRead(0, 0, null);
                 break;
             }
             totalBytesRead++;
-            continueReading = readSink.read(0, 0,
+            continueReading = readSink.processRead(0, 0,
                     newChildChannel(acceptFd, acceptedAddress, 1, acceptedAddress[0]));
         } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
         return totalBytesRead;

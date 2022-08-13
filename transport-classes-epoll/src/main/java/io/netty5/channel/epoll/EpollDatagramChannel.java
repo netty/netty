@@ -515,7 +515,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             do {
                 buf = readBufferAllocator.allocate(allocator, readSink.estimatedBufferCapacity());
                 if (buf == null) {
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     break;
                 }
                 int attemptedBytesRead = buf.writableBytes();
@@ -528,7 +528,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     if (actualBytesRead <= 0) {
                         // nothing was read, release the buffer.
                         buf.close();
-                        readSink.read(attemptedBytesRead, actualBytesRead, null);
+                        readSink.processRead(attemptedBytesRead, actualBytesRead, null);
                         return ReadState.Closed;
                     }
                     packet = new DatagramPacket(buf, localAddress(), remoteAddress());
@@ -538,7 +538,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
 
                     if (remoteAddress == null) {
-                        readSink.read(attemptedBytesRead, 0, null);
+                        readSink.processRead(attemptedBytesRead, 0, null);
                         buf.close();
                         return ReadState.All;
                     }
@@ -552,7 +552,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     packet = new DatagramPacket(buf, localAddress, remoteAddress);
                 }
 
-                continueReading = readSink.read(attemptedBytesRead, actualBytesRead, packet);
+                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, packet);
                 buf = null;
             } while (continueReading);
             return ReadState.Partial;
@@ -578,7 +578,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             int datagramSize = getMaxDatagramPayloadSize();
             Buffer buf = readBufferAllocator.allocate(allocator, readSink.estimatedBufferCapacity());
             if (buf == null) {
-                readSink.read(0, 0, null);
+                readSink.processRead(0, 0, null);
                 return ReadState.Partial;
             }
             // Only try to use recvmmsg if its really supported by the running system.
@@ -635,12 +635,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             });
             final int totalBytesRead = initialWritableBytes - buf.writableBytes();
             if (totalBytesRead == 0) {
-                readSink.read(attemptedBytesRead, totalBytesRead, null);
+                readSink.processRead(attemptedBytesRead, totalBytesRead, null);
                 // nothing was read, release the buffer.
                 return ReadingState.Nothing;
             }
 
-            boolean continueReading = readSink.read(attemptedBytesRead, totalBytesRead,
+            boolean continueReading = readSink.processRead(attemptedBytesRead, totalBytesRead,
                     new DatagramPacket(buf, localAddress(), remoteAddress()));
             buf = null;
             return continueReading ? ReadingState.Continue : ReadingState.Stop;
@@ -690,7 +690,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     private static boolean processPacket(ReadSink readSink,
                                          int attemptedBytesRead, int bytesRead, AddressedEnvelope<?, ?> packet) {
         // Avoid signalling end-of-data for zero-sized datagrams.
-        return readSink.read(attemptedBytesRead, Math.max(1, bytesRead), packet);
+        return readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead), packet);
     }
 
     private static boolean processPacketList(BufferAllocator allocator, ReadSink readSink,
@@ -699,7 +699,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         boolean continueReading = true;
         for (int i = 0; i < messagesRead; i++) {
             // Avoid signalling end-of-data for zero-sized datagrams.
-            if (!readSink.read(attemptedBytesRead, Math.max(1, bytesRead),
+            if (!readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead),
                     packetList.set(i, allocator.allocate(0)))) {
                 continueReading = false;
             }
@@ -722,7 +722,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
             int bytesReceived = socket.recvmsg(msg);
             if (!msg.hasSender()) {
-                readSink.read(attemptedBytesRead, 0, null);
+                readSink.processRead(attemptedBytesRead, 0, null);
                 return ReadingState.Nothing;
             }
             buf.writerOffset(initialWriterOffset + bytesReceived);
@@ -772,7 +772,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
             int received = socket.recvmmsg(packets, 0, array.count());
             if (received == 0) {
-                readSink.read(attemptedBytesRead, 0, null);
+                readSink.processRead(attemptedBytesRead, 0, null);
                 return ReadingState.Nothing;
             }
             int bytesReceived = received * datagramSize;

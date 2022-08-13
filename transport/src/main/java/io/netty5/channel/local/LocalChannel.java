@@ -223,10 +223,10 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         do {
             Object received = inboundBuffer.poll();
             if (received == null) {
-                readSink.read(0, 0, null);
+                readSink.processRead(0, 0, null);
                 break;
             }
-            continueReading = readSink.read(0, 0, received);
+            continueReading = readSink.processRead(0, 0, received);
         } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
         return false;
     }

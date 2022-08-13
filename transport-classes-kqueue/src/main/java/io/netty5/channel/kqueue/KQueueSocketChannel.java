@@ -514,15 +514,15 @@ public final class KQueueSocketChannel
             int recvFd = socket.recvFd();
             switch(recvFd) {
                 case 0:
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     break readLoop;
                 case -1:
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     closeTransportNow();
                     return totalBytesRead;
                 default:
                     totalBytesRead ++;
-                    continueReading = readSink.read(0, 0, new FileDescriptor(recvFd));
+                    continueReading = readSink.processRead(0, 0, new FileDescriptor(recvFd));
                     break;
             }
         } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
@@ -867,7 +867,7 @@ public final class KQueueSocketChannel
             do {
                 buffer = readBufferAllocator.allocate(recvBufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     break;
                 }
                 // we use a direct buffer here as the native implementations only be able
@@ -880,14 +880,14 @@ public final class KQueueSocketChannel
                     // nothing was read, release the buffer.
                     Resource.dispose(buffer);
                     buffer = null;
-                    readSink.read(attemptedBytesRead, actualBytesRead, null);
+                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
                     if (actualBytesRead < 0) {
                         return -1;
                     }
                     break;
                 }
                 totalBytesRead += actualBytesRead;
-                continueReading = readSink.read(attemptedBytesRead, actualBytesRead, buffer);
+                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
                 buffer = null;
             } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
         } catch (Throwable t) {

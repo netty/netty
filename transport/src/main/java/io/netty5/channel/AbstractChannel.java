@@ -1888,12 +1888,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
          * Process the read message and fire it through the {@link ChannelPipeline}
          *
          * @param attemptedBytesRead    The number of  bytes the read operation did attempt to read.
-         * @param actualBytesRead       The number of bytes from the previous read operation. This may be negative if a
-         *                              read error occurs.
+         * @param actualBytesRead       The number of bytes the read operation actually read.
          * @param message               the read message or {@code null} if none was read.
          * @return                      {@code true} if the read loop should continue reading, {@code false} otherwise.
          */
-        public boolean read(int attemptedBytesRead, int actualBytesRead, Object message) {
+        public boolean processRead(int attemptedBytesRead, int actualBytesRead, Object message) {
             if (message == null) {
                 readHandle.lastRead(attemptedBytesRead, actualBytesRead, 0);
                 return false;
@@ -1907,7 +1906,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         /**
-         * Guess the capacity for the next receive buffer that is probably large enough to read all inbound data and
+         * Guess the capacity for the next read buffer that is probably large enough to read all inbound data and
          * small enough not to waste its space.
          */
         public int estimatedBufferCapacity() {

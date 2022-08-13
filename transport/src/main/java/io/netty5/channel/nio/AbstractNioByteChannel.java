@@ -69,7 +69,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
             do {
                 buffer = readBufferAllocator.allocate(bufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readSink.read(0, 0, null);
+                    readSink.processRead(0, 0, null);
                     break;
                 }
                 int attemptedBytesRead = buffer.writableBytes();
@@ -78,12 +78,12 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
                     // nothing was read. release the buffer.
                     Resource.dispose(buffer);
                     buffer = null;
-                    readSink.read(attemptedBytesRead, actualBytesRead, null);
+                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
                     close = actualBytesRead < 0;
                     break;
                 }
 
-                continueReading = readSink.read(attemptedBytesRead, actualBytesRead, buffer);
+                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
                 buffer = null;
             } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 

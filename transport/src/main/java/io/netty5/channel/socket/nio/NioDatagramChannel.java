@@ -377,7 +377,7 @@ public final class NioDatagramChannel
     protected int doReadMessages(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception {
         Buffer data = readBufferAllocator.allocate(bufferAllocator(), readSink.estimatedBufferCapacity());
         if (data == null) {
-            readSink.read(0, 0, null);
+            readSink.processRead(0, 0, null);
             return 0;
         }
         int attemptedBytesRead = data.writableBytes();
@@ -387,12 +387,12 @@ public final class NioDatagramChannel
             data.forEachWritable(0, receiveDatagram);
             SocketAddress remoteAddress = receiveDatagram.remoteAddress;
             if (remoteAddress == null) {
-                readSink.read(attemptedBytesRead, 0, null);
+                readSink.processRead(attemptedBytesRead, 0, null);
                 return -1;
             }
             int actualBytesRead = receiveDatagram.bytesReceived;
             data.skipWritableBytes(actualBytesRead);
-            if (readSink.read(attemptedBytesRead, actualBytesRead,
+            if (readSink.processRead(attemptedBytesRead, actualBytesRead,
                     new DatagramPacket(data, localAddress(), remoteAddress))) {
                 free = false;
                 return 1;
