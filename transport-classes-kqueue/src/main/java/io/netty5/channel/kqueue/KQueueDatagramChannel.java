@@ -21,12 +21,10 @@ import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
@@ -484,26 +482,22 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    int readReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                  BufferAllocator recvBufferAllocator) {
-        final ChannelPipeline pipeline = pipeline();
-
-        Throwable exception = null;
+    int readReady(ReadBufferAllocator readBufferAllocator,
+                  BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception {
         Buffer buffer = null;
         int totalReadyBytes = 0;
         try {
             boolean connected = isConnected();
             boolean continueReading;
             do {
-                buffer = readBufferAllocator.allocate(recvBufferAllocator, readHandle.estimatedBufferCapacity());
+                buffer = readBufferAllocator.allocate(recvBufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readHandle.lastRead(0, 0, 0);
+                    readSink.processRead(0, 0, null);
                     break;
                 }
                 assert buffer.isDirect();
                 int attemptedBytesRead = buffer.writableBytes();
-                final int actualBytesRead;
-
+                int actualBytesRead = 0;
                 final DatagramPacket packet;
                 if (connected) {
                     try {
@@ -517,12 +511,16 @@ public final class KQueueDatagramChannel
                         }
                         throw e;
                     }
-                    continueReading = readHandle.lastRead(
-                            attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+
                     if (actualBytesRead <= 0) {
                         // nothing was read, release the buffer.
                         buffer.close();
-                        buffer = null;
+
+                        readSink.processRead(attemptedBytesRead, actualBytesRead, null);
+                        // Signal closure
+                        if (actualBytesRead == -1) {
+                            totalReadyBytes = -1;
+                        }
                         break;
                     }
                     totalReadyBytes += actualBytesRead;
@@ -530,14 +528,13 @@ public final class KQueueDatagramChannel
                 } else {
                     SocketAddress localAddress = null;
                     SocketAddress remoteAddress = null;
-                    int bytesRead = 0;
                     if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
                         final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
                         buffer.forEachWritable(0, recvFrom);
                         DomainDatagramSocketAddress recvAddress = recvFrom.remoteAddress();
                         if (recvAddress != null) {
                             remoteAddress = recvAddress;
-                            bytesRead = recvAddress.receivedAmount();
+                            actualBytesRead = recvAddress.receivedAmount();
                             localAddress = recvAddress.localAddress();
                         }
                     } else {
@@ -556,45 +553,33 @@ public final class KQueueDatagramChannel
                             if (datagramSocketAddress != null) {
                                 remoteAddress = datagramSocketAddress;
                                 localAddress = datagramSocketAddress.localAddress();
-                                bytesRead = datagramSocketAddress.receivedAmount();
+                                actualBytesRead = datagramSocketAddress.receivedAmount();
                             }
                         }
                     }
 
                     if (remoteAddress == null) {
-                        readHandle.lastRead(attemptedBytesRead, -1, 0);
+                        readSink.processRead(attemptedBytesRead, 0, null);
                         buffer.close();
                         break;
                     }
                     if (localAddress == null) {
                         localAddress = localAddress();
                     }
-                    continueReading = readHandle.lastRead(attemptedBytesRead, bytesRead, 1);
-                    totalReadyBytes += bytesRead;
-                    buffer.skipWritableBytes(bytesRead);
+                    totalReadyBytes += actualBytesRead;
+                    buffer.skipWritableBytes(actualBytesRead);
 
                     packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                 }
-
-                readPending = false;
-                pipeline.fireChannelRead(packet);
-
+                continueReading = readSink.processRead(
+                        attemptedBytesRead, actualBytesRead, packet);
                 buffer = null;
             } while (continueReading);
         } catch (Throwable t) {
             if (buffer != null) {
                 buffer.close();
             }
-            exception = t;
-        }
-
-        readHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-
-        if (exception != null) {
-            pipeline.fireChannelExceptionCaught(exception);
-        } else {
-            readIfIsAutoRead();
+            throw t;
         }
         return totalReadyBytes;
     }

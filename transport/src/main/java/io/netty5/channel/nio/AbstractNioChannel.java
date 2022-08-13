@@ -18,7 +18,6 @@ package io.netty5.channel.nio;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
@@ -46,12 +45,8 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
     private final SelectableChannel ch;
-    private final Runnable clearReadPendingRunnable = this::clearReadPending0;
-    protected final int readInterestOp;
-    volatile SelectionKey selectionKey;
-    boolean readPending;
-
-    private ReadBufferAllocator readBufferAllocator;
+    private final int readInterestOp;
+    private volatile SelectionKey selectionKey;
 
     private final NioProcessor nioProcessor = new NioProcessor() {
         @Override
@@ -103,13 +98,13 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                     // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to
                     // write
-                    forceFlush();
+                    writeFlushedNow();
                 }
 
                 // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
                 // to a spin loop
                 if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                    readNow(readBufferAllocator);
+                    readNow();
                 }
             } catch (CancelledKeyException ignored) {
                 closeTransportNow();
@@ -156,7 +151,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return ch.isOpen();
     }
 
@@ -168,28 +163,12 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
      * Return the current {@link SelectionKey} or {@code null} if the underlying channel was not registered with the
      * {@link Selector} yet.
      */
-    protected SelectionKey selectionKey() {
+    protected final SelectionKey selectionKey() {
         return selectionKey;
     }
 
-    /**
-     * Set read pending to {@code false}.
-     */
-    protected final void clearReadPending() {
-        EventLoop eventLoop = executor();
-        if (eventLoop.inEventLoop()) {
-            clearReadPending0();
-        } else {
-            eventLoop.execute(clearReadPendingRunnable);
-        }
-    }
-
-    private void clearReadPending0() {
-        readPending = false;
-        removeReadOp();
-    }
-
-    protected final void removeReadOp() {
+    @Override
+    protected final void doClearScheduledRead() {
         SelectionKey key = selectionKey();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
@@ -205,28 +184,19 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     @Override
-    protected final void writeFlushed() {
+    protected final boolean isWriteFlushedScheduled() {
         // Flush immediately only when there's no pending flush.
-        // If there's a pending flush operation, event loop will call forceFlush() later,
-        // and thus there's no need to call it now.
-        if (!isFlushPending()) {
-            super.writeFlushed();
-        }
-    }
-
-    final void forceFlush() {
-        // directly call super.flush0() to force a flush now
-        super.writeFlushed();
-    }
-
-    private boolean isFlushPending() {
         SelectionKey selectionKey = selectionKey();
         return selectionKey != null && selectionKey.isValid()
                 && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
     }
 
     @Override
-    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
+    protected final void doRead(boolean wasReadPendingAlready) {
+        if (wasReadPendingAlready) {
+            // We already had doRead(...) called before and so set the interestedOps.
+            return;
+        }
         // Channel.read() or ChannelHandlerContext.read() was called
         final SelectionKey selectionKey = this.selectionKey;
         if (!selectionKey.isValid()) {
@@ -234,8 +204,6 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
             return;
         }
 
-        readPending = true;
-        this.readBufferAllocator = readBufferAllocator;
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
             selectionKey.interestOps(interestOps | readInterestOp);
@@ -243,7 +211,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected final void doClose() throws Exception {
         javaChannel().close();
     }
 
@@ -293,8 +261,6 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
             return buf.split();
         }
     }
-
-    protected abstract void readNow(ReadBufferAllocator readBufferAllocator);
 
     private void closeTransportNow() {
         closeTransport(newPromise());

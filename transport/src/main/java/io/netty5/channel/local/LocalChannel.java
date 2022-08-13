@@ -26,9 +26,7 @@ import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
@@ -59,10 +57,10 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
     // To further optimize this we could write our own SPSC queue.
     final Queue<Object> inboundBuffer = PlatformDependent.newSpscQueue();
-    private final Runnable readTask = () -> {
+    private final Runnable readNowTask = () -> {
         // Ensure the inboundBuffer is not empty as readInbound() will always call fireChannelReadComplete()
         if (!inboundBuffer.isEmpty()) {
-            readInbound();
+            readNow();
         }
     };
 
@@ -219,23 +217,18 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         }
     }
 
-    private void readInbound() {
-        ReadHandleFactory.ReadHandle readHandle = readHandle();
-        ChannelPipeline pipeline = pipeline();
+    @Override
+    protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) {
         boolean continueReading;
         do {
             Object received = inboundBuffer.poll();
             if (received == null) {
-                readHandle.lastRead(0, 0, 0);
+                readSink.processRead(0, 0, null);
                 break;
             }
-            continueReading = readHandle.lastRead(0, 0, 1);
-            pipeline.fireChannelRead(received);
+            continueReading = readSink.processRead(0, 0, received);
         } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
-
-        readHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-        readIfIsAutoRead();
+        return false;
     }
 
     private static final class ReaderStackDepth {
@@ -262,7 +255,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     };
 
     @Override
-    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
+    protected void doRead(boolean wasReadPendingAlready) throws Exception {
         if (readInProgress) {
             return;
         }
@@ -276,13 +269,13 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         final ReaderStackDepth readerStackDepth = STACK_DEPTH.get();
         if (readerStackDepth.incrementIfPossible()) {
             try {
-                readInbound();
+                readNow();
             } finally {
                 readerStackDepth.decrement();
             }
         } else {
             try {
-                executor().execute(readTask);
+                executor().execute(readNowTask);
             } catch (Throwable cause) {
                 logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
                 close();
@@ -398,7 +391,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         // forward data later on.
         if (peer.readInProgress && !peer.inboundBuffer.isEmpty()) {
             peer.readInProgress = false;
-            peer.readInbound();
+            peer.readNow();
         }
     }
 

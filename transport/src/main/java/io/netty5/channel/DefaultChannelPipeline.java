@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.util.ResourceLeakDetector;
 import io.netty5.util.concurrent.EventExecutor;
@@ -47,6 +48,8 @@ import static io.netty5.channel.DefaultChannelHandlerContext.safeExecute;
  * by a {@link Channel} implementation when the {@link Channel} is created.
  */
 public abstract class DefaultChannelPipeline implements ChannelPipeline {
+
+    static final ReadBufferAllocator DEFAULT_READ_BUFFER_ALLOCATOR = BufferAllocator::allocate;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
     private static final String HEAD_NAME = generateName0(HeadHandler.class);

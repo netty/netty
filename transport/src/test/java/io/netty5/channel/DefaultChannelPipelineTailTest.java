@@ -277,7 +277,12 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
+        protected void doRead(boolean wasReadPendingAlready) throws Exception {
+        }
+
+        @Override
+        protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) {
+            return false;
         }
 
         @Override

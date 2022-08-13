@@ -59,8 +59,6 @@ import static java.util.Objects.requireNonNull;
 
 final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
-    private static final ReadBufferAllocator DEFAULT_READ_BUFFER_ALLOCATOR = BufferAllocator::allocate;
-
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelHandlerContext.class);
 
     /**
@@ -790,7 +788,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelHandlerContext read() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeRead(DEFAULT_READ_BUFFER_ALLOCATOR);
+            findAndInvokeRead(DefaultChannelPipeline.DEFAULT_READ_BUFFER_ALLOCATOR);
         } else {
             Tasks tasks = invokeTasks();
             executor.execute(tasks.invokeReadTask);
@@ -801,7 +799,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeRead() {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_READ);
         if (ctx != null) {
-            ctx.invokeRead(DEFAULT_READ_BUFFER_ALLOCATOR);
+            ctx.invokeRead(DefaultChannelPipeline.DEFAULT_READ_BUFFER_ALLOCATOR);
         }
     }
 

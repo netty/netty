@@ -713,8 +713,13 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected void doRead(ReadBufferAllocator readBufferAllocator) throws Exception {
+    protected void doRead(boolean wasReadPendingAlready) throws Exception {
         // NOOP
+    }
+
+    @Override
+    protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) {
+        return false;
     }
 
     @Override

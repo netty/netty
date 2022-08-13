@@ -21,13 +21,11 @@ import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -497,51 +495,38 @@ public final class KQueueSocketChannel
     }
 
     @Override
-    int readReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                  BufferAllocator recvBufferAllocator) {
+    int readReady(ReadBufferAllocator readBufferAllocator,
+            BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX &&
                 getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
-            return readReadyFd(readHandle);
+            return readReadyFd(readSink);
         }
-        return readReadyBytes(readHandle, readBufferAllocator, recvBufferAllocator);
+        return readReadyBytes(readBufferAllocator, recvBufferAllocator, readSink);
     }
 
-    private int readReadyFd(ReadHandleFactory.ReadHandle readHandle) {
-        final ChannelPipeline pipeline = pipeline();
+    private int readReadyFd(ReadSink readSink) throws Exception {
         int totalBytesRead = 0;
-        try {
-            boolean continueReading;
-            readLoop: do {
-                // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
-                // enabled.
-                int recvFd = socket.recvFd();
-                switch(recvFd) {
-                    case 0:
-                        readHandle.lastRead(0, 0, 0);
-                        break readLoop;
-                    case -1:
-                        readHandle.lastRead(0, 0, 0);
-                        closeTransportNow();
-                        return totalBytesRead;
-                    default:
-                        continueReading = readHandle.lastRead(0, 0, 1);
-                        totalBytesRead ++;
-                        readPending = false;
-                        pipeline.fireChannelRead(new FileDescriptor(recvFd));
-                        break;
-                }
-            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
+        boolean continueReading;
+        readLoop: do {
+            // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
+            // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
+            // enabled.
+            int recvFd = socket.recvFd();
+            switch(recvFd) {
+                case 0:
+                    readSink.processRead(0, 0, null);
+                    break readLoop;
+                case -1:
+                    readSink.processRead(0, 0, null);
+                    closeTransportNow();
+                    return totalBytesRead;
+                default:
+                    totalBytesRead ++;
+                    continueReading = readSink.processRead(0, 0, new FileDescriptor(recvFd));
+                    break;
+            }
+        } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
 
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-        } catch (Throwable t) {
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-            pipeline.fireChannelExceptionCaught(t);
-        } finally {
-            readIfIsAutoRead();
-        }
         return totalBytesRead;
     }
 
@@ -873,18 +858,16 @@ public final class KQueueSocketChannel
         }
     }
 
-    private int readReadyBytes(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                               BufferAllocator recvBufferAllocator) {
-        final ChannelPipeline pipeline = pipeline();
+    private int readReadyBytes(ReadBufferAllocator readBufferAllocator,
+            BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception {
         Buffer buffer = null;
-        boolean close = false;
         int totalBytesRead = 0;
         try {
             boolean continueReading;
             do {
-                buffer = readBufferAllocator.allocate(recvBufferAllocator, readHandle.estimatedBufferCapacity());
+                buffer = readBufferAllocator.allocate(recvBufferAllocator, readSink.estimatedBufferCapacity());
                 if (buffer == null) {
-                    readHandle.lastRead(0, 0, 0);
+                    readSink.processRead(0, 0, null);
                     break;
                 }
                 // we use a direct buffer here as the native implementations only be able
@@ -892,77 +875,31 @@ public final class KQueueSocketChannel
                 assert buffer.isDirect();
                 int attemptedBytesRead = buffer.writableBytes();
                 int actualBytesRead = doReadBytes(buffer);
-                continueReading = readHandle.lastRead(
-                        attemptedBytesRead, actualBytesRead, actualBytesRead <= 0 ? 0 : 1);
+
                 if (actualBytesRead <= 0) {
                     // nothing was read, release the buffer.
                     Resource.dispose(buffer);
                     buffer = null;
-                    close = actualBytesRead < 0;
-                    if (close) {
-                        // There is nothing left to read as we received an EOF.
-                        readPending = false;
+                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
+                    if (actualBytesRead < 0) {
+                        return -1;
                     }
                     break;
                 }
                 totalBytesRead += actualBytesRead;
-                readPending = false;
-                pipeline.fireChannelRead(buffer);
+                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
                 buffer = null;
-
-                if (shouldBreakReadReady()) {
-                    // We need to do this for two reasons:
-                    //
-                    // - If the input was shutdown in between (which may be the case when the user did it in the
-                    //   fireChannelRead(...) method we should not try to read again to not produce any
-                    //   miss-leading exceptions.
-                    //
-                    // - If the user closes the channel we need to ensure we not try to read from it again as
-                    //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
-                    //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
-                    //   reading data from a filedescriptor that belongs to another socket then the socket that
-                    //   was "wrapped" by this Channel implementation.
-                    break;
-                }
             } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
-
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-
-            if (close) {
-                shutdownInput(false);
-            } else {
-                readIfIsAutoRead();
-            }
         } catch (Throwable t) {
-            handleReadException(pipeline, buffer, t, close, readHandle);
+            if (buffer != null) {
+                buffer.close();
+            }
+            if (isConnectPending()) {
+                finishConnect();
+            }
+            throw t;
         }
         return totalBytesRead;
-    }
-
-    private void handleReadException(ChannelPipeline pipeline, Buffer buffer, Throwable cause, boolean close,
-                                     ReadHandleFactory.ReadHandle readHandle) {
-        if (buffer.readableBytes() > 0) {
-            readPending = false;
-            pipeline.fireChannelRead(buffer);
-        } else {
-            buffer.close();
-        }
-        if (isConnectPending()) {
-            finishConnect();
-        } else {
-            readHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-            pipeline.fireChannelExceptionCaught(cause);
-
-            // If oom will close the read event, release connection.
-            // See https://github.com/netty/netty/issues/10434
-            if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-                shutdownInput(false);
-            } else {
-                readIfIsAutoRead();
-            }
-        }
     }
 
     private final class KQueueSocketWritableByteChannel extends SocketWritableByteChannel {

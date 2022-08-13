@@ -23,7 +23,6 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.util.NetUtil;
@@ -40,7 +39,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.List;
 
 import static io.netty5.channel.ChannelOption.SO_BACKLOG;
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
@@ -239,18 +237,15 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     }
 
     @Override
-    protected int doReadMessages(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                                 List<Object> buf) throws Exception {
+    protected int doReadMessages(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception {
         SocketChannel ch = SocketUtils.accept(javaChannel());
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch, family));
-                if (readHandle.lastRead(0, 0, 1)) {
+                if (readSink.processRead(0, 0,
+                        new NioSocketChannel(this, childEventLoopGroup().next(), ch, family))) {
                     return 1;
                 }
                 return 0;
-            } else {
-                readHandle.lastRead(0, 0, 0);
             }
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted socket.", t);
@@ -261,7 +256,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
                 logger.warn("Failed to close a socket.", t2);
             }
         }
-        readHandle.lastRead(0, 0, 0);
+        readSink.processRead(0, 0, null);
         return 0;
     }
 
@@ -295,16 +290,5 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     @Override
     protected final Object filterOutboundMessage(Object msg) {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void autoReadCleared() {
-        clearReadPending();
-    }
-
-    // Override just to to be able to call directly via unit tests.
-    @Override
-    protected boolean closeOnReadError(Throwable cause) {
-        return super.closeOnReadError(cause);
     }
 }

@@ -20,12 +20,10 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
@@ -354,37 +352,20 @@ public final class EpollServerSocketChannel
     }
 
     @Override
-    protected boolean epollInReady(ReadHandleFactory.ReadHandle readHandle, ReadBufferAllocator readBufferAllocator,
-                                   BufferAllocator recvBufferAllocator) {
-        final ChannelPipeline pipeline = pipeline();
-        Throwable exception = null;
-        boolean readAll = false;
-        try {
-            boolean continueReading;
-            do {
-                int acceptedFd = socket.accept(acceptedAddress);
-                continueReading = readHandle.lastRead(0, 0, acceptedFd == -1 ? 0 : 1);
-
-                if (acceptedFd == -1) {
-                    // this means everything was handled for now
-                    readAll = true;
-                    break;
-                }
-                readPending = false;
-                pipeline.fireChannelRead(newChildChannel(acceptedFd, acceptedAddress, 1,
-                        acceptedAddress[0]));
-            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
-        } catch (Throwable t) {
-            exception = t;
-        }
-        readHandle.readComplete();
-        pipeline.fireChannelReadComplete();
-
-        if (exception != null) {
-            pipeline.fireChannelExceptionCaught(exception);
-        }
-        readIfIsAutoRead();
-        return readAll;
+    protected ReadState epollInReady(ReadBufferAllocator readBufferAllocator, BufferAllocator recvBufferAllocator,
+                                     ReadSink readSink) throws Exception {
+        boolean continueReading;
+        do {
+            int acceptedFd = socket.accept(acceptedAddress);
+            if (acceptedFd == -1) {
+                readSink.processRead(0, 0, null);
+                // this means everything was handled for now
+                return ReadState.All;
+            }
+            continueReading = readSink.processRead(0, 0,
+                    newChildChannel(acceptedFd, acceptedAddress, 1, acceptedAddress[0]));
+        } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
+        return ReadState.Partial;
     }
 
     @Override
