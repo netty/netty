@@ -18,7 +18,6 @@ package io.netty5.channel.socket.nio;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.WritableComponent;
 import io.netty5.buffer.api.WritableComponentProcessor;
@@ -374,8 +373,8 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doReadMessages(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception {
-        Buffer data = readBufferAllocator.allocate(bufferAllocator(), readSink.estimatedBufferCapacity());
+    protected int doReadMessages(ReadSink readSink) throws Exception {
+        Buffer data = readSink.allocateBuffer();
         if (data == null) {
             readSink.processRead(0, 0, null);
             return 0;

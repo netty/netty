@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -499,21 +498,20 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     @Override
-    protected ReadState epollInReady(ReadBufferAllocator readBufferAllocator, BufferAllocator recvBufferAllocator,
-                                     ReadSink readSink) throws Exception {
+    protected ReadState epollInReady(
+            ReadSink readSink) throws Exception {
         return socket.protocolFamily() == SocketProtocolFamily.UNIX ?
-                doReadBufferDomainSocket(readBufferAllocator, recvBufferAllocator, readSink) :
-                doReadBuffer(readBufferAllocator, recvBufferAllocator, readSink);
+                doReadBufferDomainSocket(readSink) :
+                doReadBuffer(readSink);
     }
 
-    private ReadState doReadBufferDomainSocket(ReadBufferAllocator readBufferAllocator, BufferAllocator allocator,
-                                               ReadSink readSink) throws Exception {
+    private ReadState doReadBufferDomainSocket(ReadSink readSink) throws Exception {
         Buffer buf = null;
         try {
             boolean connected = isConnected();
             boolean continueReading;
             do {
-                buf = readBufferAllocator.allocate(allocator, readSink.estimatedBufferCapacity());
+                buf = readSink.allocateBuffer();
                 if (buf == null) {
                     readSink.processRead(0, 0, null);
                     break;
@@ -571,13 +569,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         Nothing
     }
 
-    private ReadState doReadBuffer(ReadBufferAllocator readBufferAllocator, BufferAllocator allocator,
-                                   ReadSink readSink) throws Exception {
+    private ReadState doReadBuffer(ReadSink readSink) throws Exception {
         boolean connected = isConnected();
         for (;;) {
             final ReadingState state;
             int datagramSize = getMaxDatagramPayloadSize();
-            Buffer buf = readBufferAllocator.allocate(allocator, readSink.estimatedBufferCapacity());
+            Buffer buf = readSink.allocateBuffer();
             if (buf == null) {
                 readSink.processRead(0, 0, null);
                 return ReadState.Partial;
@@ -589,13 +586,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             try {
                 if (numDatagram <= 1) {
                     if (!connected || isUdpGro()) {
-                        state = recvmsg(allocator, readSink, cleanDatagramPacketArray(), buf);
+                        state = recvmsg(readSink, cleanDatagramPacketArray(), buf);
                     } else {
                         state = connectedRead(readSink, buf, datagramSize);
                     }
                 } else {
                     // Try to use scattering reads via recvmmsg(...) syscall.
-                    state = scatteringRead(allocator, readSink, cleanDatagramPacketArray(),
+                    state = scatteringRead(readBufferAllocator(), readSink, cleanDatagramPacketArray(),
                                           buf, datagramSize, numDatagram);
                 }
             } catch (NativeIoException e) {
@@ -708,8 +705,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         return continueReading;
     }
 
-    private ReadingState recvmsg(BufferAllocator allocator, ReadSink readSink, NativeDatagramPacketArray array,
-                                 Buffer buf) throws IOException {
+    private ReadingState recvmsg(ReadSink readSink, NativeDatagramPacketArray array, Buffer buf) throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
             int initialWriterOffset = buf.writerOffset();
@@ -743,7 +739,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // it into the RecyclableArrayList.
                 buf = null;
 
-                continueReading = processPacketList(allocator, readSink, attemptedBytesRead,
+                continueReading = processPacketList(readBufferAllocator(), readSink, attemptedBytesRead,
                         bytesReceived, datagramPackets);
                 datagramPackets.recycle();
                 datagramPackets = null;

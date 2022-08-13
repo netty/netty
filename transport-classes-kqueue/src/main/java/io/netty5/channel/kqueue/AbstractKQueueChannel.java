@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueReadHandle;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -361,14 +360,12 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
-    protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink)
+    protected boolean doReadNow(ReadSink readSink)
             throws Exception {
         maybeMoreDataToRead = false;
 
-        assert readBufferAllocator != null;
-
         try {
-            int readBytes = readReady(readBufferAllocator, ioBufferAllocator(), readSink);
+            int readBytes = readReady(readSink);
             if (readBytes > 0) {
                 this.numberBytesPending -= readBytes;
             } else if (readBytes == -1) {
@@ -393,8 +390,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         return false;
     }
 
-    abstract int readReady(ReadBufferAllocator readBufferAllocator,
-                           BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception;
+    abstract int readReady(ReadSink readSink) throws Exception;
 
     final void writeReady() {
         if (isConnectPending()) {
@@ -545,8 +541,16 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         closeTransport(newPromise());
     }
 
+    @Override
+    protected BufferAllocator readBufferAllocator() {
+        return ioBufferAllocator(super.readBufferAllocator());
+    }
+
     private BufferAllocator ioBufferAllocator() {
-        BufferAllocator alloc = bufferAllocator();
+        return ioBufferAllocator(bufferAllocator());
+    }
+
+    private static BufferAllocator ioBufferAllocator(BufferAllocator alloc) {
         // We need to ensure we always allocate a direct Buffer as we can only use a direct buffer to read via JNI.
         if (!alloc.getAllocationType().isDirect()) {
             return DefaultBufferAllocators.offHeapAllocator();

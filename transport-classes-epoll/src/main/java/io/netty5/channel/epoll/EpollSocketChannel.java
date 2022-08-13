@@ -25,7 +25,6 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -515,17 +514,15 @@ public final class EpollSocketChannel
     }
 
     @Override
-    protected ReadState epollInReady(ReadBufferAllocator readBufferAllocator, BufferAllocator recvBufferAllocator,
-                                     ReadSink readSink) throws Exception {
+    protected ReadState epollInReady(ReadSink readSink) throws Exception {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX
                 && getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
             return epollInReadFd(readSink);
         }
-        return epollInReadyBytes(readBufferAllocator, recvBufferAllocator, readSink);
+        return epollInReadyBytes(readSink);
     }
 
-    private ReadState epollInReadyBytes(ReadBufferAllocator readBufferAllocator,
-                                        BufferAllocator bufferAllocator, ReadSink readSink) throws Exception {
+    private ReadState epollInReadyBytes(ReadSink readSink) throws Exception {
         Buffer buffer = null;
         boolean readMore;
         try {
@@ -533,7 +530,7 @@ public final class EpollSocketChannel
             do {
                 // we use a direct buffer here as the native implementations only be able
                 // to handle direct buffers.
-                buffer = readBufferAllocator.allocate(bufferAllocator, readSink.estimatedBufferCapacity());
+                buffer = readSink.allocateBuffer();
                 if (buffer == null) {
                     readSink.processRead(0, 0, null);
                     return ReadState.Partial;

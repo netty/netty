@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.util.Resource;
@@ -93,7 +94,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private volatile R remoteAddress;
     private volatile boolean registered;
 
-    private volatile ReadBufferAllocator readPending;
+    private volatile ReadBufferAllocator currentBufferAllocator;
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbstractChannel> AUTOREAD_UPDATER =
@@ -845,8 +846,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // Input was shutdown so not try to read.
             return;
         }
-        boolean wasReadPending = readPending != null;
-        readPending = readBufferAllocator;
+        boolean wasReadPending = currentBufferAllocator != null;
+        currentBufferAllocator = readBufferAllocator;
         try {
             doRead(wasReadPending);
         } catch (final Exception e) {
@@ -866,16 +867,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             clearScheduledRead();
             return;
         }
-        ReadBufferAllocator readBufferAllocator = readPending;
-        if (readBufferAllocator == null) {
-            readBufferAllocator = DefaultChannelPipeline.DEFAULT_READ_BUFFER_ALLOCATOR;
-        }
 
         final boolean closed;
         try {
             ReadSink readSink = readSink();
             try {
-                closed = doReadNow(readBufferAllocator, readSink);
+                closed = doReadNow(readSink);
             } catch (Throwable cause) {
                 if (readSink.completeFailure(readHandle(), cause)) {
                     shutdownReadSide();
@@ -918,7 +915,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private void clearScheduledRead() {
         assertEventLoop();
-        readPending = null;
+        currentBufferAllocator = null;
         doClearScheduledRead();
     }
 
@@ -939,7 +936,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *                      to propagate these.
      * @return {@code true} if the channel should be shutdown / closed.
      */
-    protected abstract boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception;
+    protected abstract boolean doReadNow(ReadSink readSink) throws Exception;
 
     /**
      * Returns {@code true} if a read is currently scheduled and pending for later execution.
@@ -948,7 +945,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      */
     protected final boolean isReadPending() {
         assertEventLoop();
-        return readPending != null;
+        return currentBufferAllocator != null;
     }
 
     private void writeTransport(Object msg, Promise<Void> promise) {
@@ -1634,7 +1631,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (autoRead && !oldAutoRead) {
             read();
         } else if (!autoRead && oldAutoRead) {
-            readPending = null;
+            currentBufferAllocator = null;
             if (executor().inEventLoop()) {
                 clearScheduledRead();
             } else {
@@ -1873,7 +1870,18 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     /**
-     * Sink that will be used by {@link #doReadNow(ReadBufferAllocator, ReadSink)} implementations.
+     * Return the {@link BufferAllocator} that is used to allocate {@link Buffer} that are used for reading.
+     * By default this will just return {@link #bufferAllocator()}. Sub-classes might override this if some special
+     * allocator is needed.
+     *
+     * @return the {@link BufferAllocator} that is used to allocate {@link Buffer}s that are used for reading.
+     */
+    protected BufferAllocator readBufferAllocator() {
+        return bufferAllocator();
+    }
+
+    /**
+     * Sink that will be used by {@link #doReadNow(ReadSink)} implementations.
      */
     protected final class ReadSink {
         final ReadHandleFactory.ReadHandle readHandle;
@@ -1898,7 +1906,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 return false;
             } else {
                 readSomething = true;
-                readPending = null;
+                currentBufferAllocator = null;
                 boolean continueReading = readHandle.lastRead(attemptedBytesRead, actualBytesRead, 1);
                 pipeline().fireChannelRead(message);
                 return continueReading;
@@ -1906,11 +1914,17 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         /**
-         * Guess the capacity for the next read buffer that is probably large enough to read all inbound data and
+         * Allocate a {@link Buffer} with a capacity that is probably large enough to read all inbound data and
          * small enough not to waste its space.
+         *
+         * @return the allocated {@link Buffer}.
          */
-        public int estimatedBufferCapacity() {
-            return readHandle().estimatedBufferCapacity();
+        public Buffer allocateBuffer() {
+            ReadBufferAllocator readBufferAllocator = currentBufferAllocator;
+            if (readBufferAllocator == null) {
+                readBufferAllocator = DefaultChannelPipeline.DEFAULT_READ_BUFFER_ALLOCATOR;
+            }
+            return readBufferAllocator.allocate(readBufferAllocator(), readHandle.estimatedBufferCapacity());
         }
 
         void complete(ReadHandleFactory.ReadHandle readHandle) {

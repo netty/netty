@@ -19,7 +19,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 
 import java.net.SocketAddress;
@@ -43,10 +42,10 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
     }
 
     @Override
-    protected final boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception {
+    protected final boolean doReadNow(ReadSink readSink) throws Exception {
         boolean closed = false;
         do {
-            int localRead = doReadMessages(readBufferAllocator, readSink);
+            int localRead = doReadMessages(readSink);
             if (localRead == 0) {
                 break;
             }
@@ -120,7 +119,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
     /**
      * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception;
+    protected abstract int doReadMessages(ReadSink readSink) throws Exception;
 
     /**
      * Write a message to the underlying {@link java.nio.channels.Channel}.

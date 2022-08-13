@@ -247,7 +247,7 @@ public class AbstractChannelTest {
         protected void doRead(boolean wasReadPendingAlready) { }
 
         @Override
-        protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) {
+        protected boolean doReadNow(ReadSink readSink) {
             return false;
         }
 

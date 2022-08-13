@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ServerChannel;
 
 import java.net.SocketAddress;
@@ -103,7 +102,7 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
     }
 
     @Override
-    protected boolean doReadNow(ReadBufferAllocator allocator, ReadSink readSink) {
+    protected boolean doReadNow(ReadSink readSink) {
         boolean continueReading;
         do {
             Object m = inboundBuffer.poll();

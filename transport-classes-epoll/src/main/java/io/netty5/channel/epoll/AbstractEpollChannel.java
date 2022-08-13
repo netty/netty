@@ -308,12 +308,12 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink)
+    protected boolean doReadNow(ReadSink readSink)
             throws Exception {
         maybeMoreDataToRead = false;
         ReadState readState = null;
         try {
-            readState = epollInReady(readBufferAllocator, ioBufferAllocator(), readSink);
+            readState = epollInReady(readSink);
             return readState == ReadState.Closed;
         } finally {
             this.maybeMoreDataToRead = readState == ReadState.Partial || receivedRdHup;
@@ -340,8 +340,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     /**
      * Called once EPOLLIN event is ready to be processed
      */
-    protected abstract ReadState epollInReady(ReadBufferAllocator readBufferAllocator,
-                                              BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception;
+    protected abstract ReadState epollInReady(ReadSink readSink) throws Exception;
 
     private void executeReadNowRunnable() {
         if (readNowRunnablePending || !isActive()) {
@@ -554,8 +553,16 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
+    @Override
+    protected BufferAllocator readBufferAllocator() {
+        return ioBufferAllocator(super.readBufferAllocator());
+    }
+
     private BufferAllocator ioBufferAllocator() {
-        BufferAllocator alloc =  bufferAllocator();
+        return ioBufferAllocator(bufferAllocator());
+    }
+
+    private static BufferAllocator ioBufferAllocator(BufferAllocator alloc) {
         // We need to ensure we always allocate a direct Buffer as we can only use a direct buffer to read via JNI.
         if (!alloc.getAllocationType().isDirect()) {
             return DefaultBufferAllocators.offHeapAllocator();

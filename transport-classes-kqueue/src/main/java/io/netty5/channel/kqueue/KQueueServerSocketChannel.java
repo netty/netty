@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.kqueue;
 
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
@@ -23,7 +22,6 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
@@ -366,8 +364,7 @@ public final class KQueueServerSocketChannel extends
     }
 
     @Override
-    int readReady(ReadBufferAllocator readBufferAllocator, BufferAllocator recvBufferAllocator,
-                  ReadSink readSink) throws Exception {
+    int readReady(ReadSink readSink) throws Exception {
         int totalBytesRead = 0;
         boolean continueReading;
         do {
