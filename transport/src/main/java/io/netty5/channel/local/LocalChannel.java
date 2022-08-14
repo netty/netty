@@ -18,7 +18,6 @@ package io.netty5.channel.local;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.internal.ResourceSupport;
@@ -218,7 +217,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     @Override
-    protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) {
+    protected boolean doReadNow(ReadSink readSink) {
         boolean continueReading;
         do {
             Object received = inboundBuffer.poll();

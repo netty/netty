@@ -16,7 +16,6 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
@@ -25,7 +24,6 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -482,15 +480,14 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    int readReady(ReadBufferAllocator readBufferAllocator,
-                  BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception {
+    int readReady(ReadSink readSink) throws Exception {
         Buffer buffer = null;
         int totalReadyBytes = 0;
         try {
             boolean connected = isConnected();
             boolean continueReading;
             do {
-                buffer = readBufferAllocator.allocate(recvBufferAllocator, readSink.estimatedBufferCapacity());
+                buffer = readSink.allocateBuffer();
                 if (buffer == null) {
                     readSink.processRead(0, 0, null);
                     break;

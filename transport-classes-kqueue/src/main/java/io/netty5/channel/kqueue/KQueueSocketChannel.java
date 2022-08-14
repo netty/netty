@@ -25,7 +25,6 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -495,13 +494,12 @@ public final class KQueueSocketChannel
     }
 
     @Override
-    int readReady(ReadBufferAllocator readBufferAllocator,
-            BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception {
+    int readReady(ReadSink readSink) throws Exception {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX &&
                 getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
             return readReadyFd(readSink);
         }
-        return readReadyBytes(readBufferAllocator, recvBufferAllocator, readSink);
+        return readReadyBytes(readSink);
     }
 
     private int readReadyFd(ReadSink readSink) throws Exception {
@@ -858,14 +856,13 @@ public final class KQueueSocketChannel
         }
     }
 
-    private int readReadyBytes(ReadBufferAllocator readBufferAllocator,
-            BufferAllocator recvBufferAllocator, ReadSink readSink) throws Exception {
+    private int readReadyBytes(ReadSink readSink) throws Exception {
         Buffer buffer = null;
         int totalBytesRead = 0;
         try {
             boolean continueReading;
             do {
-                buffer = readBufferAllocator.allocate(recvBufferAllocator, readSink.estimatedBufferCapacity());
+                buffer = readSink.allocateBuffer();
                 if (buffer == null) {
                     readSink.processRead(0, 0, null);
                     break;

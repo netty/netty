@@ -16,10 +16,8 @@
 package io.netty5.channel.nio;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
@@ -59,15 +57,13 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
     }
 
     @Override
-    protected final boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) throws Exception {
-        final BufferAllocator bufferAllocator = bufferAllocator();
-
+    protected final boolean doReadNow(ReadSink readSink) throws Exception {
         Buffer buffer = null;
         boolean close = false;
         try {
             boolean continueReading;
             do {
-                buffer = readBufferAllocator.allocate(bufferAllocator, readSink.estimatedBufferCapacity());
+                buffer = readSink.allocateBuffer();
                 if (buffer == null) {
                     readSink.processRead(0, 0, null);
                     break;

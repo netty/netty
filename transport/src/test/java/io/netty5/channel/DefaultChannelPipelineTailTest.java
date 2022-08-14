@@ -281,7 +281,7 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected boolean doReadNow(ReadBufferAllocator readBufferAllocator, ReadSink readSink) {
+        protected boolean doReadNow(ReadSink readSink) {
             return false;
         }
 
