@@ -97,8 +97,6 @@ import java.net.SocketAddress;
  * </tr><tr>
  * <td>{@link ChannelOption#CONNECT_TIMEOUT_MILLIS}</td>
  * </tr><tr>
- * <td>{@link ChannelOption#WRITE_SPIN_COUNT}</td>
- * </tr><tr>
  * <td>{@link ChannelOption#WRITE_BUFFER_WATER_MARK}</td>
  * </tr><tr>
  * <td>{@link ChannelOption#BUFFER_ALLOCATOR}</td>

@@ -644,15 +644,7 @@ public final class KQueueDatagramChannel
             }
 
             try {
-                boolean done = false;
-                for (int i = getWriteSpinCount(); i > 0; --i) {
-                    if (doWriteMessage(msg)) {
-                        done = true;
-                        break;
-                    }
-                }
-
-                if (done) {
+                if (doWriteMessage(msg)) {
                     in.remove();
                     maxMessagesPerWrite--;
                 } else {

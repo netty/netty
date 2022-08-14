@@ -854,10 +854,8 @@ public class Http2MultiplexTest {
 
         Channel childChannel = newOutboundStream(new ChannelHandler() { });
         childChannel.setOption(ChannelOption.AUTO_READ, false);
-        childChannel.setOption(ChannelOption.WRITE_SPIN_COUNT, 1000);
         childChannel.attr(key).set("bar");
         assertFalse(childChannel.getOption(ChannelOption.AUTO_READ));
-        assertEquals(1000, childChannel.getOption(ChannelOption.WRITE_SPIN_COUNT));
         assertEquals("bar", childChannel.attr(key).get());
     }
 

@@ -59,7 +59,6 @@ import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty5.channel.ChannelOption.READ_HANDLE_FACTORY;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
-import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
@@ -105,7 +104,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
-    private volatile int writeSpinCount = 16;
     private volatile int maxMessagesPerWrite = Integer.MAX_VALUE;
 
     @SuppressWarnings("FieldMayBeFinal")
@@ -1445,9 +1443,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
         }
-        if (option == WRITE_SPIN_COUNT) {
-            return (T) Integer.valueOf(getWriteSpinCount());
-        }
         if (option == BUFFER_ALLOCATOR) {
             return (T) getBufferAllocator();
         }
@@ -1493,8 +1488,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == CONNECT_TIMEOUT_MILLIS) {
             setConnectTimeoutMillis((Integer) value);
-        } else if (option == WRITE_SPIN_COUNT) {
-            setWriteSpinCount((Integer) value);
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
         } else if (option == READ_HANDLE_FACTORY) {
@@ -1548,7 +1541,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(
                 AUTO_READ, WRITE_BUFFER_WATER_MARK, CONNECT_TIMEOUT_MILLIS,
-                WRITE_SPIN_COUNT, BUFFER_ALLOCATOR, READ_HANDLE_FACTORY, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
+                BUFFER_ALLOCATOR, READ_HANDLE_FACTORY, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
                 MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
     }
 
@@ -1586,22 +1579,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      */
     private void setMaxMessagesPerWrite(int maxMessagesPerWrite) {
         this.maxMessagesPerWrite = checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
-    }
-
-    protected final int getWriteSpinCount() {
-        return writeSpinCount;
-    }
-
-    private void setWriteSpinCount(int writeSpinCount) {
-        checkPositive(writeSpinCount, "writeSpinCount");
-        // Integer.MAX_VALUE is used as a special value in the channel implementations to indicate the channel cannot
-        // accept any more data, and results in the writeOp being set on the selector (or execute a runnable which tries
-        // to flush later because the writeSpinCount quantum has been exhausted). This strategy prevents additional
-        // conditional logic in the channel implementations, and shouldn't be noticeable in practice.
-        if (writeSpinCount == Integer.MAX_VALUE) {
-            --writeSpinCount;
-        }
-        this.writeSpinCount = writeSpinCount;
     }
 
     private BufferAllocator getBufferAllocator() {

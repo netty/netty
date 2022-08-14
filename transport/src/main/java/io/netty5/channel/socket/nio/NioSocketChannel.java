@@ -298,64 +298,62 @@ public class NioSocketChannel
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         SocketChannel ch = javaChannel();
-        int writeSpinCount = getWriteSpinCount();
-        do {
-            if (in.isEmpty()) {
-                // All written so clear OP_WRITE
-                clearOpWrite();
-                // Directly return here so incompleteWrite(...) is not called.
-                return;
-            }
+        if (in.isEmpty()) {
+            // All written so clear OP_WRITE
+            clearOpWrite();
+            // Directly return here so incompleteWrite(...) is not called.
+            return;
+        }
 
-            // Ensure the pending writes are made of ByteBufs only.
-            int maxBytesPerGatheringWrite = getMaxBytesPerGatheringWrite();
-            ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
-            int nioBufferCnt = in.nioBufferCount();
+        // Ensure the pending writes are made of ByteBufs only.
+        int maxBytesPerGatheringWrite = getMaxBytesPerGatheringWrite();
+        ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
+        int nioBufferCnt = in.nioBufferCount();
 
-            // Always use nioBuffers() to workaround data-corruption.
-            // See https://github.com/netty/netty/issues/2761
-            switch (nioBufferCnt) {
-                case 0:
-                    // We have something else beside ByteBuffers to write so fallback to normal writes.
-                    writeSpinCount -= doWrite0(in);
-                    break;
-                case 1: {
-                    // Only one ByteBuf so use non-gathering write
-                    // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
-                    // to check if the total size of all the buffers is non-zero.
-                    ByteBuffer buffer = nioBuffers[0];
-                    int attemptedBytes = buffer.remaining();
-                    final int localWrittenBytes = ch.write(buffer);
-                    if (localWrittenBytes <= 0) {
-                        incompleteWrite(true);
-                        return;
-                    }
-                    adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
-                    in.removeBytes(localWrittenBytes);
-                    --writeSpinCount;
-                    break;
+        long result;
+        // Always use nioBuffers() to workaround data-corruption.
+        // See https://github.com/netty/netty/issues/2761
+        switch (nioBufferCnt) {
+            case 0:
+                // We have something else beside ByteBuffers to write so fallback to normal writes.
+                result = doWrite0(in);
+                break;
+            case 1: {
+                // Only one ByteBuf so use non-gathering write
+                // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
+                // to check if the total size of all the buffers is non-zero.
+                ByteBuffer buffer = nioBuffers[0];
+                int attemptedBytes = buffer.remaining();
+                final int localWrittenBytes = ch.write(buffer);
+                if (localWrittenBytes <= 0) {
+                    incompleteWrite(true);
+                    return;
                 }
-                default: {
-                    // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
-                    // to check if the total size of all the buffers is non-zero.
-                    // We limit the max amount to int above so cast is safe
-                    long attemptedBytes = in.nioBufferSize();
-                    final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
-                    if (localWrittenBytes <= 0) {
-                        incompleteWrite(true);
-                        return;
-                    }
-                    // Casting to int is safe because we limit the total amount of data in the nioBuffers to int above.
-                    adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
-                            maxBytesPerGatheringWrite);
-                    in.removeBytes(localWrittenBytes);
-                    --writeSpinCount;
-                    break;
-                }
+                adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
+                in.removeBytes(localWrittenBytes);
+                result = localWrittenBytes;
+                break;
             }
-        } while (writeSpinCount > 0);
+            default: {
+                // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
+                // to check if the total size of all the buffers is non-zero.
+                // We limit the max amount to int above so cast is safe
+                long attemptedBytes = in.nioBufferSize();
+                final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                if (localWrittenBytes <= 0) {
+                    incompleteWrite(true);
+                    return;
+                }
+                // Casting to int is safe because we limit the total amount of data in the nioBuffers to int above.
+                adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
+                        maxBytesPerGatheringWrite);
+                in.removeBytes(localWrittenBytes);
+                result = localWrittenBytes;
+                break;
+            }
+        }
 
-        incompleteWrite(writeSpinCount < 0);
+        incompleteWrite(result == -1);
     }
 
     @Override
