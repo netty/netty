@@ -41,7 +41,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
-import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty5.util.CharsetUtil.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -274,7 +273,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             in.removeBytes(bytesWritten);
             return 1; // Some data was written to the socket.
         }
-        return WRITE_STATUS_SNDBUF_FULL;
+        return -1;
     }
 
     /**

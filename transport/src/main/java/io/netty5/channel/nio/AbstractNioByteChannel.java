@@ -23,14 +23,11 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-
-import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
@@ -95,13 +92,12 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
     /**
      * Write objects to the OS.
      * @param in the collection which contains objects to write.
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but no
+     *     <li>-1 - if an attempt to write data was made to the OS, but no
      *     data was accepted</li>
      * </ul>
      * @throws Exception if an I/O exception occurs during write.
@@ -150,24 +146,20 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
             // Should not reach here.
             throw new Error();
         }
-        return WRITE_STATUS_SNDBUF_FULL;
+        return -1;
     }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int writeSpinCount = getWriteSpinCount();
-        do {
-            Object msg = in.current();
-            if (msg == null) {
-                // Wrote all messages.
-                clearOpWrite();
-                // Directly return here so incompleteWrite(...) is not called.
-                return;
-            }
-            writeSpinCount -= doWriteInternal(in, msg);
-        } while (writeSpinCount > 0);
-
-        incompleteWrite(writeSpinCount < 0);
+        Object msg = in.current();
+        if (msg == null) {
+            // Wrote all messages.
+            clearOpWrite();
+            // Directly return here so incompleteWrite(...) is not called.
+            return;
+        }
+        int result = doWriteInternal(in, msg);
+        incompleteWrite(result == -1);
     }
 
     @Override

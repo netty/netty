@@ -38,7 +38,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
-import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.unix.Limits.SSIZE_MAX;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static java.lang.Math.min;
@@ -315,7 +314,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             in.removeBytes(bytesWritten);
             return 1; // Some data was written to the socket.
         }
-        return WRITE_STATUS_SNDBUF_FULL;
+        return -1;
     }
 
     final void readFilter(boolean readFilterEnabled) {

@@ -73,15 +73,7 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
                 break;
             }
             try {
-                boolean done = false;
-                for (int i = getWriteSpinCount() - 1; i >= 0; i--) {
-                    if (doWriteMessage(msg, in)) {
-                        done = true;
-                        break;
-                    }
-                }
-
-                if (done) {
+                if (doWriteMessage(msg, in)) {
                     maxMessagesPerWrite--;
                     in.remove();
                 } else {

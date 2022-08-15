@@ -25,7 +25,6 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.internal.ChannelUtils;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainSocketReadMode;
@@ -63,7 +62,6 @@ import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.ChannelOption.TCP_NODELAY;
 import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
-import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty5.channel.kqueue.KQueueChannelOption.SO_SNDLOWAT;
 import static io.netty5.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
 import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
@@ -540,13 +538,12 @@ public final class KQueueSocketChannel
      * Write bytes form the given {@link Buffer} to the underlying {@link java.nio.channels.Channel}.
      * @param in the collection which contains objects to write.
      * @param buf the {@link Buffer} from which the bytes should be written
-     * @return The value that should be decremented from the write-quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     <li>-1 - if an attempt to write data was made to the OS, but
      *     no data was accepted</li>
      * </ul>
      */
@@ -587,13 +584,12 @@ public final class KQueueSocketChannel
      * Write multiple bytes via {@link IovArray}.
      * @param in the collection which contains objects to write.
      * @param array The array which contains the content to write.
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     <li>-1 - if an attempt to write data was made to the OS, but
      *     no data was accepted</li>
      * </ul>
      * @throws IOException If an I/O exception occurs during write.
@@ -610,7 +606,7 @@ public final class KQueueSocketChannel
             in.removeBytes(localWrittenBytes);
             return 1;
         }
-        return WRITE_STATUS_SNDBUF_FULL;
+        return -1;
     }
 
     /**
@@ -620,13 +616,12 @@ public final class KQueueSocketChannel
      * @param nioBufferCnt The number of buffers to write.
      * @param expectedWrittenBytes The number of bytes we expect to write.
      * @param maxBytesPerGatheringWrite The maximum number of bytes we should attempt to write.
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     <li>-1 - if an attempt to write data was made to the OS, but
      *     no data was accepted</li>
      * </ul>
      * @throws IOException If an I/O exception occurs during write.
@@ -645,20 +640,19 @@ public final class KQueueSocketChannel
             in.removeBytes(localWrittenBytes);
             return 1;
         }
-        return WRITE_STATUS_SNDBUF_FULL;
+        return -1;
     }
 
     /**
      * Write a {@link DefaultFileRegion}
      * @param in the collection which contains objects to write.
      * @param region the {@link DefaultFileRegion} from which the bytes should be written
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     <li>-1 - if an attempt to write data was made to the OS, but
      *     no data was accepted</li>
      * </ul>
      */
@@ -682,20 +676,19 @@ public final class KQueueSocketChannel
         if (flushedAmount == 0) {
             validateFileRegion(region, offset);
         }
-        return WRITE_STATUS_SNDBUF_FULL;
+        return -1;
     }
 
     /**
      * Write a {@link FileRegion}
      * @param in the collection which contains objects to write.
      * @param region the {@link FileRegion} from which the bytes should be written
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but no
+     *     <li>-1 - if an attempt to write data was made to the OS, but no
      *     data was accepted</li>
      * </ul>
      */
@@ -716,57 +709,45 @@ public final class KQueueSocketChannel
             }
             return 1;
         }
-        return WRITE_STATUS_SNDBUF_FULL;
+        return -1;
     }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int writeSpinCount = getWriteSpinCount();
-        do {
+        while (!in.isEmpty()) {
             final int msgCount = in.size();
+            int result;
+
             // Do gathering write if the outbound buffer entries start with more than one Buffer.
             if (msgCount > 1 && in.current() instanceof Buffer) {
-                writeSpinCount -= doWriteMultiple(in);
+                result = doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
                 writeFilter(false);
                 // Return here so we don't set the WRITE flag.
                 return;
             } else { // msgCount == 1
-                writeSpinCount -= doWriteSingle(in);
+                result = doWriteSingle(in);
             }
-
-            // We do not break the loop here even if the outbound buffer was flushed completely,
-            // because a user might have triggered another write and flush when we notify his or her
-            // listeners.
-        } while (writeSpinCount > 0);
-
-        if (writeSpinCount == 0) {
-            // It is possible that we have set the write filter, woken up by KQUEUE because the socket is writable, and
-            // then use our write quantum. In this case we no longer want to set the write filter because the socket is
-            // still writable (as far as we know). We will find out next time we attempt to write if the socket is
-            // writable and set the write filter if necessary.
-            writeFilter(false);
-
-            // We used our writeSpin quantum, and should try to write again later.
-            executor().execute(flushTask);
-        } else {
-            // Underlying descriptor can not accept all data currently, so set the WRITE flag to be woken up
-            // when it can accept more data.
-            writeFilter(true);
+            if (result == -1) {
+                // Underlying descriptor can not accept all data currently, so set the WRITE flag to be woken up
+                // when it can accept more data.
+                writeFilter(true);
+                return;
+            }
         }
+        writeFilter(false);
     }
 
     /**
      * Attempt to write a single object.
      * @param in the collection which contains objects to write.
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but no
+     *     <li>-1 - if an attempt to write data was made to the OS, but no
      *     data was accepted</li>
      * </ul>
      * @throws Exception If an I/O error occurs.
@@ -797,13 +778,12 @@ public final class KQueueSocketChannel
     /**
      * Attempt to write multiple {@link Buffer} objects.
      * @param in the collection which contains objects to write.
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link #getWriteSpinCount()}. The typical use cases are as follows:
+     * @return write result.
      * <ul>
      *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
      *     is encountered</li>
      *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but no
+     *     <li>-1 - if an attempt to write data was made to the OS, but no
      *     data was accepted</li>
      * </ul>
      * @throws Exception If an I/O error occurs.

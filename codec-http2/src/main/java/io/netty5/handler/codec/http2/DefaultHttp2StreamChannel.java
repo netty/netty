@@ -51,7 +51,6 @@ import java.util.Queue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
@@ -62,7 +61,6 @@ import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty5.channel.ChannelOption.READ_HANDLE_FACTORY;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
-import static io.netty5.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -147,9 +145,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     private static final AtomicIntegerFieldUpdater<DefaultHttp2StreamChannel> AUTOREAD_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(DefaultHttp2StreamChannel.class, "autoRead");
-    private static final AtomicReferenceFieldUpdater<DefaultHttp2StreamChannel, WriteBufferWaterMark>
-            WATERMARK_UPDATER = AtomicReferenceFieldUpdater.newUpdater(
-                    DefaultHttp2StreamChannel.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
 
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
     private volatile ReadHandleFactory readHandleFactory = new AdaptiveReadHandleFactory();
@@ -993,9 +988,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
         }
-        if (option == WRITE_SPIN_COUNT) {
-            return (T) Integer.valueOf(getWriteSpinCount());
-        }
         if (option == BUFFER_ALLOCATOR) {
             return (T) getBufferAllocator();
         }
@@ -1029,8 +1021,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == CONNECT_TIMEOUT_MILLIS) {
             setConnectTimeoutMillis((Integer) value);
-        } else if (option == WRITE_SPIN_COUNT) {
-            setWriteSpinCount((Integer) value);
         } else if (option == BUFFER_ALLOCATOR) {
             setBufferAllocator((BufferAllocator) value);
         } else if (option == READ_HANDLE_FACTORY) {
@@ -1050,7 +1040,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     @Override
     public boolean isOptionSupported(ChannelOption<?> option) {
         return option == AUTO_READ || option == WRITE_BUFFER_WATER_MARK || option == CONNECT_TIMEOUT_MILLIS ||
-                option == WRITE_SPIN_COUNT || option == BUFFER_ALLOCATOR ||
+                option == BUFFER_ALLOCATOR ||
                 option == READ_HANDLE_FACTORY || option == AUTO_CLOSE || option == MESSAGE_SIZE_ESTIMATOR ||
                 option == MAX_MESSAGES_PER_WRITE || option == ALLOW_HALF_CLOSURE;
     }
