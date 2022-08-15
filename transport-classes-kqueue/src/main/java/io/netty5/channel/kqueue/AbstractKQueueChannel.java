@@ -306,8 +306,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
                 written = socket.writeAddress(address, 0, component.readableBytes());
             }
         }
-        in.removeBytes(written);
         if (written > 0) {
+            in.removeBytes(written);
             return 1; // Some data was written to the socket.
         }
         return -1;
