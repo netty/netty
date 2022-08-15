@@ -114,6 +114,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
 
+    private static final Object NULL = new Object();
+
     private volatile boolean activeOnOpen;
     private volatile int maxDatagramSize;
     private volatile boolean gro;
@@ -691,14 +693,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         return readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead), packet);
     }
 
-    private static boolean processPacketList(BufferAllocator allocator, ReadSink readSink,
+    private static boolean processPacketList(ReadSink readSink,
                                              int attemptedBytesRead, int bytesRead, RecyclableArrayList packetList) {
         int messagesRead = packetList.size();
         boolean continueReading = true;
         for (int i = 0; i < messagesRead; i++) {
             // Avoid signalling end-of-data for zero-sized datagrams.
             if (!readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead),
-                    packetList.set(i, allocator.allocate(0)))) {
+                    packetList.set(i, NULL))) {
                 continueReading = false;
             }
         }
@@ -739,8 +741,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // it into the RecyclableArrayList.
                 buf = null;
 
-                continueReading = processPacketList(readBufferAllocator(), readSink, attemptedBytesRead,
-                        bytesReceived, datagramPackets);
+                continueReading = processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
                 datagramPackets.recycle();
                 datagramPackets = null;
             }
@@ -797,8 +798,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             buf.close();
             buf = null;
 
-            boolean continueReading = processPacketList(allocator, readSink, attemptedBytesRead,
-                    bytesReceived, datagramPackets);
+            boolean continueReading = processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
             datagramPackets.recycle();
             datagramPackets = null;
             return continueReading ? ReadingState.Continue : ReadingState.Stop;
