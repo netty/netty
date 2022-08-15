@@ -69,7 +69,6 @@ public final class UnsafeMemoryManager implements MemoryManager {
             base = null;
             address = PlatformDependent.allocateMemory(size);
             Statics.MEM_USAGE_NATIVE.add(size);
-            PlatformDependent.setMemory(address, size, (byte) 0);
             memory = new UnsafeMemory(base, address, size32);
             FreeAddress freeAddress = new FreeAddress(address, size32);
             if (FREE_IMMEDIATELY) {

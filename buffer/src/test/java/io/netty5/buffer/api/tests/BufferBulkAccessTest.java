@@ -337,7 +337,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
     @MethodSource("allocators")
     public void writeBytesMustWriteAllBytesFromByteArray(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buffer = allocator.allocate(8)) {
+             Buffer buffer = allocator.allocate(8).fill((byte) 0)) {
             buffer.writeByte((byte) 1);
             buffer.writeBytes(new byte[] {2, 3, 4, 5, 6, 7});
             assertThat(buffer.writerOffset()).isEqualTo(7);

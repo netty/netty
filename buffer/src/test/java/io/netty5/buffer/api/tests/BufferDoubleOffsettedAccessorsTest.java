@@ -126,7 +126,7 @@ public class BufferDoubleOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfDoubleMustBoundsCheckWhenWriteOffsetIsNegative(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             assertEquals(Long.BYTES, buf.capacity());
             double value = Double.longBitsToDouble(0x0102030405060708L);
             assertThrows(IndexOutOfBoundsException.class, () -> buf.setDouble(-1, value));
@@ -140,7 +140,7 @@ public class BufferDoubleOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfDoubleMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             assertEquals(Long.BYTES, buf.capacity());
             double value = Double.longBitsToDouble(0x0102030405060708L);
             assertThrows(IndexOutOfBoundsException.class, () -> buf.setDouble(1, value));

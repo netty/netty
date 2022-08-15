@@ -145,7 +145,7 @@ public class BufferFloatOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfFloatMustBoundsCheckWhenWriteOffsetIsNegative(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             assertEquals(Long.BYTES, buf.capacity());
             float value = Float.intBitsToFloat(0x01020304);
             assertThrows(IndexOutOfBoundsException.class, () -> buf.setFloat(-1, value));
@@ -159,7 +159,7 @@ public class BufferFloatOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfFloatMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             assertEquals(Long.BYTES, buf.capacity());
             float value = Float.intBitsToFloat(0x01020304);
             assertThrows(IndexOutOfBoundsException.class, () -> buf.setFloat(5, value));
@@ -173,7 +173,7 @@ public class BufferFloatOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfFloatMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             float value = Float.intBitsToFloat(0x01020304);
             buf.setFloat(0, value);
             buf.writerOffset(Long.BYTES);

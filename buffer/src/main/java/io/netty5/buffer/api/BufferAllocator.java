@@ -121,6 +121,12 @@ public interface BufferAllocator extends SafeCloseable {
      * is not enough free memory available to allocate a {@link Buffer} of the requested size.
      * <p>
      * The buffer will use big endian byte order.
+     * <p>
+     * <strong>Note:</strong> unlike the JDK {@link ByteBuffer}s, Netty {@code Buffers} are not guaranteed to be zeroed
+     * when allocated. In other words, the memory of a newly allocated buffer may contain garbage data from prior
+     * allocations, and the memory is likewise not guaranteed to be erased when the buffer is closed.
+     * If the data is sensitive and needs to be overwritten when the buffer is closed,
+     * then the buffer should be allocated with the {@link SensitiveBufferAllocator}.
      *
      * @param size The size of {@link Buffer} to allocate.
      * @return The newly allocated {@link Buffer}.

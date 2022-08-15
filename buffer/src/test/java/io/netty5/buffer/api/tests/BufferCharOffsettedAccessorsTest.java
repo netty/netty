@@ -144,7 +144,7 @@ public class BufferCharOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfCharMustBoundsCheckWhenWriteOffsetIsNegative(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             assertEquals(Long.BYTES, buf.capacity());
             char value = 0x0102;
             assertThrows(IndexOutOfBoundsException.class, () -> buf.setChar(-1, value));
@@ -158,7 +158,7 @@ public class BufferCharOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfCharMustBoundsCheckWhenWriteOffsetAndSizeIsBeyondCapacity(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             assertEquals(Long.BYTES, buf.capacity());
             char value = 0x0102;
             assertThrows(IndexOutOfBoundsException.class, () -> buf.setChar(7, value));
@@ -172,7 +172,7 @@ public class BufferCharOffsettedAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void offsettedSetOfCharMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             char value = 0x0102;
             buf.setChar(0, value);
             buf.writerOffset(Long.BYTES);
