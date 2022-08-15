@@ -1054,7 +1054,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
     /**
      * Get the number of "components" in this buffer, that are writable. These are the components that would be
-     * processed by {@link #forEachComponent()}, by followin the {@link ComponentIterator#firstWritable()} and
+     * processed by {@link #forEachComponent()}, by following the {@link ComponentIterator#firstWritable()} and
      * {@link Next#nextWritable()} methods. For composite buffers, this is the number of transitive constituent buffers
      * that are writable, while non-composite buffers only have at most one writable component.
      * <p>
