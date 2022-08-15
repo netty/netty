@@ -256,23 +256,17 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
-        int initialReaderOffset = buf.readerOffset();
+        int written = 0;
         try (var iterator = buf.forEachComponent()) {
             var component = iterator.firstReadable();
             if (component != null) {
                 long address = component.readableNativeAddress();
                 assert address != 0;
-                int written = socket.writeAddress(address, 0, component.readableBytes());
-                if (written > 0) {
-                    component.skipReadableBytes(written);
-                }
+                written = socket.writeAddress(address, 0, component.readableBytes());
             }
         }
-        int readerOffset = buf.readerOffset();
-        if (initialReaderOffset < readerOffset) {
-            buf.readerOffset(initialReaderOffset); // Restore read offset for ChannelOutboundBuffer.
-            int bytesWritten = readerOffset - initialReaderOffset;
-            in.removeBytes(bytesWritten);
+        in.removeBytes(written);
+        if (written > 0) {
             return 1; // Some data was written to the socket.
         }
         return -1;

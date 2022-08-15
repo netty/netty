@@ -35,7 +35,7 @@ import static java.lang.Math.min;
 /**
  * Represent an array of struct array and so can be passed directly over via JNI without the need to do any more
  * array copies.
- *
+ * <p>
  * The buffers are written out directly into direct memory to match the struct iov. See also {@code man writev}.
  *
  * <pre>
@@ -82,7 +82,7 @@ public final class IovArray implements MessageProcessor<RuntimeException> {
             memory = ByteBuffer.allocateDirect(memory.capacity());
         }
         if (memory.order() != ByteOrder.nativeOrder()) {
-            memory = memory.order(ByteOrder.nativeOrder());
+            memory.order(ByteOrder.nativeOrder());
         }
         this.memory = memory;
         memoryAddress = nativeAddressOf(memory);
@@ -201,16 +201,14 @@ public final class IovArray implements MessageProcessor<RuntimeException> {
     }
 
     public boolean addReadable(Buffer buffer) {
-        boolean addedAny = false;
         try (var iteration = buffer.forEachComponent()) {
             for (var c = iteration.firstReadable(); c != null; c = c.nextReadable()) {
                 if (!addReadable(c, c.readableBytes())) {
-                    break;
+                    return false;
                 }
-                addedAny = true;
             }
         }
-        return addedAny;
+        return true;
     }
 
     public boolean addReadable(BufferComponent component, int byteCount) {
@@ -224,16 +222,14 @@ public final class IovArray implements MessageProcessor<RuntimeException> {
     }
 
     public boolean addWritable(Buffer buffer) {
-        boolean addedAny = false;
         try (var iteration = buffer.forEachComponent()) {
             for (var c = iteration.firstWritable(); c != null; c = c.nextWritable()) {
                 if (!addWritable(c, c.writableBytes())) {
-                    break;
+                    return false;
                 }
-                addedAny = true;
             }
         }
-        return addedAny;
+        return true;
     }
 
     public boolean addWritable(BufferComponent component, int byteCount) {
