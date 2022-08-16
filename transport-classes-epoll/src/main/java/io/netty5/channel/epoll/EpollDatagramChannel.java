@@ -27,7 +27,6 @@ import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.RawUnixChannelOption;
-import io.netty5.channel.unix.RecvFromAddressDomainSocket;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.Resource;
@@ -526,9 +525,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     }
                     packet = new DatagramPacket(buf, localAddress(), remoteAddress());
                 } else {
-                    final RecvFromAddressDomainSocket recvFrom = new RecvFromAddressDomainSocket(socket);
-                    buf.forEachWritable(0, recvFrom);
-                    final DomainDatagramSocketAddress remoteAddress = recvFrom.remoteAddress();
+                    final DomainDatagramSocketAddress remoteAddress;
+                    try (var iteration = buf.forEachComponent()) {
+                        var c = iteration.firstWritable();
+                        if (c != null) {
+                            remoteAddress = socket.recvFromAddressDomainSocket(
+                                    c.writableNativeAddress(), 0, c.writableBytes());
+                        } else {
+                            remoteAddress = null;
+                        }
+                    }
 
                     if (remoteAddress == null) {
                         readSink.processRead(attemptedBytesRead, 0, null);
@@ -615,16 +621,17 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     : buf.writableBytes();
 
             int initialWritableBytes = buf.writableBytes();
-            buf.forEachWritable(0, (index, component) -> {
-                long address = component.writableNativeAddress();
-                assert address != 0;
-                int bytesRead = socket.readAddress(address, 0, component.writableBytes());
-                if (bytesRead <= 0) {
-                    return false;
+            try (var iteration = buf.forEachComponent()) {
+                for (var c = iteration.firstWritable(); c != null; c = c.nextWritable()) {
+                    long address = c.writableNativeAddress();
+                    assert address != 0;
+                    int bytesRead = socket.readAddress(address, 0, c.writableBytes());
+                    if (bytesRead <= 0) {
+                        break;
+                    }
+                    c.skipWritableBytes(bytesRead);
                 }
-                component.skipWritableBytes(bytesRead);
-                return true;
-            });
+            }
             final int totalBytesRead = initialWritableBytes - buf.writableBytes();
             if (totalBytesRead == 0) {
                 readSink.processRead(attemptedBytesRead, totalBytesRead, null);

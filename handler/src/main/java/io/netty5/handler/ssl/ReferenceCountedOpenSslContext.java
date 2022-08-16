@@ -941,8 +941,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     private static long newBIO(Buffer buffer) throws Exception {
         long bio = SSL.newMemBIO();
-        try (var iterator = buffer.forEachReadable()) {
-            for (var component = iterator.first(); component != null; component = component.next()) {
+        try (var iterator = buffer.forEachComponent()) {
+            for (var component = iterator.firstReadable(); component != null; component = component.nextReadable()) {
                 int readable = component.readableBytes();
                 if (SSL.bioWrite(bio, component.readableNativeAddress(), readable) != readable) {
                     SSL.freeBIO(bio);

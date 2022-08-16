@@ -120,8 +120,8 @@ public class ChunkedStream implements ChunkedInput<Buffer> {
         try {
             // transfer to buffer
             int written;
-            try (var iter = buffer.forEachWritable()) {
-                var component = iter.first();
+            try (var iter = buffer.forEachComponent()) {
+                var component = iter.firstWritable();
                 if (component.hasWritableArray()) {
                     written = in.read(component.writableArray(),
                             component.writableArrayOffset(),

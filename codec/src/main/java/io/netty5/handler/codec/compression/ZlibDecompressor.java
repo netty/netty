@@ -240,8 +240,8 @@ public final class ZlibDecompressor implements Decompressor {
         }
 
         if (inflater.needsInput()) {
-            try (var readableIteration = in.forEachReadable()) {
-                var readableComponent = readableIteration.first();
+            try (var readableIteration = in.forEachComponent()) {
+                var readableComponent = readableIteration.firstReadable();
                 if (readableComponent.hasReadableArray()) {
                     inflater.setInput(readableComponent.readableArray(),
                             readableComponent.readableArrayOffset(), readableComponent.readableBytes());
@@ -262,8 +262,8 @@ public final class ZlibDecompressor implements Decompressor {
                     throw new IllegalStateException(
                             "Decompress buffer must have array or exactly 1 NIO buffer: " + decompressed);
                 }
-                try (var writableIteration = decompressed.forEachWritable()) {
-                    var writableComponent = writableIteration.first();
+                try (var writableIteration = decompressed.forEachComponent()) {
+                    var writableComponent = writableIteration.firstWritable();
                     int writerIndex = decompressed.writerOffset();
                     int writable = decompressed.writableBytes();
                     int outputLength;

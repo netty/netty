@@ -15,12 +15,12 @@
  */
 package io.netty5.buffer.api.internal;
 
-import io.netty5.buffer.api.ReadableComponent;
+import io.netty5.buffer.api.BufferComponent;
 
 import java.nio.ByteBuffer;
 
 /**
- * Safety by-pass that let us get {@link java.nio.ByteBuffer}s from a {@link io.netty5.buffer.api.ReadableComponent}
+ * Safety by-pass that let us get {@link java.nio.ByteBuffer}s from a {@link BufferComponent}
  * that is not read-only.
  * <p>
  * This is for instance used by the {@code SslHandler}, because some {@link javax.net.ssl.SSLEngine} implementations
@@ -30,7 +30,7 @@ public interface NotReadOnlyReadableComponent {
     /**
      * Get a {@link ByteBuffer} instance for this memory component.
      * <p>
-     * <strong>Note</strong> that unlike the {@link ReadableComponent#readableBuffer()} method, the {@link ByteBuffer}
+     * <strong>Note</strong> that unlike the {@link BufferComponent#readableBuffer()} method, the {@link ByteBuffer}
      * returned here is writable.
      *
      * @return A new {@link ByteBuffer}, with its own position and limit, for this memory component.

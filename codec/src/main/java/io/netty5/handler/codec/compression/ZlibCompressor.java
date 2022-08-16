@@ -218,9 +218,9 @@ public final class ZlibCompressor implements Compressor {
         }
         Buffer out = allocator.allocate(sizeEstimate);
 
-        try (var readableIteration = uncompressed.forEachReadable()) {
-            for (var readableComponent = readableIteration.first();
-                 readableComponent != null; readableComponent = readableComponent.next()) {
+        try (var readableIteration = uncompressed.forEachComponent()) {
+            for (var readableComponent = readableIteration.firstReadable();
+                 readableComponent != null; readableComponent = readableComponent.nextReadable()) {
                 compressData(readableComponent.readableBuffer(), out);
             }
         }
@@ -326,9 +326,9 @@ public final class ZlibCompressor implements Compressor {
     }
 
     private void deflate(Buffer out) {
-        try (var writableIteration = out.forEachWritable()) {
-            for (var writableComponent = writableIteration.first();
-                 writableComponent != null; writableComponent = writableComponent.next()) {
+        try (var writableIteration = out.forEachComponent()) {
+            for (var writableComponent = writableIteration.firstWritable();
+                 writableComponent != null; writableComponent = writableComponent.nextWritable()) {
                 if (writableComponent.hasWritableArray()) {
                     for (;;) {
                         int numBytes = deflater.deflate(

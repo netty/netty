@@ -45,7 +45,7 @@ public class BufferSplitTest extends BufferTestSupport {
         readSplit(fixture, 3, 3, 1, 2);
     }
 
-    private void readSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
+    private static void readSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(capacity)) {
             writeRandomBytes(buf, writeBytes);
@@ -92,7 +92,7 @@ public class BufferSplitTest extends BufferTestSupport {
         writeSplit(fixture, 3, 1, 1, 2);
     }
 
-    private void writeSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
+    private static void writeSplit(Fixture fixture, int capacity, int writeBytes, int readBytes, int offset) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(capacity)) {
             writeRandomBytes(buf, writeBytes);

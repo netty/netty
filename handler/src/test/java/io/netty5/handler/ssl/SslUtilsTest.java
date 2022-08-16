@@ -29,6 +29,7 @@ import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SslUtilsTest {
@@ -45,13 +46,13 @@ public class SslUtilsTest {
 
         try (Buffer buffer = offHeapAllocator().copyOf(cTOsBE);
              Buffer copy = buffer.copy()) {
-            buffer.forEachReadable(0, (index, component) -> {
-                assertEquals(0, index); // Only one component expected here.
+            try (var iterator = buffer.forEachComponent()) {
+                var component = iterator.firstReadable();
                 ByteBuffer[] byteBuffers = { component.readableBuffer() };
                 assertEquals(getEncryptedPacketLength(byteBuffers, 0),
                              getEncryptedPacketLength(copy, 0));
-                return true;
-            });
+                assertNull(component.nextReadable()); // Only one component expected here.
+            }
         }
     }
 
@@ -91,8 +92,8 @@ public class SslUtilsTest {
                                             .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
                                             .writeShort((short) SslUtils.GMSSL_PROTOCOL_VERSION)
                                             .writeShort((short) bodyLength)) {
-            try (var iterable = buf.forEachReadable()) {
-                var component = iterable.first();
+            try (var iterable = buf.forEachComponent()) {
+                var component = iterable.firstReadable();
                 assertNotNull(component);
                 int packetLength = getEncryptedPacketLength(new ByteBuffer[]{ component.readableBuffer() }, 0);
                 assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);

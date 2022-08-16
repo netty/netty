@@ -297,11 +297,11 @@ public final class Lz4Compressor implements Compressor {
             assert out.countWritableComponents() == 1;
             int readable = flushableBytes;
 
-            try (var writableIteration = out.forEachWritable()) {
-                var writableComponent = writableIteration.first();
-                try (var readableIteration = in.forEachReadable()) {
-                    for (var readableComponent = readableIteration.first();
-                         readableComponent != null; readableComponent = readableComponent.next()) {
+            try (var writableIteration = out.forEachComponent()) {
+                var writableComponent = writableIteration.firstWritable();
+                try (var readableIteration = in.forEachComponent()) {
+                    for (var readableComponent = readableIteration.firstReadable();
+                         readableComponent != null; readableComponent = readableComponent.nextReadable()) {
                         ByteBuffer outNioBuffer = writableComponent.writableBuffer();
                         int pos = outNioBuffer.position();
                         ByteBuffer inNioBuffer = readableComponent.readableBuffer();

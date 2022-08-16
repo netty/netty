@@ -27,7 +27,9 @@ import io.netty5.buffer.api.internal.Statics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.TestAbortedException;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 import static io.netty5.buffer.api.internal.Statics.acquire;
@@ -101,19 +103,14 @@ public class BufferCompositionTest extends BufferTestSupport {
     public void compositeBufferMustNotBeAllowedToContainThemselves() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer bufA = allocator.compose(allocator.allocate(4).send());
-            Send<Buffer> sendA = bufA.send();
-            try {
+            try (Send<Buffer> sendA = bufA.send()) {
                 assertThrows(BufferClosedException.class, () -> bufA.extendWith(sendA));
-            } finally {
-                sendA.close();
             }
 
             CompositeBuffer bufB = allocator.compose(allocator.allocate(4).send());
-            Send<Buffer> sendB = bufB.send();
-            try (CompositeBuffer compositeBuffer = allocator.compose(sendB)) {
+            try (Send<Buffer> sendB = bufB.send();
+                 CompositeBuffer compositeBuffer = allocator.compose(sendB)) {
                 assertThrows(IllegalStateException.class, () -> compositeBuffer.extendWith(sendB));
-            } finally {
-                sendB.close();
             }
         }
     }
@@ -715,7 +712,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
-    public void failureInDecomposeMustCloseConstituentBuffers() {
+    public void failureInDecomposeMustCloseConstituentBuffers() throws Exception {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             CompositeBuffer composite = allocator.compose(asList(
                     allocator.allocate(3).send(),
@@ -744,11 +741,18 @@ public class BufferCompositionTest extends BufferTestSupport {
             }
             Buffer[] inners  = new Buffer[3];
             assertThat(composite.countWritableComponents()).isEqualTo(3);
-            int count = composite.forEachWritable(0, (i, component) -> {
-                inners[i] = (Buffer) component;
-                return true;
-            });
-            assertThat(count).isEqualTo(3);
+            try (var iteration = composite.forEachComponent()) {
+                int index = 0;
+                for (var c = iteration.first(); c != null; c = c.next()) {
+                    Field currentItrField = c.getClass().getDeclaredField("currentItr");
+                    if (currentItrField.trySetAccessible()) {
+                        inners[index++] = (Buffer) currentItrField.get(c);
+                    } else {
+                        throw new TestAbortedException("Cannot make reflective accesses required for this test.");
+                    }
+                }
+                assertThat(index).isEqualTo(3);
+            }
             var re = assertThrows(RuntimeException.class, () -> composite.decomposeBuffer());
             assertThat(re.getMessage()).isEqualTo("Expected.");
             // The failure to decompose the buffer should have closed the inner buffers we extracted earlier.

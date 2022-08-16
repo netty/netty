@@ -16,20 +16,19 @@
 package io.netty5.channel.socket.nio;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.util.Resource;
-import io.netty5.buffer.api.WritableComponent;
-import io.netty5.buffer.api.WritableComponentProcessor;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
@@ -58,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
-
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toJdkFamily;
@@ -382,14 +380,21 @@ public final class NioDatagramChannel
         int attemptedBytesRead = data.writableBytes();
         boolean free = true;
         try {
-            ReceiveDatagram receiveDatagram = new ReceiveDatagram(javaChannel());
-            data.forEachWritable(0, receiveDatagram);
-            SocketAddress remoteAddress = receiveDatagram.remoteAddress;
+            SocketAddress remoteAddress = null;
+            int actualBytesRead = 0;
+            try (var iterator = data.forEachComponent()) {
+                var component = iterator.firstWritable();
+                if (component != null) {
+                    ByteBuffer dst = component.writableBuffer();
+                    int position = dst.position();
+                    remoteAddress =  javaChannel().receive(dst);
+                    actualBytesRead = dst.position() - position;
+                }
+            }
             if (remoteAddress == null) {
                 readSink.processRead(attemptedBytesRead, 0, null);
                 return -1;
             }
-            int actualBytesRead = receiveDatagram.bytesReceived;
             data.skipWritableBytes(actualBytesRead);
             if (readSink.processRead(attemptedBytesRead, actualBytesRead,
                     new DatagramPacket(data, localAddress(), remoteAddress))) {
@@ -426,16 +431,17 @@ public final class NioDatagramChannel
         }
 
         int initialReadable = buf.readableBytes();
-        buf.forEachReadable(0, (index, component) -> {
-            final int writtenBytes;
-            if (remoteAddress != null) {
-                writtenBytes = javaChannel().send(component.readableBuffer(), remoteAddress);
-            } else {
-                writtenBytes = javaChannel().write(component.readableBuffer());
+        try (var iterator = buf.forEachComponent()) {
+            for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
+                final int writtenBytes;
+                if (remoteAddress != null) {
+                    writtenBytes = javaChannel().send(c.readableBuffer(), remoteAddress);
+                } else {
+                    writtenBytes = javaChannel().write(c.readableBuffer());
+                }
+                c.skipReadableBytes(writtenBytes);
             }
-            component.skipReadableBytes(writtenBytes);
-            return true;
-        });
+        }
         return buf.readableBytes() < initialReadable;
     }
 
@@ -627,25 +633,6 @@ public final class NioDatagramChannel
                     sourceToBlock);
         } catch (SocketException | UnsupportedOperationException e) {
             return newFailedFuture(e);
-        }
-    }
-
-    private static final class ReceiveDatagram implements WritableComponentProcessor<IOException> {
-        private final DatagramChannel channel;
-        private SocketAddress remoteAddress;
-        private int bytesReceived;
-
-        ReceiveDatagram(DatagramChannel channel) {
-            this.channel = channel;
-        }
-
-        @Override
-        public boolean process(int index, WritableComponent component) throws IOException {
-            ByteBuffer dst = component.writableBuffer();
-            int position = dst.position();
-            remoteAddress =  channel.receive(dst);
-            bytesReceived = dst.position() - position;
-            return false;
         }
     }
 }

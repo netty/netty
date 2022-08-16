@@ -281,8 +281,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
      * Read bytes into the given {@link Buffer} and return the amount.
      */
     protected final int doReadBytes(Buffer buffer) throws Exception {
-        try (var iterator = buffer.forEachWritable()) {
-            var component = iterator.first();
+        try (var iterator = buffer.forEachComponent()) {
+            var component = iterator.firstWritable();
             if (component == null) {
                 return 0;
             }
@@ -297,21 +297,17 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
-        int initialReaderOffset = buf.readerOffset();
-        buf.forEachReadable(0, (index, component) -> {
-            long address = component.readableNativeAddress();
-            assert address != 0;
-            int written = socket.writeAddress(address, 0, component.readableBytes());
-            if (written > 0) {
-                component.skipReadableBytes(written);
+        int written = 0;
+        try (var iteration = buf.forEachComponent()) {
+            var component = iteration.firstReadable();
+            if (component != null) {
+                long address = component.readableNativeAddress();
+                assert address != 0;
+                written = socket.writeAddress(address, 0, component.readableBytes());
             }
-            return false;
-        });
-        int readerOffset = buf.readerOffset();
-        if (initialReaderOffset < readerOffset) {
-            buf.readerOffset(initialReaderOffset); // Restore read offset for ChannelOutboundBuffer.
-            int bytesWritten = readerOffset - initialReaderOffset;
-            in.removeBytes(bytesWritten);
+        }
+        if (written > 0) {
+            in.removeBytes(written);
             return 1; // Some data was written to the socket.
         }
         return -1;
@@ -352,7 +348,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         ReadHandleFactory.ReadHandle readHandle = readHandle();
         if (readHandle instanceof KQueueReadHandle) {
             ((KQueueReadHandle) readHandle)
-                    .bufferCapacity(Math.min(128, (int) Math.min(numberBytesPending, 8 * 1024 * 1024)));
+                    .bufferCapacity(min(128, (int) min(numberBytesPending, 8 * 1024 * 1024)));
         }
         this.numberBytesPending = numberBytesPending;
         readNow();

@@ -21,6 +21,7 @@ import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.util.internal.UnstableApi;
 
+import java.lang.ref.Reference;
 import java.util.Objects;
 
 /**
@@ -74,7 +75,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
      *
      * @return This {@link Resource} instance.
      */
-    protected final I acquire() {
+    protected final T acquire() {
         if (acquires < 0) {
             throw attachTrace(createResourceClosedException());
         }
@@ -83,7 +84,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         }
         acquires++;
         tracer.acquire(acquires);
-        return self();
+        return impl();
     }
 
     protected abstract RuntimeException createResourceClosedException();
@@ -113,6 +114,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
             tracer.drop(0);
             try {
                 drop.drop(impl());
+                Reference.reachabilityFence(this); // Avoid racing with any Cleaner.
             } finally {
                 makeInaccessible();
             }

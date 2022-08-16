@@ -533,8 +533,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         } else {
             try (Buffer buf = alloc.allocate(len)) {
                 buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
-                try (var iterator = buf.forEachReadable()) {
-                    var c = iterator.first();
+                try (var iterator = buf.forEachComponent()) {
+                    var c = iterator.firstReadable();
                     sslWrote = SSL.writeToSSL(ssl, c.readableNativeAddress(), len);
                     if (sslWrote > 0) {
                         src.position(pos + sslWrote);
@@ -564,8 +564,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             Buffer buf = alloc.allocate(len);
             try {
                 buf.writeBytes(src.array(), src.arrayOffset() + pos, len);
-                try (var iterator = buf.forEachReadable()) {
-                    var component = iterator.first();
+                try (var iterator = buf.forEachComponent()) {
+                    var component = iterator.firstReadable();
                     SSL.bioSetByteBuffer(networkBIO, component.readableNativeAddress(), len, false);
                     assert component.next() == null;
                 }
@@ -594,8 +594,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             final int limit = dst.limit();
             final int len = min(maxEncryptedPacketLength0(), limit - pos);
             try (Buffer buf = alloc.allocate(len)) {
-                try (var iterator = buf.forEachWritable()) {
-                    var component = iterator.first();
+                try (var iterator = buf.forEachComponent()) {
+                    var component = iterator.firstWritable();
                     sslRead = SSL.readFromSSL(ssl, component.writableNativeAddress(), len);
                     assert component.next() == null;
                 }
@@ -703,8 +703,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                 bioReadCopyBuf = null;
             } else {
                 bioReadCopyBuf = alloc.allocate(len);
-                try (var iterator = bioReadCopyBuf.forEachWritable()) {
-                    var component = iterator.first();
+                try (var iterator = bioReadCopyBuf.forEachComponent()) {
+                    var component = iterator.firstWritable();
                     SSL.bioSetByteBuffer(networkBIO, component.writableNativeAddress(), len, true);
                     assert component.next() == null;
                 }

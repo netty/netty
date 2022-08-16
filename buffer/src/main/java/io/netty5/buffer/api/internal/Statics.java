@@ -20,7 +20,7 @@ import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.ReadableComponent;
+import io.netty5.buffer.api.BufferComponent;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.PlatformDependent;
 
@@ -162,7 +162,7 @@ public interface Statics {
         }
     }
 
-    static ByteBuffer tryGetWritableBufferFromReadableComponent(ReadableComponent component) {
+    static ByteBuffer tryGetWritableBufferFromReadableComponent(BufferComponent component) {
         if (component instanceof NotReadOnlyReadableComponent) {
             return ((NotReadOnlyReadableComponent) component).mutableReadableBuffer();
         }

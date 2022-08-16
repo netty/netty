@@ -186,8 +186,8 @@ public final class LzfCompressor implements Compressor {
                 if (in.readableBytes() == 0) {
                     return allocator.allocate(0);
                 }
-                try (var readableIteration = in.forEachReadable()) {
-                    var readableComponent = readableIteration.first();
+                try (var readableIteration = in.forEachComponent()) {
+                    var readableComponent = readableIteration.firstReadable();
                     final int length = readableComponent.readableBytes();
                     final byte[] input;
                     final int inputPtr;

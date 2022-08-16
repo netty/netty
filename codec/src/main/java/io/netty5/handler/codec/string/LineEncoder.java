@@ -103,8 +103,8 @@ public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
         assert buf.countWritableComponents() == 1;
         boolean release = true;
         CharBuffer chars = CharBuffer.wrap(msg);
-        try (var iterator = buf.forEachWritable()) {
-            var component = requireNonNull(iterator.first(), "writable component");
+        try (var iterator = buf.forEachComponent()) {
+            var component = requireNonNull(iterator.firstWritable(), "writable component");
             ByteBuffer byteBuffer = component.writableBuffer();
             int start = byteBuffer.position();
             CoderResult result = encoder.encode(chars, byteBuffer, true);
