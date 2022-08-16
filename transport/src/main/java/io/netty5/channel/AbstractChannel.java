@@ -55,11 +55,10 @@ import static io.netty5.channel.ChannelOption.AUTO_CLOSE;
 import static io.netty5.channel.ChannelOption.AUTO_READ;
 import static io.netty5.channel.ChannelOption.BUFFER_ALLOCATOR;
 import static io.netty5.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
-import static io.netty5.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty5.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty5.channel.ChannelOption.READ_HANDLE_FACTORY;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
-import static io.netty5.util.internal.ObjectUtil.checkPositive;
+import static io.netty5.channel.ChannelOption.WRITE_HANDLE_FACTORY;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
@@ -101,10 +100,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private volatile BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
     private volatile ReadHandleFactory readHandleFactory;
+
+    private volatile WriteHandleFactory writeHandleFactory;
+
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
-    private volatile int maxMessagesPerWrite = Integer.MAX_VALUE;
 
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
@@ -149,7 +150,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *                                  @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect) {
-        this(parent, eventLoop, supportingDisconnect, new AdaptiveReadHandleFactory());
+        this(parent, eventLoop, supportingDisconnect, new AdaptiveReadHandleFactory(),
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE));
     }
 
     /**
@@ -161,10 +163,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *                                      operation that allows a user to disconnect and then call {
      *                                      @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      * @param defaultReadHandleFactory      the {@link ReadHandleFactory} that is used by default.
+     * @param defaultWriteHandleFactory     the {@link WriteHandleFactory} that is used by default.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop,
-                              boolean supportingDisconnect, ReadHandleFactory defaultReadHandleFactory) {
-        this(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, DefaultChannelId.newInstance());
+                              boolean supportingDisconnect, ReadHandleFactory defaultReadHandleFactory,
+                              WriteHandleFactory defaultWriteHandleFactory) {
+        this(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
+                DefaultChannelId.newInstance());
     }
 
     /**
@@ -176,19 +181,22 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *                                      operation that allows a user to disconnect and then call {
      *                                      @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      * @param defaultReadHandleFactory      the {@link ReadHandleFactory} that is used by default.
+     * @param defaultWriteHandleFactory     the {@link WriteHandleFactory} that is used by default.
      * @param id                            the {@link ChannelId} which will be used.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
-                              ReadHandleFactory defaultReadHandleFactory, ChannelId id) {
+                              ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
+                              ChannelId id) {
         this.parent = parent;
         this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", getClass());
+        this.id = requireNonNull(id, "id");
         this.supportingDisconnect = supportingDisconnect;
+        readHandleFactory = requireNonNull(defaultReadHandleFactory, "defaultReadHandleFactory");
+        writeHandleFactory = requireNonNull(defaultWriteHandleFactory, "defaultWriteHandleFactory");
         closePromise = new ClosePromise(eventLoop);
         outboundBuffer = new ChannelOutboundBuffer(eventLoop);
-        this.id = id;
         pipeline = newChannelPipeline();
         fireChannelWritabilityChangedTask = () -> pipeline().fireChannelWritabilityChanged();
-        readHandleFactory = requireNonNull(defaultReadHandleFactory, "defaultReadHandleFactory");
     }
 
     protected static <T extends EventLoopGroup> T validateEventLoopGroup(
@@ -397,11 +405,15 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return readSink().readHandle;
     }
 
+    protected final WriteHandleFactory.WriteHandle writeHandle() {
+        return writeHandleFactory.newHandle(this);
+    }
+
     private ReadSink readSink() {
         assertEventLoop();
 
         if (readSink == null) {
-            readSink = new ReadSink(getReadHandleFactory().newHandle());
+            readSink = new ReadSink(getReadHandleFactory().newHandle(this));
         }
         return readSink;
     }
@@ -1069,11 +1081,23 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             return;
         }
 
+        WriteHandleFactory.WriteHandle writeHandle = writeHandle();
         try {
-            doWrite(outboundBuffer);
-        } catch (Throwable t) {
-            handleWriteError(t);
+            Throwable writeError = null;
+            try {
+                doWrite(outboundBuffer, writeHandle);
+            } catch (Throwable t) {
+                handleWriteError(t);
+            } finally {
+                try {
+                    writeLoopComplete(outboundBuffer.isEmpty());
+                } catch (Exception e) {
+                    handleWriteError(writeError);
+                }
+            }
         } finally {
+            writeHandle.writeComplete();
+
             // It's important that we call this with notifyLater true so we not get into trouble when flush() is called
             // again in channelWritabilityChanged(...).
             updateWritabilityIfNeeded(true, true);
@@ -1081,6 +1105,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
+    protected void writeLoopComplete(boolean allWritten) throws Exception {
+        if (!allWritten) {
+            // Schedule a new write.
+            executor().execute(this::writeFlushed);
+        }
+    }
     private void handleWriteError(Throwable t) {
         assertEventLoop();
 
@@ -1257,7 +1287,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Flush the content of the given buffer to the remote peer.
      */
-    protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
+    protected abstract void doWrite(ChannelOutboundBuffer in,  WriteHandleFactory.WriteHandle writeHandle)
+            throws Exception;
 
     /**
      * Connect to remote peer.
@@ -1449,14 +1480,14 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         if (option == READ_HANDLE_FACTORY) {
             return getReadHandleFactory();
         }
+        if (option == WRITE_HANDLE_FACTORY) {
+            return getWriteHandleFactory();
+        }
         if (option == AUTO_CLOSE) {
             return (T) Boolean.valueOf(isAutoClose());
         }
         if (option == MESSAGE_SIZE_ESTIMATOR) {
             return (T) getMessageSizeEstimator();
-        }
-        if (option == MAX_MESSAGES_PER_WRITE) {
-            return (T) Integer.valueOf(getMaxMessagesPerWrite());
         }
         if (option == ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
@@ -1492,12 +1523,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             setBufferAllocator((BufferAllocator) value);
         } else if (option == READ_HANDLE_FACTORY) {
             setReadHandleFactory((ReadHandleFactory) value);
+        } else if (option == WRITE_HANDLE_FACTORY) {
+            setWriteHandleFactory((WriteHandleFactory) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
             setMessageSizeEstimator((MessageSizeEstimator) value);
-        } else if (option == MAX_MESSAGES_PER_WRITE) {
-            setMaxMessagesPerWrite((Integer) value);
         } else if (option == ALLOW_HALF_CLOSURE) {
             setAllowHalfClosure((Boolean) value);
         } else {
@@ -1541,8 +1572,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(
                 AUTO_READ, WRITE_BUFFER_WATER_MARK, CONNECT_TIMEOUT_MILLIS,
-                BUFFER_ALLOCATOR, READ_HANDLE_FACTORY, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
-                MAX_MESSAGES_PER_WRITE, ALLOW_HALF_CLOSURE);
+                BUFFER_ALLOCATOR, READ_HANDLE_FACTORY, WRITE_HANDLE_FACTORY, AUTO_CLOSE, MESSAGE_SIZE_ESTIMATOR,
+                ALLOW_HALF_CLOSURE);
     }
 
     protected static Set<ChannelOption<?>> newSupportedIdentityOptionsSet(ChannelOption<?>... options) {
@@ -1565,22 +1596,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         this.connectTimeoutMillis = connectTimeoutMillis;
     }
 
-    /**
-     * Get the maximum number of message to write per eventloop run. Once this limit is
-     * reached we will continue to process other events before trying to write the remaining messages.
-     */
-    protected final int getMaxMessagesPerWrite() {
-        return maxMessagesPerWrite;
-    }
-
-    /**
-     * Set the maximum number of message to write per eventloop run. Once this limit is
-     * reached we will continue to process other events before trying to write the remaining messages.
-     */
-    private void setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-        this.maxMessagesPerWrite = checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
-    }
-
     private BufferAllocator getBufferAllocator() {
         return bufferAllocator;
     }
@@ -1597,6 +1612,15 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private void setReadHandleFactory(ReadHandleFactory readHandleFactory) {
         this.readHandleFactory = requireNonNull(readHandleFactory, "readHandleFactory");
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends WriteHandleFactory> T getWriteHandleFactory() {
+        return (T) writeHandleFactory;
+    }
+
+    private void setWriteHandleFactory(WriteHandleFactory writeHandleFactory) {
+        this.writeHandleFactory = requireNonNull(writeHandleFactory, "writeHandleFactory");
     }
 
     protected final boolean isAutoRead() {

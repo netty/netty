@@ -18,6 +18,8 @@ package io.netty5.channel.kqueue;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.CompositeBufferGatheringWriteTest;
 
@@ -31,9 +33,31 @@ public class KQueueCompositeBufferGatheringWriteTest extends CompositeBufferGath
 
     @Override
     protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(Channel channel,
-                                                                                 int soSndBuf) {
-        if (channel instanceof AbstractKQueueChannel<?>) {
-            ((AbstractKQueueChannel<?>) channel).setMaxBytesPerGatheringWrite(soSndBuf);
+                                                                                 final int soSndBuf) {
+        if (channel instanceof KQueueSocketChannel) {
+            channel.setOption(ChannelOption.WRITE_HANDLE_FACTORY, new WriteHandleFactory() {
+                @Override
+                public WriteHandle newHandle(Channel channel) {
+                    return new WriteHandle() {
+
+                        @Override
+                        public long estimatedMaxBytesPerGatheringWrite() {
+                            return soSndBuf;
+                        }
+
+                        @Override
+                        public boolean lastWrite(
+                                long attemptedBytesWrite, long actualBytesWrite, int numMessagesWrite) {
+                            return true;
+                        }
+
+                        @Override
+                        public void writeComplete() {
+                            // NOOP
+                        }
+                    };
+                }
+            });
         }
     }
 }

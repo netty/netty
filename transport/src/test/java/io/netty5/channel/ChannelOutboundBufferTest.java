@@ -206,14 +206,11 @@ public class ChannelOutboundBufferTest {
             int size = buf.readableBytes();
             buffer.addMessage(buf, size, executor.newPromise());
             buffer.addFlush();
-            assertEquals(0, buffer.currentProgress());
             buffer.removeBytes(size / 2);
-            assertEquals(size / 2, buffer.currentProgress());
             assertThat(buffer.current()).isNotNull();
             buffer.removeBytes(size);
             assertNull(buffer.current());
             assertTrue(buffer.isEmpty());
-            assertEquals(0, buffer.currentProgress());
         });
     }
 

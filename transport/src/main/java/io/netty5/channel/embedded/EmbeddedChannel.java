@@ -19,6 +19,8 @@ import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.MaxMessagesWriteHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
@@ -171,7 +173,8 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, new EmbeddedEventLoop(), hasDisconnect, new AdaptiveReadHandleFactory(), channelId);
+        super(parent, new EmbeddedEventLoop(), hasDisconnect, new AdaptiveReadHandleFactory(),
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), channelId);
         setup(register, handlers);
     }
 
@@ -722,8 +725,9 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        for (;;) {
+    protected void doWrite(ChannelOutboundBuffer in,  WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+        boolean continueWriting;
+        do {
             Object msg = in.current();
             if (msg == null) {
                 break;
@@ -741,14 +745,15 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
             } else {
                 handleOutboundMessage(ReferenceCountUtil.retain(msg));
             }
+            continueWriting = writeHandle.lastWrite(0, 0, 1);
             in.remove();
-        }
+        } while (continueWriting);
     }
 
     /**
      * Called for each outbound message.
      *
-     * @see #doWrite(ChannelOutboundBuffer)
+     * @see #doWrite(ChannelOutboundBuffer, WriteHandleFactory.WriteHandle)
      */
     protected void handleOutboundMessage(Object msg) {
         outboundMessages().add(msg);

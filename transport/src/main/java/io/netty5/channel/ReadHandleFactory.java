@@ -16,14 +16,15 @@
 package io.netty5.channel;
 
 /**
- * Implementations allow to influence how much data / messages are received per read loop invocation.
+ * Implementations allow to influence how much data / messages are read per read loop invocation.
  */
 public interface ReadHandleFactory {
     /**
-     * Creates a new handle. The handle provides the actual operations and keeps the internal information which is
-     * required for predicting an optimal buffer capacity.
+     * Creates a new handle for the given {@link Channel}.
+     *
+     * @param channel   the {@link Channel} for which the {@link ReadHandle} is used.
      */
-    ReadHandle newHandle();
+    ReadHandle newHandle(Channel channel);
 
     /**
      * Handle which allows to customize how data / messages are read.

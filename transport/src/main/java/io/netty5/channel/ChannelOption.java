@@ -77,6 +77,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
 
     public static final ChannelOption<BufferAllocator> BUFFER_ALLOCATOR = valueOf("BUFFER_ALLOCATOR");
     public static final ChannelOption<ReadHandleFactory> READ_HANDLE_FACTORY = valueOf("READ_HANDLE_FACTORY");
+    public static final ChannelOption<WriteHandleFactory> WRITE_HANDLE_FACTORY = valueOf("WRITE_HANDLE_FACTORY");
     public static final ChannelOption<MessageSizeEstimator> MESSAGE_SIZE_ESTIMATOR = valueOf("MESSAGE_SIZE_ESTIMATOR");
 
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS = valueOf("CONNECT_TIMEOUT_MILLIS");

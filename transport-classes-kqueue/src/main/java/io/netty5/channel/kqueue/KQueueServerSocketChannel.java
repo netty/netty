@@ -23,6 +23,8 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelReadHandleFactory;
+import io.netty5.channel.ServerChannelWriteHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -98,7 +100,7 @@ public final class KQueueServerSocketChannel extends
     private volatile boolean enableTcpFastOpen;
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
                 newSocketStream(), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
@@ -106,7 +108,7 @@ public final class KQueueServerSocketChannel extends
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                      ProtocolFamily protocolFamily) {
-        super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
                 BsdSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
@@ -122,7 +124,8 @@ public final class KQueueServerSocketChannel extends
     private KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(null, eventLoop, false, new ServerChannelReadHandleFactory(), socket, isSoErrorZero(socket));
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
+                socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 KQueueSocketChannel.class);
     }
@@ -339,7 +342,7 @@ public final class KQueueServerSocketChannel extends
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) {
+    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
         throw new UnsupportedOperationException();
     }
 

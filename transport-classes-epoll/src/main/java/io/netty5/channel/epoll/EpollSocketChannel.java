@@ -25,7 +25,9 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.channel.socket.SocketChannelWriteHandleFactory;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainSocketReadMode;
 import io.netty5.channel.unix.FileDescriptor;
@@ -63,7 +65,6 @@ import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.ChannelOption.TCP_NODELAY;
 import static io.netty5.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
-import static io.netty5.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty5.channel.unix.Limits.SSIZE_MAX;
 import static io.netty5.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 import static java.util.Objects.requireNonNull;
@@ -126,7 +127,6 @@ public final class EpollSocketChannel
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
     private WritableByteChannel byteChannel;
-    private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
@@ -140,7 +140,7 @@ public final class EpollSocketChannel
 
     public EpollSocketChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(),
+        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
                 LinuxSocket.newSocket(protocolFamily), false);
     }
 
@@ -150,92 +150,71 @@ public final class EpollSocketChannel
 
     private EpollSocketChannel(EventLoop eventLoop, LinuxSocket socket) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(),
+        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
                 socket, isSoErrorZero(socket));
     }
 
     EpollSocketChannel(EpollServerSocketChannel parent, EventLoop eventLoop,
                        LinuxSocket fd, SocketAddress remoteAddress) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(parent, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(), fd, remoteAddress);
+        super(parent, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
+                fd, remoteAddress);
 
         if (fd.protocolFamily() != SocketProtocolFamily.UNIX && parent != null) {
             tcpMd5SigAddresses = parent.tcpMd5SigAddresses();
         }
     }
 
+    private static WriteHandleFactory newWriteHandleFactory() {
+        return new SocketChannelWriteHandleFactory(Integer.MAX_VALUE, SSIZE_MAX);
+    }
+
     /**
      * Write bytes form the given {@link Buffer} to the underlying {@link java.nio.channels.Channel}.
      * @param in the collection which contains objects to write.
+     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
      * @param buf the {@link Buffer} from which the bytes should be written.
-     * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
+     * @return if we should continue with writing more messages.
      */
-    private int writeBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
+    private boolean writeBytes(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle, Buffer buf)
+            throws Exception {
         int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             in.remove();
-            return 0;
+            return writeHandle.lastWrite(0, 0, 1);
         }
 
         int readableComponents = buf.countReadableComponents();
+        long attempted;
+        long written;
         if (readableComponents == 1) {
-            return doWriteBytes(in, buf);
-        } else {
+            attempted = buf.readableBytes();
+            written = doWriteBytes(in, buf);
+        }  else {
+            attempted = Math.min(writeHandle.estimatedMaxBytesPerGatheringWrite(), buf.readableBytes());
             ByteBuffer[] nioBuffers = new ByteBuffer[readableComponents];
-            int index = 0;
             try (var iteration = buf.forEachComponent()) {
-                for (var c = iteration.firstReadable(); c != null; c = c.nextReadable()) {
-                    nioBuffers[index++] = c.readableBuffer();
+                int index = 0;
+                for (var c = iteration.first(); c != null; c = c.next()) {
+                   nioBuffers[index++] = c.readableBuffer();
                 }
+                written = writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes, attempted);
             }
-            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
-                    getMaxBytesPerGatheringWrite());
         }
-    }
-
-    void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
-        this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
-    }
-
-    long getMaxBytesPerGatheringWrite() {
-        return maxBytesPerGatheringWrite;
-    }
-
-    private void adjustMaxBytesPerGatheringWrite(long attempted, long written, long oldMaxBytesPerGatheringWrite) {
-        // By default we track the SO_SNDBUF when ever it is explicitly set. However some OSes may dynamically change
-        // SO_SNDBUF (and other characteristics that determine how much data can be written at once) so we should try
-        // make a best effort to adjust as OS behavior changes.
-        if (attempted == written) {
-            if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
-                setMaxBytesPerGatheringWrite(attempted << 1);
-            }
-        } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
-            setMaxBytesPerGatheringWrite(attempted >>> 1);
-        }
+        return writeHandle.lastWrite(attempted, written, written >= 0 ? 1: 0) && written != -1;
     }
 
     /**
      * Write multiple bytes via {@link IovArray}.
      * @param in the collection which contains objects to write.
+     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
      * @param array The array which contains the content to write.
-     * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
+     * @return if we should continue with writing more messages.
      * @throws IOException If an I/O exception occurs during write.
      */
-    private int writeBytesMultiple(ChannelOutboundBuffer in, IovArray array) throws IOException {
+    private boolean writeBytesMultiple(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle,
+                                       IovArray array)
+            throws IOException {
         final long expectedWrittenBytes = array.size();
         assert expectedWrittenBytes != 0;
         final int cnt = array.count();
@@ -243,11 +222,12 @@ public final class EpollSocketChannel
 
         final long localWrittenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
         if (localWrittenBytes > 0) {
-            adjustMaxBytesPerGatheringWrite(expectedWrittenBytes, localWrittenBytes, array.maxBytes());
             in.removeBytes(localWrittenBytes);
-            return 1;
+            int numMessages = array.writtenMessages(0, localWrittenBytes);
+            return writeHandle.lastWrite(expectedWrittenBytes, localWrittenBytes, numMessages);
         }
-        return -1;
+        writeHandle.lastWrite(expectedWrittenBytes, localWrittenBytes, 0);
+        return false;
     }
 
     /**
@@ -258,13 +238,6 @@ public final class EpollSocketChannel
      * @param expectedWrittenBytes The number of bytes we expect to write.
      * @param maxBytesPerGatheringWrite The maximum number of bytes we should attempt to write.
      * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
      * @throws IOException If an I/O exception occurs during write.
      */
     private int writeBytesMultiple(
@@ -277,7 +250,6 @@ public final class EpollSocketChannel
 
         final long localWrittenBytes = socket.writev(nioBuffers, 0, nioBufferCnt, expectedWrittenBytes);
         if (localWrittenBytes > 0) {
-            adjustMaxBytesPerGatheringWrite(expectedWrittenBytes, localWrittenBytes, maxBytesPerGatheringWrite);
             in.removeBytes(localWrittenBytes);
             return 1;
         }
@@ -287,129 +259,109 @@ public final class EpollSocketChannel
     /**
      * Write a {@link DefaultFileRegion}
      * @param in the collection which contains objects to write.
+     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
      * @param region the {@link DefaultFileRegion} from which the bytes should be written
-     * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
+     * @return if we should continue with writing more messages.
      */
-    private int writeDefaultFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
-        final long offset = region.transferred();
+    private boolean writeDefaultFileRegion(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle,
+                                           DefaultFileRegion region) throws Exception {
         final long regionCount = region.count();
-        if (offset >= regionCount) {
-            in.remove();
-            return 0;
-        }
+        final long offset = region.transferred();
+        final long flushedAmount;
+        int messagesWritten  = 0;
 
-        final long flushedAmount = socket.sendFile(region, region.position(), offset, regionCount - offset);
-        if (flushedAmount > 0) {
-            in.progress(flushedAmount);
-            if (region.transferred() >= regionCount) {
-                in.remove();
+        if (offset >= regionCount) {
+            flushedAmount = 0;
+            messagesWritten = 1;
+        } else {
+            flushedAmount = socket.sendFile(region, region.position(), offset, regionCount - offset);
+            if (flushedAmount > 0) {
+                if (region.transferred() >= regionCount) {
+                    messagesWritten = 1;
+                }
+            } else if (flushedAmount == 0) {
+                validateFileRegion(region, offset);
             }
-            return 1;
         }
-        if (flushedAmount == 0) {
-            validateFileRegion(region, offset);
+        if (messagesWritten > 0) {
+            in.remove();
         }
-        return -1;
+        return writeHandle.lastWrite(regionCount, flushedAmount, messagesWritten) && flushedAmount > 0;
     }
 
     /**
      * Write a {@link FileRegion}
      * @param in the collection which contains objects to write.
+     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
      * @param region the {@link FileRegion} from which the bytes should be written
-     * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
+     * @return if we should continue with writing more messages.
      */
-    private int writeFileRegion(ChannelOutboundBuffer in, FileRegion region) throws Exception {
+    private boolean writeFileRegion(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle,
+                                FileRegion region) throws Exception {
+        final long regionCount = region.count();
+        final long flushedAmount;
+        int messagesWritten  = 0;
         if (region.transferred() >= region.count()) {
-            in.remove();
-            return 0;
+            flushedAmount = 0;
+            messagesWritten = 1;
+        } else {
+            if (byteChannel == null) {
+                byteChannel = new EpollSocketWritableByteChannel();
+            }
+            flushedAmount = region.transferTo(byteChannel, region.transferred());
+            if (flushedAmount > 0) {
+                if (region.transferred() >= region.count()) {
+                    messagesWritten = 1;
+                }
+            }
         }
 
-        if (byteChannel == null) {
-            byteChannel = new EpollSocketWritableByteChannel();
+        if (messagesWritten > 0) {
+            in.remove();
         }
-        final long flushedAmount = region.transferTo(byteChannel, region.transferred());
-        if (flushedAmount > 0) {
-            in.progress(flushedAmount);
-            if (region.transferred() >= region.count()) {
-                in.remove();
-            }
-            return 1;
-        }
-        return -1;
+        return writeHandle.lastWrite(regionCount, flushedAmount, messagesWritten) && flushedAmount > 0;
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        while (!in.isEmpty()) {
+    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+        boolean continueWriting;
+        do {
             final int msgCount = in.size();
-            int result;
+            if (msgCount == 0) {
+                writeHandle.lastWrite(0, 0, 0);
+                return;
+            }
             // Do gathering write if the outbound buffer entries start with more than one Buffer.
             if (msgCount > 1 && in.current() instanceof Buffer) {
-                result = doWriteMultiple(in);
-            } else if (msgCount == 0) {
-                // Wrote all messages.
-                clearFlag(Native.EPOLLOUT);
-                // Return here so we not set the EPOLLOUT flag.
-                return;
-            } else { // msgCount == 1
-                result = doWriteSingle(in);
+                continueWriting = doWriteMultiple(in, writeHandle);
+            } else {
+                continueWriting = doWriteSingle(in, writeHandle);
             }
-
-            // We do not break the loop here even if the outbound buffer was flushed completely,
-            // because a user might have triggered another write and flush when we notify his or her
-            // listeners.
-
-            if (result == -1) {
-                // Underlying descriptor can not accept all data currently, so set the EPOLLOUT flag to be woken up
-                // when it can accept more data.
-                setFlag(Native.EPOLLOUT);
-                return;
-            }
-        }
-        clearFlag(Native.EPOLLOUT);
+        } while (continueWriting);
     }
 
     /**
      * Attempt to write a single object.
      * @param in the collection which contains objects to write.
-     * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
+     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
+     * @return if we should continue with writing more messages.
      * @throws Exception If an I/O error occurs.
      */
-    private int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
+    private boolean doWriteSingle(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
+            throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
         if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
             // File descriptor was written, so remove it.
             in.remove();
-            return 1;
+            return writeHandle.lastWrite(0, 0, 1);
         }
         if (msg instanceof Buffer) {
-            return writeBytes(in, (Buffer) msg);
+            return writeBytes(in, writeHandle, (Buffer) msg);
         } else if (msg instanceof DefaultFileRegion) {
-            return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
+            return writeDefaultFileRegion(in, writeHandle, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
-            return writeFileRegion(in, (FileRegion) msg);
+            return writeFileRegion(in, writeHandle, (FileRegion) msg);
         } else {
             // Should never reach here.
             throw new Error();
@@ -419,28 +371,24 @@ public final class EpollSocketChannel
     /**
      * Attempt to write multiple {@link Buffer} objects.
      * @param in the collection which contains objects to write.
-     * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
+     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
+     * @return if we should continue with writing more messages.
      * @throws Exception If an I/O error occurs.
      */
-    private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
-        final long maxBytesPerGatheringWrite = getMaxBytesPerGatheringWrite();
+    private boolean doWriteMultiple(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
+            throws Exception {
+        final long maxBytesPerGatheringWrite = writeHandle.estimatedMaxBytesPerGatheringWrite();
         IovArray array = registration().cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
 
         if (array.count() >= 1) {
-            return writeBytesMultiple(in, array);
+            return writeBytesMultiple(in, writeHandle, array);
         }
+        int messages = in.size();
         // cnt == 0, which means the outbound buffer contained empty buffers only.
         in.removeBytes(0);
-        return 0;
+        return writeHandle.lastWrite(0, 0, messages);
     }
 
     @Override
@@ -868,7 +816,6 @@ public final class EpollSocketChannel
     private void setSendBufferSize(int sendBufferSize) {
         try {
             socket.setSendBufferSize(sendBufferSize);
-            calculateMaxBytesPerGatheringWrite();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -1049,14 +996,6 @@ public final class EpollSocketChannel
      */
     private boolean isTcpFastOpenConnect() {
         return tcpFastopen;
-    }
-
-    private void calculateMaxBytesPerGatheringWrite() {
-        // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
-        int newSendBufferSize = getSendBufferSize() << 1;
-        if (newSendBufferSize > 0) {
-            setMaxBytesPerGatheringWrite(newSendBufferSize);
-        }
     }
 
     /**

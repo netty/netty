@@ -21,7 +21,9 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
@@ -159,7 +161,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, true, 0, new FixedReadHandleFactory(2048), fd, active);
+        super(null, eventLoop, true, 0, new FixedReadHandleFactory(2048),
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), fd, active);
     }
 
     @Override
@@ -334,83 +337,95 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int maxMessagesPerWrite = getMaxMessagesPerWrite();
-        while (maxMessagesPerWrite > 0) {
-            Object msg = in.current();
-            if (msg == null) {
+    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+        boolean continueWriting;
+        do {
+            if (in.isEmpty()) {
                 // Wrote all messages.
                 break;
             }
+            // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
+            if (Native.IS_SUPPORTING_SENDMMSG && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                    in.size() > 1 ||
+                    // We only handle UDP_SEGMENT in sendmmsg.
+                    in.current() instanceof SegmentedDatagramPacket) {
+                NativeDatagramPacketArray array = cleanDatagramPacketArray();
+                array.add(in, isConnected(), Integer.MAX_VALUE);
+                int cnt = array.count();
 
-            try {
-                // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
-                if (Native.IS_SUPPORTING_SENDMMSG && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
-                        in.size() > 1 ||
-                        // We only handle UDP_SEGMENT in sendmmsg.
-                        in.current() instanceof SegmentedDatagramPacket) {
-                    NativeDatagramPacketArray array = cleanDatagramPacketArray();
-                    array.add(in, isConnected(), maxMessagesPerWrite);
-                    int cnt = array.count();
-
-                    if (cnt >= 1) {
+                if (cnt >= 1) {
                         // Try to use gathering writes via sendmmsg(...) syscall.
                         int offset = 0;
                         NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
-
-                        int send = socket.sendmmsg(packets, offset, cnt);
+                    long sentBytes = 0;
+                    long notSentBytes = 0;
+                    int send = 0;
+                    try {
+                        send = socket.sendmmsg(packets, offset, cnt);
                         if (send == 0) {
                             // Did not write all messages.
                             break;
                         }
-                        for (int i = 0; i < send; i++) {
-                            in.remove();
+                        for (int i = 0; i < cnt; i++) {
+                            int count = packets[i].count();
+                            if (i < send) {
+                                sentBytes += count;
+                                in.remove();
+                            } else {
+                                notSentBytes += count;
+                            }
                         }
-                        maxMessagesPerWrite -= send;
-                        continue;
-                    }
-                }
-                if (doWriteMessage(msg)) {
-                    in.remove();
-                    maxMessagesPerWrite --;
-                } else {
-                    break;
-                }
-            } catch (IOException e) {
-                maxMessagesPerWrite --;
-                // Continue on write error as a DatagramChannel can write to multiple remote peers
-                //
-                // See https://github.com/netty/netty/issues/2665
-                in.remove(e);
-            }
-        }
+                    } catch (IOException e) {
+                        for (int i = 0; i < cnt; i++) {
+                            int count = packets[i].count();
+                            notSentBytes += count;
+                        }
 
-        if (in.isEmpty()) {
-            // Did write all messages.
-            clearFlag(Native.EPOLLOUT);
-        } else {
-            // Did not write all messages.
-            setFlag(Native.EPOLLOUT);
-        }
+                        // Continue on write error as a DatagramChannel can write to multiple remote peers
+                        //
+                        // See https://github.com/netty/netty/issues/2665
+                        in.remove(e);
+                    }
+                    continueWriting = writeHandle.lastWrite(sentBytes + notSentBytes, sentBytes, send);
+                } else {
+                    continueWriting = doWriteMessage(in, writeHandle);
+                }
+            } else {
+                continueWriting = doWriteMessage(in, writeHandle);
+            }
+        } while (continueWriting);
     }
 
-    private boolean doWriteMessage(Object msg) throws Exception {
+    private boolean doWriteMessage(ChannelOutboundBuffer in,  WriteHandleFactory.WriteHandle writeHandle)
+            throws Exception {
+        Object msg = in.current();
+        if (msg == null) {
+            return writeHandle.lastWrite(0, 0, 0);
+        }
         final Buffer data;
         final SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<?, SocketAddress> envelope = (AddressedEnvelope<?, SocketAddress>) msg;
-            data = (Buffer) envelope.content();
+            AddressedEnvelope<Buffer, SocketAddress> envelope = (AddressedEnvelope<Buffer, SocketAddress>) msg;
+            data = envelope.content();
             remoteAddress = envelope.recipient();
         } else {
             data = (Buffer) msg;
-            remoteAddress = null;
+            remoteAddress = remoteAddress();
         }
 
         if (data.readableBytes() == 0) {
-            return true;
+            in.remove();
+            return writeHandle.lastWrite(0, 0, 1);
         }
-        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+
+        long result = doWriteOrSendBytes(data, remoteAddress, false);
+        if (result > 0) {
+            in.remove();
+            return writeHandle.lastWrite(data.readableBytes(), result, 1);
+        }
+        writeHandle.lastWrite(data.readableBytes(), result, 0);
+        return false;
     }
 
     @Override
@@ -592,8 +607,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                     }
                 } else {
                     // Try to use scattering reads via recvmmsg(...) syscall.
-                    state = scatteringRead(readBufferAllocator(), readSink, cleanDatagramPacketArray(),
-                                          buf, datagramSize, numDatagram);
+                    state = scatteringRead(readSink, cleanDatagramPacketArray(), buf, datagramSize, numDatagram);
                 }
             } catch (NativeIoException e) {
                 if (connected) {
@@ -751,7 +765,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private ReadingState scatteringRead(BufferAllocator allocator, ReadSink readSink, NativeDatagramPacketArray array,
+    private ReadingState scatteringRead(ReadSink readSink, NativeDatagramPacketArray array,
                                         Buffer buf, int datagramSize, int numDatagram)
             throws IOException {
         RecyclableArrayList datagramPackets = null;

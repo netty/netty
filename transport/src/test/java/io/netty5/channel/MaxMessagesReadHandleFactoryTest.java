@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class MaxMessagesReadHandleFactoryTest {
 
@@ -40,7 +41,7 @@ public class MaxMessagesReadHandleFactoryTest {
     @Test
     public void testRespectMaxMessages() {
         MaxMessagesReadHandleFactory allocator = newAllocator();
-        ReadHandleFactory.ReadHandle handle = allocator.newHandle();
+        ReadHandleFactory.ReadHandle handle = allocator.newHandle(mock(Channel.class));
 
         EmbeddedChannel channel = new EmbeddedChannel();
         assertTrue(handle.lastRead(0, 0, 1));
@@ -54,7 +55,7 @@ public class MaxMessagesReadHandleFactoryTest {
     @Test
     public void testIgnoreReadBytes() {
         MaxMessagesReadHandleFactory allocator = newAllocator();
-        ReadHandleFactory.ReadHandle handle = allocator.newHandle();
+        ReadHandleFactory.ReadHandle handle = allocator.newHandle(mock(Channel.class));
 
         EmbeddedChannel channel = new EmbeddedChannel();
         assertTrue(handle.lastRead(0, 0, 1));

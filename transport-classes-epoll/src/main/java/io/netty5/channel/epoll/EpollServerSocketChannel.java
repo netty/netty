@@ -23,6 +23,8 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelReadHandleFactory;
+import io.netty5.channel.ServerChannelWriteHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -103,14 +105,15 @@ public final class EpollServerSocketChannel
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, false, 0, new ServerChannelReadHandleFactory(), LinuxSocket.newSocketStream());
+        super(eventLoop, false, 0, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
+                LinuxSocket.newSocketStream());
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     ProtocolFamily protocolFamily) {
-        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(),
+        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
                 LinuxSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
@@ -124,7 +127,8 @@ public final class EpollServerSocketChannel
     private EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(), socket, isSoErrorZero(socket));
+        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
+                socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
                 EpollSocketChannel.class);
     }
@@ -340,7 +344,7 @@ public final class EpollServerSocketChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) {
+    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
         throw new UnsupportedOperationException();
     }
 

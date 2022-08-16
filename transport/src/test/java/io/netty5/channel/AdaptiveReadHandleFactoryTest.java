@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
 public class AdaptiveReadHandleFactoryTest {
 
@@ -28,7 +29,7 @@ public class AdaptiveReadHandleFactoryTest {
     @BeforeEach
     public void setup() {
         AdaptiveReadHandleFactory recvBufferAllocator = new AdaptiveReadHandleFactory(1, 64, 512, 1024 * 1024 * 10);
-        handle = recvBufferAllocator.newHandle();
+        handle = recvBufferAllocator.newHandle(mock(Channel.class));
     }
 
     @Test

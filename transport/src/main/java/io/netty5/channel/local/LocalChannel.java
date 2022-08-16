@@ -18,6 +18,7 @@ package io.netty5.channel.local;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.internal.ResourceSupport;
@@ -285,7 +286,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
         switch (state) {
         case OPEN:
         case BOUND:
@@ -300,9 +301,11 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
         writeInProgress = true;
         try {
-            for (;;) {
+            boolean continueWriting;
+            do {
                 Object msg = in.current();
                 if (msg == null) {
+                    writeHandle.lastWrite(0, 0, 0);
                     break;
                 }
                 try {
@@ -318,14 +321,17 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                         } else {
                             peer.inboundBuffer.add(msg);
                         }
+                        continueWriting = writeHandle.lastWrite(0, 0, 1);
                         in.remove();
                     } else {
+                        writeHandle.lastWrite(0, 0, 0);
                         break;
                     }
                 } catch (Throwable cause) {
                     in.remove(cause);
+                    continueWriting = writeHandle.lastWrite(0, 0, 0);
                 }
-            }
+            } while (continueWriting);
         } finally {
             // The following situation may cause trouble:
             // 1. Write (with promise X)

@@ -20,10 +20,10 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
@@ -33,12 +33,14 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
 
     /**
      * @see AbstractNioChannel#AbstractNioChannel(Channel, EventLoop,
-     * boolean, ReadHandleFactory, SelectableChannel, int)
+     * boolean, ReadHandleFactory, WriteHandleFactory ,SelectableChannel, int)
      */
     protected AbstractNioMessageChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                         ReadHandleFactory defaultReadHandleFactory,
+                                        WriteHandleFactory defaultWriteHandleFactory,
                                         SelectableChannel ch, int readInterestOp) {
-        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, ch, readInterestOp);
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
+                ch, readInterestOp);
     }
 
     @Override
@@ -59,53 +61,12 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
     }
 
     @Override
-    protected final void doWrite(ChannelOutboundBuffer in) throws Exception {
-        final SelectionKey key = selectionKey();
-        if (key == null) {
-            return;
-        }
-        final int interestOps = key.interestOps();
-
-        int maxMessagesPerWrite = getMaxMessagesPerWrite();
-        while (maxMessagesPerWrite > 0) {
-            Object msg = in.current();
-            if (msg == null) {
-                break;
-            }
-            try {
-                if (doWriteMessage(msg, in)) {
-                    maxMessagesPerWrite--;
-                    in.remove();
-                } else {
-                    break;
-                }
-            } catch (Exception e) {
-                if (continueOnWriteError()) {
-                    maxMessagesPerWrite--;
-                    in.remove(e);
-                } else {
-                    throw e;
-                }
-            }
-        }
-        if (in.isEmpty()) {
-            // Wrote all messages.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
-        } else {
-            // Did not write all messages.
-            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                key.interestOps(interestOps | SelectionKey.OP_WRITE);
-            }
-        }
-    }
-
-    /**
-     * Returns {@code true} if we should continue the write loop on a write error.
-     */
-    protected boolean continueOnWriteError() {
-        return false;
+    protected final void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
+            throws Exception {
+        boolean continueWriting;
+        do {
+            continueWriting = doWriteMessage(in, writeHandle);
+        } while (continueWriting);
     }
 
     /**
@@ -118,5 +79,6 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
      *
      * @return {@code true} if and only if the message has been written
      */
-    protected abstract boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception;
+    protected abstract boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
+            throws Exception;
 }

@@ -19,6 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
@@ -127,13 +128,15 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
      *                                  operation that allows a user to disconnect and then call {
      *                                  @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      * @param defaultReadHandleFactory  the default {@link ReadHandleFactory} to use.
+     * @param defaultWriteHandleFactory the {@link WriteHandleFactory} that is used by default.
      * @param ch                        the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp            the ops to set to receive data from the {@link SelectableChannel}
      */
     protected AbstractNioChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                  ReadHandleFactory defaultReadHandleFactory,
+                                 WriteHandleFactory defaultWriteHandleFactory,
                                  SelectableChannel ch, int readInterestOp) {
-        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory);
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
         this.ch = ch;
         this.readInterestOp = readInterestOp;
         try {
@@ -228,10 +231,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
             return buf;
         }
 
-        BufferAllocator bufferAllocator = bufferAllocator();
-        if (!bufferAllocator.getAllocationType().isDirect()) {
-            bufferAllocator = DefaultBufferAllocators.offHeapAllocator();
-        }
+        BufferAllocator bufferAllocator = ioBufferAllocator(bufferAllocator());
         if (bufferAllocator.isPooling()) {
             try (buf) {
                 return bufferAllocator.allocate(buf.readableBytes()).writeBytes(buf);
@@ -249,10 +249,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
      */
     protected final Buffer newDirectBuffer(Resource<?> holder, Buffer buf) {
         try (holder) {
-            BufferAllocator bufferAllocator = bufferAllocator();
-            if (!bufferAllocator.getAllocationType().isDirect()) {
-                bufferAllocator = DefaultBufferAllocators.offHeapAllocator();
-            }
+            BufferAllocator bufferAllocator = ioBufferAllocator(bufferAllocator());
             if (bufferAllocator.isPooling()) {
                 return bufferAllocator.allocate(buf.readableBytes()).writeBytes(buf);
             }
@@ -260,6 +257,35 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
             // Use split() to grab the readable part of the buffer; the remainder will be closed along with its holder.
             return buf.split();
         }
+    }
+
+    private static BufferAllocator ioBufferAllocator(BufferAllocator bufferAllocator) {
+        if (!bufferAllocator.getAllocationType().isDirect()) {
+            return DefaultBufferAllocators.offHeapAllocator();
+        }
+        return bufferAllocator;
+    }
+
+    @Override
+    protected final void writeLoopComplete(boolean allWritten) throws Exception {
+        final SelectionKey key = selectionKey();
+        // Check first if the key is still valid as it may be canceled as part of the deregistration
+        // from the EventLoop
+        // See https://github.com/netty/netty/issues/2104
+        if (key != null && key.isValid()) {
+            final int interestOps = key.interestOps();
+            // Did not write completely.
+            if (!allWritten) {
+                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                }
+            } else {
+                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+                }
+            }
+        }
+        super.writeLoopComplete(allWritten);
     }
 
     private void closeTransportNow() {

@@ -23,6 +23,8 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelReadHandleFactory;
+import io.netty5.channel.ServerChannelWriteHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
@@ -131,7 +133,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
             ServerSocketChannel channel, ProtocolFamily family) {
         super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
-                channel, SelectionKey.OP_ACCEPT);
+                new ServerChannelWriteHandleFactory(), channel, SelectionKey.OP_ACCEPT);
         this.family = toJdkFamily(family);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", NioSocketChannel.class);
@@ -282,7 +284,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) {
+    protected boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
         throw new UnsupportedOperationException();
     }
 

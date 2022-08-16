@@ -139,7 +139,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
         }
 
         @Override
-        public ReadHandle newHandle() {
+        public ReadHandle newHandle(Channel channel) {
             return new ReadHandle() {
                 private int totalNumMessagesRead;
 

@@ -32,7 +32,7 @@ public abstract class MaxMessagesReadHandleFactory implements ReadHandleFactory 
     }
 
     @Override
-    public final ReadHandle newHandle() {
+    public final ReadHandle newHandle(Channel channel) {
         return newMaxMessageHandle(maxMessagesPerRead);
     }
 

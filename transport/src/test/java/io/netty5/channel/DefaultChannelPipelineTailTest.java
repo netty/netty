@@ -286,7 +286,7 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
             throw new IOException();
         }
 
