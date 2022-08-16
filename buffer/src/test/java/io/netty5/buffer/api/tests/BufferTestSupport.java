@@ -602,7 +602,7 @@ public abstract class BufferTestSupport {
                 buf.copyInto(0, buffer, 0, buffer.capacity());
             }
 
-            try (Buffer buffer = bbAlloc.apply(8)) {
+            try (Buffer buffer = bbAlloc.apply(8).fill((byte) 0)) {
                 buf.copyInto(0, buffer, 0, 0);
                 buffer.writerOffset(8);
                 assertEquals(0L, buffer.readLong());
@@ -621,7 +621,7 @@ public abstract class BufferTestSupport {
                 assertEquals((byte) 0x08, buffer.readByte());
             }
 
-            try (Buffer buffer = bbAlloc.apply(6)) {
+            try (Buffer buffer = bbAlloc.apply(6).fill((byte) 0)) {
                 buf.copyInto(1, buffer, 1, 3);
                 buffer.writerOffset(6);
                 assertEquals((byte) 0x00, buffer.readByte());
@@ -632,7 +632,7 @@ public abstract class BufferTestSupport {
                 assertEquals((byte) 0x00, buffer.readByte());
             }
 
-            try (Buffer buffer = bbAlloc.apply(6)) {
+            try (Buffer buffer = bbAlloc.apply(6).fill((byte) 0)) {
                 buffer.writerOffset(3).readerOffset(3);
                 buf.copyInto(1, buffer, 1, 3);
                 assertEquals(3, buffer.readerOffset());

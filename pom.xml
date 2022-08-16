@@ -354,7 +354,7 @@
     <profile>
       <id>unsafeBuffer</id>
       <properties>
-        <argLine.java9>-Dio.netty5.tryReflectionSetAccessible=true --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty5.buffer.api.MemoryManager=Unsafe</argLine.java9>
+        <argLine.java9.extras>-Dio.netty5.tryReflectionSetAccessible=true --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty5.buffer.api.MemoryManager=Unsafe</argLine.java9.extras>
       </properties>
     </profile>
 

@@ -253,13 +253,13 @@ public class BufferSearchTest extends BufferTestSupport {
             try (Buffer buffer = allocator.allocate(0)) {
                 assertThat(buffer.bytesBefore(needle)).isEqualTo(-1);
             }
-            try (Buffer buffer = allocator.allocate(1).writerOffset(1)) {
+            try (Buffer buffer = allocator.allocate(1).fill((byte) 0).writerOffset(1)) {
                 assertThat(buffer.bytesBefore(needle)).isEqualTo(-1);
             }
-            try (Buffer buffer = allocator.allocate(2).writerOffset(2)) {
+            try (Buffer buffer = allocator.allocate(2).fill((byte) 0).writerOffset(2)) {
                 assertThat(buffer.bytesBefore(needle)).isEqualTo(-1);
             }
-            try (Buffer buffer = allocator.allocate(3).writerOffset(3)) {
+            try (Buffer buffer = allocator.allocate(3).fill((byte) 0).writerOffset(3)) {
                 assertThat(buffer.bytesBefore(needle)).isEqualTo(0);
             }
         }

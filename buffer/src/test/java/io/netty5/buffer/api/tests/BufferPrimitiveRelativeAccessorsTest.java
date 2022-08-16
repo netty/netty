@@ -227,7 +227,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfByteMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             byte value = 0x01;
             buf.writeByte(value);
             buf.writerOffset(Long.BYTES);
@@ -261,7 +261,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfUnsignedByteMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             int value = 0x01;
             buf.writeUnsignedByte(value);
             buf.writerOffset(Long.BYTES);
@@ -362,7 +362,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfCharMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             char value = 0x0102;
             buf.writeChar(value);
             buf.writerOffset(Long.BYTES);
@@ -544,7 +544,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfShortMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             short value = 0x0102;
             buf.writeShort(value);
             buf.writerOffset(Long.BYTES);
@@ -578,7 +578,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfUnsignedShortMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             int value = 0x0102;
             buf.writeUnsignedShort(value);
             buf.writerOffset(Long.BYTES);
@@ -760,7 +760,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfMediumMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             int value = 0x010203;
             buf.writeMedium(value);
             buf.writerOffset(Long.BYTES);
@@ -794,7 +794,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfUnsignedMediumMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             int value = 0x010203;
             buf.writeUnsignedMedium(value);
             buf.writerOffset(Long.BYTES);
@@ -976,7 +976,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfIntMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             int value = 0x01020304;
             buf.writeInt(value);
             buf.writerOffset(Long.BYTES);
@@ -1010,7 +1010,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfUnsignedIntMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             long value = 0x01020304;
             buf.writeUnsignedInt(value);
             buf.writerOffset(Long.BYTES);
@@ -1111,7 +1111,7 @@ public class BufferPrimitiveRelativeAccessorsTest extends BufferTestSupport {
     @MethodSource("allocators")
     void relativeWriteOfFloatMustHaveDefaultEndianByteOrder(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             Buffer buf = allocator.allocate(8)) {
+             Buffer buf = allocator.allocate(8).fill((byte) 0)) {
             float value = Float.intBitsToFloat(0x01020304);
             buf.writeFloat(value);
             buf.writerOffset(Long.BYTES);
