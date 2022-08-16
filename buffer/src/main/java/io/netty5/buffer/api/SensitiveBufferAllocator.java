@@ -81,7 +81,7 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
 
     private Drop<Buffer> decorate(Drop<Buffer> base) {
         MemoryManager manager = getManager();
-        return CleanerDrop.wrap(ArcDrop.wrap(new ZeroingDrop(manager, control, base)), manager);
+        return CleanerDrop.wrap(ArcDrop.wrap(new ZeroingDrop(manager, base)), manager);
     }
 
     private MemoryManager getManager() {
@@ -104,11 +104,9 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
     private static final class ZeroingDrop implements Drop<Buffer> {
         private final MemoryManager manager;
         private final Drop<Buffer> base;
-        private final AllocatorControl control;
 
-        ZeroingDrop(MemoryManager manager, AllocatorControl control, Drop<Buffer> base) {
+        ZeroingDrop(MemoryManager manager, Drop<Buffer> base) {
             this.manager = manager;
-            this.control = control;
             this.base = base;
         }
 
