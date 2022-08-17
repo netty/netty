@@ -267,7 +267,7 @@ public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddr
     }
 
     @Override
-    protected final void writeLoopComplete(boolean allWritten) throws Exception {
+    protected final void writeLoopComplete(boolean allWritten) {
         final SelectionKey key = selectionKey();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop

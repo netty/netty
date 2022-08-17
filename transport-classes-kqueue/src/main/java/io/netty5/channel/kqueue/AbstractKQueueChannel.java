@@ -525,7 +525,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
-    protected final void writeLoopComplete(boolean allWritten) throws Exception {
+    protected final void writeLoopComplete(boolean allWritten) {
         writeFilter(!allWritten);
         super.writeLoopComplete(allWritten);
     }

@@ -1083,7 +1083,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         WriteHandleFactory.WriteHandle writeHandle = writeHandle();
         try {
-            Throwable writeError = null;
             try {
                 doWrite(outboundBuffer, writeHandle);
             } catch (Throwable t) {
@@ -1091,8 +1090,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             } finally {
                 try {
                     writeLoopComplete(outboundBuffer.isEmpty());
-                } catch (Exception e) {
-                    handleWriteError(writeError);
+                } catch (Throwable cause) {
+                    // Something is really seriously wrong!
+                    closeWithErrorFromWriteFlushed(cause);
                 }
             }
         } finally {
@@ -1105,27 +1105,37 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    protected void writeLoopComplete(boolean allWritten) throws Exception {
+    /**
+     * Called once the write loop completed. Subclasses might override this methods for custom logic.
+     *
+     * @param allWritten    {@code true} if all messages were written during the write loop, {@code false} otherwise.
+     */
+    protected void writeLoopComplete(boolean allWritten) {
         if (!allWritten) {
             // Schedule a new write.
             executor().execute(this::writeFlushed);
         }
     }
+
+    private void closeWithErrorFromWriteFlushed(Throwable t) {
+        /*
+         * Just call {@link #close(Promise, Throwable, boolean)} here which will take care of
+         * failing all flushed messages and also ensure the actual close of the underlying transport
+         * will happen before the promises are notified.
+         *
+         * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #writableBytes()}}
+         * may still return {@code true} / {@code > 0} even if the channel should be closed as result of
+         * the exception.
+         */
+        initialCloseCause = t;
+        close(newPromise(), t, newClosedChannelException(t, "writeFlushed()"));
+    }
+
     private void handleWriteError(Throwable t) {
         assertEventLoop();
 
         if (t instanceof IOException && isAutoClose()) {
-            /*
-             * Just call {@link #close(Promise, Throwable, boolean)} here which will take care of
-             * failing all flushed messages and also ensure the actual close of the underlying transport
-             * will happen before the promises are notified.
-             *
-             * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #writableBytes()}}
-             * may still return {@code true} / {@code > 0} even if the channel should be closed as result of
-             * the exception.
-             */
-            initialCloseCause = t;
-            close(newPromise(), t, newClosedChannelException(t, "writeFlushed()"));
+            closeWithErrorFromWriteFlushed(t);
         } else {
             try {
                 if (shutdownOutput(newPromise(), t)) {

@@ -36,6 +36,7 @@ import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -550,12 +551,16 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     @Override
-    protected void writeLoopComplete(boolean allWritten) throws Exception {
+    protected void writeLoopComplete(boolean allWritten) {
         super.writeLoopComplete(allWritten);
-        if (allWritten) {
-            clearFlag(Native.EPOLLOUT);
-        } else {
-            setFlag(Native.EPOLLOUT);
+        try {
+            if (allWritten) {
+                clearFlag(Native.EPOLLOUT);
+            } else {
+                setFlag(Native.EPOLLOUT);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Error while trying to update flags", e);
         }
     }
 
