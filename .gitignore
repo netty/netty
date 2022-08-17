@@ -32,6 +32,10 @@
 hs_err_pid*.log
 replay_pid*.log
 
+# JVM dumps
+*.hprof.xz
+*.threads
+
 dependency-reduced-pom.xml
 
 */.unison.*
