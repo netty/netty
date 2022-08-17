@@ -17,7 +17,6 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.util.concurrent.EventExecutor;
-import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
@@ -26,9 +25,6 @@ import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
-
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import static java.util.Objects.requireNonNull;
 
@@ -55,15 +51,6 @@ public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
-    private static final FastThreadLocal<BufferCache> NIO_BUFFERS = new FastThreadLocal<>() {
-        @Override
-        protected BufferCache initialValue() {
-            BufferCache cache = new BufferCache();
-            cache.buffers = new ByteBuffer[1024];
-            return cache;
-        }
-    };
-
     private final EventExecutor executor;
 
     // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
@@ -76,9 +63,6 @@ public final class ChannelOutboundBuffer {
     private Entry tailEntry;
     // The number of flushed entries that are not written yet
     private int flushed;
-
-    private int nioBufferCount;
-    private long nioBufferSize;
 
     private boolean inFail;
 
@@ -212,7 +196,6 @@ public final class ChannelOutboundBuffer {
 
         Entry e = flushedEntry;
         if (e == null) {
-            clearNioBuffers();
             return false;
         }
         Object msg = e.msg;
@@ -245,7 +228,6 @@ public final class ChannelOutboundBuffer {
 
         Entry e = flushedEntry;
         if (e == null) {
-            clearNioBuffers();
             return false;
         }
         Object msg = e.msg;
@@ -308,7 +290,6 @@ public final class ChannelOutboundBuffer {
             }
             msg = current();
         }
-        clearNioBuffers();
     }
 
     private static boolean hasZeroReadable(Object msg) {
@@ -316,144 +297,6 @@ public final class ChannelOutboundBuffer {
             return ((Buffer) msg).readableBytes() == 0;
         }
         return false;
-    }
-
-    // Clear all ByteBuffer from the array so these can be GC'ed.
-    // See https://github.com/netty/netty/issues/3837
-    private void clearNioBuffers() {
-        int count = nioBufferCount;
-        if (count > 0) {
-            nioBufferCount = 0;
-            Arrays.fill(NIO_BUFFERS.get().buffers, 0, count, null);
-        }
-    }
-
-    /**
-     * Returns an array of direct NIO buffers if the currently pending messages are made of {@link Buffer} only.
-     * {@link #nioBufferCount()} and {@link #nioBufferSize()} will return the number of NIO buffers in the returned
-     * array and the total number of readable bytes of the NIO buffers respectively.
-     * <p>
-     * Note that the returned array is reused and thus should not escape
-     * {@link AbstractChannel#doWrite(ChannelOutboundBuffer)}.
-     * </p>
-     */
-    public ByteBuffer[] nioBuffers() {
-        assert executor.inEventLoop();
-
-        return nioBuffers(Integer.MAX_VALUE, Integer.MAX_VALUE);
-    }
-
-    /**
-     * Returns an array of direct NIO buffers if the currently pending messages are made of {@link Buffer} only.
-     * {@link #nioBufferCount()} and {@link #nioBufferSize()} will return the number of NIO buffers in the returned
-     * array and the total number of readable bytes of the NIO buffers respectively.
-     * <p>
-     * Note that the returned array is reused and thus should not escape
-     * {@link AbstractChannel#doWrite(ChannelOutboundBuffer)}.
-     * </p>
-     * @param maxCount The maximum amount of buffers that will be added to the return value.
-     * @param maxBytes A hint toward the maximum number of bytes to include as part of the return value. Note that this
-     *                 value maybe exceeded because we make a best effort to include at least 1 {@link ByteBuffer}
-     *                 in the return value to ensure write progress is made.
-     */
-    public ByteBuffer[] nioBuffers(int maxCount, long maxBytes) {
-        assert executor.inEventLoop();
-
-        assert maxCount > 0;
-        assert maxBytes > 0;
-        long nioBufferSize = 0;
-        int nioBufferCount = 0;
-        BufferCache cache = NIO_BUFFERS.get();
-        cache.dataSize = 0;
-        cache.bufferCount = 0;
-        ByteBuffer[] nioBuffers = cache.buffers;
-
-        Entry entry = flushedEntry;
-        flush: while (isFlushedEntry(entry) && entry.msg instanceof Buffer) {
-            if (!entry.cancelled) {
-                Buffer buf = (Buffer) entry.msg;
-                if (buf.readableBytes() > 0) {
-                    try (var iterator = buf.forEachComponent()) {
-                        for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
-                            ByteBuffer byteBuffer = c.readableBuffer();
-                            if (cache.bufferCount > 0 && cache.dataSize + byteBuffer.remaining() > maxBytes) {
-                                // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least
-                                // one entry we stop populate the ByteBuffer array. This is done for 2 reasons:
-                                // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one
-                                // writev(...) call and so will return 'EINVAL', which will raise an IOException.
-                                // On Linux it may work depending on the architecture and kernel but to be safe we also
-                                // enforce the limit here.
-                                // 2. There is no sense in putting more data in the array than is likely to be accepted
-                                // by the OS.
-                                //
-                                // See also:
-                                // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
-                                // - https://linux.die.net//man/2/writev
-                                break flush;
-                            }
-                            cache.dataSize += byteBuffer.remaining();
-                            ByteBuffer[] buffers = cache.buffers;
-                            int bufferCount = cache.bufferCount;
-                            if (buffers.length == bufferCount && bufferCount < maxCount) {
-                                buffers = cache.buffers = expandNioBufferArray(buffers, bufferCount + 1, bufferCount);
-                            }
-                            buffers[cache.bufferCount] = byteBuffer;
-                            bufferCount++;
-                            cache.bufferCount = bufferCount;
-                            if (maxCount <= bufferCount) {
-                                break flush;
-                            }
-                        }
-                    }
-                }
-            }
-            entry = entry.next;
-        }
-        this.nioBufferCount = nioBufferCount + cache.bufferCount;
-        this.nioBufferSize = nioBufferSize + cache.dataSize;
-
-        return nioBuffers;
-    }
-
-    private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {
-        int newCapacity = array.length;
-        do {
-            // double capacity until it is big enough
-            // See https://github.com/netty/netty/issues/1890
-            newCapacity <<= 1;
-
-            if (newCapacity < 0) {
-                throw new IllegalStateException();
-            }
-
-        } while (neededSpace > newCapacity);
-
-        ByteBuffer[] newArray = new ByteBuffer[newCapacity];
-        System.arraycopy(array, 0, newArray, 0, size);
-
-        return newArray;
-    }
-
-    /**
-     * Returns the number of {@link ByteBuffer} that can be written out of the {@link ByteBuffer} array that was
-     * obtained via {@link #nioBuffers()}. This method <strong>MUST</strong> be called after {@link #nioBuffers()}
-     * was called.
-     */
-    public int nioBufferCount() {
-        assert executor.inEventLoop();
-
-        return nioBufferCount;
-    }
-
-    /**
-     * Returns the number of bytes that can be written out of the {@link ByteBuffer} array that was
-     * obtained via {@link #nioBuffers()}. This method <strong>MUST</strong> be called after {@link #nioBuffers()}
-     * was called.
-     */
-    public long nioBufferSize() {
-        assert executor.inEventLoop();
-
-        return nioBufferSize;
     }
 
     /**
@@ -537,7 +380,6 @@ public final class ChannelOutboundBuffer {
         } finally {
             inFail = false;
         }
-        clearNioBuffers();
     }
 
     private static void safeSuccess(Promise<Void> promise) {
@@ -594,8 +436,6 @@ public final class ChannelOutboundBuffer {
         private final Handle<Entry> handle;
         Entry next;
         Object msg;
-        ByteBuffer[] bufs;
-        ByteBuffer buf;
         Promise<Void> promise;
         long progress;
         long total;
@@ -628,8 +468,6 @@ public final class ChannelOutboundBuffer {
                 pendingSize = 0;
                 total = 0;
                 progress = 0;
-                bufs = null;
-                buf = null;
                 return pSize;
             }
             return 0;
@@ -637,8 +475,6 @@ public final class ChannelOutboundBuffer {
 
         void recycle() {
             next = null;
-            bufs = null;
-            buf = null;
             msg = null;
             promise = null;
             progress = 0;
@@ -654,14 +490,5 @@ public final class ChannelOutboundBuffer {
             recycle();
             return next;
         }
-    }
-
-    /**
-     * Thread-local cache of {@link ByteBuffer} array, and processing meta-data.
-     */
-    private static final class BufferCache {
-        ByteBuffer[] buffers;
-        long dataSize;
-        int bufferCount;
     }
 }
