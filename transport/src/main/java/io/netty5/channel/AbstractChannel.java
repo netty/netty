@@ -123,6 +123,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private ReadBufferAllocator readBeforeActive;
 
     private ReadSink readSink;
+    private WriteHandleFactory.WriteHandle writeHandle;
 
     private MessageSizeEstimator.Handle estimatorHandler;
     private boolean inWriteFlushed;
@@ -406,7 +407,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     protected final WriteHandleFactory.WriteHandle writeHandle() {
-        return writeHandleFactory.newHandle(this);
+        if (writeHandle == null) {
+            writeHandle = getWriteHandleFactory().newHandle(this);
+        }
+        return writeHandle;
     }
 
     private ReadSink readSink() {
