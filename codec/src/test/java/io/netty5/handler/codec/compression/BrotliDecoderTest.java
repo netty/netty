@@ -21,11 +21,9 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -36,7 +34,6 @@ import java.util.Random;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
 public class BrotliDecoderTest {
 
     private static Random RANDOM;
@@ -58,10 +55,6 @@ public class BrotliDecoderTest {
         } catch (Throwable throwable) {
             throw new ExceptionInInitializerError(throwable);
         }
-    }
-
-    static boolean isNotSupported() {
-        return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
 
     private static void fillArrayWithCompressibleData(byte[] array) {

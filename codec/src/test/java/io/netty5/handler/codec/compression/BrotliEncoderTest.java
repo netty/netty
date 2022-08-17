@@ -21,11 +21,8 @@ import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
 public class BrotliEncoderTest extends AbstractEncoderTest {
 
     @BeforeAll
@@ -77,9 +74,5 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
                 }
             }
         });
-    }
-
-    static boolean isNotSupported() {
-        return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
 }
