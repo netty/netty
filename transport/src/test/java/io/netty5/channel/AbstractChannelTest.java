@@ -157,7 +157,8 @@ public class AbstractChannelTest {
             }
 
             @Override
-            protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+            protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
+                    throws Exception {
                 throw ioException;
             }
 
@@ -252,7 +253,9 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception { }
+        protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+            // NOOP
+        }
 
         @Override
         protected void doShutdown(ChannelShutdownDirection direction) {

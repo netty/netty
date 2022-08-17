@@ -18,6 +18,8 @@ package io.netty5.channel.epoll;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.CompositeBufferGatheringWriteTest;
 
@@ -31,9 +33,31 @@ public class EpollCompositeBufferGatheringWriteTest extends CompositeBufferGathe
 
     @Override
     protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(Channel channel,
-                                                                                 int soSndBuf) {
+                                                                                 final int soSndBuf) {
         if (channel instanceof EpollSocketChannel) {
-            ((EpollSocketChannel) channel).setMaxBytesPerGatheringWrite(soSndBuf);
+            channel.setOption(ChannelOption.WRITE_HANDLE_FACTORY, new WriteHandleFactory() {
+                @Override
+                public WriteHandle newHandle(Channel channel) {
+                    return new WriteHandle() {
+
+                        @Override
+                        public long estimatedMaxBytesPerGatheringWrite() {
+                            return soSndBuf;
+                        }
+
+                        @Override
+                        public boolean lastWrite(
+                                long attemptedBytesWrite, long actualBytesWrite, int numMessagesWrite) {
+                            return true;
+                        }
+
+                        @Override
+                        public void writeComplete() {
+                            // NOOP
+                        }
+                    };
+                }
+            });
         }
     }
 }

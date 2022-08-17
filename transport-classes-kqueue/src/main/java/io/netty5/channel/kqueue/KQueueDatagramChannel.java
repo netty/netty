@@ -24,6 +24,8 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.MaxMessagesWriteHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -123,6 +125,7 @@ public final class KQueueDatagramChannel
 
     public KQueueDatagramChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
         super(null, eventLoop, true, new FixedReadHandleFactory(2048),
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE),
                 BsdSocket.newDatagramSocket(protocolFamily), false);
     }
 
@@ -131,7 +134,8 @@ public final class KQueueDatagramChannel
     }
 
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
-        super(null, eventLoop, true, new FixedReadHandleFactory(2048), socket, active);
+        super(null, eventLoop, true, new FixedReadHandleFactory(2048),
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), socket, active);
     }
 
     @SuppressWarnings("unchecked")
@@ -340,71 +344,88 @@ public final class KQueueDatagramChannel
         active = true;
     }
 
-    private boolean doWriteMessage(Object msg) throws Exception {
-        final Object data;
-        final SocketAddress remoteAddress;
+    private boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
+        Object msg = in.current();
+        if (msg == null) {
+            return false;
+        }
+        final Buffer data;
+        SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<?, SocketAddress> envelope = (AddressedEnvelope<?, SocketAddress>) msg;
+            AddressedEnvelope<Buffer, SocketAddress> envelope = (AddressedEnvelope<Buffer, SocketAddress>) msg;
             data = envelope.content();
             remoteAddress = envelope.recipient();
         } else {
-            data = msg;
+            data = (Buffer) msg;
             remoteAddress = null;
         }
 
-        return doWriteBufferMessage((Buffer) data, remoteAddress);
-    }
-
-    private boolean doWriteBufferMessage(Buffer data, SocketAddress remoteAddress) throws IOException {
         final int initialReadableBytes = data.readableBytes();
         if (initialReadableBytes == 0) {
-            return true;
+            in.remove();
+            return writeHandle.lastWrite(0, 0, 1);
         }
 
-        if (data.countReadableComponents() > 1) {
-            IovArray array = registration().cleanArray();
-            array.addReadable(data);
-            int count = array.count();
-            assert count != 0;
+        try {
+            final int written;
+            if (data.countReadableComponents() > 1) {
+                IovArray array = registration().cleanArray();
+                array.addReadable(data);
+                int count = array.count();
+                assert count != 0;
 
-            final long writtenBytes;
-            if (remoteAddress == null) {
-                writtenBytes = socket.writevAddresses(array.memoryAddress(0), count);
-            } else {
+                if (remoteAddress == null) {
+                    // connected datagram
+                     remoteAddress = remoteAddress();
+                }
                 if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-                    writtenBytes = socket.sendToAddressesDomainSocket(
+                    written = socket.sendToAddressesDomainSocket(
                             array.memoryAddress(0), count,
                             ((DomainSocketAddress) remoteAddress).path().getBytes(UTF_8));
                 } else {
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
-                    writtenBytes = socket.sendToAddresses(array.memoryAddress(0), count,
+                    written = socket.sendToAddresses(array.memoryAddress(0), count,
                             inetSocketAddress.getAddress(), inetSocketAddress.getPort());
                 }
-            }
-            return writtenBytes > 0;
-        } else {
-            try (var iteration = data.forEachComponent()) {
-                var component = iteration.firstReadable();
-                if (component == null) {
-                    return false;
-                }
-                final int written;
+            } else {
                 if (remoteAddress == null) {
-                    written = socket.writeAddress(component.readableNativeAddress(), 0, component.readableBytes());
-                } else if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-                    byte[] path = ((DomainSocketAddress) remoteAddress).path().getBytes(UTF_8);
-                    written = socket.sendToAddressDomainSocket(
-                            component.readableNativeAddress(), 0, component.readableBytes(), path);
+                    try (var iteration = data.forEachComponent()) {
+                        var component = iteration.firstReadable();
+                        written = socket.writeAddress(component.readableNativeAddress(), 0,
+                                component.readableBytes());
+                    }
                 } else {
-                    InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
-                    written = socket.sendToAddress(
-                            component.readableNativeAddress(), 0, component.readableBytes(),
-                            inetSocketAddress.getAddress(), inetSocketAddress.getPort());
+                    if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                        byte[] path = ((DomainSocketAddress) remoteAddress).path().getBytes(UTF_8);
+                        try (var iteration = data.forEachComponent()) {
+                            var component = iteration.firstReadable();
+                            written = socket.sendToAddressDomainSocket(
+                                    component.readableNativeAddress(), 0, component.readableBytes(), path);
+                        }
+                    } else {
+                        InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
+                        try (var iteration = data.forEachComponent()) {
+                            var component = iteration.firstReadable();
+                            written = socket.sendToAddress(component.readableNativeAddress(), 0,
+                                    component.readableBytes(), inetSocketAddress.getAddress(),
+                                    inetSocketAddress.getPort());
+                        }
+                    }
                 }
-                component.skipReadableBytes(written);
             }
-            return data.readableBytes() < initialReadableBytes;
+            if (written > 0) {
+                in.remove();
+                return writeHandle.lastWrite(initialReadableBytes, written, 1);
+            }
+            writeHandle.lastWrite(initialReadableBytes, written, 0);
+            return false;
+        } catch (IOException e) {
+            // Continue on write error as a DatagramChannel can write to multiple remote peers
+            //
+            // See https://github.com/netty/netty/issues/2665
+            in.remove(e);
+            return writeHandle.lastWrite(initialReadableBytes, 0, 1);
         }
     }
 
@@ -634,33 +655,16 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        int maxMessagesPerWrite = getMaxMessagesPerWrite();
-        while (maxMessagesPerWrite > 0) {
-            Object msg = in.current();
-            if (msg == null) {
-                break;
+    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
+        boolean continueWriting;
+        do {
+            if (in.isEmpty()) {
+                writeHandle.lastWrite(0, 0, 0);
+                return;
             }
 
-            try {
-                if (doWriteMessage(msg)) {
-                    in.remove();
-                    maxMessagesPerWrite--;
-                } else {
-                    break;
-                }
-            } catch (IOException e) {
-                maxMessagesPerWrite--;
-
-                // Continue on write error as a DatagramChannel can write to multiple remote peers
-                //
-                // See https://github.com/netty/netty/issues/2665
-                in.remove(e);
-            }
-        }
-
-        // Whether all messages were written or not.
-        writeFilter(!in.isEmpty());
+            continueWriting = doWriteMessage(in, writeHandle);
+        } while (continueWriting);
     }
 
     @Override

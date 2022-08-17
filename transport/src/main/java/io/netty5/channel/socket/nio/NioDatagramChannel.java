@@ -16,19 +16,21 @@
 package io.netty5.channel.socket.nio;
 
 import io.netty5.buffer.api.Buffer;
+
+import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.MaxMessagesWriteHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
+import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
-import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
@@ -168,7 +170,8 @@ public final class NioDatagramChannel
      * Create a new instance from the given {@link DatagramChannel}.
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket, ProtocolFamily family) {
-        super(null, eventLoop, true, new FixedReadHandleFactory(2048), socket, SelectionKey.OP_READ);
+        super(null, eventLoop, true, new FixedReadHandleFactory(2048),
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), socket, SelectionKey.OP_READ);
         this.family = toJdkFamily(family);
     }
 
@@ -411,38 +414,72 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+    protected boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
+        Object msg = in.current();
+        if (msg == null) {
+            writeHandle.lastWrite(0, 0, 0);
+            return false;
+        }
         final SocketAddress remoteAddress;
-        final Object data;
+        final Buffer buf;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<?, SocketAddress> envelope = (AddressedEnvelope<?, SocketAddress>) msg;
+            AddressedEnvelope<Buffer, SocketAddress> envelope = (AddressedEnvelope<Buffer, SocketAddress>) msg;
             remoteAddress = envelope.recipient();
-            data = envelope.content();
+            buf = envelope.content();
         } else {
-            data = msg;
+            buf = (Buffer) msg;
             remoteAddress = null;
         }
 
-        Buffer buf = (Buffer) data;
         final int length = buf.readableBytes();
         if (length == 0) {
-            return true;
+            in.remove();
+            return writeHandle.lastWrite(0, 0, 1);
         }
 
-        int initialReadable = buf.readableBytes();
-        try (var iterator = buf.forEachComponent()) {
-            for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
-                final int writtenBytes;
-                if (remoteAddress != null) {
-                    writtenBytes = javaChannel().send(c.readableBuffer(), remoteAddress);
-                } else {
-                    writtenBytes = javaChannel().write(c.readableBuffer());
+        int readable = buf.readableBytes();
+        final int writtenBytes;
+        try {
+            if (buf.countReadableComponents() > 1) {
+                // Let's make a copy so we only have one readableComponent. This is needed as the JDK does not support
+                // using multiple buffers for one send operation and calling send / write multiple times would result
+                // in multiple datagrams.
+                try (Buffer copy = bufferAllocator().allocate(buf.readableBytes())) {
+                    buf.copyInto(buf.readerOffset(), copy, copy.writerOffset(), buf.readableBytes());
+                    copy.writerOffset(buf.readableBytes());
+                    writtenBytes = write(copy, remoteAddress);
                 }
-                c.skipReadableBytes(writtenBytes);
+            } else {
+                writtenBytes = write(buf, remoteAddress);
             }
+            if (writtenBytes > 0) {
+                in.remove();
+                return writeHandle().lastWrite(readable, writtenBytes, 1);
+            }
+            writeHandle().lastWrite(readable, writtenBytes, 0);
+            return false;
+        } catch (Throwable e) {
+            // Continue on write error as a DatagramChannel can write to multiple remote peers
+            //
+            // See https://github.com/netty/netty/issues/2665
+            in.remove(e);
+            return writeHandle().lastWrite(readable, 0, 0);
         }
-        return buf.readableBytes() < initialReadable;
+    }
+
+    private int write(Buffer buf, SocketAddress remoteAddress) throws IOException {
+        assert buf.countReadableComponents() <= 1;
+        try (var iterator = buf.forEachComponent()) {
+            var c = iterator.firstReadable();
+            final int writtenBytes;
+            if (remoteAddress != null) {
+                writtenBytes = javaChannel().send(c.readableBuffer(), remoteAddress);
+            } else {
+                writtenBytes = javaChannel().write(c.readableBuffer());
+            }
+            return writtenBytes;
+        }
     }
 
     @Override
@@ -487,14 +524,6 @@ public final class NioDatagramChannel
      */
     private static boolean isSingleDirectBuffer(Buffer buf) {
         return buf.isDirect() && buf.countComponents() == 1;
-    }
-
-    @Override
-    protected boolean continueOnWriteError() {
-        // Continue on write error as a DatagramChannel can write to multiple remote peers
-        //
-        // See https://github.com/netty/netty/issues/2665
-        return true;
     }
 
     private NetworkInterface networkInterface() throws SocketException {

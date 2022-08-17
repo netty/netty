@@ -39,7 +39,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
      */
     protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     Class<? extends Channel> childChannelType) {
-        super(null, eventLoop, false, new ServerChannelReadHandleFactory());
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory());
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
     }
 
@@ -69,7 +69,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     }
 
     @Override
-    protected final void doWrite(ChannelOutboundBuffer in) {
+    protected final void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
         throw new UnsupportedOperationException();
     }
 

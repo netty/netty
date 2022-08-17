@@ -65,8 +65,8 @@ import java.net.SocketAddress;
  * <h3>Downcast to access transport-specific operations</h3>
  * <p>
  * Some transports exposes additional operations that is specific to the
- * transport.  Down-cast the {@link Channel} to sub-type to invoke such
- * operations.  For example, with the old I/O datagram transport, multicast
+ * transport. Down-cast the {@link Channel} to sub-type to invoke such
+ * operations. For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
  *
  *
@@ -105,7 +105,9 @@ import java.net.SocketAddress;
  * </tr><tr>
  * <td>{@link ChannelOption#ALLOW_HALF_CLOSURE}</td>
  * </tr><tr>
- * <td>{@link ChannelOption#MAX_MESSAGES_PER_WRITE}</td>
+ * <td>{@link ChannelOption#WRITE_HANDLE_FACTORY}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#READ_HANDLE_FACTORY}</td>
  * </tr><tr>
  * <td>{@link ChannelOption#ALLOW_HALF_CLOSURE}</td>
  * </tr>

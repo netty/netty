@@ -203,31 +203,6 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
-     * Return the current message flush progress.
-     * @return {@code 0} if nothing was flushed before for the current message or there is no current message
-     */
-    public long currentProgress() {
-        assert executor.inEventLoop();
-
-        Entry entry = flushedEntry;
-        if (entry == null) {
-            return 0;
-        }
-        return entry.progress;
-    }
-
-    /**
-     * Notify the {@link Promise} of the current message about writing progress.
-     */
-    public void progress(long amount) {
-        assert executor.inEventLoop();
-
-        Entry e = flushedEntry;
-        assert e != null;
-        e.progress += amount;
-    }
-
-    /**
      * Will remove the current message, mark its {@link Promise} as success and return {@code true}. If no
      * flushed message exists at the time this method is called it will return {@code false} to signal that no more
      * messages are ready to be handled.
@@ -322,12 +297,10 @@ public final class ChannelOutboundBuffer {
                 Buffer buf = (Buffer) msg;
                 final int readableBytes = buf.readableBytes();
                 if (readableBytes <= writtenBytes) {
-                    progress(readableBytes);
                     writtenBytes -= readableBytes;
                     remove();
                 } else { // readableBytes > writtenBytes
                     buf.readSplit(Math.toIntExact(writtenBytes)).close();
-                    progress(writtenBytes);
                     break;
                 }
             } else {

@@ -264,6 +264,10 @@ final class NativeDatagramPacketArray {
             return senderPort > 0;
         }
 
+        int count() {
+            return count;
+        }
+
         DatagramPacket newDatagramPacket(Buffer buffer, InetSocketAddress recipient) throws UnknownHostException {
             InetSocketAddress sender = newAddress(senderAddr, senderAddrLen, senderPort, senderScopeId, ipv4Bytes);
             if (recipientAddrLen != 0) {

@@ -449,7 +449,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     private ReadHandleFactory.ReadHandle readHandle() {
         if (readHandle == null) {
-            readHandle = readHandleFactory.newHandle();
+            readHandle = readHandleFactory.newHandle(this);
         }
         return readHandle;
     }

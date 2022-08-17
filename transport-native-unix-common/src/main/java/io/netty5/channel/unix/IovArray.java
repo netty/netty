@@ -138,6 +138,43 @@ public final class IovArray implements MessageProcessor<RuntimeException> {
     }
 
     /**
+     * Return the number of messages that have been completely written for the given total number of bytes.
+     *
+     * @param index         the start index.
+     * @param totalBytes    the total number of bytes
+     * @return              the number of messages that are totally written for the given number of total bytes.
+     */
+    public int writtenMessages(int index, long totalBytes) {
+        if (index == 0 && totalBytes == size) {
+            // If the number of total bytes match the size we know that we wrote all, no need to iterate.
+            return count;
+        }
+        int num = 0;
+        for (; index < count && totalBytes > 0; num++) {
+            final int baseOffset = idx(index);
+            final int lengthOffset = baseOffset + ADDRESS_SIZE;
+            final long len;
+            if (ADDRESS_SIZE == 8) {
+                // 64bit
+                if (PlatformDependent.hasUnsafe()) {
+                    len = PlatformDependent.getLong(lengthOffset + memoryAddress);
+                } else {
+                    len = memory.getLong(lengthOffset);
+                }
+            } else {
+                assert ADDRESS_SIZE == 4;
+                if (PlatformDependent.hasUnsafe()) {
+                    len = PlatformDependent.getInt(lengthOffset + memoryAddress);
+                } else {
+                    len = memory.getInt(lengthOffset);
+                }
+            }
+            totalBytes -= len;
+        }
+        return num;
+    }
+
+    /**
      * Returns the number if iov entries.
      */
     public int count() {

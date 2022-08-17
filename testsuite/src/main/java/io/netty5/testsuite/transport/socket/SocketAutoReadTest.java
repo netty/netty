@@ -164,7 +164,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
      */
     private static final class TestReadHandleFactory implements ReadHandleFactory {
         @Override
-        public ReadHandle newHandle() {
+        public ReadHandle newHandle(Channel channel) {
             return new ReadHandle() {
 
                 @Override

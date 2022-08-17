@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueReadHandle;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
@@ -38,7 +39,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
-import static io.netty5.channel.unix.Limits.SSIZE_MAX;
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
@@ -49,8 +49,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     final BsdSocket socket;
 
     protected volatile boolean active;
-
-    private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -75,8 +73,9 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     private boolean eof;
 
     AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
-                          ReadHandleFactory defaultReadHandleFactory, BsdSocket fd, boolean active) {
-        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory);
+                          ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
+                          BsdSocket fd, boolean active) {
+        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -88,8 +87,9 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
-                          ReadHandleFactory defaultReadHandleFactory, BsdSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory);
+                          ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
+                          BsdSocket fd, SocketAddress remote) {
+        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
@@ -142,14 +142,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             return true;
         }
         return super.isExtendedOptionSupported(option);
-    }
-
-    protected final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
-        this.maxBytesPerGatheringWrite = min(SSIZE_MAX, maxBytesPerGatheringWrite);
-    }
-
-    protected final long getMaxBytesPerGatheringWrite() {
-        return maxBytesPerGatheringWrite;
     }
 
     static boolean isSoErrorZero(BsdSocket fd) {
@@ -237,7 +229,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         writeFilterEnabled = false;
     }
 
-    final void unregisterFilters() throws Exception {
+    final void unregisterFilters() {
         // Make sure we unregister our filters from kqueue!
         readFilter(false);
         writeFilter(false);
@@ -530,6 +522,12 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     @Override
     protected final void doClearScheduledRead() {
         readFilter(false);
+    }
+
+    @Override
+    protected final void writeLoopComplete(boolean allWritten) {
+        writeFilter(!allWritten);
+        super.writeLoopComplete(allWritten);
     }
 
     final void closeTransportNow() {

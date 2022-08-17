@@ -19,8 +19,8 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
@@ -36,6 +36,7 @@ import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannel;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -70,13 +71,16 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     private volatile SocketAddress remoteAddress;
 
     AbstractEpollChannel(EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
-                         ReadHandleFactory defaultReadHandleFactory, LinuxSocket fd) {
-        this(null, eventLoop, supportingDisconnect, initialFlag, defaultReadHandleFactory, fd, false);
+                         ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
+                         LinuxSocket fd) {
+        this(null, eventLoop, supportingDisconnect, initialFlag, defaultReadHandleFactory, defaultWriteHandleFactory,
+                fd, false);
     }
 
     AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
-                         ReadHandleFactory defaultReadHandleFactory, LinuxSocket fd, boolean active) {
-        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory);
+                         ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
+                         LinuxSocket fd, boolean active) {
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
         flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         this.active = active;
@@ -89,8 +93,9 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
-                         ReadHandleFactory defaultReadHandleFactory, LinuxSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory);
+                         ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
+                         LinuxSocket fd, SocketAddress remote) {
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
         flags |= initialFlag;
         socket = requireNonNull(fd, "fd");
         active = true;
@@ -284,9 +289,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         array.addReadable(data);
         int count = array.count();
         assert count != 0;
-        if (remoteAddress == null) {
-            return socket.writevAddresses(array.memoryAddress(0), count);
-        }
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
              return socket.sendToAddressesDomainSocket(
                     array.memoryAddress(0), count, ((DomainSocketAddress) remoteAddress)
@@ -545,6 +547,20 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             // so fire the exception through the pipeline and close the Channel.
             pipeline().fireChannelExceptionCaught(e);
             closeTransport(newPromise());
+        }
+    }
+
+    @Override
+    protected void writeLoopComplete(boolean allWritten) {
+        super.writeLoopComplete(allWritten);
+        try {
+            if (allWritten) {
+                clearFlag(Native.EPOLLOUT);
+            } else {
+                setFlag(Native.EPOLLOUT);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Error while trying to update flags", e);
         }
     }
 
