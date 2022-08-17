@@ -67,6 +67,9 @@ final class ByteBufferCollector implements ChannelOutboundBuffer.MessageProcesso
     // Clear all ByteBuffer from the array so these can be GC'ed.
     // See https://github.com/netty/netty/issues/3837
     void reset() {
+        if (cache == null) {
+            cache = NIO_BUFFERS.get();
+        }
         int count = cache.bufferCount;
         if (count > 0) {
             Arrays.fill(cache.buffers, 0, count, null);
