@@ -15,16 +15,15 @@
  */
 package io.netty5.channel.socket.nio;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.ServerChannelWriteHandleFactory;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
@@ -262,7 +261,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     // Unnecessary stuff
     @Override
     protected boolean doConnect(
-            SocketAddress remoteAddress, SocketAddress localAddress) {
+            SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
         throw new UnsupportedOperationException();
     }
 
@@ -282,7 +281,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
     }
 
     @Override
-    protected boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
+    protected void doWriteNow(WriteSink writeHandle) throws Exception {
         throw new UnsupportedOperationException();
     }
 

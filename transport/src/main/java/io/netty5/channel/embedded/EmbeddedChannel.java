@@ -15,12 +15,12 @@
  */
 package io.netty5.channel.embedded;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
@@ -28,7 +28,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
@@ -725,35 +724,27 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in,  WriteHandleFactory.WriteHandle writeHandle) throws Exception {
-        boolean continueWriting;
-        do {
-            Object msg = in.current();
-            if (msg == null) {
-                break;
-            }
-
-            if (msg instanceof ResourceSupport<?, ?>) {
-                // Prevent the close in ChannelOutboundBuffer.remove() from ending the lifecycle of this message.
-                // This allows tests to examine the message.
-                handleOutboundMessage(Statics.acquire((ResourceSupport<?, ?>) msg));
-            } else if (msg instanceof Resource<?>) {
-                // Resource life-cycle otherwise normally ends in ChannelOutboundBuffer.remove(), but using send()
-                // here allows the close() in remove() to become a no-op.
-                // Since message isn't a subclass of ResourceSupport, we can't rely on its internal reference counting.
-                handleOutboundMessage(((Resource<?>) msg).send().receive());
-            } else {
-                handleOutboundMessage(ReferenceCountUtil.retain(msg));
-            }
-            continueWriting = writeHandle.lastWrite(0, 0, 1);
-            in.remove();
-        } while (continueWriting);
+    protected void doWriteNow(WriteSink writeSink) throws Exception {
+        Object msg = writeSink.first();
+        if (msg instanceof ResourceSupport<?, ?>) {
+            // Prevent the close in ChannelOutboundBuffer.remove() from ending the lifecycle of this message.
+            // This allows tests to examine the message.
+            handleOutboundMessage(Statics.acquire((ResourceSupport<?, ?>) msg));
+        } else if (msg instanceof Resource<?>) {
+            // Resource life-cycle otherwise normally ends in ChannelOutboundBuffer.remove(), but using send()
+            // here allows the close() in remove() to become a no-op.
+            // Since message isn't a subclass of ResourceSupport, we can't rely on its internal reference counting.
+            handleOutboundMessage(((Resource<?>) msg).send().receive());
+        } else {
+            handleOutboundMessage(ReferenceCountUtil.retain(msg));
+        }
+        writeSink.complete(0, 0, 1, true);
     }
 
     /**
      * Called for each outbound message.
      *
-     * @see #doWrite(ChannelOutboundBuffer, WriteHandleFactory.WriteHandle)
+     * @see #doWriteNow(WriteSink)
      */
     protected void handleOutboundMessage(Object msg) {
         outboundMessages().add(msg);
@@ -775,7 +766,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
         return true;
     }
 

@@ -16,9 +16,6 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferComponent;
-import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Limits;
@@ -29,6 +26,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.unix.Limits.UIO_MAX_IOV;
 import static io.netty5.channel.unix.NativeInetAddress.copyIpv4MappedIpv6Address;
@@ -123,10 +121,10 @@ final class NativeDatagramPacketArray {
         }
     }
 
-    void add(ChannelOutboundBuffer buffer, boolean connected, int maxMessagesPerWrite) throws Exception {
+    Predicate<Object> addFunction(boolean connected, int maxMessagesPerWrite) {
         processor.connected = connected;
         processor.maxMessagesPerWrite = maxMessagesPerWrite;
-        buffer.forEachFlushedMessage(processor);
+        return processor;
     }
 
     /**
@@ -152,12 +150,12 @@ final class NativeDatagramPacketArray {
         iovArray.release();
     }
 
-    private final class MyMessageProcessor implements MessageProcessor<RuntimeException> {
+    private final class MyMessageProcessor implements Predicate<Object> {
         private boolean connected;
         private int maxMessagesPerWrite;
 
         @Override
-        public boolean processMessage(Object msg) {
+        public boolean test(Object msg) {
             final boolean added;
             if (msg instanceof DatagramPacket) {
                 DatagramPacket packet = (DatagramPacket) msg;

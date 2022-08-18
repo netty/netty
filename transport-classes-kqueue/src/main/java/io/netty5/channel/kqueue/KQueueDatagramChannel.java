@@ -19,13 +19,11 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -344,11 +342,9 @@ public final class KQueueDatagramChannel
         active = true;
     }
 
-    private boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
-        Object msg = in.current();
-        if (msg == null) {
-            return false;
-        }
+    @Override
+    protected void doWriteNow(WriteSink writeSink) {
+        Object msg = writeSink.first();
         final Buffer data;
         SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
@@ -363,8 +359,8 @@ public final class KQueueDatagramChannel
 
         final int initialReadableBytes = data.readableBytes();
         if (initialReadableBytes == 0) {
-            in.remove();
-            return writeHandle.lastWrite(0, 0, 1);
+            writeSink.complete(0, 0, 1, true);
+            return;
         }
 
         try {
@@ -414,18 +410,12 @@ public final class KQueueDatagramChannel
                     }
                 }
             }
-            if (written > 0) {
-                in.remove();
-                return writeHandle.lastWrite(initialReadableBytes, written, 1);
-            }
-            writeHandle.lastWrite(initialReadableBytes, written, 0);
-            return false;
+            writeSink.complete(initialReadableBytes, written, written > 0 ? 1 : 0, written > 0);
         } catch (IOException e) {
             // Continue on write error as a DatagramChannel can write to multiple remote peers
             //
             // See https://github.com/netty/netty/issues/2665
-            in.remove(e);
-            return writeHandle.lastWrite(initialReadableBytes, 0, 1);
+            writeSink.complete(initialReadableBytes, e, true);
         }
     }
 
@@ -480,8 +470,9 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        if (super.doConnect(remoteAddress, localAddress)) {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData)
+            throws Exception {
+        if (super.doConnect(remoteAddress, localAddress, initialData)) {
             connected = true;
             return true;
         }
@@ -499,7 +490,6 @@ public final class KQueueDatagramChannel
         Buffer buffer = null;
         try {
             boolean connected = isConnected();
-            boolean continueReading;
             buffer = readSink.allocateBuffer();
             if (buffer == null) {
                 readSink.processRead(0, 0, null);
@@ -643,19 +633,6 @@ public final class KQueueDatagramChannel
         requireNonNull(sourceToBlock, "sourceToBlock");
 
         return newMulticastNotSupportedFuture();
-    }
-
-    @Override
-    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
-        boolean continueWriting;
-        do {
-            if (in.isEmpty()) {
-                writeHandle.lastWrite(0, 0, 0);
-                return;
-            }
-
-            continueWriting = doWriteMessage(in, writeHandle);
-        } while (continueWriting);
     }
 
     @Override

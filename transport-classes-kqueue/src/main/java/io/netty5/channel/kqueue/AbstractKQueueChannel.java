@@ -28,7 +28,6 @@ import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.UnixChannel;
@@ -280,15 +279,11 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             }
             long address = component.writableNativeAddress();
             assert address != 0;
-            int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
-            if (localReadAmount > 0) {
-                component.skipWritableBytes(localReadAmount);
-            }
-            return localReadAmount;
+            return socket.readAddress(address, 0, component.writableBytes());
         }
     }
 
-    protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
+    protected final int doWriteBytes(Buffer buf) throws Exception {
         int written = 0;
         try (var iteration = buf.forEachComponent()) {
             var component = iteration.firstReadable();
@@ -298,11 +293,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
                 written = socket.writeAddress(address, 0, component.readableBytes());
             }
         }
-        if (written > 0) {
-            in.removeBytes(written);
-            return 1; // Some data was written to the socket.
-        }
-        return -1;
+        return written;
     }
 
     final void readFilter(boolean readFilterEnabled) {
@@ -464,7 +455,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     /**
      * Connect to the remote peer
      */
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData)
+            throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) localAddress);
         }
@@ -479,7 +471,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             doBind(localAddress);
         }
 
-        boolean connected = doConnect0(remoteAddress, localAddress);
+        boolean connected = doConnect0(remoteAddress, localAddress, initialData);
         if (connected) {
             active = true;
             this.remoteAddress = remoteSocketAddr == null?
@@ -495,7 +487,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         return connected;
     }
 
-    protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress, Buffer data)
+            throws Exception {
         boolean success = false;
         try {
             boolean connected = socket.connect(remoteAddress);

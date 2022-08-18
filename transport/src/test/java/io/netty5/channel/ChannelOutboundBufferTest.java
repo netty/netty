@@ -17,7 +17,6 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -26,10 +25,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,7 +61,7 @@ public class ChannelOutboundBufferTest {
             buffer.addMessage(buf, 0, executor.newPromise());
             buffer.addFlush();
             AtomicInteger messageCounter = new AtomicInteger();
-            MessageProcessor<RuntimeException> messageProcessor = msg -> {
+            Predicate<Object> messageProcessor = msg -> {
                 assertNotNull(msg);
                 messageCounter.incrementAndGet();
                 return true;
@@ -102,11 +103,11 @@ public class ChannelOutboundBufferTest {
                 buffer.addFlush();
                 // Should have 1 entries.
                 assertNotNull(buffer.current());
-                assertTrue(buffer.remove());
+                assertEquals(size, buffer.remove());
 
                 assertNull(buffer.current());
                 assertTrue(buffer.isEmpty());
-                assertFalse(buffer.remove());
+                assertEquals(-1, buffer.remove());
             }
         });
     }
@@ -124,11 +125,11 @@ public class ChannelOutboundBufferTest {
                 buffer.addFlush();
                 // Should have 1 entries.
                 assertNotNull(buffer.current());
-                assertTrue(buffer.remove());
+                assertEquals(size, buffer.remove());
 
                 assertNull(buffer.current());
                 assertTrue(buffer.isEmpty());
-                assertFalse(buffer.remove());
+                assertEquals(-1, buffer.remove());
             }
         });
     }
@@ -147,22 +148,21 @@ public class ChannelOutboundBufferTest {
 
                 // Should have two entries.
                 assertNotNull(buffer.current());
-                assertTrue(buffer.remove());
+                assertEquals(size, buffer.remove());
                 assertNotNull(buffer.current());
-                assertTrue(buffer.remove());
+                assertEquals(size, buffer.remove());
 
                 assertNull(buffer.current());
                 assertTrue(buffer.isEmpty());
-                assertFalse(buffer.remove());
+                assertEquals(-1, buffer.remove());
             }
         });
     }
 
     private static void release(ChannelOutboundBuffer buffer) {
-        for (;;) {
-            if (!buffer.remove()) {
-                break;
-            }
+        while (!buffer.isEmpty()) {
+            assertNotEquals(-1, buffer.remove());
         }
+        assertEquals(-1, buffer.remove());
     }
 }

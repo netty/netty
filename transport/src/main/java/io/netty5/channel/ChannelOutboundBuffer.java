@@ -26,6 +26,9 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -38,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  * </ul>
  * </p>
  */
-public final class ChannelOutboundBuffer {
+final class ChannelOutboundBuffer {
     // Assuming a 64-bit JVM:
     //  - 16 bytes object header
     //  - 6 reference fields
@@ -65,6 +68,8 @@ public final class ChannelOutboundBuffer {
     private int flushed;
 
     private boolean inFail;
+
+    private boolean closed;
 
     // We use a volatile only as its single-writer, multiple reader
     private volatile long totalPendingSize;
@@ -96,7 +101,10 @@ public final class ChannelOutboundBuffer {
      * Add given message to this {@link ChannelOutboundBuffer}. The given {@link Promise} will be notified once
      * the message was written.
      */
-    public void addMessage(Object msg, int size, Promise<Void> promise) {
+    void addMessage(Object msg, int size, Promise<Void> promise) {
+        if (closed) {
+            throw new IllegalStateException();
+        }
         assert executor.inEventLoop();
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
@@ -119,7 +127,7 @@ public final class ChannelOutboundBuffer {
      * Add a flush to this {@link ChannelOutboundBuffer}. This means all previous added messages are marked as flushed
      * and so you will be able to handle them.
      */
-    public void addFlush() {
+    void addFlush() {
         assert executor.inEventLoop();
 
         // There is no need to process all entries if there was already a flush before and no new messages
@@ -175,7 +183,7 @@ public final class ChannelOutboundBuffer {
     /**
      * Return the current message to write or {@code null} if nothing was flushed before and so is ready to be written.
      */
-    public Object current() {
+    Object current() {
         assert executor.inEventLoop();
 
         Entry entry = flushedEntry;
@@ -191,12 +199,12 @@ public final class ChannelOutboundBuffer {
      * flushed message exists at the time this method is called it will return {@code false} to signal that no more
      * messages are ready to be handled.
      */
-    public boolean remove() {
+    int remove() {
         assert executor.inEventLoop();
 
         Entry e = flushedEntry;
         if (e == null) {
-            return false;
+            return -1;
         }
         Object msg = e.msg;
 
@@ -215,7 +223,7 @@ public final class ChannelOutboundBuffer {
         // recycle the entry
         e.recycle();
 
-        return true;
+        return size - CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
     }
 
     /**
@@ -223,12 +231,12 @@ public final class ChannelOutboundBuffer {
      * and return {@code true}. If no   flushed message exists at the time this method is called it will return
      * {@code false} to signal that no more messages are ready to be handled.
      */
-    public boolean remove(Throwable cause) {
+    int remove(Throwable cause) {
         assert executor.inEventLoop();
 
         Entry e = flushedEntry;
         if (e == null) {
-            return false;
+            return -1;
         }
         Object msg = e.msg;
 
@@ -248,7 +256,7 @@ public final class ChannelOutboundBuffer {
         // recycle the entry
         e.recycle();
 
-        return true;
+        return size - CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
     }
 
     private void removeEntry(Entry e) {
@@ -270,17 +278,22 @@ public final class ChannelOutboundBuffer {
      * Removes the fully written entries and update the reader index of the partially written entry.
      * This operation assumes all messages in this buffer are either {@link Buffer}s or {@link Buffer}s.
      */
-    public void removeBytes(long writtenBytes) {
+    int removeBytes(long writtenBytes) {
         assert executor.inEventLoop();
 
         Object msg = current();
+        int messages = 0;
         while (writtenBytes > 0 || hasZeroReadable(msg)) {
+            if (msg instanceof BufferAddressedEnvelope) {
+                msg = ((BufferAddressedEnvelope<?, ?>) msg).content();
+            }
             if (msg instanceof Buffer) {
                 Buffer buf = (Buffer) msg;
                 final int readableBytes = buf.readableBytes();
                 if (readableBytes <= writtenBytes) {
                     writtenBytes -= readableBytes;
                     remove();
+                    messages++;
                 } else { // readableBytes > writtenBytes
                     buf.readSplit(Math.toIntExact(writtenBytes)).close();
                     break;
@@ -290,6 +303,7 @@ public final class ChannelOutboundBuffer {
             }
             msg = current();
         }
+        return messages;
     }
 
     private static boolean hasZeroReadable(Object msg) {
@@ -302,7 +316,7 @@ public final class ChannelOutboundBuffer {
     /**
      * Returns the number of flushed messages in this {@link ChannelOutboundBuffer}.
      */
-    public int size() {
+    int size() {
         assert executor.inEventLoop();
 
         return flushed;
@@ -312,7 +326,7 @@ public final class ChannelOutboundBuffer {
      * Returns {@code true} if there are flushed messages in this {@link ChannelOutboundBuffer} or {@code false}
      * otherwise.
      */
-    public boolean isEmpty() {
+    boolean isEmpty() {
         assert executor.inEventLoop();
 
         return flushed == 0;
@@ -339,14 +353,16 @@ public final class ChannelOutboundBuffer {
 
         try {
             inFail = true;
-            for (;;) {
-                if (!remove(cause)) {
-                    break;
-                }
+            while (!isEmpty()) {
+                remove(cause);
             }
         } finally {
             inFail = false;
         }
+    }
+
+    boolean isClosed() {
+        return closed;
     }
 
     private void close(final Throwable cause) {
@@ -356,13 +372,11 @@ public final class ChannelOutboundBuffer {
             executor.execute(() -> close(cause));
             return;
         }
-
         inFail = true;
 
         if (!isEmpty()) {
             throw new IllegalStateException("close() must be invoked after all flushed writes are handled.");
         }
-
         // Release all unflushed messages.
         try {
             Entry e = unflushedEntry;
@@ -378,6 +392,7 @@ public final class ChannelOutboundBuffer {
                 e = e.recycleAndGetNext();
             }
         } finally {
+            closed = true;
             inFail = false;
         }
     }
@@ -390,15 +405,15 @@ public final class ChannelOutboundBuffer {
         PromiseNotificationUtil.tryFailure(promise, cause, logger);
     }
 
-    public long totalPendingWriteBytes() {
+    long totalPendingWriteBytes() {
         return totalPendingSize;
     }
     /**
-     * Call {@link MessageProcessor#processMessage(Object)} for each flushed message
-     * in this {@link ChannelOutboundBuffer} until {@link MessageProcessor#processMessage(Object)}
-     * returns {@code false} or there are no more flushed messages to process.
+     * Call {@link Function#apply(Object)} for each flushed message
+     * in this {@link ChannelOutboundBuffer} until {@link Function#apply(Object)}
+     * returns {@link Boolean#FALSE} or there are no more flushed messages to process.
      */
-    public <T extends Exception> void forEachFlushedMessage(MessageProcessor<T> processor) throws T {
+    void forEachFlushedMessage(Predicate<Object> processor) {
         assert executor.inEventLoop();
 
         requireNonNull(processor, "processor");
@@ -410,7 +425,7 @@ public final class ChannelOutboundBuffer {
 
         do {
             if (!entry.cancelled) {
-                if (!processor.processMessage(entry.msg)) {
+                if (!processor.test(entry.msg)) {
                     return;
                 }
             }
@@ -420,14 +435,6 @@ public final class ChannelOutboundBuffer {
 
     private boolean isFlushedEntry(Entry e) {
         return e != null && e != unflushedEntry;
-    }
-
-    public interface MessageProcessor<T extends Exception> {
-        /**
-         * Will be called for each flushed message until it either there are no more flushed messages or this
-         * method returns {@code false}.
-         */
-        boolean processMessage(Object msg) throws T;
     }
 
     private static final class Entry {

@@ -16,7 +16,6 @@
 package io.netty5.channel.nio;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ReadHandleFactory;
@@ -49,25 +48,9 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
         return localRead < 0;
     }
 
-    @Override
-    protected final void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
-            throws Exception {
-        boolean continueWriting;
-        do {
-            continueWriting = doWriteMessage(in, writeHandle);
-        } while (continueWriting);
-    }
-
     /**
      * Read messages into the given array and return the amount which was read.
      */
     protected abstract int doReadMessages(ReadSink readSink) throws Exception;
 
-    /**
-     * Write a message to the underlying {@link java.nio.channels.Channel}.
-     *
-     * @return {@code true} if and only if the message has been written
-     */
-    protected abstract boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
-            throws Exception;
 }

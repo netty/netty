@@ -16,13 +16,13 @@
 package io.netty5.channel.socket.nio;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.util.concurrent.FastThreadLocal;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.function.Predicate;
 
-final class ByteBufferCollector implements ChannelOutboundBuffer.MessageProcessor<RuntimeException> {
+final class ByteBufferCollector implements Predicate<Object> {
 
     private static final FastThreadLocal<BufferCache> NIO_BUFFERS = new FastThreadLocal<>() {
         @Override
@@ -39,20 +39,24 @@ final class ByteBufferCollector implements ChannelOutboundBuffer.MessageProcesso
 
     /**
      * Returns the number of {@link ByteBuffer} that can be written out of the {@link ByteBuffer} array that was
-     * obtained via {@link #collect(ChannelOutboundBuffer, int, long)}. This method <strong>MUST</strong> be
-     * called after {@link #collect(ChannelOutboundBuffer, int, long)} was called.
+     * obtained via {@link #test(Object)}. This method <strong>MUST</strong> be
+     * called after {@link #test(Object)} was called.
      */
-    public int nioBufferCount() {
+    int nioBufferCount() {
         return cache.bufferCount;
     }
 
     /**
      * Returns the number of bytes that can be written out of the {@link ByteBuffer} array that was
-     * obtained via {@link #collect(ChannelOutboundBuffer, int, long)}. This method <strong>MUST</strong> be called
-     * after {@link #collect(ChannelOutboundBuffer, int, long)}was called.
+     * obtained via {@link #test(Object)}. This method <strong>MUST</strong> be called
+     * after {@link #test(Object)} was called.
      */
-    public long nioBufferSize() {
+    long nioBufferSize() {
         return cache.totalSize;
+    }
+
+    ByteBuffer[] nioBuffers() {
+        return cache.buffers;
     }
 
     /**
@@ -85,11 +89,11 @@ final class ByteBufferCollector implements ChannelOutboundBuffer.MessageProcesso
      * array and the total number of readable bytes of the NIO buffers respectively.
      *
      * @param maxCount The maximum amount of buffers that will be added to the return value.
-     * @param maxBytes A hint toward the maximum number of bytes to include as part of the return value. Note that this
-     *                 value maybe exceeded because we make a best effort to include at least 1 {@link ByteBuffer}
-     *                 in the return value to ensure write progress is made.
+     * @param maxBytes A hint toward the maximum number of bytes to include as part of the return value. Note that
+     *                 this value maybe exceeded because we make a best effort to include at least 1
+     *                 {@link ByteBuffer} in the return value to ensure write progress is made.
      */
-    public ByteBuffer[] collect(ChannelOutboundBuffer outboundBuffer, int maxCount, long maxBytes) {
+    void prepare(int maxCount, long maxBytes) {
         assert maxCount > 0;
         assert maxBytes > 0;
         this.maxCount = maxCount;
@@ -97,12 +101,10 @@ final class ByteBufferCollector implements ChannelOutboundBuffer.MessageProcesso
         this.cache = NIO_BUFFERS.get();
         this.cache.bufferCount = 0;
         this.cache.totalSize = 0;
-        outboundBuffer.forEachFlushedMessage(this);
-        return cache.buffers;
     }
 
     @Override
-    public boolean processMessage(Object msg) throws RuntimeException {
+    public boolean test(Object msg) throws RuntimeException {
         if (!(msg instanceof Buffer)) {
             return false;
         }

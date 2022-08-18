@@ -15,16 +15,15 @@
  */
 package io.netty5.channel.epoll;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.ServerChannelWriteHandleFactory;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -344,7 +343,7 @@ public final class EpollServerSocketChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
+    protected void doWriteNow(WriteSink writeHandle) {
         throw new UnsupportedOperationException();
     }
 
@@ -383,7 +382,7 @@ public final class EpollServerSocketChannel
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
         throw new UnsupportedOperationException();
     }
 

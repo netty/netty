@@ -16,6 +16,7 @@
 package io.netty5.channel;
 
 
+import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -286,7 +287,7 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+        protected void doWriteNow(WriteSink writeHandle) throws Exception {
             throw new IOException();
         }
 
@@ -320,7 +321,7 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initalData) {
             active = true;
             return true;
         }

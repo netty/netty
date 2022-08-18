@@ -28,7 +28,6 @@ import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.ChannelException;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
@@ -260,7 +259,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    protected final int doWriteBytes(ChannelOutboundBuffer in, Buffer buf) throws Exception {
+    protected final int doWriteBytes(Buffer buf) throws Exception {
         int written = 0;
         try (var iterator = buf.forEachComponent()) {
             var component = iterator.firstReadable();
@@ -270,11 +269,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
                 written = socket.sendAddress(address, 0, component.readableBytes());
             }
         }
-        if (written > 0) {
-            in.removeBytes(written);
-            return 1; // Some data was written to the socket.
-        }
-        return -1;
+        return written;
     }
 
     /**
@@ -436,7 +431,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     /**
      * Connect to the remote peer
      */
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData)
+            throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             checkResolvable((InetSocketAddress) localAddress);
         }
@@ -451,7 +447,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             socket.bind(localAddress);
         }
 
-        boolean connected = doConnect0(remoteAddress);
+        boolean connected = doConnect0(remoteAddress, initialData);
         if (connected) {
             this.remoteAddress = remoteSocketAddr == null ?
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
@@ -466,7 +462,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         return connected;
     }
 
-    protected boolean doConnect0(SocketAddress remote) throws Exception {
+    protected boolean doConnect0(SocketAddress remote, Buffer initialData) throws Exception {
         boolean success = false;
         try {
             boolean connected = socket.connect(remote);

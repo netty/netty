@@ -20,7 +20,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoop;
@@ -171,68 +170,59 @@ public final class EpollSocketChannel
 
     /**
      * Write bytes form the given {@link Buffer} to the underlying {@link java.nio.channels.Channel}.
-     * @param in the collection which contains objects to write.
-     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
-     * @param buf the {@link Buffer} from which the bytes should be written.
+     * @param writeSink the {@link WriteSink} used to track write results.
      * @return if we should continue with writing more messages.
      */
-    private boolean writeBytes(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle, Buffer buf)
+    private void writeBytes(WriteSink writeSink)
             throws Exception {
+        Buffer buf = (Buffer) writeSink.first();
         int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
-            in.remove();
-            return writeHandle.lastWrite(0, 0, 1);
+            writeSink.complete(0, 0, 1, true);
+            return;
         }
 
         int readableComponents = buf.countReadableComponents();
         long attempted;
-        long written;
+        int written;
         if (readableComponents == 1) {
             attempted = buf.readableBytes();
-            written = doWriteBytes(in, buf);
+            written = doWriteBytes(buf);
         }  else {
-            attempted = Math.min(writeHandle.estimatedMaxBytesPerGatheringWrite(), buf.readableBytes());
+            attempted = Math.min(writeSink.estimatedMaxBytesPerGatheringWrite(), buf.readableBytes());
             ByteBuffer[] nioBuffers = new ByteBuffer[readableComponents];
             try (var iteration = buf.forEachComponent()) {
                 int index = 0;
                 for (var c = iteration.first(); c != null; c = c.next()) {
                    nioBuffers[index++] = c.readableBuffer();
                 }
-                written = writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes, attempted);
+                written = (int) writeBytesMultiple(nioBuffers, nioBuffers.length, readableBytes, attempted);
             }
         }
-        return writeHandle.lastWrite(attempted, written, written >= 0 ? 1: 0) && written != -1;
+        if (written > 0) {
+            buf.skipReadableBytes(written);
+        }
+        writeSink.complete(attempted, written, readableBytes == written ? 1 : 0, written > 0);
     }
 
     /**
      * Write multiple bytes via {@link IovArray}.
-     * @param in the collection which contains objects to write.
-     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
      * @param array The array which contains the content to write.
      * @return if we should continue with writing more messages.
      * @throws IOException If an I/O exception occurs during write.
      */
-    private boolean writeBytesMultiple(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle,
-                                       IovArray array)
+    private long writeBytesMultiple(IovArray array)
             throws IOException {
         final long expectedWrittenBytes = array.size();
         assert expectedWrittenBytes != 0;
         final int cnt = array.count();
         assert cnt != 0;
 
-        final long localWrittenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
-        if (localWrittenBytes > 0) {
-            in.removeBytes(localWrittenBytes);
-            int numMessages = array.writtenMessages(0, localWrittenBytes);
-            return writeHandle.lastWrite(expectedWrittenBytes, localWrittenBytes, numMessages);
-        }
-        writeHandle.lastWrite(expectedWrittenBytes, localWrittenBytes, 0);
-        return false;
+        return socket.writevAddresses(array.memoryAddress(0), cnt);
     }
 
     /**
      * Write multiple bytes via {@link ByteBuffer} array.
-     * @param in the collection which contains objects to write.
      * @param nioBuffers The buffers to write.
      * @param nioBufferCnt The number of buffers to write.
      * @param expectedWrittenBytes The number of bytes we expect to write.
@@ -240,128 +230,97 @@ public final class EpollSocketChannel
      * @return write result.
      * @throws IOException If an I/O exception occurs during write.
      */
-    private int writeBytesMultiple(
-            ChannelOutboundBuffer in, ByteBuffer[] nioBuffers, int nioBufferCnt, long expectedWrittenBytes,
+    private long writeBytesMultiple(ByteBuffer[] nioBuffers, int nioBufferCnt, long expectedWrittenBytes,
             long maxBytesPerGatheringWrite) throws IOException {
         assert expectedWrittenBytes != 0;
         if (expectedWrittenBytes > maxBytesPerGatheringWrite) {
             expectedWrittenBytes = maxBytesPerGatheringWrite;
         }
 
-        final long localWrittenBytes = socket.writev(nioBuffers, 0, nioBufferCnt, expectedWrittenBytes);
-        if (localWrittenBytes > 0) {
-            in.removeBytes(localWrittenBytes);
-            return 1;
-        }
-        return -1;
+        return socket.writev(nioBuffers, 0, nioBufferCnt, expectedWrittenBytes);
     }
 
     /**
      * Write a {@link DefaultFileRegion}
-     * @param in the collection which contains objects to write.
-     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
-     * @param region the {@link DefaultFileRegion} from which the bytes should be written
+     * @param writeSink the {@link WriteSink} used to track write results.
      * @return if we should continue with writing more messages.
      */
-    private boolean writeDefaultFileRegion(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle,
-                                           DefaultFileRegion region) throws Exception {
+    private void writeDefaultFileRegion(WriteSink writeSink) throws Exception {
+        final DefaultFileRegion region = (DefaultFileRegion) writeSink.first();
         final long regionCount = region.count();
-        final long offset = region.transferred();
-        final long flushedAmount;
-        int messagesWritten  = 0;
+        final long transferred = region.transferred();
 
-        if (offset >= regionCount) {
-            flushedAmount = 0;
-            messagesWritten = 1;
+        if (transferred >= regionCount) {
+            writeSink.complete(0, 0, 1, true);
         } else {
-            flushedAmount = socket.sendFile(region, region.position(), offset, regionCount - offset);
-            if (flushedAmount > 0) {
-                if (region.transferred() >= regionCount) {
-                    messagesWritten = 1;
-                }
-            } else if (flushedAmount == 0) {
-                validateFileRegion(region, offset);
+            long flushedAmount = socket.sendFile(region, region.position(), transferred, regionCount - transferred);
+            if (flushedAmount == 0) {
+                validateFileRegion(region, transferred);
             }
+            writeSink.complete(regionCount, flushedAmount, region.transferred() >= regionCount ? 1: 0,
+                    flushedAmount > 0);
         }
-        if (messagesWritten > 0) {
-            in.remove();
-        }
-        return writeHandle.lastWrite(regionCount, flushedAmount, messagesWritten) && flushedAmount > 0;
     }
 
     /**
      * Write a {@link FileRegion}
-     * @param in the collection which contains objects to write.
-     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
-     * @param region the {@link FileRegion} from which the bytes should be written
+     * @param writeSink the {@link WriteSink} used to track write results.
      * @return if we should continue with writing more messages.
      */
-    private boolean writeFileRegion(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle,
-                                FileRegion region) throws Exception {
+    private void writeFileRegion(WriteSink writeSink) throws Exception {
+        final FileRegion region = (FileRegion) writeSink.first();
         final long regionCount = region.count();
-        final long flushedAmount;
-        int messagesWritten  = 0;
-        if (region.transferred() >= region.count()) {
-            flushedAmount = 0;
-            messagesWritten = 1;
+        final long transferred = region.transferred();
+        if (transferred >= regionCount) {
+            writeSink.complete(0, 0, 1, true);
         } else {
             if (byteChannel == null) {
                 byteChannel = new EpollSocketWritableByteChannel();
             }
-            flushedAmount = region.transferTo(byteChannel, region.transferred());
-            if (flushedAmount > 0) {
-                if (region.transferred() >= region.count()) {
-                    messagesWritten = 1;
-                }
-            }
+            long flushedAmount = region.transferTo(byteChannel, region.transferred());
+            writeSink.complete(regionCount, flushedAmount, region.transferred() >= regionCount ? 1: 0,
+                    flushedAmount > 0);
         }
-
-        if (messagesWritten > 0) {
-            in.remove();
-        }
-        return writeHandle.lastWrite(regionCount, flushedAmount, messagesWritten) && flushedAmount > 0;
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
-        boolean continueWriting;
-        do {
-            final int msgCount = in.size();
-            if (msgCount == 0) {
-                writeHandle.lastWrite(0, 0, 0);
-                return;
-            }
-            // Do gathering write if the outbound buffer entries start with more than one Buffer.
-            if (msgCount > 1 && in.current() instanceof Buffer) {
-                continueWriting = doWriteMultiple(in, writeHandle);
-            } else {
-                continueWriting = doWriteSingle(in, writeHandle);
-            }
-        } while (continueWriting);
+    protected void doWriteNow(WriteSink writeSink) throws Exception {
+        final int msgCount = writeSink.size();
+        // Do gathering write if the outbound buffer entries start with more than one Buffer.
+        if (msgCount > 1 && writeSink.first() instanceof Buffer) {
+            doWriteMultiple(writeSink);
+        } else {
+            doWriteSingle(writeSink);
+        }
     }
 
     /**
      * Attempt to write a single object.
-     * @param in the collection which contains objects to write.
-     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
+     * @param writeSink the {@link WriteSink} used to track write results.
      * @return if we should continue with writing more messages.
      * @throws Exception If an I/O error occurs.
      */
-    private boolean doWriteSingle(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
-            throws Exception {
+    private void doWriteSingle(WriteSink writeSink) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
-        Object msg = in.current();
-        if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
-            // File descriptor was written, so remove it.
-            in.remove();
-            return writeHandle.lastWrite(0, 0, 1);
+        Object msg = writeSink.first();
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            if (msg instanceof FileDescriptor) {
+                if (socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
+                    // File descriptor was written, so remove it.
+                    writeSink.complete(0, 0, 1, true);
+                } else {
+                    writeSink.complete(0, 0, 0, false);
+                }
+                return;
+            }
         }
+
         if (msg instanceof Buffer) {
-            return writeBytes(in, writeHandle, (Buffer) msg);
+            writeBytes(writeSink);
         } else if (msg instanceof DefaultFileRegion) {
-            return writeDefaultFileRegion(in, writeHandle, (DefaultFileRegion) msg);
+            writeDefaultFileRegion(writeSink);
         } else if (msg instanceof FileRegion) {
-            return writeFileRegion(in, writeHandle, (FileRegion) msg);
+            writeFileRegion(writeSink);
         } else {
             // Should never reach here.
             throw new Error();
@@ -370,25 +329,22 @@ public final class EpollSocketChannel
 
     /**
      * Attempt to write multiple {@link Buffer} objects.
-     * @param in the collection which contains objects to write.
-     * @param writeHandle the {@link WriteHandleFactory.WriteHandle} used to track write results.
+     * @param writeSink the {@link WriteSink} used to track write results.
      * @return if we should continue with writing more messages.
      * @throws Exception If an I/O error occurs.
      */
-    private boolean doWriteMultiple(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
-            throws Exception {
-        final long maxBytesPerGatheringWrite = writeHandle.estimatedMaxBytesPerGatheringWrite();
+    private void doWriteMultiple(WriteSink writeSink) throws Exception {
         IovArray array = registration().cleanIovArray();
-        array.maxBytes(maxBytesPerGatheringWrite);
-        in.forEachFlushedMessage(array);
+        array.maxBytes(writeSink.estimatedMaxBytesPerGatheringWrite());
+        writeSink.forEach(array);
 
         if (array.count() >= 1) {
-            return writeBytesMultiple(in, writeHandle, array);
+            long result = writeBytesMultiple(array);
+            writeSink.complete(array.size(), result, -1, result > 0);
+        } else {
+            // cnt == 0, which means the outbound buffer contained empty buffers only.
+            writeSink.complete(0, 0, -1, true);
         }
-        int messages = in.size();
-        // cnt == 0, which means the outbound buffer contained empty buffers only.
-        in.removeBytes(0);
-        return writeHandle.lastWrite(0, 0, messages);
     }
 
     @Override
@@ -1015,27 +971,23 @@ public final class EpollSocketChannel
     }
 
     @Override
-    protected boolean doConnect0(SocketAddress remote) throws Exception {
+    protected boolean doConnect0(SocketAddress remote, Buffer initialData) throws Exception {
         if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
                 isTcpFastOpenConnect()) {
-            ChannelOutboundBuffer outbound = outboundBuffer();
-            outbound.addFlush();
-            Object curr = outbound.current();
-            if (curr instanceof Buffer) {
+            if (initialData != null) {
                 // If no cookie is present, the write fails with EINPROGRESS and this call basically
                 // becomes a normal async connect. All writes will be sent normally afterwards.
                 final long localFlushedAmount;
-                Buffer initialData = (Buffer) curr;
                 localFlushedAmount = doWriteOrSendBytes(initialData, remote, true);
                 if (localFlushedAmount > 0) {
                     // We had a cookie and our fast-open proceeded. Remove written data
                     // then continue with normal TCP operation.
-                    outbound.removeBytes(localFlushedAmount);
+                    initialData.skipReadableBytes((int) localFlushedAmount);
                     return true;
                 }
             }
         }
-        return super.doConnect0(remote);
+        return super.doConnect0(remote, initialData);
     }
 
     @Override
