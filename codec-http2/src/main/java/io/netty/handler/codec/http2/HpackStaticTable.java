@@ -32,6 +32,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.util.AsciiString;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
 import java.util.List;
@@ -120,7 +121,7 @@ final class HpackStaticTable {
     private static final int HEADER_NAMES_TABLE_SIZE = 1 << 9;
 
     // a bit shift chosen so that each header name will hash into a single bucket
-    private static final int HEADER_NAMES_TABLE_SHIFT = 18;
+    private static final int HEADER_NAMES_TABLE_SHIFT = PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? 22 : 18;
 
     // A table holding header names and their associated indexes.
     private static final HeaderNameIndex[] HEADER_NAMES = new HeaderNameIndex[HEADER_NAMES_TABLE_SIZE];
@@ -143,7 +144,8 @@ final class HpackStaticTable {
     private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE = 1 << 6;
 
     // a bit shift chosen so that each header will hash into a single bucket
-    private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SHIFT = 6;
+    private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SHIFT =
+      PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? 0 : 6;
 
     // A table holding header names and values for non-empty values.
     // This table is keyed by value which is possible since each non-empty value is unique.
