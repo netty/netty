@@ -31,13 +31,13 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.util.AsciiString;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 final class HpackStaticTable {
 
@@ -117,9 +117,53 @@ final class HpackStaticTable {
         return new HpackHeaderField(AsciiString.cached(name), AsciiString.cached(value));
     }
 
-    private static final CharSequenceMap<Integer> STATIC_INDEX_BY_NAME = createMap();
+    private static final int HEADER_NAMES_TABLE_SIZE = 1 << 9;
 
-    private static final int MAX_SAME_NAME_FIELD_INDEX = maxSameNameFieldIndex();
+    // a bit shift chosen so that each header name will hash into a single bucket
+    private static final int HEADER_NAMES_TABLE_SHIFT = 18;
+
+    // A table holding header names and their associated indexes.
+    private static final HeaderNameIndex[] HEADER_NAMES = new HeaderNameIndex[HEADER_NAMES_TABLE_SIZE];
+    static {
+        // Iterate through the static table in reverse order to
+        // save the smallest index for a given name in the table.
+        for (int index = STATIC_TABLE.size(); index > 0; index--) {
+            HpackHeaderField entry = getEntry(index);
+            int bucket = headerNameBucket(entry.name);
+            HeaderNameIndex tableEntry = HEADER_NAMES[bucket];
+            if (tableEntry != null && !equalsVariableTime(tableEntry.name, entry.name)) {
+                // Can happen if AsciiString.hashCode changes
+                throw new IllegalStateException("Hash bucket collision between " +
+                  tableEntry.name + " and " + entry.name);
+            }
+            HEADER_NAMES[bucket] = new HeaderNameIndex(entry.name, index, entry.value.length() == 0);
+        }
+    }
+
+    private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE = 1 << 6;
+
+    // a bit shift chosen so that each header will hash into a single bucket
+    private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SHIFT = 6;
+
+    // A table holding header names and values for non-empty values.
+    // This table is keyed by value which is possible since each non-empty value is unique.
+    private static final HeaderIndex[] HEADERS_WITH_NON_EMPTY_VALUES =
+      new HeaderIndex[HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE];
+    static {
+        for (int index = STATIC_TABLE.size(); index > 0; index--) {
+            HpackHeaderField entry = getEntry(index);
+            if (entry.value.length() > 0) {
+                int bucket = headerBucket(entry.value);
+                HeaderIndex tableEntry = HEADERS_WITH_NON_EMPTY_VALUES[bucket];
+                if (tableEntry != null) {
+                    // Can happen if AsciiString.hashCode changes
+                    throw new IllegalStateException("Hash bucket collision between " +
+                      tableEntry.value + " and " + entry.value);
+                }
+                HEADERS_WITH_NON_EMPTY_VALUES[bucket] = new HeaderIndex(entry.name, entry.value, index);
+            }
+        }
+    }
 
     /**
      * The number of header fields in the static table.
@@ -138,11 +182,9 @@ final class HpackStaticTable {
      * -1 if the header field name is not in the static table.
      */
     static int getIndex(CharSequence name) {
-        Integer index = STATIC_INDEX_BY_NAME.get(name);
-        if (index == null) {
-            return NOT_FOUND;
-        }
-        return index;
+        checkNotNull(name, "name");
+        HeaderNameIndex entry = getEntry(name);
+        return entry == null ? NOT_FOUND : entry.index;
     }
 
     /**
@@ -150,70 +192,69 @@ final class HpackStaticTable {
      * header field is not in the static table.
      */
     static int getIndexInsensitive(CharSequence name, CharSequence value) {
-        int index = getIndex(name);
-        if (index == NOT_FOUND) {
+        checkNotNull(name, "name");
+        if (value == null) {
             return NOT_FOUND;
         }
-
-        // Compare values for the first name match
-        HpackHeaderField entry = getEntry(index);
-        if (equalsVariableTime(value, entry.value)) {
-            return index;
-        }
-
-        // Note this assumes all entries for a given header field are sequential.
-        index++;
-        while (index <= MAX_SAME_NAME_FIELD_INDEX) {
-            entry = getEntry(index);
-            if (!equalsVariableTime(name, entry.name)) {
-                // As far as fields with the same name are placed in the table sequentially
-                // and INDEX_BY_NAME returns index of the fist position, - it's safe to
-                // exit immediately.
+        if (value.length() == 0) {
+            HeaderNameIndex entry = getEntry(name);
+            return entry == null || !entry.emptyValue ? NOT_FOUND : entry.index;
+        } else {
+            int bucket = headerBucket(value);
+            HeaderIndex header = HEADERS_WITH_NON_EMPTY_VALUES[bucket];
+            if (header == null) {
                 return NOT_FOUND;
             }
-            if (equalsVariableTime(value, entry.value)) {
-                return index;
+            if (equalsVariableTime(header.name, name) && equalsVariableTime(header.value, value)) {
+                return header.index;
             }
-            index++;
+            return NOT_FOUND;
         }
-
-        return NOT_FOUND;
     }
 
-    // create a map CharSequenceMap header name to index value to allow quick lookup
-    private static CharSequenceMap<Integer> createMap() {
-        int length = STATIC_TABLE.size();
-        @SuppressWarnings("unchecked")
-        CharSequenceMap<Integer> ret = new CharSequenceMap<Integer>(true,
-                UnsupportedValueConverter.<Integer>instance(), length);
-        // Iterate through the static table in reverse order to
-        // save the smallest index for a given name in the map.
-        for (int index = length; index > 0; index--) {
-            HpackHeaderField entry = getEntry(index);
-            CharSequence name = entry.name;
-            ret.set(name, index);
+    private static HeaderNameIndex getEntry(CharSequence name) {
+        int bucket = headerNameBucket(name);
+        HeaderNameIndex entry = HEADER_NAMES[bucket];
+        if (entry == null) {
+            return null;
         }
-        return ret;
+        return equalsVariableTime(entry.name, name) ? entry : null;
     }
 
-    /**
-     * Returns the last position in the array that contains multiple
-     * fields with the same name. Starting from this position, all
-     * names are unique. Similar to {@link #getIndexInsensitive(CharSequence, CharSequence)} method
-     * assumes all entries for a given header field are sequential
-     */
-    private static int maxSameNameFieldIndex() {
-        final int length = STATIC_TABLE.size();
-        HpackHeaderField cursor = getEntry(length);
-        for (int index = length - 1; index > 0; index--) {
-            HpackHeaderField entry = getEntry(index);
-            if (equalsVariableTime(entry.name, cursor.name)) {
-                return index + 1;
-            } else {
-                cursor = entry;
-            }
+    private static int headerNameBucket(CharSequence name) {
+        return bucket(name, HEADER_NAMES_TABLE_SHIFT, HEADER_NAMES_TABLE_SIZE - 1);
+    }
+
+    private static int headerBucket(CharSequence value) {
+        return bucket(value, HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SHIFT, HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE - 1);
+    }
+
+    private static int bucket(CharSequence s, int shift, int mask) {
+        return (AsciiString.hashCode(s) >> shift) & mask;
+    }
+
+    private static final class HeaderNameIndex {
+        private final CharSequence name;
+        private final int index;
+        private final boolean emptyValue;
+
+        private HeaderNameIndex(CharSequence name, int index, boolean emptyValue) {
+            this.name = name;
+            this.index = index;
+            this.emptyValue = emptyValue;
         }
-        return length;
+    }
+
+    private static final class HeaderIndex {
+        private final CharSequence name;
+        private final CharSequence value;
+        private final int index;
+
+        private HeaderIndex(CharSequence name, CharSequence value, int index) {
+            this.name = name;
+            this.value = value;
+            this.index = index;
+        }
     }
 
     // singleton
