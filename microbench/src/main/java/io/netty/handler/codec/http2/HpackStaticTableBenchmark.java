@@ -66,6 +66,24 @@ public class HpackStaticTableBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
+    public int lookupNameAndValueMatchFirst() {
+        return HpackStaticTable.getIndexInsensitive(STATUS, STATUS_200);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public int lookupNameAndValueMatchLast() {
+        return HpackStaticTable.getIndexInsensitive(STATUS, STATUS_500);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public int lookupNameOnlyMatchBeginTable() {
+        return HpackStaticTable.getIndexInsensitive(AUTHORITY, AUTHORITY_NETTY);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
     public int lookupHttp() {
         return HpackStaticTable.getIndexInsensitive(SCHEME, HTTP);
     }
@@ -78,7 +96,7 @@ public class HpackStaticTableBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public int lookupNameOnlyMatch() {
+    public int lookupNameOnlyMatchEndTable() {
         return HpackStaticTable.getIndexInsensitive(USER_AGENT, USER_AGENT_CURL);
     }
 }
