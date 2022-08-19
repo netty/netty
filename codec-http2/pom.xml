@@ -111,6 +111,7 @@
       <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
       <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>
