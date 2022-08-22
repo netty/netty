@@ -17,7 +17,6 @@ package io.netty5.channel.nio;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AdaptiveReadHandleFactory;
-import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -57,31 +56,25 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
     @Override
     protected final boolean doReadNow(ReadSink readSink) throws Exception {
         Buffer buffer = null;
-        boolean close = false;
         try {
-            boolean continueReading;
-            do {
-                buffer = readSink.allocateBuffer();
-                if (buffer == null) {
-                    readSink.processRead(0, 0, null);
-                    break;
-                }
-                int attemptedBytesRead = buffer.writableBytes();
-                int actualBytesRead = doReadBytes(buffer);
-                if (actualBytesRead <= 0) {
-                    // nothing was read. release the buffer.
-                    Resource.dispose(buffer);
-                    buffer = null;
-                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
-                    close = actualBytesRead < 0;
-                    break;
-                }
-
-                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
+            buffer = readSink.allocateBuffer();
+            if (buffer == null) {
+                readSink.processRead(0, 0, null);
+                return false;
+            }
+            int attemptedBytesRead = buffer.writableBytes();
+            int actualBytesRead = doReadBytes(buffer);
+            if (actualBytesRead <= 0) {
+                // nothing was read. release the buffer.
+                Resource.dispose(buffer);
                 buffer = null;
-            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
+                readSink.processRead(attemptedBytesRead, actualBytesRead, null);
+                return actualBytesRead < 0;
+            }
 
-            return close;
+            readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
+            buffer = null;
+            return false;
         } catch (Throwable t) {
             if (buffer != null) {
                 buffer.close();

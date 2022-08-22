@@ -103,15 +103,8 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
 
     @Override
     protected boolean doReadNow(ReadSink readSink) {
-        boolean continueReading;
-        do {
-            Object m = inboundBuffer.poll();
-            if (m == null) {
-                readSink.processRead(0, 0, null);
-                break;
-            }
-            continueReading = readSink.processRead(0, 0, m);
-        } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
+        Object m = inboundBuffer.poll();
+        readSink.processRead(0, 0, m);
         return false;
     }
 

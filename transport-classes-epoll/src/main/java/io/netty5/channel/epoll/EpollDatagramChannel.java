@@ -16,7 +16,6 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -517,58 +516,56 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         Buffer buf = null;
         try {
             boolean connected = isConnected();
-            boolean continueReading;
-            do {
-                buf = readSink.allocateBuffer();
-                if (buf == null) {
-                    readSink.processRead(0, 0, null);
-                    break;
+
+            buf = readSink.allocateBuffer();
+            if (buf == null) {
+                readSink.processRead(0, 0, null);
+                return ReadState.Partial;
+            }
+            int attemptedBytesRead = buf.writableBytes();
+            assert buf.isDirect();
+
+            final DatagramPacket packet;
+            int actualBytesRead;
+            if (connected) {
+                actualBytesRead = doReadBytes(buf);
+                if (actualBytesRead <= 0) {
+                    // nothing was read, release the buffer.
+                    buf.close();
+                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
+
+                    return actualBytesRead == 0 ? ReadState.All : ReadState.Closed;
                 }
-                int attemptedBytesRead = buf.writableBytes();
-                assert buf.isDirect();
-
-                final DatagramPacket packet;
-                int actualBytesRead;
-                if (connected) {
-                    actualBytesRead = doReadBytes(buf);
-                    if (actualBytesRead <= 0) {
-                        // nothing was read, release the buffer.
-                        buf.close();
-                        readSink.processRead(attemptedBytesRead, actualBytesRead, null);
-
-                        return actualBytesRead == 0 ? ReadState.All : ReadState.Closed;
+                packet = new DatagramPacket(buf, localAddress(), remoteAddress());
+            } else {
+                final DomainDatagramSocketAddress remoteAddress;
+                try (var iteration = buf.forEachComponent()) {
+                    var c = iteration.firstWritable();
+                    if (c != null) {
+                        remoteAddress = socket.recvFromAddressDomainSocket(
+                                c.writableNativeAddress(), 0, c.writableBytes());
+                    } else {
+                        remoteAddress = null;
                     }
-                    packet = new DatagramPacket(buf, localAddress(), remoteAddress());
-                } else {
-                    final DomainDatagramSocketAddress remoteAddress;
-                    try (var iteration = buf.forEachComponent()) {
-                        var c = iteration.firstWritable();
-                        if (c != null) {
-                            remoteAddress = socket.recvFromAddressDomainSocket(
-                                    c.writableNativeAddress(), 0, c.writableBytes());
-                        } else {
-                            remoteAddress = null;
-                        }
-                    }
-
-                    if (remoteAddress == null) {
-                        readSink.processRead(attemptedBytesRead, 0, null);
-                        buf.close();
-                        return ReadState.All;
-                    }
-                    DomainSocketAddress localAddress = remoteAddress.localAddress();
-                    if (localAddress == null) {
-                        localAddress = (DomainSocketAddress) localAddress();
-                    }
-                    actualBytesRead = remoteAddress.receivedAmount();
-
-                    buf.skipWritableBytes(actualBytesRead);
-                    packet = new DatagramPacket(buf, localAddress, remoteAddress);
                 }
 
-                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, packet);
-                buf = null;
-            } while (continueReading);
+                if (remoteAddress == null) {
+                    readSink.processRead(attemptedBytesRead, 0, null);
+                    buf.close();
+                    return ReadState.All;
+                }
+                DomainSocketAddress localAddress = remoteAddress.localAddress();
+                if (localAddress == null) {
+                    localAddress = (DomainSocketAddress) localAddress();
+                }
+                actualBytesRead = remoteAddress.receivedAmount();
+
+                buf.skipWritableBytes(actualBytesRead);
+                packet = new DatagramPacket(buf, localAddress, remoteAddress);
+            }
+
+            readSink.processRead(attemptedBytesRead, actualBytesRead, packet);
+            buf = null;
             return ReadState.Partial;
         } catch (Throwable t) {
             if (buf != null) {
@@ -578,58 +575,38 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private enum ReadingState {
-        Continue,
-        Stop,
-        Nothing
-    }
-
     private ReadState doReadBuffer(ReadSink readSink) throws Exception {
         boolean connected = isConnected();
-        for (;;) {
-            final ReadingState state;
-            int datagramSize = getMaxDatagramPayloadSize();
-            Buffer buf = readSink.allocateBuffer();
-            if (buf == null) {
-                readSink.processRead(0, 0, null);
-                return ReadState.Partial;
-            }
-            // Only try to use recvmmsg if its really supported by the running system.
-            int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
-                    datagramSize == 0 ? 1 : buf.writableBytes() / datagramSize :
-                    0;
-            try {
-                if (numDatagram <= 1) {
-                    if (!connected || isUdpGro()) {
-                        state = recvmsg(readSink, cleanDatagramPacketArray(), buf);
-                    } else {
-                        state = connectedRead(readSink, buf, datagramSize);
-                    }
+        int datagramSize = getMaxDatagramPayloadSize();
+        Buffer buf = readSink.allocateBuffer();
+        if (buf == null) {
+            readSink.processRead(0, 0, null);
+            return ReadState.Partial;
+        }
+        // Only try to use recvmmsg if its really supported by the running system.
+        int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
+                datagramSize == 0 ? 1 : buf.writableBytes() / datagramSize :
+                0;
+        try {
+            if (numDatagram <= 1) {
+                if (!connected || isUdpGro()) {
+                    return recvmsg(readSink, cleanDatagramPacketArray(), buf);
                 } else {
-                    // Try to use scattering reads via recvmmsg(...) syscall.
-                    state = scatteringRead(readSink, cleanDatagramPacketArray(), buf, datagramSize, numDatagram);
+                    return connectedRead(readSink, buf, datagramSize);
                 }
-            } catch (NativeIoException e) {
-                if (connected) {
-                    throw translateForConnected(e);
-                }
-                throw e;
+            } else {
+                // Try to use scattering reads via recvmmsg(...) syscall.
+                return scatteringRead(readSink, cleanDatagramPacketArray(), buf, datagramSize, numDatagram);
             }
-
-            switch (state) {
-                case Nothing:
-                    return ReadState.All;
-                case Stop:
-                    return ReadState.Partial;
-                case Continue:
-                    break;
-                default:
-                    throw new AssertionError("Should never happen");
+        } catch (NativeIoException e) {
+            if (connected) {
+                throw translateForConnected(e);
             }
+            throw e;
         }
     }
 
-    private ReadingState connectedRead(ReadSink readSink, Buffer buf, int maxDatagramPacketSize) throws Exception {
+    private ReadState connectedRead(ReadSink readSink, Buffer buf, int maxDatagramPacketSize) throws Exception {
         try {
             int attemptedBytesRead = maxDatagramPacketSize != 0 ? Math.min(buf.writableBytes(), maxDatagramPacketSize)
                     : buf.writableBytes();
@@ -650,13 +627,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             if (totalBytesRead == 0) {
                 readSink.processRead(attemptedBytesRead, totalBytesRead, null);
                 // nothing was read, release the buffer.
-                return ReadingState.Nothing;
+                return ReadState.All;
             }
 
-            boolean continueReading = readSink.processRead(attemptedBytesRead, totalBytesRead,
+            readSink.processRead(attemptedBytesRead, totalBytesRead,
                     new DatagramPacket(buf, localAddress(), remoteAddress()));
             buf = null;
-            return continueReading ? ReadingState.Continue : ReadingState.Stop;
+            return ReadState.Partial;
         } finally {
             if (buf != null) {
                 buf.close();
@@ -700,27 +677,22 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private static boolean processPacket(ReadSink readSink,
+    private static void processPacket(ReadSink readSink,
                                          int attemptedBytesRead, int bytesRead, AddressedEnvelope<?, ?> packet) {
         // Avoid signalling end-of-data for zero-sized datagrams.
-        return readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead), packet);
+        readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead), packet);
     }
 
-    private static boolean processPacketList(ReadSink readSink,
+    private static void processPacketList(ReadSink readSink,
                                              int attemptedBytesRead, int bytesRead, RecyclableArrayList packetList) {
         int messagesRead = packetList.size();
-        boolean continueReading = true;
         for (int i = 0; i < messagesRead; i++) {
             // Avoid signalling end-of-data for zero-sized datagrams.
-            if (!readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead),
-                    packetList.set(i, NULL))) {
-                continueReading = false;
-            }
+            readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead), packetList.set(i, NULL));
         }
-        return continueReading;
     }
 
-    private ReadingState recvmsg(ReadSink readSink, NativeDatagramPacketArray array, Buffer buf) throws IOException {
+    private ReadState recvmsg(ReadSink readSink, NativeDatagramPacketArray array, Buffer buf) throws IOException {
         RecyclableArrayList datagramPackets = null;
         try {
             int initialWriterOffset = buf.writerOffset();
@@ -735,14 +707,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             int bytesReceived = socket.recvmsg(msg);
             if (!msg.hasSender()) {
                 readSink.processRead(attemptedBytesRead, 0, null);
-                return ReadingState.Nothing;
+                return ReadState.All;
             }
             buf.writerOffset(initialWriterOffset + bytesReceived);
             InetSocketAddress local = (InetSocketAddress) localAddress();
             DatagramPacket packet = msg.newDatagramPacket(buf, local);
-            boolean continueReading;
             if (!(packet instanceof SegmentedDatagramPacket)) {
-                continueReading = processPacket(readSink, attemptedBytesRead, bytesReceived, packet);
+                processPacket(readSink, attemptedBytesRead, bytesReceived, packet);
                 buf = null;
             } else {
                 // Its important we process all received data out of the NativeDatagramPacketArray
@@ -754,18 +725,17 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // it into the RecyclableArrayList.
                 buf = null;
 
-                continueReading = processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
+                processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
                 datagramPackets.recycle();
                 datagramPackets = null;
             }
-
-            return continueReading ? ReadingState.Continue : ReadingState.Stop;
+            return ReadState.Partial;
         } finally {
             releaseAndRecycle(buf, datagramPackets);
         }
     }
 
-    private ReadingState scatteringRead(ReadSink readSink, NativeDatagramPacketArray array,
+    private ReadState scatteringRead(ReadSink readSink, NativeDatagramPacketArray array,
                                         Buffer buf, int datagramSize, int numDatagram)
             throws IOException {
         RecyclableArrayList datagramPackets = null;
@@ -784,7 +754,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             int received = socket.recvmmsg(packets, 0, array.count());
             if (received == 0) {
                 readSink.processRead(attemptedBytesRead, 0, null);
-                return ReadingState.Nothing;
+                return ReadState.All;
             }
             int bytesReceived = received * datagramSize;
             buf.writerOffset(initialWriterOffset + bytesReceived);
@@ -793,10 +763,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(buf, local);
                 if (!(packet instanceof SegmentedDatagramPacket)) {
-                    boolean continueReading = processPacket(readSink,
-                            attemptedBytesRead, datagramSize, packet);
+                    processPacket(readSink, attemptedBytesRead, datagramSize, packet);
                     buf = null;
-                    return continueReading ? ReadingState.Continue : ReadingState.Stop;
+                    return ReadState.Partial;
                 }
             }
             // It's important we process all received data out of the NativeDatagramPacketArray
@@ -811,10 +780,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             buf.close();
             buf = null;
 
-            boolean continueReading = processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
+            processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
             datagramPackets.recycle();
             datagramPackets = null;
-            return continueReading ? ReadingState.Continue : ReadingState.Stop;
+            return ReadState.Partial;
         } finally {
             releaseAndRecycle(buf, datagramPackets);
         }
