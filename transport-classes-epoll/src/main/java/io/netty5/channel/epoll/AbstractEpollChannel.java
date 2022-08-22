@@ -252,7 +252,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             }
             long address = component.writableNativeAddress();
             assert address != 0;
-            int localReadAmount = socket.readAddress(address, 0, component.writableBytes());
+            int localReadAmount = socket.recvAddress(address, 0, component.writableBytes());
             if (localReadAmount > 0) {
                 component.skipWritableBytes(localReadAmount);
             }
@@ -267,7 +267,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             if (component != null) {
                 long address = component.readableNativeAddress();
                 assert address != 0;
-                written = socket.writeAddress(address, 0, component.readableBytes());
+                written = socket.sendAddress(address, 0, component.readableBytes());
             }
         }
         if (written > 0) {
