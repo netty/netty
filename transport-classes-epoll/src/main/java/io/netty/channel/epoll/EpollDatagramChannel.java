@@ -569,10 +569,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             int writerIndex = byteBuf.writerIndex();
             int localReadAmount;
             if (byteBuf.hasMemoryAddress()) {
-                localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, writerIndex + writable);
+                localReadAmount = socket.recvAddress(byteBuf.memoryAddress(), writerIndex, writerIndex + writable);
             } else {
                 ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, writable);
-                localReadAmount = socket.read(buf, buf.position(), buf.limit());
+                localReadAmount = socket.recv(buf, buf.position(), buf.limit());
             }
 
             if (localReadAmount <= 0) {

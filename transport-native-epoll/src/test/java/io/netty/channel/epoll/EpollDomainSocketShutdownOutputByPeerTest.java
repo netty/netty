@@ -58,7 +58,7 @@ public class EpollDomainSocketShutdownOutputByPeerTest extends AbstractSocketShu
         final ByteBuffer buf = Buffer.allocateDirectWithNativeOrder(4);
         buf.putInt(data);
         buf.flip();
-        s.write(buf, buf.position(), buf.limit());
+        s.send(buf, buf.position(), buf.limit());
         Buffer.free(buf);
     }
 
