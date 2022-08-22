@@ -639,7 +639,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 for (var c = iteration.firstWritable(); c != null; c = c.nextWritable()) {
                     long address = c.writableNativeAddress();
                     assert address != 0;
-                    int bytesRead = socket.readAddress(address, 0, c.writableBytes());
+                    int bytesRead = socket.recvAddress(address, 0, c.writableBytes());
                     if (bytesRead <= 0) {
                         break;
                     }

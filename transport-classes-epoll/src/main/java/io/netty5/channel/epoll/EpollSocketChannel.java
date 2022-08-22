@@ -502,6 +502,11 @@ public final class EpollSocketChannel
         }
 
         @Override
+        protected int write(final ByteBuffer buf, final int pos, final int limit) throws IOException {
+            return socket.send(buf, pos, limit);
+        }
+
+        @Override
         protected BufferAllocator alloc() {
             return bufferAllocator();
         }

@@ -34,13 +34,17 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
         this.fd = requireNonNull(fd, "fd");
     }
 
+    protected int write(ByteBuffer buf, int pos, int limit) throws IOException {
+        return fd.write(buf, pos, limit);
+    }
+
     @Override
     public final int write(ByteBuffer src) throws IOException {
         final int written;
         int position = src.position();
         int limit = src.limit();
         if (src.isDirect()) {
-            written = fd.write(src, position, src.limit());
+            written = write(src, position, src.limit());
         } else {
             final int readableBytes = limit - position;
             final BufferAllocator alloc = alloc();
@@ -61,7 +65,7 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
                 try (var iterator = buffer.forEachComponent()) {
                     var component = iterator.firstReadable();
                     ByteBuffer nioBuffer = component.readableBuffer();
-                    written = fd.write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
+                    written = write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
                     assert component.next() == null;
                 }
             } catch (Throwable throwable) {
