@@ -24,7 +24,7 @@ env:
 
 jobs:
   prepare-release:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -260,7 +260,7 @@ jobs:
         run: ./.github/scripts/release_rollback.ps1 release.properties netty/netty-incubator-codec-quic main
 
   deploy-staged-release:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     # Wait until we have staged everything
     needs: [stage-release-linux, stage-release-windows-x86_64]
     steps:
