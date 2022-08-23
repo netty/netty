@@ -491,29 +491,22 @@ public final class KQueueSocketChannel
     }
 
     private int readReadyFd(ReadSink readSink) throws Exception {
-        int totalBytesRead = 0;
-        boolean continueReading;
-        readLoop: do {
-            // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-            // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
-            // enabled.
-            int recvFd = socket.recvFd();
-            switch(recvFd) {
-                case 0:
-                    readSink.processRead(0, 0, null);
-                    break readLoop;
-                case -1:
-                    readSink.processRead(0, 0, null);
-                    closeTransportNow();
-                    return totalBytesRead;
-                default:
-                    totalBytesRead ++;
-                    continueReading = readSink.processRead(0, 0, new FileDescriptor(recvFd));
-                    break;
-            }
-        } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
-
-        return totalBytesRead;
+        // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
+        // KQueueRecvBufferAllocatorHandle knows if it should try to read again or not when autoRead is
+        // enabled.
+        int recvFd = socket.recvFd();
+        switch(recvFd) {
+            case 0:
+                readSink.processRead(0, 0, null);
+                return 0;
+            case -1:
+                readSink.processRead(0, 0, null);
+                closeTransportNow();
+                return -1;
+            default:
+                readSink.processRead(0, 0, new FileDescriptor(recvFd));
+                return 1;
+        }
     }
 
     private PeerCredentials getPeerCredentials() {
@@ -803,35 +796,31 @@ public final class KQueueSocketChannel
 
     private int readReadyBytes(ReadSink readSink) throws Exception {
         Buffer buffer = null;
-        int totalBytesRead = 0;
         try {
-            boolean continueReading;
-            do {
-                buffer = readSink.allocateBuffer();
-                if (buffer == null) {
-                    readSink.processRead(0, 0, null);
-                    break;
-                }
-                // we use a direct buffer here as the native implementations only be able
-                // to handle direct buffers.
-                assert buffer.isDirect();
-                int attemptedBytesRead = buffer.writableBytes();
-                int actualBytesRead = doReadBytes(buffer);
+            buffer = readSink.allocateBuffer();
+            if (buffer == null) {
+                readSink.processRead(0, 0, null);
+                return 0;
+            }
+            // we use a direct buffer here as the native implementations only be able
+            // to handle direct buffers.
+            assert buffer.isDirect();
+            int attemptedBytesRead = buffer.writableBytes();
+            int actualBytesRead = doReadBytes(buffer);
 
-                if (actualBytesRead <= 0) {
-                    // nothing was read, release the buffer.
-                    Resource.dispose(buffer);
-                    buffer = null;
-                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
-                    if (actualBytesRead < 0) {
-                        return -1;
-                    }
-                    break;
-                }
-                totalBytesRead += actualBytesRead;
-                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
+            if (actualBytesRead <= 0) {
+                // nothing was read, release the buffer.
+                Resource.dispose(buffer);
                 buffer = null;
-            } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
+                readSink.processRead(attemptedBytesRead, actualBytesRead, null);
+                if (actualBytesRead < 0) {
+                    return -1;
+                }
+                return 0;
+            }
+            readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
+            buffer = null;
+            return actualBytesRead;
         } catch (Throwable t) {
             if (buffer != null) {
                 buffer.close();
@@ -841,7 +830,6 @@ public final class KQueueSocketChannel
             }
             throw t;
         }
-        return totalBytesRead;
     }
 
     private final class KQueueSocketWritableByteChannel extends SocketWritableByteChannel {

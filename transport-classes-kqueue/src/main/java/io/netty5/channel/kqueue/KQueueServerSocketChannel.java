@@ -368,19 +368,14 @@ public final class KQueueServerSocketChannel extends
 
     @Override
     int readReady(ReadSink readSink) throws Exception {
-        int totalBytesRead = 0;
-        boolean continueReading;
-        do {
-            int acceptFd = socket.accept(acceptedAddress);
-            if (acceptFd == -1) {
-                // this means everything was handled for now
-                readSink.processRead(0, 0, null);
-                break;
-            }
-            totalBytesRead++;
-            continueReading = readSink.processRead(0, 0,
-                    newChildChannel(acceptFd, acceptedAddress, 1, acceptedAddress[0]));
-        } while (continueReading && !isShutdown(ChannelShutdownDirection.Inbound));
-        return totalBytesRead;
+        int acceptFd = socket.accept(acceptedAddress);
+        if (acceptFd == -1) {
+            // this means everything was handled for now
+            readSink.processRead(0, 0, null);
+            return 0;
+        }
+        readSink.processRead(0, 0,
+                newChildChannel(acceptFd, acceptedAddress, 1, acceptedAddress[0]));
+        return 1;
     }
 }

@@ -242,11 +242,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
         SocketChannel ch = SocketUtils.accept(javaChannel());
         try {
             if (ch != null) {
-                if (readSink.processRead(0, 0,
-                        new NioSocketChannel(this, childEventLoopGroup().next(), ch, family))) {
-                    return 1;
-                }
-                return 0;
+                readSink.processRead(0, 0,
+                        new NioSocketChannel(this, childEventLoopGroup().next(), ch, family));
+                return 1;
             }
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted socket.", t);

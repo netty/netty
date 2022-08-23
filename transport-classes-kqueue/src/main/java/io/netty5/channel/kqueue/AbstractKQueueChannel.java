@@ -351,30 +351,32 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             throws Exception {
         maybeMoreDataToRead = false;
 
-        try {
-            int readBytes = readReady(readSink);
-            if (readBytes > 0) {
-                this.numberBytesPending -= readBytes;
-            } else if (readBytes == -1) {
-                this.numberBytesPending = 0;
-                // Inbound should be shutdown.
-                return true;
-            }
-        } finally {
-            maybeMoreDataToRead = this.numberBytesPending != 0;
-
-            if (eof || isReadPending() && maybeMoreDataToRead) {
-                // trigger a read again as there may be something left to read and because of ET we
-                // will not get notified again until we read everything from the socket
-                //
-                // It is possible the last fireChannelRead call could cause the user to call read() again, or if
-                // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
-                // to false before every read operation to prevent re-entry into readReady() we will not read from
-                // the underlying OS again unless the user happens to call read again.
-                executeReadNowRunnable();
-            }
+        int readBytes = readReady(readSink);
+        if (readBytes > 0) {
+            this.numberBytesPending -= readBytes;
+        } else if (readBytes == -1) {
+            this.numberBytesPending = 0;
+            // Inbound should be shutdown.
+            return true;
         }
         return false;
+    }
+
+    @Override
+    protected void readLoopComplete() {
+        super.readLoopComplete();
+        maybeMoreDataToRead = this.numberBytesPending != 0;
+
+        if (eof || isReadPending() && maybeMoreDataToRead) {
+            // trigger a read again as there may be something left to read and because of ET we
+            // will not get notified again until we read everything from the socket
+            //
+            // It is possible the last fireChannelRead call could cause the user to call read() again, or if
+            // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
+            // to false before every read operation to prevent re-entry into readReady() we will not read from
+            // the underlying OS again unless the user happens to call read again.
+            executeReadNowRunnable();
+        }
     }
 
     abstract int readReady(ReadSink readSink) throws Exception;

@@ -399,13 +399,10 @@ public final class NioDatagramChannel
                 return -1;
             }
             data.skipWritableBytes(actualBytesRead);
-            if (readSink.processRead(attemptedBytesRead, actualBytesRead,
-                    new DatagramPacket(data, localAddress(), remoteAddress))) {
-                free = false;
-                return 1;
-            }
+            readSink.processRead(attemptedBytesRead, actualBytesRead,
+                    new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
-            return 0;
+            return 1;
         } finally {
             if (free) {
                 data.close();

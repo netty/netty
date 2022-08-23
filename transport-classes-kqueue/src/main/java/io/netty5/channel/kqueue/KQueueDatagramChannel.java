@@ -497,108 +497,99 @@ public final class KQueueDatagramChannel
     @Override
     int readReady(ReadSink readSink) throws Exception {
         Buffer buffer = null;
-        int totalReadyBytes = 0;
         try {
             boolean connected = isConnected();
             boolean continueReading;
-            do {
-                buffer = readSink.allocateBuffer();
-                if (buffer == null) {
-                    readSink.processRead(0, 0, null);
-                    break;
+            buffer = readSink.allocateBuffer();
+            if (buffer == null) {
+                readSink.processRead(0, 0, null);
+                return 0;
+            }
+            assert buffer.isDirect();
+            int attemptedBytesRead = buffer.writableBytes();
+            int actualBytesRead = 0;
+            final DatagramPacket packet;
+            if (connected) {
+                try {
+                    actualBytesRead = doReadBytes(buffer);
+                } catch (Errors.NativeIoException e) {
+                    // We need to correctly translate connect errors to match NIO behaviour.
+                    if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+                        PortUnreachableException error = new PortUnreachableException(e.getMessage());
+                        error.initCause(e);
+                        throw error;
+                    }
+                    throw e;
                 }
-                assert buffer.isDirect();
-                int attemptedBytesRead = buffer.writableBytes();
-                int actualBytesRead = 0;
-                final DatagramPacket packet;
-                if (connected) {
-                    try {
-                        actualBytesRead = doReadBytes(buffer);
-                    } catch (Errors.NativeIoException e) {
-                        // We need to correctly translate connect errors to match NIO behaviour.
-                        if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
-                            PortUnreachableException error = new PortUnreachableException(e.getMessage());
-                            error.initCause(e);
-                            throw error;
-                        }
-                        throw e;
-                    }
 
-                    if (actualBytesRead <= 0) {
-                        // nothing was read, release the buffer.
-                        buffer.close();
-
-                        readSink.processRead(attemptedBytesRead, actualBytesRead, null);
-                        // Signal closure
-                        if (actualBytesRead == -1) {
-                            totalReadyBytes = -1;
+                if (actualBytesRead <= 0) {
+                    // nothing was read, release the buffer.
+                    buffer.close();
+                    buffer = null;
+                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
+                    return actualBytesRead;
+                }
+                packet = new DatagramPacket(buffer, localAddress(), remoteAddress());
+            } else {
+                SocketAddress localAddress = null;
+                SocketAddress remoteAddress = null;
+                if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                    DomainDatagramSocketAddress recvAddress = null;
+                    try (var iteration = buffer.forEachComponent()) {
+                        var c = iteration.firstWritable();
+                        if (c != null) {
+                            recvAddress = socket.recvFromAddressDomainSocket(
+                                    c.writableNativeAddress(), 0, c.writableBytes());
                         }
-                        break;
                     }
-                    totalReadyBytes += actualBytesRead;
-                    packet = new DatagramPacket(buffer, localAddress(), remoteAddress());
+                    if (recvAddress != null) {
+                        remoteAddress = recvAddress;
+                        actualBytesRead = recvAddress.receivedAmount();
+                        localAddress = recvAddress.localAddress();
+                    }
                 } else {
-                    SocketAddress localAddress = null;
-                    SocketAddress remoteAddress = null;
-                    if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-                        DomainDatagramSocketAddress recvAddress = null;
-                        try (var iteration = buffer.forEachComponent()) {
-                            var c = iteration.firstWritable();
-                            if (c != null) {
-                                recvAddress = socket.recvFromAddressDomainSocket(
-                                        c.writableNativeAddress(), 0, c.writableBytes());
-                            }
+                    try (var iterator = buffer.forEachComponent()) {
+                        var component = iterator.firstWritable();
+                        long addr = component.writableNativeAddress();
+                        DatagramSocketAddress datagramSocketAddress;
+                        if (addr != 0) {
+                            // has a memory address so use optimized call
+                        datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
+                        } else {
+                        ByteBuffer nioData = component.writableBuffer();
+                            datagramSocketAddress = socket.recvFrom(
+                                    nioData, nioData.position(), nioData.limit());
                         }
-                        if (recvAddress != null) {
-                            remoteAddress = recvAddress;
-                            actualBytesRead = recvAddress.receivedAmount();
-                            localAddress = recvAddress.localAddress();
-                        }
-                    } else {
-                        try (var iterator = buffer.forEachComponent()) {
-                            var component = iterator.firstWritable();
-                            long addr = component.writableNativeAddress();
-                            DatagramSocketAddress datagramSocketAddress;
-                            if (addr != 0) {
-                                // has a memory address so use optimized call
-                            datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
-                            } else {
-                            ByteBuffer nioData = component.writableBuffer();
-                                datagramSocketAddress = socket.recvFrom(
-                                        nioData, nioData.position(), nioData.limit());
-                            }
-                            if (datagramSocketAddress != null) {
-                                remoteAddress = datagramSocketAddress;
-                                localAddress = datagramSocketAddress.localAddress();
-                                actualBytesRead = datagramSocketAddress.receivedAmount();
-                            }
+                        if (datagramSocketAddress != null) {
+                            remoteAddress = datagramSocketAddress;
+                            localAddress = datagramSocketAddress.localAddress();
+                            actualBytesRead = datagramSocketAddress.receivedAmount();
                         }
                     }
-
-                    if (remoteAddress == null) {
-                        readSink.processRead(attemptedBytesRead, 0, null);
-                        buffer.close();
-                        break;
-                    }
-                    if (localAddress == null) {
-                        localAddress = localAddress();
-                    }
-                    totalReadyBytes += actualBytesRead;
-                    buffer.skipWritableBytes(actualBytesRead);
-
-                    packet = new DatagramPacket(buffer, localAddress, remoteAddress);
                 }
-                continueReading = readSink.processRead(
-                        attemptedBytesRead, actualBytesRead, packet);
-                buffer = null;
-            } while (continueReading);
+
+                if (remoteAddress == null) {
+                    readSink.processRead(attemptedBytesRead, 0, null);
+                    buffer.close();
+                    buffer = null;
+                    return 0;
+                }
+                if (localAddress == null) {
+                    localAddress = localAddress();
+                }
+                buffer.skipWritableBytes(actualBytesRead);
+
+                packet = new DatagramPacket(buffer, localAddress, remoteAddress);
+            }
+            readSink.processRead(attemptedBytesRead, actualBytesRead, packet);
+            buffer = null;
+            return actualBytesRead;
         } catch (Throwable t) {
             if (buffer != null) {
                 buffer.close();
             }
             throw t;
         }
-        return totalReadyBytes;
     }
 
     private <V> Future<V> newMulticastNotSupportedFuture() {

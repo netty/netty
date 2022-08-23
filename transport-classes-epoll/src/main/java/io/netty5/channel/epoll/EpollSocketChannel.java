@@ -456,34 +456,31 @@ public final class EpollSocketChannel
         Buffer buffer = null;
         boolean readMore;
         try {
-            boolean continueReading;
-            do {
-                // we use a direct buffer here as the native implementations only be able
-                // to handle direct buffers.
-                buffer = readSink.allocateBuffer();
-                if (buffer == null) {
-                    readSink.processRead(0, 0, null);
-                    return ReadState.Partial;
-                }
-                assert buffer.isDirect();
-                int attemptedBytesRead = buffer.writableBytes();
-                int actualBytesRead = doReadBytes(buffer);
+            // we use a direct buffer here as the native implementations only be able
+            // to handle direct buffers.
+            buffer = readSink.allocateBuffer();
+            if (buffer == null) {
+                readSink.processRead(0, 0, null);
+                return ReadState.Partial;
+            }
+            assert buffer.isDirect();
+            int attemptedBytesRead = buffer.writableBytes();
+            int actualBytesRead = doReadBytes(buffer);
 
-                readMore = attemptedBytesRead == actualBytesRead;
-                if (actualBytesRead <= 0) {
-                    // nothing was read, release the buffer.
-                    Resource.dispose(buffer);
-                    buffer = null;
-                    readSink.processRead(attemptedBytesRead, actualBytesRead, null);
-
-                    if (actualBytesRead < 0) {
-                        return ReadState.Closed;
-                    }
-                    return ReadState.All;
-                }
-                continueReading = readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
+            readMore = attemptedBytesRead == actualBytesRead;
+            if (actualBytesRead <= 0) {
+                // nothing was read, release the buffer.
+                Resource.dispose(buffer);
                 buffer = null;
-            } while (continueReading && readMore && !isShutdown(ChannelShutdownDirection.Inbound));
+                readSink.processRead(attemptedBytesRead, actualBytesRead, null);
+
+                if (actualBytesRead < 0) {
+                    return ReadState.Closed;
+                }
+                return ReadState.All;
+            }
+            readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
+            buffer = null;
             if (readMore) {
                 return ReadState.Partial;
             }
@@ -1089,24 +1086,18 @@ public final class EpollSocketChannel
 
     private ReadState epollInReadFd(ReadSink readSink)
             throws Exception {
-        boolean continueReading;
-        do {
-            int readFd = socket.recvFd();
-            switch(readFd) {
-                case 0:
-                    readSink.processRead(0, 0, null);
-                    return ReadState.All;
-                case -1:
-                    readSink.processRead(0, 0, null);
-                    closeTransport(newPromise());
-                    return ReadState.Closed;
-                default:
-                    continueReading = readSink.processRead(0, 0, new FileDescriptor(readFd));
-                    break;
-            }
-        } while (continueReading
-                && !isShutdown(ChannelShutdownDirection.Inbound));
-
-        return ReadState.Partial;
+        int readFd = socket.recvFd();
+        switch(readFd) {
+            case 0:
+                readSink.processRead(0, 0, null);
+                return ReadState.All;
+            case -1:
+                readSink.processRead(0, 0, null);
+                closeTransport(newPromise());
+                return ReadState.Closed;
+            default:
+                readSink.processRead(0, 0, new FileDescriptor(readFd));
+                return ReadState.Partial;
+        }
     }
 }

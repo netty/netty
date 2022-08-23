@@ -45,19 +45,8 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
 
     @Override
     protected final boolean doReadNow(ReadSink readSink) throws Exception {
-        boolean closed = false;
-        do {
-            int localRead = doReadMessages(readSink);
-            if (localRead == 0) {
-                break;
-            }
-            if (localRead < 0) {
-                closed = true;
-                break;
-            }
-        } while (!isShutdown(ChannelShutdownDirection.Inbound));
-
-        return closed;
+        int localRead = doReadMessages(readSink);
+        return localRead < 0;
     }
 
     @Override
