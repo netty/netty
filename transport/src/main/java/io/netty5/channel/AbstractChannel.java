@@ -1958,6 +1958,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         void readLoop() {
+            continueReading = false;
             boolean closed;
             try {
                 do {

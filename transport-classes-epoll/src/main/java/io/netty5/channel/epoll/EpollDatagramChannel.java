@@ -677,18 +677,20 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
     }
 
-    private static void processPacket(ReadSink readSink,
-                                         int attemptedBytesRead, int bytesRead, AddressedEnvelope<?, ?> packet) {
-        // Avoid signalling end-of-data for zero-sized datagrams.
-        readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead), packet);
-    }
-
-    private static void processPacketList(ReadSink readSink,
-                                             int attemptedBytesRead, int bytesRead, RecyclableArrayList packetList) {
+    private static void processPacketList(ReadSink readSink, int attemptedBytesRead,
+                                          RecyclableArrayList packetList) {
         int messagesRead = packetList.size();
         for (int i = 0; i < messagesRead; i++) {
-            // Avoid signalling end-of-data for zero-sized datagrams.
-            readSink.processRead(attemptedBytesRead, Math.max(1, bytesRead), packetList.set(i, NULL));
+            DatagramPacket packet =  (DatagramPacket) packetList.set(i, NULL);
+            int readable = packet.content().readableBytes();
+            final int attempted;
+            if (attemptedBytesRead >= readable) {
+                attemptedBytesRead -= readable;
+                attempted = readable;
+            } else {
+                attempted = attemptedBytesRead;
+            }
+            readSink.processRead(attempted, readable, packet);
         }
     }
 
@@ -713,7 +715,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             InetSocketAddress local = (InetSocketAddress) localAddress();
             DatagramPacket packet = msg.newDatagramPacket(buf, local);
             if (!(packet instanceof SegmentedDatagramPacket)) {
-                processPacket(readSink, attemptedBytesRead, bytesReceived, packet);
+                readSink.processRead(attemptedBytesRead, bytesReceived, packet);
                 buf = null;
             } else {
                 // Its important we process all received data out of the NativeDatagramPacketArray
@@ -725,7 +727,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // it into the RecyclableArrayList.
                 buf = null;
 
-                processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
+                processPacketList(readSink, attemptedBytesRead, datagramPackets);
                 datagramPackets.recycle();
                 datagramPackets = null;
             }
@@ -763,7 +765,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(buf, local);
                 if (!(packet instanceof SegmentedDatagramPacket)) {
-                    processPacket(readSink, attemptedBytesRead, datagramSize, packet);
+                    readSink.processRead(attemptedBytesRead, datagramSize, packet);
                     buf = null;
                     return ReadState.Partial;
                 }
@@ -780,7 +782,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             buf.close();
             buf = null;
 
-            processPacketList(readSink, attemptedBytesRead, bytesReceived, datagramPackets);
+            processPacketList(readSink, attemptedBytesRead, datagramPackets);
             datagramPackets.recycle();
             datagramPackets = null;
             return ReadState.Partial;
