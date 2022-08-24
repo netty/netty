@@ -68,11 +68,11 @@ public final class DnsServerAddressStreamProviders {
                 }
             } catch (ClassNotFoundException cause) {
                 LOGGER.warn("Can not find {} in the classpath, fallback to system defaults. This may result in "
-                        + "incorrect DNS resolutions on MacOS. Check whether you have a dependency to "
+                        + "incorrect DNS resolutions on MacOS. Check whether you have a dependency on "
                         + "'io.netty:netty-resolver-dns-native-macos'", MACOS_PROVIDER_CLASS_NAME);
             } catch (Throwable cause) {
                 LOGGER.error("Unable to load {}, fallback to system defaults. This may result in "
-                        + "incorrect DNS resolutions on MacOS. Check whether you have a dependency to "
+                        + "incorrect DNS resolutions on MacOS. Check whether you have a dependency on "
                         + "'io.netty:netty-resolver-dns-native-macos'", MACOS_PROVIDER_CLASS_NAME, cause);
                 constructor = null;
             }
