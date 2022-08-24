@@ -519,6 +519,7 @@ public final class KQueueDatagramChannel
                     readSink.processRead(attemptedBytesRead, actualBytesRead, null);
                     return actualBytesRead;
                 }
+                buffer.skipWritableBytes(actualBytesRead);
                 packet = new DatagramPacket(buffer, localAddress(), remoteAddress());
             } else {
                 SocketAddress localAddress = null;

@@ -513,6 +513,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
                     return actualBytesRead == 0 ? ReadState.All : ReadState.Closed;
                 }
+
+                buf.skipWritableBytes(actualBytesRead);
                 packet = new DatagramPacket(buf, localAddress(), remoteAddress());
             } else {
                 final DomainDatagramSocketAddress remoteAddress;

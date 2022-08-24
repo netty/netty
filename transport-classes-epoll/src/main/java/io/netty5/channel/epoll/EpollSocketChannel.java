@@ -438,6 +438,8 @@ public final class EpollSocketChannel
                 }
                 return ReadState.All;
             }
+
+            buffer.skipWritableBytes(actualBytesRead);
             readSink.processRead(attemptedBytesRead, actualBytesRead, buffer);
             buffer = null;
             if (readMore) {

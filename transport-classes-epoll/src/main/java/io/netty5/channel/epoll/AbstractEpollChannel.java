@@ -241,7 +241,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     }
 
     /**
-     * Read bytes into the given {@link Buffer} and return the amount.
+     * Read bytes into the given {@link Buffer} and return the amount. This method does not modify the offset of the
+     * buffer.
      */
     protected final int doReadBytes(Buffer buffer) throws Exception {
         try (var iterator = buffer.forEachComponent()) {
@@ -251,11 +252,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             }
             long address = component.writableNativeAddress();
             assert address != 0;
-            int localReadAmount = socket.recvAddress(address, 0, component.writableBytes());
-            if (localReadAmount > 0) {
-                component.skipWritableBytes(localReadAmount);
-            }
-            return localReadAmount;
+            return socket.recvAddress(address, 0, component.writableBytes());
         }
     }
 
