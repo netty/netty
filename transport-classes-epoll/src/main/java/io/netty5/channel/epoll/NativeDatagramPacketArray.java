@@ -125,7 +125,6 @@ final class NativeDatagramPacketArray {
                         }
                     }
                 }
-
             }
             // Add one packet for sendmmsg(...) now.
             NativeDatagramPacket p = packets[count];
