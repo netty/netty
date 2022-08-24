@@ -107,13 +107,25 @@ final class NativeDatagramPacketArray {
                 return false;
             }
             for (var c = first; c != null; c = c.nextReadable()) {
-                int writableBytes = c.readableBytes();
-                int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-                if (iovArray.addReadable(c, byteCount)) {
-                    c.skipReadableBytes(byteCount);
+                if (segmentLen == 0) {
+                    int readableBytes = c.readableBytes();
+                    if (iovArray.addReadable(c, readableBytes)) {
+                        c.skipReadableBytes(readableBytes);
+                    } else {
+                        break;
+                    }
                 } else {
-                    break;
+                    // In the case of segments we need to add each of the segments in a loop.
+                    while (c.readableBytes() > 0) {
+                        int byteCount = Math.min(c.readableBytes(), segmentLen);
+                        if (iovArray.addReadable(c, byteCount)) {
+                            c.skipReadableBytes(byteCount);
+                        } else {
+                            break;
+                        }
+                    }
                 }
+
             }
             // Add one packet for sendmmsg(...) now.
             NativeDatagramPacket p = packets[count];
