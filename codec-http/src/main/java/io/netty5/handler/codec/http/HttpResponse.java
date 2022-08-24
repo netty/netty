@@ -15,25 +15,14 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
-
 /**
  * An HTTP response.
  *
  * <h3>Accessing Cookies</h3>
  * <p>
- * Unlike the Servlet API, {@link Cookie} support is provided separately via {@link ServerCookieDecoder},
- * {@link ClientCookieDecoder}, {@link ServerCookieEncoder}, and {@link ClientCookieEncoder}.
+ * Cookies are accessed via the {@link #headers()} API.
  *
  * @see HttpRequest
- * @see ServerCookieDecoder
- * @see ClientCookieDecoder
- * @see ServerCookieEncoder
- * @see ClientCookieEncoder
  */
 public interface HttpResponse extends HttpMessage {
     /**
