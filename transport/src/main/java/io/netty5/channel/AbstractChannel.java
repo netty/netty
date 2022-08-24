@@ -2166,7 +2166,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         private int verifyMessagesWritten(int messagesWritten) {
             checkPositiveOrZero(messagesWritten, "messagesWritten");
             if (messagesWritten > numFlushedMessages()) {
-                throw new IllegalArgumentException("messagesWritten > size()");
+                throw new IllegalArgumentException("messagesWritten > size(): " +
+                        messagesWritten + " (expected: " + 0 + "-" + numFlushedMessages() + ")");
             }
             return messagesWritten;
         }
