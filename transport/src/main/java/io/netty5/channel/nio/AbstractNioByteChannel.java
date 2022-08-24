@@ -84,7 +84,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
 
     @Override
     protected void doWriteNow(WriteSink writeSink) throws Exception {
-        Object msg = writeSink.first();
+        Object msg = writeSink.currentFlushedMessage();
 
         final long attemptedBytesWrite;
         final long actualBytesWrite;

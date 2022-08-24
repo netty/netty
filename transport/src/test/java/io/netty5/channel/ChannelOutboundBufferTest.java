@@ -23,14 +23,9 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,42 +50,6 @@ public class ChannelOutboundBufferTest {
     }
 
     @Test
-    public void flushingEmptyBuffers() throws InterruptedException {
-        testChannelOutboundBuffer((buffer, executor) -> {
-            Buffer buf = BufferAllocator.onHeapUnpooled().allocate(0);
-            buffer.addMessage(buf, 0, executor.newPromise());
-            buffer.addFlush();
-            AtomicInteger messageCounter = new AtomicInteger();
-            Predicate<Object> messageProcessor = msg -> {
-                assertNotNull(msg);
-                messageCounter.incrementAndGet();
-                return true;
-            };
-            buffer.forEachFlushedMessage(messageProcessor);
-            assertThat(messageCounter.get()).isOne();
-            buffer.removeBytes(0); // This must remove the empty buffer.
-            messageCounter.set(0);
-            buffer.forEachFlushedMessage(messageProcessor);
-            assertThat(messageCounter.get()).isZero();
-        });
-    }
-
-    @Test
-    public void removeBytes() throws InterruptedException {
-        testChannelOutboundBuffer((buffer, executor) -> {
-            Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII);
-            int size = buf.readableBytes();
-            buffer.addMessage(buf, size, executor.newPromise());
-            buffer.addFlush();
-            buffer.removeBytes(size / 2);
-            assertThat(buffer.current()).isNotNull();
-            buffer.removeBytes(size);
-            assertNull(buffer.current());
-            assertTrue(buffer.isEmpty());
-        });
-    }
-
-    @Test
     public void cancelFirst() throws InterruptedException {
         testChannelOutboundBuffer((buffer, executor) -> {
             try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII)) {
@@ -103,11 +62,11 @@ public class ChannelOutboundBufferTest {
                 buffer.addFlush();
                 // Should have 1 entries.
                 assertNotNull(buffer.current());
-                assertEquals(size, buffer.remove());
+                assertTrue(buffer.remove());
 
                 assertNull(buffer.current());
                 assertTrue(buffer.isEmpty());
-                assertEquals(-1, buffer.remove());
+                assertFalse(buffer.remove());
             }
         });
     }
@@ -125,11 +84,11 @@ public class ChannelOutboundBufferTest {
                 buffer.addFlush();
                 // Should have 1 entries.
                 assertNotNull(buffer.current());
-                assertEquals(size, buffer.remove());
+                assertTrue(buffer.remove());
 
                 assertNull(buffer.current());
                 assertTrue(buffer.isEmpty());
-                assertEquals(-1, buffer.remove());
+                assertFalse(buffer.remove());
             }
         });
     }
@@ -148,21 +107,21 @@ public class ChannelOutboundBufferTest {
 
                 // Should have two entries.
                 assertNotNull(buffer.current());
-                assertEquals(size, buffer.remove());
+                assertTrue(buffer.remove());
                 assertNotNull(buffer.current());
-                assertEquals(size, buffer.remove());
+                assertTrue(buffer.remove());
 
                 assertNull(buffer.current());
                 assertTrue(buffer.isEmpty());
-                assertEquals(-1, buffer.remove());
+                assertFalse(buffer.remove());
             }
         });
     }
 
     private static void release(ChannelOutboundBuffer buffer) {
         while (!buffer.isEmpty()) {
-            assertNotEquals(-1, buffer.remove());
+            assertTrue(buffer.remove());
         }
-        assertEquals(-1, buffer.remove());
+        assertFalse(buffer.remove());
     }
 }

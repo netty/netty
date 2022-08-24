@@ -725,7 +725,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
 
     @Override
     protected void doWriteNow(WriteSink writeSink) throws Exception {
-        Object msg = writeSink.first();
+        Object msg = writeSink.currentFlushedMessage();
         if (msg instanceof ResourceSupport<?, ?>) {
             // Prevent the close in ChannelOutboundBuffer.remove() from ending the lifecycle of this message.
             // This allows tests to examine the message.

@@ -61,8 +61,8 @@ import static io.netty5.channel.ChannelOption.READ_HANDLE_FACTORY;
 import static io.netty5.channel.ChannelOption.TCP_FASTOPEN_CONNECT;
 import static io.netty5.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty5.channel.ChannelOption.WRITE_HANDLE_FACTORY;
-import static io.netty5.util.internal.ObjectUtil.checkInRange;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -1065,14 +1065,15 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             }
 
             WriteSink writeSink = writeSink();
-            writeSink.processWriteLoop(outboundBuffer);
+            writeSink.writeLoop(outboundBuffer);
         } finally {
             inWriteFlushed = false;
         }
     }
 
     /**
-     * Called once the write loop completed. Subclasses might override this methods for custom logic.
+     * Called once the write loop completed. Subclasses might override this method for custom logic  but should also
+     * call super.
      *
      * @param allWritten    {@code true} if all messages were written during the write loop, {@code false} otherwise.
      */
@@ -1263,13 +1264,16 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Called in a loop when writes should be performed until this methods returns {@code false} or there are
      * no more messages to write.
+     * Implementations are responsible of handling partial writes, which for example means that if {@link Buffer}s
+     * are written partial implementations need to ensure the {@link Buffer#readerOffset() readerOffset} is updated
+     * accordingly.
      *
      * @param writeSink                             the {@link WriteSink} that must be completed with the write
      *                                              progress.
      *                                              {@link WriteSink#complete(long, long, int, boolean)} or
      *                                              {@link WriteSink#complete(long, Throwable, boolean)} must be called
      *                                              exactly once before this method returns non-exceptional.
-     * @throws Exception                            if and error happened during writing.
+     * @throws Exception                            if an error happened during writing.
      */
     protected abstract void doWriteNow(WriteSink writeSink) throws Exception;
 
@@ -1333,13 +1337,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 Object current = outboundBuffer.current();
                 if (current instanceof Buffer) {
                     message = (Buffer) current;
-                    readable = message.readableBytes();
                 }
             }
             if (doConnect(remoteAddress, localAddress, message)) {
                 fulfillConnectPromise(promise, wasActive);
-                if (message != null) {
-                    outboundBuffer.removeBytes(readable - message.readableBytes());
+                if (message != null && message.readableBytes() == 0) {
+                    // Fully written.
+                    outboundBuffer.remove();
                 }
             } else {
                 connectPromise = promise;
@@ -2011,6 +2015,24 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * Sink that will be used by {@link #doWriteNow(WriteSink)} implementations.
      */
     protected final class WriteSink {
+
+        private long writtenBytes;
+        private int writtenMessages;
+
+        private final Predicate<Object> predicate = o -> {
+            if (o instanceof Buffer) {
+                Buffer buffer = (Buffer) o;
+                int readable = buffer.readableBytes();
+                buffer.skipReadableBytes((int) min(readable, writtenBytes));
+                if (buffer.readableBytes() == 0) {
+                    writtenBytes -= readable;
+                    writtenMessages++;
+                    return true;
+                }
+            }
+            return false;
+        };
+
         final WriteHandleFactory.WriteHandle writeHandle;
         private ChannelOutboundBuffer outboundBuffer;
 
@@ -2025,7 +2047,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             this.writeHandle = writeHandle;
         }
 
-        void processWriteLoop(ChannelOutboundBuffer outboundBuffer) {
+        void writeLoop(ChannelOutboundBuffer outboundBuffer) {
+            assertEventLoop();
             this.outboundBuffer = outboundBuffer;
             try {
                 try {
@@ -2053,31 +2076,52 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         /**
+         * Update the {@link Buffer#readerOffset()} of each buffer and return the number of completely
+         * written {@link Buffer}s.
+         *
+         * @param writtenBytes  the number of written bytes.
+         * @return              the number of completely written buffers.
+         */
+        public int updateBufferReaderOffsets(long writtenBytes) {
+            assertEventLoop();
+            if (writtenBytes < 0) {
+                return 0;
+            }
+            // Explicit reset.
+            writtenMessages = 0;
+            this.writtenBytes = writtenBytes;
+            forEachFlushedMessage(predicate);
+            return writtenMessages;
+        }
+
+        /**
          * Return the estimated maximum number of bytes that can be written with one gathering write operation.
          *
          * @return number of bytes.
          */
         public long estimatedMaxBytesPerGatheringWrite() {
+            assertEventLoop();
             return writeHandle.estimatedMaxBytesPerGatheringWrite();
         }
 
         /**
-         * The number of flushed messages that are ready to be written.
+         * The number of flushed messages that are ready to be written by either calling
+         * {@link #currentFlushedMessage()} or {@link #forEachFlushedMessage(Predicate)}.
          *
          * @return the number of messages.
          */
-        public int size() {
+        public int numFlushedMessages() {
+            assertEventLoop();
             return outboundBuffer.size();
         }
 
         /**
-         * Return the first message that should be written.
+         * Return the current message that should be written.
          *
-         * @return                          the first message.
-         * @throws IllegalStateException    if called after {@link #complete(long, long, int, boolean)}
-         *                                  or {@link #complete(long, Throwable, boolean)} was called.
+         * @return the first flushed message.
          */
-        public Object first() {
+        public Object currentFlushedMessage() {
+            assertEventLoop();
             return outboundBuffer.current();
         }
 
@@ -2089,7 +2133,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
          * @throws IllegalStateException    if called after {@link #complete(long, long, int, boolean)}
          *                                  or {@link #complete(long, Throwable, boolean)} was called.
          */
-        public void forEach(Predicate<Object> processor) {
+        public void forEachFlushedMessage(Predicate<Object> processor) {
+            assertEventLoop();
             outboundBuffer.forEachFlushedMessage(processor);
         }
 
@@ -2099,8 +2144,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
          * @param attemptedBytesWrite       The number of  bytes the write operation did attempt to write.
          * @param actualBytesWrite          The number of bytes from the previous write operation. This may be negative
          *                                  if a write error occurs.
-         * @param messagesWritten           The number of written messages, or {@code -1} if the amount of written
-         *                                  messages is unknown.
+         * @param messagesWritten           The number of written messages, this can never be greater than
+         *                                  {@link #numFlushedMessages()}.
          * @param mightContinueWriting      {@code true} if the write loop might continue writing messages,
          *                                  {@code false} otherwise
          *
@@ -2109,19 +2154,28 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
          */
         public void complete(long attemptedBytesWrite, long actualBytesWrite, int messagesWritten,
                              boolean mightContinueWriting) {
+            assertEventLoop();
             checkCompleteAlready();
             this.attemptedBytesWrite = checkPositiveOrZero(attemptedBytesWrite, "attemptedBytesWrite");
             this.actualBytesWrite = actualBytesWrite;
-            this.messagesWritten = checkInRange(messagesWritten, -1, Integer.MAX_VALUE, "messagesWritten");
+            this.messagesWritten = verifyMessagesWritten(messagesWritten);
             this.continueWriting = mightContinueWriting ? Boolean.TRUE : Boolean.FALSE;
             this.writeError = null;
+        }
+
+        private int verifyMessagesWritten(int messagesWritten) {
+            checkPositiveOrZero(messagesWritten, "messagesWritten");
+            if (messagesWritten > numFlushedMessages()) {
+                throw new IllegalArgumentException("messagesWritten > size()");
+            }
+            return messagesWritten;
         }
 
         /**
          * Notify of the last write operation and its result.
          *
          * @param attemptedBytesWrite       The number of  bytes the write operation did attempt to write.
-         * @param cause                     The error that happened during the write and can be recovered.
+         * @param cause                     The error that happened during the write operation and can be recovered.
          * @param mightContinueWriting      {@code true} if the write loop might continue writing messages,
          *                                  {@code false} otherwise.
          *
@@ -2129,6 +2183,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
          *                                  or {@link #complete(long, Throwable, boolean)} was called.
          */
         public void complete(long attemptedBytesWrite, Throwable cause, boolean mightContinueWriting) {
+            assertEventLoop();
             checkCompleteAlready();
             this.attemptedBytesWrite = checkPositiveOrZero(attemptedBytesWrite, "attemptedBytesWrite");
             this.writeError = requireNonNull(cause, "cause");
@@ -2152,16 +2207,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             try {
                 if (writeError != null) {
                     outboundBuffer.remove(writeError);
-                } else {
-                    if (messagesWritten > 0) {
-                        int written = messagesWritten;
-                        do {
-                            outboundBuffer.remove();
-                            written--;
-                        } while (written > 0);
-                    } else if (messagesWritten == -1 && actualBytesWrite >= 0) {
-                        messagesWritten = outboundBuffer.removeBytes(actualBytesWrite);
-                    }
+                } else if (messagesWritten > 0) {
+                    int written = messagesWritten;
+                    do {
+                        outboundBuffer.remove();
+                        written--;
+                    } while (written > 0);
                 }
                 return writeHandle.lastWrite(attemptedBytesWrite, actualBytesWrite, messagesWritten) &&
                         continueWriting == Boolean.TRUE;

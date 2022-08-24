@@ -553,7 +553,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
 
     @Override
     protected void writeLoopComplete(boolean allWritten) {
-        super.writeLoopComplete(allWritten);
         try {
             if (allWritten) {
                 clearFlag(Native.EPOLLOUT);
@@ -563,6 +562,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         } catch (IOException e) {
             throw new UncheckedIOException("Error while trying to update flags", e);
         }
+        super.writeLoopComplete(allWritten);
     }
 
     @Override

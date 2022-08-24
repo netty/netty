@@ -410,7 +410,7 @@ public final class NioDatagramChannel
 
     @Override
     protected void doWriteNow(WriteSink writeSink) throws Exception {
-        Object msg = writeSink.first();
+        Object msg = writeSink.currentFlushedMessage();
         final SocketAddress remoteAddress;
         final Buffer buf;
         if (msg instanceof AddressedEnvelope) {

@@ -103,6 +103,7 @@ public final class KQueueSocketChannel
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
+
     private WritableByteChannel byteChannel;
 
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
@@ -516,7 +517,7 @@ public final class KQueueSocketChannel
      * @param   writeSink the {@link WriteSink} used.
      */
     private void writeBytes(WriteSink writeSink) throws Exception {
-        Buffer buf = (Buffer) writeSink.first();
+        Buffer buf = (Buffer) writeSink.currentFlushedMessage();
         int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             writeSink.complete(0, 0, 1, true);
@@ -586,7 +587,7 @@ public final class KQueueSocketChannel
      * @param   writeSink the {@link WriteSink} used.
      */
     private void writeDefaultFileRegion(WriteSink writeSink) throws Exception {
-        final DefaultFileRegion region = (DefaultFileRegion) writeSink.first();
+        final DefaultFileRegion region = (DefaultFileRegion) writeSink.currentFlushedMessage();
         final long regionCount = region.count();
         final long transferred = region.transferred();
 
@@ -607,7 +608,7 @@ public final class KQueueSocketChannel
      * @param   writeSink the {@link WriteSink} used.
      */
     private void writeFileRegion(WriteSink writeSink) throws Exception {
-        final FileRegion region = (FileRegion) writeSink.first();
+        final FileRegion region = (FileRegion) writeSink.currentFlushedMessage();
         final long regionCount = region.count();
         final long transferred = region.transferred();
         if (transferred >= regionCount) {
@@ -624,9 +625,9 @@ public final class KQueueSocketChannel
 
     @Override
     protected void doWriteNow(WriteSink writeSink) throws Exception {
-        final int msgCount = writeSink.size();
+        final int msgCount = writeSink.numFlushedMessages();
         // Do gathering write if the outbound buffer entries start with more than one Buffer.
-        if (msgCount > 1 && writeSink.first() instanceof Buffer) {
+        if (msgCount > 1 && writeSink.currentFlushedMessage() instanceof Buffer) {
             doWriteMultiple(writeSink);
         } else {
             doWriteSingle(writeSink);
@@ -640,7 +641,7 @@ public final class KQueueSocketChannel
      */
     private void doWriteSingle(WriteSink writeSink) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
-        Object msg = writeSink.first();
+        Object msg = writeSink.currentFlushedMessage();
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
             if (msg instanceof FileDescriptor) {
                 if (socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
@@ -674,14 +675,16 @@ public final class KQueueSocketChannel
             throws Exception {
         IovArray array = registration().cleanArray();
         array.maxBytes(writeSink.estimatedMaxBytesPerGatheringWrite());
-        writeSink.forEach(array);
+        writeSink.forEachFlushedMessage(array);
 
         if (array.count() >= 1) {
             long result = writeBytesMultiple(array);
-            writeSink.complete(array.size(), result, -1, result > 0);
+            // Update readerOffset of buffers and return how many are completely written.
+            int messages = writeSink.updateBufferReaderOffsets(result);
+            writeSink.complete(array.size(), result, messages, result > 0);
         } else {
             // cnt == 0, which means the outbound buffer contained empty buffers only.
-            writeSink.complete(0, 0, -1, true);
+            writeSink.complete(0, 0, writeSink.numFlushedMessages(), true);
         }
     }
 

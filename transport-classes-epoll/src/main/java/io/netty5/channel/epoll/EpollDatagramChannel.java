@@ -338,11 +338,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
 
         if (Native.IS_SUPPORTING_SENDMMSG && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
-                writeSink.size() > 1 ||
+                writeSink.numFlushedMessages() > 1 ||
                 // We only handle UDP_SEGMENT in sendmmsg.
-                writeSink.first() instanceof SegmentedDatagramPacket) {
+                writeSink.currentFlushedMessage() instanceof SegmentedDatagramPacket) {
             NativeDatagramPacketArray array = cleanDatagramPacketArray();
-            writeSink.forEach(array.addFunction(isConnected(), Integer.MAX_VALUE));
+            writeSink.forEachFlushedMessage(array.addFunction(isConnected(), Integer.MAX_VALUE));
             int cnt = array.count();
 
             if (cnt >= 1) {
@@ -381,7 +381,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
     private void doWriteMessage(WriteSink writeSink)
             throws Exception {
-        Object msg = writeSink.first();
+        Object msg = writeSink.currentFlushedMessage();
         final Buffer data;
         final SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {

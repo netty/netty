@@ -293,7 +293,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
         writeInProgress = true;
 
-        Object msg = writeSink.first();
+        Object msg = writeSink.currentFlushedMessage();
         // It is possible the peer could have closed while we are writing, and in this case we should
         // simulate real socket behavior and ensure the write operation is failed.
         if (peer.state == State.CONNECTED) {

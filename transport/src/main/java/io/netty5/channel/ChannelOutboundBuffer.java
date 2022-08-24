@@ -199,31 +199,8 @@ final class ChannelOutboundBuffer {
      * flushed message exists at the time this method is called it will return {@code false} to signal that no more
      * messages are ready to be handled.
      */
-    int remove() {
-        assert executor.inEventLoop();
-
-        Entry e = flushedEntry;
-        if (e == null) {
-            return -1;
-        }
-        Object msg = e.msg;
-
-        Promise<Void> promise = e.promise;
-        int size = e.pendingSize;
-
-        removeEntry(e);
-
-        if (!e.cancelled) {
-            // only release message, notify and decrement if it was not canceled before.
-            SilentDispose.trySilentDispose(msg, logger);
-            safeSuccess(promise);
-            decrementPendingOutboundBytes(size);
-        }
-
-        // recycle the entry
-        e.recycle();
-
-        return size - CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
+    boolean remove() {
+        return remove0(null);
     }
 
     /**
@@ -231,12 +208,16 @@ final class ChannelOutboundBuffer {
      * and return {@code true}. If no   flushed message exists at the time this method is called it will return
      * {@code false} to signal that no more messages are ready to be handled.
      */
-    int remove(Throwable cause) {
+    boolean remove(Throwable cause) {
+        return remove0(requireNonNull(cause, "cause"));
+    }
+
+    private boolean remove0(Throwable cause) {
         assert executor.inEventLoop();
 
         Entry e = flushedEntry;
         if (e == null) {
-            return -1;
+            return false;
         }
         Object msg = e.msg;
 
@@ -248,17 +229,19 @@ final class ChannelOutboundBuffer {
         if (!e.cancelled) {
             // only release message, fail and decrement if it was not canceled before.
             SilentDispose.trySilentDispose(msg, logger);
-
-            safeFail(promise, cause);
+            if (cause == null) {
+                safeSuccess(promise);
+            } else {
+                safeFail(promise, cause);
+            }
             decrementPendingOutboundBytes(size);
         }
 
         // recycle the entry
         e.recycle();
 
-        return size - CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
+        return true;
     }
-
     private void removeEntry(Entry e) {
         assert executor.inEventLoop();
 
@@ -272,45 +255,6 @@ final class ChannelOutboundBuffer {
         } else {
             flushedEntry = e.next;
         }
-    }
-
-    /**
-     * Removes the fully written entries and update the reader index of the partially written entry.
-     * This operation assumes all messages in this buffer are either {@link Buffer}s or {@link Buffer}s.
-     */
-    int removeBytes(long writtenBytes) {
-        assert executor.inEventLoop();
-
-        Object msg = current();
-        int messages = 0;
-        while (writtenBytes > 0 || hasZeroReadable(msg)) {
-            if (msg instanceof BufferAddressedEnvelope) {
-                msg = ((BufferAddressedEnvelope<?, ?>) msg).content();
-            }
-            if (msg instanceof Buffer) {
-                Buffer buf = (Buffer) msg;
-                final int readableBytes = buf.readableBytes();
-                if (readableBytes <= writtenBytes) {
-                    writtenBytes -= readableBytes;
-                    remove();
-                    messages++;
-                } else { // readableBytes > writtenBytes
-                    buf.readSplit(Math.toIntExact(writtenBytes)).close();
-                    break;
-                }
-            } else {
-                break; // Don't know how to process this message. Might be null.
-            }
-            msg = current();
-        }
-        return messages;
-    }
-
-    private static boolean hasZeroReadable(Object msg) {
-        if (msg instanceof Buffer) {
-            return ((Buffer) msg).readableBytes() == 0;
-        }
-        return false;
     }
 
     /**
@@ -359,10 +303,6 @@ final class ChannelOutboundBuffer {
         } finally {
             inFail = false;
         }
-    }
-
-    boolean isClosed() {
-        return closed;
     }
 
     private void close(final Throwable cause) {

@@ -344,7 +344,7 @@ public final class KQueueDatagramChannel
 
     @Override
     protected void doWriteNow(WriteSink writeSink) {
-        Object msg = writeSink.first();
+        Object msg = writeSink.currentFlushedMessage();
         final Buffer data;
         SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
@@ -544,9 +544,9 @@ public final class KQueueDatagramChannel
                         DatagramSocketAddress datagramSocketAddress;
                         if (addr != 0) {
                             // has a memory address so use optimized call
-                        datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
+                            datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
                         } else {
-                        ByteBuffer nioData = component.writableBuffer();
+                            ByteBuffer nioData = component.writableBuffer();
                             datagramSocketAddress = socket.recvFrom(
                                     nioData, nioData.position(), nioData.limit());
                         }
