@@ -110,13 +110,16 @@ final class NativeDatagramPacketArray {
                 int writableBytes = c.readableBytes();
                 int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
                 if (iovArray.addReadable(c, byteCount)) {
-                    NativeDatagramPacket p = packets[count];
-                    long packetAddr = iovArray.memoryAddress(iovArrayStart);
-                    p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
-                    count++;
                     c.skipReadableBytes(byteCount);
+                } else {
+                    break;
                 }
             }
+            // Add one packet for sendmmsg(...) now.
+            NativeDatagramPacket p = packets[count];
+            long packetAddr = iovArray.memoryAddress(iovArrayStart);
+            p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
+            count++;
             return true;
         }
     }
