@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
+import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // test
         assertNotNull(extension);
-        assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
+        assertEquals(WebSocketExtension.RSV1, extension.rsv());
         assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
@@ -72,7 +73,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // test
         assertNotNull(extension);
-        assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
+        assertEquals(WebSocketExtension.RSV1, extension.rsv());
         assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
@@ -118,7 +119,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // test
         assertNotNull(extension);
-        assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
+        assertEquals(WebSocketExtension.RSV1, extension.rsv());
         assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
@@ -145,7 +146,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // test
         assertNotNull(extension);
-        assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
+        assertEquals(WebSocketExtension.RSV1, extension.rsv());
         assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 

@@ -29,7 +29,10 @@
  */
 package io.netty5.handler.codec.http.headers;
 
+import io.netty5.handler.codec.DateFormatter;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Date;
 
 /**
  * An interface defining a <a href="https://tools.ietf.org/html/rfc6265#section-4.1">set-cookie-string</a>.
@@ -68,6 +71,30 @@ public interface HttpSetCookie extends HttpCookiePair {
      */
     @Nullable
     CharSequence expires();
+
+    /**
+     * Return a {@link #maxAge()} value that is computed from the {@link #expires()} attribute,
+     * or {@code null} if no expires attribute has been specified.
+     * <p>
+     * The reference for computing the max age, is the current time when this function is called.
+     * The computed time is not cached, so multiple calls may return different computed max-age values, as the
+     * moment of expiration approaches.
+     *
+     * @return The maximum age of this {@link HttpSetCookie}, but computed from the {@link #expires()} attribute.
+     * Or {@code null} if no expires attribute is specified.
+     */
+    @Nullable
+    default Long expiresAsMaxAge() {
+        CharSequence expires = expires();
+        if (expires != null) {
+            Date expiresDate = DateFormatter.parseHttpDate(expires);
+            if (expiresDate != null) {
+                long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
+                return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);
+            }
+        }
+        return null;
+    }
 
     /**
      * Get the value for the

@@ -231,7 +231,7 @@ public abstract class MultiMap<K, V> {
     }
 
     @Internal
-    public final boolean contains(final K key, final V value) {
+    public boolean contains(final K key, final V value) {
         return contains(key, value, this::equalsForValue);
     }
 
@@ -729,10 +729,7 @@ public abstract class MultiMap<K, V> {
 
         MultiMapEntry(final K key, final V value, final int keyHash) {
             this.key = requireNonNull(key);
-            if (value == null) {
-                throw new IllegalArgumentException("Null value for key: " + key);
-            }
-            this.value = value;
+            this.value = requireNonNull(value);
             this.keyHash = keyHash;
         }
 

@@ -21,21 +21,23 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.CodecException;
 import io.netty5.handler.codec.MessageToMessageDecoder;
 import io.netty5.handler.codec.compression.Decompressor;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.AsciiString;
 import io.netty5.util.Resource;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
- * {@link Decompressor}, which is created by {@link #newContentDecoder(String)}.
+ * {@link Decompressor}, which is created by {@link #newContentDecoder(CharSequence)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
  * header is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
  * decoded content.  If the content encoding of the original is not supported
- * by the decoder, {@link #newContentDecoder(String)} should return {@code null}
+ * by the decoder, {@link #newContentDecoder(CharSequence)} should return {@code null}
  * so that no decoding occurs (i.e. pass-through).
  * <p>
  * Please note that this is an abstract class.  You have to extend this class
- * and implement {@link #newContentDecoder(String)} properly to make this class
+ * and implement {@link #newContentDecoder(CharSequence)} properly to make this class
  * functional.  For example, refer to the source code of {@link HttpContentDecompressor}.
  * <p>
  * This handler must be placed after {@link HttpObjectDecoder} in the pipeline
@@ -80,17 +82,17 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 final HttpHeaders headers = message.headers();
 
                 // Determine the content encoding.
-                String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
+                CharSequence contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
                 if (contentEncoding != null) {
-                    contentEncoding = contentEncoding.trim();
+                    contentEncoding = AsciiString.trim(contentEncoding);
                 } else {
-                    String transferEncoding = headers.get(HttpHeaderNames.TRANSFER_ENCODING);
+                    CharSequence transferEncoding = headers.get(HttpHeaderNames.TRANSFER_ENCODING);
                     if (transferEncoding != null) {
-                        int idx = transferEncoding.indexOf(",");
+                        int idx = AsciiString.indexOf(transferEncoding, ',', 0);
                         if (idx != -1) {
-                            contentEncoding = transferEncoding.substring(0, idx).trim();
+                            contentEncoding = AsciiString.trim(AsciiString.substring(transferEncoding, 0, idx));
                         } else {
-                            contentEncoding = transferEncoding.trim();
+                            contentEncoding = AsciiString.trim(transferEncoding);
                         }
                     } else {
                         contentEncoding = IDENTITY;
@@ -223,7 +225,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract Decompressor newContentDecoder(String contentEncoding) throws Exception;
+    protected abstract Decompressor newContentDecoder(CharSequence contentEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the decoded content.
@@ -234,7 +236,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      * @return the expected content encoding of the new content
      */
     protected String getTargetContentEncoding(
-            @SuppressWarnings("UnusedParameters") String contentEncoding) throws Exception {
+            @SuppressWarnings("UnusedParameters") CharSequence contentEncoding) throws Exception {
         return IDENTITY;
     }
 

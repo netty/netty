@@ -24,11 +24,9 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOutboundInvoker;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
-import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContentCompressor;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -36,6 +34,7 @@ import io.netty5.handler.codec.http.HttpRequestDecoder;
 import io.netty5.handler.codec.http.HttpResponseEncoder;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -325,7 +324,7 @@ public abstract class WebSocketServerHandshaker {
                     HttpRequest httpRequest = (HttpRequest) httpObject;
                     fullHttpRequest = new DefaultFullHttpRequest(httpRequest.protocolVersion(), httpRequest.method(),
                                                                  httpRequest.uri(), ctx.bufferAllocator().allocate(0),
-                                                                 httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
+                                                                 httpRequest.headers(), HttpHeaders.emptyHeaders());
                     if (httpRequest.decoderResult().isFailure()) {
                         fullHttpRequest.setDecoderResult(httpRequest.decoderResult());
                     }

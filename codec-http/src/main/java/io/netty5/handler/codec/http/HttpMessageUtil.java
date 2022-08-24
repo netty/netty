@@ -16,6 +16,7 @@
 
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.Map;
@@ -98,7 +99,7 @@ final class HttpMessageUtil {
     }
 
     private static void appendHeaders(StringBuilder buf, HttpHeaders headers) {
-        for (Map.Entry<String, String> e: headers) {
+        for (Map.Entry<CharSequence, CharSequence> e: headers) {
             buf.append(e.getKey());
             buf.append(": ");
             buf.append(e.getValue());

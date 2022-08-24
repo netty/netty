@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -41,14 +42,6 @@ public class RtspEncoderTest {
      */
     @Test
     public void testSendSetupRequest() {
-        String expected = "SETUP rtsp://172.10.20.30:554/d3abaaa7-65f2-42b4-"
-                        + "8d6b-379f492fcf0f RTSP/1.0\r\n"
-                        + "transport: MP2T/DVBC/UDP;unicast;client=01234567;"
-                        + "source=172.10.20.30;"
-                        + "destination=1.1.1.1;client_port=6922\r\n"
-                        + "cseq: 1\r\n"
-                        + "\r\n";
-
         HttpRequest request = new DefaultHttpRequest(RtspVersions.RTSP_1_0,
                RtspMethods.SETUP,
                "rtsp://172.10.20.30:554/d3abaaa7-65f2-42b4-8d6b-379f492fcf0f");
@@ -62,7 +55,14 @@ public class RtspEncoderTest {
 
         try (Buffer buf = ch.readOutbound()) {
             String actual = buf.toString(UTF_8);
-            assertEquals(expected, actual);
+            assertThat(actual).startsWith(
+                    "SETUP rtsp://172.10.20.30:554/d3abaaa7-65f2-42b4-8d6b-379f492fcf0f RTSP/1.0\r\n");
+            assertThat(actual.lines()).contains(
+                    "transport: MP2T/DVBC/UDP;unicast;client=01234567;source=172.10.20.30;" +
+                    "destination=1.1.1.1;client_port=6922",
+                    "cseq: 1"
+            );
+            assertThat(actual).endsWith("\r\n\r\n");
         }
     }
 
@@ -71,16 +71,6 @@ public class RtspEncoderTest {
      */
     @Test
     public void testSendGetParameterRequest() {
-        String expected = "GET_PARAMETER rtsp://172.10.20.30:554 RTSP/1.0\r\n"
-                        + "session: 2547019973447939919\r\n"
-                        + "cseq: 3\r\n"
-                        + "content-length: 31\r\n"
-                        + "content-type: text/parameters\r\n"
-                        + "\r\n"
-                        + "stream_state\r\n"
-                        + "position\r\n"
-                        + "scale\r\n";
-
         byte[] content = ("stream_state\r\n"
                         + "position\r\n"
                         + "scale\r\n").getBytes(UTF_8);
@@ -91,8 +81,7 @@ public class RtspEncoderTest {
                 "rtsp://172.10.20.30:554", preferredAllocator().allocate(content.length));
         request.headers().add(RtspHeaderNames.SESSION, "2547019973447939919");
         request.headers().add(RtspHeaderNames.CSEQ, "3");
-        request.headers().add(RtspHeaderNames.CONTENT_LENGTH,
-                "" + content.length);
+        request.headers().add(RtspHeaderNames.CONTENT_LENGTH, String.valueOf(content.length));
         request.headers().add(RtspHeaderNames.CONTENT_TYPE, "text/parameters");
         request.payload().writeBytes(content);
 
@@ -100,8 +89,20 @@ public class RtspEncoderTest {
         ch.writeOutbound(request);
 
         try (Buffer buf = ch.readOutbound()) {
-            String actual = buf.toString(UTF_8);
-            assertEquals(expected, actual);
+            String[] actual = buf.toString(UTF_8).split("\r\n\r\n");
+            String head = actual[0];
+            String body = actual[1];
+            assertEquals(2, actual.length);
+            assertThat(head).startsWith("GET_PARAMETER rtsp://172.10.20.30:554 RTSP/1.0\r\n");
+            assertThat(head.lines()).contains(
+                    "session: 2547019973447939919",
+                    "cseq: 3",
+                    "content-length: 31",
+                    "content-type: text/parameters"
+            );
+            assertThat(body).isEqualTo("stream_state\r\n" +
+                                       "position\r\n" +
+                                       "scale\r\n");
         }
     }
 
@@ -110,12 +111,6 @@ public class RtspEncoderTest {
      */
     @Test
     public void testSend200OkResponseWithoutBody() {
-        String expected = "RTSP/1.0 200 OK\r\n"
-                        + "server: Testserver\r\n"
-                        + "cseq: 1\r\n"
-                        + "session: 2547019973447939919\r\n"
-                        + "\r\n";
-
         HttpResponse response = new DefaultHttpResponse(RtspVersions.RTSP_1_0,
                 RtspResponseStatuses.OK);
         response.headers().add(RtspHeaderNames.SERVER, "Testserver");
@@ -127,7 +122,12 @@ public class RtspEncoderTest {
 
         try (Buffer buf = ch.readOutbound()) {
             String actual = buf.toString(UTF_8);
-            assertEquals(expected, actual);
+            assertThat(actual).startsWith("RTSP/1.0 200 OK\r\n");
+            assertThat(actual.lines()).contains(
+                    "server: Testserver",
+                    "cseq: 1",
+                    "session: 2547019973447939919"
+            );
         }
     }
 
@@ -136,17 +136,6 @@ public class RtspEncoderTest {
      */
     @Test
     public void testSend200OkResponseWithBody() {
-        String expected = "RTSP/1.0 200 OK\r\n"
-                        + "server: Testserver\r\n"
-                        + "session: 2547019973447939919\r\n"
-                        + "content-type: text/parameters\r\n"
-                        + "content-length: 50\r\n"
-                        + "cseq: 3\r\n"
-                        + "\r\n"
-                        + "position: 24\r\n"
-                        + "stream_state: playing\r\n"
-                        + "scale: 1.00\r\n";
-
         byte[] content = ("position: 24\r\n"
                         + "stream_state: playing\r\n"
                         + "scale: 1.00\r\n").getBytes(UTF_8);
@@ -166,8 +155,20 @@ public class RtspEncoderTest {
         ch.writeOutbound(response);
 
         try (Buffer buf = ch.readOutbound()) {
-            String actual = buf.toString(UTF_8);
-            assertEquals(expected, actual);
+            String[] actual = buf.toString(UTF_8).split("\r\n\r\n");
+            String head = actual[0];
+            String body = actual[1];
+            assertThat(head).startsWith("RTSP/1.0 200 OK\r\n");
+            assertThat(head.lines()).contains(
+                    "server: Testserver",
+                    "session: 2547019973447939919",
+                    "content-type: text/parameters",
+                    "content-length: 50",
+                    "cseq: 3"
+            );
+            assertThat(body).isEqualTo("position: 24\r\n" +
+                                       "stream_state: playing\r\n" +
+                                       "scale: 1.00\r\n");
         }
     }
 }

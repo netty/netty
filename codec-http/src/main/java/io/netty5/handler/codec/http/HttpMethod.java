@@ -178,13 +178,15 @@ public class HttpMethod implements Comparable<HttpMethod> {
     }
 
     private static final class EnumNameMap<T> {
-        private final EnumNameMap.Node<T>[] values;
+        private final Node<T>[] values;
         private final int valuesMask;
 
-        EnumNameMap(EnumNameMap.Node<T>... nodes) {
-            values = (EnumNameMap.Node<T>[]) new EnumNameMap.Node[findNextPositivePowerOfTwo(nodes.length)];
+        @SuppressWarnings("unchecked")
+        @SafeVarargs
+        EnumNameMap(Node<T>... nodes) {
+            values = (Node<T>[]) new Node[findNextPositivePowerOfTwo(nodes.length)];
             valuesMask = values.length - 1;
-            for (EnumNameMap.Node<T> node : nodes) {
+            for (Node<T> node : nodes) {
                 int i = hashCode(node.key) & valuesMask;
                 if (values[i] != null) {
                     throw new IllegalArgumentException("index " + i + " collision between values: [" +
@@ -195,7 +197,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
 
         T get(String name) {
-            EnumNameMap.Node<T> node = values[hashCode(name) & valuesMask];
+            Node<T> node = values[hashCode(name) & valuesMask];
             return node == null || !node.key.equals(name) ? null : node.value;
         }
 

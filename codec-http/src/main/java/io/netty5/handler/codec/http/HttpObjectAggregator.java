@@ -24,6 +24,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.MessageAggregator;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -167,7 +168,8 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
             // if the request contains an unsupported expectation, we return 417
             pipeline.fireChannelInboundEvent(HttpExpectationFailedEvent.INSTANCE);
             return newErrorResponse(EXPECTATION_FAILED, pipeline.channel().bufferAllocator(), true, false);
-        } else if (HttpUtil.is100ContinueExpected(start)) {
+        }
+        if (HttpUtil.is100ContinueExpected(start)) {
             // if the request contains 100-continue but the content-length is too large, we return 413
             if (getContentLength(start, -1L) <= maxContentLength) {
                 return newErrorResponse(CONTINUE, pipeline.channel().bufferAllocator(), false, false);
@@ -199,7 +201,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
     protected boolean ignoreContentAfterContinueResponse(Object msg) {
         if (msg instanceof HttpResponse) {
             final HttpResponse httpResponse = (HttpResponse) msg;
-            return httpResponse.status().codeClass().equals(HttpStatusClass.CLIENT_ERROR);
+            return httpResponse.status().codeClass() == HttpStatusClass.CLIENT_ERROR;
         }
         return false;
     }
@@ -295,7 +297,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
                                                      boolean emptyContent, boolean closeConnection) {
         FullHttpResponse resp = new DefaultFullHttpResponse(HTTP_1_1, status, allocator.allocate(0));
         if (emptyContent) {
-            resp.headers().set(CONTENT_LENGTH, 0);
+            resp.headers().set(CONTENT_LENGTH, HttpHeaderValues.ZERO);
         }
         if (closeConnection) {
             resp.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
@@ -304,6 +306,8 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
     }
 
     private static final class ResponseTooLargeException extends TooLongHttpContentException {
+        private static final long serialVersionUID = 1922084473597224689L;
+
         ResponseTooLargeException(String message) {
             super(message);
         }
@@ -339,7 +343,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         @Override
         public HttpHeaders trailingHeaders() {
             HttpHeaders trailingHeaders = this.trailingHeaders;
-            return requireNonNullElse(trailingHeaders, EmptyHttpHeaders.INSTANCE);
+            return requireNonNullElse(trailingHeaders, HttpHeaders.emptyHeaders());
         }
 
         void setTrailingHeaders(HttpHeaders trailingHeaders) {

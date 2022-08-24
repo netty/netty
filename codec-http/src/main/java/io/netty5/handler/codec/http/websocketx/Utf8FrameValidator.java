@@ -53,8 +53,8 @@ public class Utf8FrameValidator implements ChannelHandler {
                         fragmentedFramesCount = 0;
 
                         // Check text for UTF8 correctness
-                        if ((frame instanceof TextWebSocketFrame) ||
-                                (utf8Validator != null && utf8Validator.isChecking())) {
+                        if (frame instanceof TextWebSocketFrame ||
+                            utf8Validator != null && utf8Validator.isChecking()) {
                             // Check UTF-8 correctness for this payload
                             checkUTF8String(frame.binaryData());
 

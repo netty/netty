@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -26,6 +27,7 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -78,15 +80,14 @@ public final class HttpUtil {
 
     /**
      * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'.  This methods respects the value of the.
-     *
+     * thus 'kept alive'. This method respects the value of the
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
     public static boolean isKeepAlive(HttpMessage message) {
-        return !message.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE, true) &&
+        return !message.headers().containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE) &&
                (message.protocolVersion().isKeepAliveDefault() ||
-                message.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE, true));
+                message.headers().containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE));
     }
 
     /**
@@ -161,9 +162,9 @@ public final class HttpUtil {
      *         or its value is not a number
      */
     public static long getContentLength(HttpMessage message) {
-        String value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
+        CharSequence value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
         if (value != null) {
-            return Long.parseLong(value);
+            return Long.parseLong(value.toString());
         }
 
         throw new NumberFormatException("header not found: " + HttpHeaderNames.CONTENT_LENGTH);
@@ -180,9 +181,9 @@ public final class HttpUtil {
      * @throws NumberFormatException if the {@code "Content-Length"} header does not parse as a long
      */
     public static long getContentLength(HttpMessage message, long defaultValue) {
-        String value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
+        CharSequence value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
         if (value != null) {
-            return Long.parseLong(value);
+            return Long.parseLong(value.toString());
         }
 
         return defaultValue;
@@ -204,7 +205,7 @@ public final class HttpUtil {
      * Sets the {@code "Content-Length"} header.
      */
     public static void setContentLength(HttpMessage message, long length) {
-        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, length);
+        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(length));
     }
 
     public static boolean isContentLengthSet(HttpMessage m) {
@@ -223,7 +224,7 @@ public final class HttpUtil {
     public static boolean is100ContinueExpected(HttpMessage message) {
         return isExpectHeaderValid(message)
           // unquoted tokens in the expect header are case-insensitive, thus 100-continue is case insensitive
-          && message.headers().contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE, true);
+          && message.headers().containsIgnoreCase(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
     }
 
     /**
@@ -239,8 +240,8 @@ public final class HttpUtil {
             return false;
         }
 
-        final String expectValue = message.headers().get(HttpHeaderNames.EXPECT);
-        return expectValue != null && !HttpHeaderValues.CONTINUE.toString().equalsIgnoreCase(expectValue);
+        final CharSequence expectValue = message.headers().get(HttpHeaderNames.EXPECT);
+        return expectValue != null && !AsciiString.contentEqualsIgnoreCase(HttpHeaderValues.CONTINUE, expectValue);
     }
 
     private static boolean isExpectHeaderValid(final HttpMessage message) {
@@ -275,7 +276,7 @@ public final class HttpUtil {
      * @return True if transfer encoding is chunked, otherwise false
      */
     public static boolean isTransferEncodingChunked(HttpMessage message) {
-        return message.headers().containsValue(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED, true);
+        return message.headers().containsIgnoreCase(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
     }
 
     /**
@@ -291,11 +292,14 @@ public final class HttpUtil {
             m.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             m.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
         } else {
-            List<String> encodings = m.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING);
-            if (encodings.isEmpty()) {
+            Iterator<CharSequence> encodings = m.headers().valuesIterator(HttpHeaderNames.TRANSFER_ENCODING);
+            if (!encodings.hasNext()) {
                 return;
             }
-            List<CharSequence> values = new ArrayList<>(encodings);
+            List<CharSequence> values = new ArrayList<>();
+            do {
+                values.add(encodings.next());
+            } while (encodings.hasNext());
             values.removeIf(HttpHeaderValues.CHUNKED::contentEqualsIgnoreCase);
             if (values.isEmpty()) {
                 m.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -381,7 +385,7 @@ public final class HttpUtil {
 
     /**
      * Fetch charset from message's Content-Type header as a char sequence.
-     *
+     * <p>
      * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
      * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
      *
@@ -397,7 +401,7 @@ public final class HttpUtil {
 
     /**
      * Fetch charset from message's Content-Type header as a char sequence.
-     *
+     * <p>
      * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
      * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
      *
@@ -415,7 +419,7 @@ public final class HttpUtil {
 
     /**
      * Fetch charset from Content-Type header value as a char sequence.
-     *
+     * <p>
      * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
      * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
      *
@@ -519,9 +523,9 @@ public final class HttpUtil {
      */
     @UnstableApi
     public static long normalizeAndGetContentLength(
-            List<? extends CharSequence> contentLengthFields, boolean isHttp10OrEarlier,
+            Iterator<CharSequence> contentLengthFields, boolean isHttp10OrEarlier,
             boolean allowDuplicateContentLengths) {
-        if (contentLengthFields.isEmpty()) {
+        if (!contentLengthFields.hasNext()) {
             return -1;
         }
 
@@ -538,15 +542,16 @@ public final class HttpUtil {
         //   duplicated field-values with a single valid Content-Length field
         //   containing that decimal value prior to determining the message body
         //   length or forwarding the message.
-        String firstField = contentLengthFields.get(0).toString();
+        String firstField = contentLengthFields.next().toString();
         boolean multipleContentLengths =
-                contentLengthFields.size() > 1 || firstField.indexOf(COMMA) >= 0;
+                contentLengthFields.hasNext() || firstField.indexOf(COMMA) >= 0;
 
         if (multipleContentLengths && !isHttp10OrEarlier) {
             if (allowDuplicateContentLengths) {
                 // Find and enforce that all Content-Length values are the same
                 String firstValue = null;
-                for (CharSequence field : contentLengthFields) {
+                CharSequence field = firstField;
+                for (;;) {
                     String[] tokens = field.toString().split(COMMA_STRING, -1);
                     for (String token : tokens) {
                         String trimmed = token.trim();
@@ -556,6 +561,11 @@ public final class HttpUtil {
                             throw new IllegalArgumentException(
                                     "Multiple Content-Length values found: " + contentLengthFields);
                         }
+                    }
+                    if (contentLengthFields.hasNext()) {
+                        field = contentLengthFields.next();
+                    } else {
+                        break;
                     }
                 }
                 // Replace the duplicated field-values with a single valid Content-Length field

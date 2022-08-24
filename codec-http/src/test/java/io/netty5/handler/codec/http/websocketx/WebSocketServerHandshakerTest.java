@@ -18,14 +18,12 @@ package io.netty5.handler.codec.http.websocketx;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpRequestDecoder;
@@ -33,11 +31,14 @@ import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseDecoder;
 import io.netty5.handler.codec.http.HttpResponseEncoder;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -65,7 +66,7 @@ public abstract class WebSocketServerHandshakerTest {
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
                .set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "chat, superchat")
                .set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, webSocketVersion().toAsciiString());
-        HttpHeaders customResponseHeaders = new DefaultHttpHeaders();
+        HttpHeaders customResponseHeaders = HttpHeaders.newHeaders();
         // set duplicate required headers and one custom
         customResponseHeaders
                 .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
@@ -80,12 +81,12 @@ public abstract class WebSocketServerHandshakerTest {
             response = serverHandshaker.newHandshakeResponse(preferredAllocator(), request, customResponseHeaders);
             HttpHeaders responseHeaders = response.headers();
 
-            assertEquals(1, responseHeaders.getAll(HttpHeaderNames.CONNECTION).size());
-            assertEquals(1, responseHeaders.getAll(HttpHeaderNames.UPGRADE).size());
-            assertTrue(responseHeaders.containsValue("custom", "header", true));
+            assertThat(responseHeaders.values(HttpHeaderNames.CONNECTION)).hasSize(1);
+            assertThat(responseHeaders.values(HttpHeaderNames.UPGRADE)).hasSize(1);
+            assertTrue(responseHeaders.containsIgnoreCase("custom", "header"));
 
-            assertFalse(responseHeaders.containsValue(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "12345", false));
-            assertEquals(1, responseHeaders.getAll(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL).size());
+            assertFalse(responseHeaders.contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, "12345"));
+            assertThat(responseHeaders.values(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL)).hasSize(1);
             assertEquals("chat", responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL));
         } finally {
             request.close();
@@ -146,9 +147,10 @@ public abstract class WebSocketServerHandshakerTest {
 
         HttpResponse response = channel.readInbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
-        assertTrue(response.headers().containsValue(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true));
+        assertTrue(response.headers().containsIgnoreCase(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET));
 
-        ((EmptyLastHttpContent) channel.readInbound()).close();
+        EmptyLastHttpContent emptyLastHttpContent = channel.readInbound();
+        emptyLastHttpContent.close();
 
         assertFalse(channel.finish());
     }

@@ -15,6 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -29,16 +31,14 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version) {
-        this(version, true, false);
+        this(version, true);
     }
 
     /**
      * Creates a new instance.
      */
-    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleFieldHeaders) {
-        this(version,
-                singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
-                                   : new DefaultHttpHeaders(validateHeaders));
+    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders) {
+        this(version, HttpHeaders.newHeaders(validateHeaders));
     }
 
     /**

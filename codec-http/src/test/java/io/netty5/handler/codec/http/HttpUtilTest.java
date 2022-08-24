@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -26,11 +26,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty5.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -75,16 +74,14 @@ public class HttpUtilTest {
     // Test for https://github.com/netty/netty/issues/1690
     @Test
     public void testGetOperations() {
-        HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(of("Foo"), of("1"));
-        headers.add(of("Foo"), of("2"));
+        HttpHeaders headers = HttpHeaders.newHeaders();
+        headers.add("Foo", "1");
+        headers.add("Foo", "2");
 
-        assertEquals("1", headers.get(of("Foo")));
+        assertEquals("1", headers.get("Foo"));
 
-        List<String> values = headers.getAll(of("Foo"));
-        assertEquals(2, values.size());
-        assertEquals("1", values.get(0));
-        assertEquals("2", values.get(1));
+        Iterable<CharSequence> values = headers.values("Foo");
+        assertThat(values).containsExactly("1", "2");
     }
 
     @Test
@@ -272,8 +269,8 @@ public class HttpUtilTest {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().add(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
         HttpUtil.setTransferEncodingChunked(message, true);
-        List<String> expected = singletonList("chunked");
-        assertEquals(expected, message.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING));
+        assertTrue(message.headers().containsIgnoreCase(HttpHeaderNames.TRANSFER_ENCODING, "chunked"));
+        assertThat(message.headers().values(HttpHeaderNames.TRANSFER_ENCODING)).hasSize(1);
     }
 
     private static List<String> allPossibleCasesOfContinue() {
@@ -410,19 +407,19 @@ public class HttpUtilTest {
         HttpMessage http11Message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
             "http:localhost/http_1_1");
         http11Message.headers().set(
-                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.CLOSE);
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, HttpHeaderValues.CLOSE);
         assertFalse(HttpUtil.isKeepAlive(http11Message));
 
         http11Message.headers().set(
-                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", Close");
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, "Close");
         assertFalse(HttpUtil.isKeepAlive(http11Message));
 
         http11Message.headers().set(
-                HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE + ", " + HttpHeaderValues.UPGRADE);
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE, HttpHeaderValues.UPGRADE);
         assertFalse(HttpUtil.isKeepAlive(http11Message));
 
         http11Message.headers().set(
-                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.KEEP_ALIVE);
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, HttpHeaderValues.KEEP_ALIVE);
         assertTrue(HttpUtil.isKeepAlive(http11Message));
     }
 
@@ -441,12 +438,8 @@ public class HttpUtilTest {
         testNormalizeAndGetContentLengthInvalidContentLength("-1");
     }
 
-    private static void testNormalizeAndGetContentLengthInvalidContentLength(final String contentLengthField) {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() {
-                normalizeAndGetContentLength(singletonList(contentLengthField), false, false);
-            }
-        });
+    private static void testNormalizeAndGetContentLengthInvalidContentLength(final CharSequence contentLengthField) {
+        assertThrows(IllegalArgumentException.class,
+                     () -> normalizeAndGetContentLength(List.of(contentLengthField).iterator(), false, false));
     }
 }

@@ -19,10 +19,10 @@ import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;

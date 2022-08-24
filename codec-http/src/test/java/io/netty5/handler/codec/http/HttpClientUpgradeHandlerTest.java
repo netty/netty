@@ -15,16 +15,16 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -88,8 +88,8 @@ public class HttpClientUpgradeHandlerTest {
         FullHttpRequest request = channel.readOutbound();
 
         assertEquals(2, request.headers().size());
-        assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp", false));
-        assertTrue(request.headers().contains("connection", "upgrade", false));
+        assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp"));
+        assertTrue(request.headers().contains("connection", "upgrade"));
         request.close();
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_ISSUED, catcher.getUserEvent());
 
@@ -127,8 +127,8 @@ public class HttpClientUpgradeHandlerTest {
         FullHttpRequest request = channel.readOutbound();
 
         assertEquals(2, request.headers().size());
-        assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp", false));
-        assertTrue(request.headers().contains("connection", "upgrade", false));
+        assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp"));
+        assertTrue(request.headers().contains("connection", "upgrade"));
         request.close();
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_ISSUED, catcher.getUserEvent());
 
@@ -166,8 +166,8 @@ public class HttpClientUpgradeHandlerTest {
         FullHttpRequest request = channel.readOutbound();
 
         assertEquals(2, request.headers().size());
-        assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp", false));
-        assertTrue(request.headers().contains("connection", "upgrade", false));
+        assertTrue(request.headers().contains(HttpHeaderNames.UPGRADE, "fancyhttp"));
+        assertTrue(request.headers().contains("connection", "upgrade"));
         request.close();
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_ISSUED, catcher.getUserEvent());
 
@@ -201,8 +201,7 @@ public class HttpClientUpgradeHandlerTest {
         assertTrue(channel.writeOutbound(request));
         FullHttpRequest readRequest = channel.readOutbound();
 
-        List<String> connectionHeaders = readRequest.headers().getAll("connection");
-        assertTrue(connectionHeaders.contains("extra"));
+        assertThat(readRequest.headers().values("connection")).contains("extra");
         readRequest.close();
         assertFalse(channel.finish());
     }

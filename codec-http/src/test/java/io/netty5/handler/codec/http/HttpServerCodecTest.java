@@ -112,7 +112,7 @@ public class HttpServerCodecTest {
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED,
                                                            preferredAllocator().allocate(16));
         res.payload().writeBytes("OK".getBytes(UTF_8));
-        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
+        res.headers().set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(2));
         ch.writeOutbound(res);
 
         // Ensure the encoder handles the response after handling 100 Continue.

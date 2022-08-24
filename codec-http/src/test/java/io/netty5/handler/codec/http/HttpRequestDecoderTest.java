@@ -16,24 +16,26 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import java.util.Iterator;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeaderNames.HOST;
-import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
+import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpRequestDecoderTest {
@@ -64,6 +66,25 @@ public class HttpRequestDecoderTest {
                 "12345678").getBytes(US_ASCII);
     }
 
+    private HttpRequestDecoder decoder;
+    private EmbeddedChannel channel;
+    private BufferAllocator allocator;
+
+    @BeforeEach
+    void setUp() {
+        setUpDecoder(new HttpRequestDecoder());
+    }
+
+    void setUpNoValidation() {
+        setUpDecoder(new HttpRequestDecoder(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, false));
+    }
+
+    void setUpDecoder(HttpRequestDecoder decoder) {
+        this.decoder = decoder;
+        channel = new EmbeddedChannel(decoder);
+        allocator = channel.bufferAllocator();
+    }
+
     @Test
     public void testDecodeWholeRequestAtOnceCRLFDelimiters() {
         testDecodeWholeRequestAtOnce(CONTENT_CRLF_DELIMITERS);
@@ -79,16 +100,15 @@ public class HttpRequestDecoderTest {
         testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS);
     }
 
-    private static void testDecodeWholeRequestAtOnce(byte[] content) {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(content.length).writeBytes(content)));
+    private void testDecodeWholeRequestAtOnce(byte[] content) {
+        assertTrue(channel.writeInbound(allocator.copyOf(content)));
         HttpRequest req = channel.readInbound();
         assertNotNull(req);
         checkHeaders(req.headers());
         LastHttpContent<?> c = channel.readInbound();
         final Buffer payload = c.payload();
         assertEquals(CONTENT_LENGTH, payload.readableBytes());
-        assertEquals(preferredAllocator().allocate(CONTENT_LENGTH)
+        assertEquals(allocator.allocate(CONTENT_LENGTH)
                                          .writeBytes(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
                      payload.copy(payload.readerOffset(), CONTENT_LENGTH));
         c.close();
@@ -109,9 +129,7 @@ public class HttpRequestDecoderTest {
     }
 
     private static void checkHeader(HttpHeaders headers, String name, String value) {
-        List<String> header1 = headers.getAll(of(name));
-        assertEquals(1, header1.size());
-        assertEquals(value, header1.get(0));
+        assertThat(headers.values(name)).containsExactly(value);
     }
 
     @Test
@@ -129,14 +147,16 @@ public class HttpRequestDecoderTest {
         testDecodeWholeRequestInMultipleSteps(CONTENT_MIXED_DELIMITERS);
     }
 
-    private static void testDecodeWholeRequestInMultipleSteps(byte[] content) {
-        for (int i = 1; i < content.length; i++) {
+    private void testDecodeWholeRequestInMultipleSteps(byte[] content) {
+        int last = content.length - 1;
+        for (int i = 1; i < last; i++) {
             testDecodeWholeRequestInMultipleSteps(content, i);
+            setUp();
         }
+        testDecodeWholeRequestInMultipleSteps(content, last);
     }
 
-    private static void testDecodeWholeRequestInMultipleSteps(byte[] content, int fragmentSize) {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+    private void testDecodeWholeRequestInMultipleSteps(byte[] content, int fragmentSize) {
         int headerLength = content.length - CONTENT_LENGTH;
 
         // split up the header
@@ -147,13 +167,13 @@ public class HttpRequestDecoderTest {
             }
 
             // if header is done it should produce an HttpRequest
-            channel.writeInbound(channel.bufferAllocator().allocate(content.length).writeBytes(content, a, amount));
+            channel.writeInbound(allocator.allocate(content.length).writeBytes(content, a, amount));
             a += amount;
         }
 
         for (int i = CONTENT_LENGTH; i > 0; i --) {
             // Should produce HttpContent
-            channel.writeInbound(channel.bufferAllocator().allocate(content.length)
+            channel.writeInbound(allocator.allocate(content.length)
                     .writeBytes(content, content.length - i, 1));
         }
 
@@ -179,19 +199,17 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testMultiLineHeader() {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
-        byte[] request = ("GET /some/path HTTP/1.1" + crlf +
+        String request = "GET /some/path HTTP/1.1" + crlf +
                 "Host: localhost" + crlf +
                 "MyTestHeader: part1" + crlf +
                 "              newLinePart2" + crlf +
                 "MyTestHeader2: part21" + crlf +
                 "\t            newLinePart22"
-                + crlf + crlf).getBytes(US_ASCII);
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(request.length).writeBytes(request)));
-        HttpRequest req = channel.readInbound();
-        assertEquals("part1 newLinePart2", req.headers().get(of("MyTestHeader")));
-        assertEquals("part21 newLinePart22", req.headers().get(of("MyTestHeader2")));
+                + crlf + crlf;
+        HttpRequest req = parseRequest(request);
+        assertEquals("part1 newLinePart2", req.headers().get("MyTestHeader"));
+        assertEquals("part21 newLinePart22", req.headers().get("MyTestHeader2"));
 
         LastHttpContent<?> c = channel.readInbound();
         c.close();
@@ -202,80 +220,71 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testEmptyHeaderValue() {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
-        byte[] request = ("GET /some/path HTTP/1.1" + crlf +
+        String request = "GET /some/path HTTP/1.1" + crlf +
                 "Host: localhost" + crlf +
-                "EmptyHeader:" + crlf + crlf).getBytes(US_ASCII);
-        channel.writeInbound(channel.bufferAllocator().allocate(request.length).writeBytes(request));
-        HttpRequest req = channel.readInbound();
-        assertEquals("", req.headers().get(of("EmptyHeader")));
+                "EmptyHeader:" + crlf + crlf;
+        HttpRequest req = parseRequest(request);
+        assertEquals("", req.headers().get("EmptyHeader"));
     }
 
     @Test
     public void test100Continue() {
-        HttpRequestDecoder decoder = new HttpRequestDecoder();
-        EmbeddedChannel channel = new EmbeddedChannel(decoder);
-        byte[] oversized =
-                ("PUT /file HTTP/1.1\r\n" +
+        String oversized =
+                "PUT /file HTTP/1.1\r\n" +
                 "Expect: 100-continue\r\n" +
-                "Content-Length: 1048576000\r\n\r\n").getBytes(US_ASCII);
+                "Content-Length: 1048576000\r\n\r\n";
 
-        channel.writeInbound(channel.bufferAllocator().allocate(oversized.length).writeBytes(oversized));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        HttpRequest request = parseRequest(oversized);
+        assertThat(request).isInstanceOf(HttpRequest.class);
 
         // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
         // so that the client can try again.
         decoder.reset();
 
         byte[] query = "GET /max-file-size HTTP/1.1\r\n\r\n".getBytes(US_ASCII);
-        channel.writeInbound(channel.bufferAllocator().allocate(query.length).writeBytes(query));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
-        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+        channel.writeInbound(allocator.copyOf(query));
+        assertThat((Object) channel.readInbound()).isInstanceOf(HttpRequest.class);
+        assertThat((Object) channel.readInbound()).isInstanceOf(LastHttpContent.class);
 
-        assertThat(channel.finish(), is(false));
+        assertFalse(channel.finish());
     }
 
     @Test
     public void test100ContinueWithBadClient() {
-        HttpRequestDecoder decoder = new HttpRequestDecoder();
-        EmbeddedChannel channel = new EmbeddedChannel(decoder);
-        byte[] oversized =
-                ("PUT /file HTTP/1.1\r\n" +
+        String oversized = "PUT /file HTTP/1.1\r\n" +
                 "Expect: 100-continue\r\n" +
                 "Content-Length: 1048576000\r\n\r\n" +
-                "WAY_TOO_LARGE_DATA_BEGINS").getBytes(US_ASCII);
+                "WAY_TOO_LARGE_DATA_BEGINS";
 
-        channel.writeInbound(channel.bufferAllocator().allocate(oversized.length).writeBytes(oversized));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        HttpRequest request = parseRequest(oversized);
+        assertThat(request).isInstanceOf(HttpRequest.class);
 
         HttpContent<?> prematureData = channel.readInbound();
         prematureData.close();
 
-        assertThat(channel.readInbound(), is(nullValue()));
+        assertThat((Object) channel.readInbound()).isNull();
 
         // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
         // so that the client can try again.
         decoder.reset();
 
         byte[] query = "GET /max-file-size HTTP/1.1\r\n\r\n".getBytes(US_ASCII);
-        channel.writeInbound(channel.bufferAllocator().allocate(query.length).writeBytes(query));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
-        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+        channel.writeInbound(allocator.copyOf(query));
+        assertThat((Object) channel.readInbound()).isInstanceOf(HttpRequest.class);
+        assertThat((Object) channel.readInbound()).isInstanceOf(LastHttpContent.class);
 
-        assertThat(channel.finish(), is(false));
+        assertFalse(channel.finish());
     }
 
     @Test
     public void testMessagesSplitBetweenMultipleBuffers() {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
-        byte[] str1 = ("GET /some/path HTTP/1.1" + crlf +
+        String str1 = "GET /some/path HTTP/1.1" + crlf +
                 "Host: localhost1" + crlf + crlf +
                 "GET /some/other/path HTTP/1.0" + crlf +
-                "Hos").getBytes(US_ASCII);
-        channel.writeInbound(channel.bufferAllocator().allocate(str1.length).writeBytes(str1));
-        HttpRequest req = channel.readInbound();
+                "Hos";
+        HttpRequest req = parseRequest(str1);
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
         assertEquals("/some/path", req.uri());
         assertEquals(1, req.headers().size());
@@ -283,10 +292,9 @@ public class HttpRequestDecoderTest {
         LastHttpContent<?> cnt = channel.readInbound();
         cnt.close();
 
-        byte[] str2 = ("t: localhost2" + crlf +
-                "content-length: 0" + crlf + crlf).getBytes(US_ASCII);
-        channel.writeInbound(channel.bufferAllocator().allocate(str2.length).writeBytes(str2));
-        req = channel.readInbound();
+        String str2 = "t: localhost2" + crlf +
+                "content-length: 0" + crlf + crlf;
+        req = parseRequest(str2);
         assertEquals(HttpVersion.HTTP_1_0, req.protocolVersion());
         assertEquals("/some/other/path", req.uri());
         assertEquals(2, req.headers().size());
@@ -299,12 +307,11 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testTooLargeInitialLine() {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(10, 1024));
-        byte[] requestStr = ("GET /some/path HTTP/1.1\r\n" +
-                "Host: localhost1\r\n\r\n").getBytes(US_ASCII);
+        setUpDecoder(new HttpRequestDecoder(10, 1024));
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Host: localhost1\r\n\r\n";
 
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
-        HttpRequest request = channel.readInbound();
+        HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
         assertFalse(channel.finish());
@@ -320,13 +327,12 @@ public class HttpRequestDecoderTest {
         testTooLargeInitialLineWithControlCharsOnly("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
     }
 
-    private static void testTooLargeInitialLineWithControlCharsOnly(String controlChars) {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(15, 1024));
-        byte[] requestStr = (controlChars + "GET / HTTP/1.1\r\n" +
-                "Host: localhost1\r\n\r\n").getBytes(US_ASCII);
+    private void testTooLargeInitialLineWithControlCharsOnly(String controlChars) {
+        setUpDecoder(new HttpRequestDecoder(15, 1024));
+        String requestStr = controlChars + "GET / HTTP/1.1\r\n" +
+                "Host: localhost1\r\n\r\n";
 
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
-        HttpRequest request = channel.readInbound();
+        HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
         assertFalse(channel.finish());
@@ -334,12 +340,10 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testInitialLineWithLeadingControlChars() {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
-        byte[] request = (crlf + "GET /some/path HTTP/1.1" + crlf +
-                "Host: localhost" + crlf + crlf).getBytes(US_ASCII);
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(request.length).writeBytes(request)));
-        HttpRequest req = channel.readInbound();
+        String request = crlf + "GET /some/path HTTP/1.1" + crlf +
+                "Host: localhost" + crlf + crlf;
+        HttpRequest req = parseRequest(request);
         assertEquals(HttpMethod.GET, req.method());
         assertEquals("/some/path", req.uri());
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
@@ -348,12 +352,11 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testTooLargeHeaders() {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(1024, 10));
-        byte[] requestStr = ("GET /some/path HTTP/1.1\r\n" +
-                "Host: localhost1\r\n\r\n").getBytes(US_ASCII);
+        setUpDecoder(new HttpRequestDecoder(1024, 10));
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Host: localhost1\r\n\r\n";
 
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
-        HttpRequest request = channel.readInbound();
+        HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongHttpHeaderException);
         assertFalse(channel.finish());
@@ -385,7 +388,7 @@ public class HttpRequestDecoderTest {
     }
 
     private void testHeaderNameStartsWithControlChar(int controlChar) {
-        Buffer requestBuffer = preferredAllocator().allocate(256);
+        Buffer requestBuffer = allocator.allocate(256);
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
                 "Host: netty.io\r\n", US_ASCII);
         requestBuffer.writeByte((byte) controlChar);
@@ -419,7 +422,7 @@ public class HttpRequestDecoderTest {
     }
 
     private void testHeaderNameEndsWithControlChar(int controlChar) {
-        Buffer requestBuffer = preferredAllocator().allocate(256);
+        Buffer requestBuffer = allocator.allocate(256);
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
                 "Host: netty.io\r\n", US_ASCII);
         requestBuffer.writeCharSequence("Transfer-Encoding", US_ASCII);
@@ -431,119 +434,131 @@ public class HttpRequestDecoderTest {
     @Test
     public void testWhitespace() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
-                "Transfer-Encoding : chunked\r\n" +
-                "Host: netty.io\r\n\r\n";
+                            "Transfer-Encoding : chunked\r\n" +
+                            "Host: netty.io\r\n\r\n";
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testWhitespaceInTransferEncoding01() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
-                "Transfer-Encoding : chunked\r\n" +
-                "Content-Length: 1\r\n" +
-                "Host: netty.io\r\n\r\n" +
-                "a";
+                            "Transfer-Encoding : chunked\r\n" +
+                            "Content-Length: 1\r\n" +
+                            "Host: netty.io\r\n\r\n" +
+                            'a';
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testWhitespaceInTransferEncoding02() {
         String requestStr = "POST / HTTP/1.1" +
-                "Transfer-Encoding : chunked\r\n" +
-                "Host: target.com" +
-                "Content-Length: 65\r\n\r\n" +
-                "0\r\n\r\n" +
-                "GET /maliciousRequest HTTP/1.1\r\n" +
-                "Host: evilServer.com\r\n" +
-                "Foo: x";
+                            "Transfer-Encoding : chunked\r\n" +
+                            "Host: target.com" +
+                            "Content-Length: 65\r\n\r\n" +
+                            "0\r\n\r\n" +
+                            "GET /maliciousRequest HTTP/1.1\r\n" +
+                            "Host: evilServer.com\r\n" +
+                            "Foo: x";
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testHeaderWithNoValueAndMissingColon() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
-                "Content-Length: 0\r\n" +
-                "Host:\r\n" +
-                "netty.io\r\n\r\n";
+                            "Content-Length: 0\r\n" +
+                            "Host:\r\n" +
+                            "netty.io\r\n\r\n";
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testMultipleContentLengthHeaders() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
-                "Content-Length: 1\r\n" +
-                "Content-Length: 0\r\n\r\n" +
-                "b";
+                            "Content-Length: 1\r\n" +
+                            "Content-Length: 0\r\n\r\n" +
+                            'b';
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testMultipleContentLengthHeaders2() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
-                "Content-Length: 1\r\n" +
-                "Connection: close\r\n" +
-                "Content-Length: 0\r\n\r\n" +
-                "b";
+                            "Content-Length: 1\r\n" +
+                            "Connection: close\r\n" +
+                            "Content-Length: 0\r\n\r\n" +
+                            'b';
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testContentLengthHeaderWithCommaValue() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
-                "Content-Length: 1,1\r\n\r\n" +
-                "b";
+                            "Content-Length: 1,1\r\n\r\n" +
+                            'b';
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testMultipleContentLengthHeadersWithFolding() {
         String requestStr = "POST / HTTP/1.1\r\n" +
-                "Host: example.com\r\n" +
-                "Connection: close\r\n" +
-                "Content-Length: 5\r\n" +
-                "Content-Length:\r\n" +
-                "\t6\r\n\r\n" +
-                "123456";
+                            "Host: example.com\r\n" +
+                            "Connection: close\r\n" +
+                            "Content-Length: 5\r\n" +
+                            "Content-Length:\r\n" +
+                            "\t6\r\n\r\n" +
+                            "123456";
         testInvalidHeaders0(requestStr);
     }
 
     @Test
     public void testContentLengthAndTransferEncodingHeadersWithVerticalTab() {
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, false);
+        setUp();
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, true);
     }
 
     @Test
     public void testContentLengthAndTransferEncodingHeadersWithCR() {
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0d, false);
+        setUp();
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0d, true);
     }
 
-    private static void testContentLengthAndTransferEncodingHeadersWithInvalidSeparator(
+    private void testContentLengthAndTransferEncodingHeadersWithInvalidSeparator(
             char separator, boolean extraLine) {
         String requestStr = "POST / HTTP/1.1\r\n" +
-                "Host: example.com\r\n" +
-                "Connection: close\r\n" +
-                "Content-Length: 9\r\n" +
-                "Transfer-Encoding:" + separator + "chunked\r\n\r\n" +
-                (extraLine ? "0\r\n\r\n" : "") +
-                "something\r\n\r\n";
+                            "Host: example.com\r\n" +
+                            "Connection: close\r\n" +
+                            "Content-Length: 9\r\n" +
+                            "Transfer-Encoding:" + separator + "chunked\r\n\r\n" +
+                            (extraLine? "0\r\n\r\n" : "") +
+                            "something\r\n\r\n";
         testInvalidHeaders0(requestStr);
+    }
+
+    private void testInvalidHeaders0(String request) {
+        testInvalidHeaders0(allocator.copyOf(request, US_ASCII));
+    }
+
+    private void testInvalidHeaders0(Buffer requestBuffer) {
+        assertTrue(channel.writeInbound(requestBuffer));
+        HttpRequest request = channel.readInbound();
+        assertThat(request.decoderResult().cause()).isInstanceOf(IllegalArgumentException.class);
+        assertTrue(request.decoderResult().isFailure());
+        assertFalse(channel.finish());
     }
 
     @Test
     public void testContentLengthHeaderAndChunked() {
-        byte[] requestStr = ("POST / HTTP/1.1\r\n" +
-                "Host: example.com\r\n" +
-                "Connection: close\r\n" +
-                "Content-Length: 5\r\n" +
-                "Transfer-Encoding: chunked\r\n\r\n" +
-                "0\r\n\r\n").getBytes(US_ASCII);
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(requestStr.length).writeBytes(requestStr)));
-        HttpRequest request = channel.readInbound();
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                            "Host: example.com\r\n" +
+                            "Connection: close\r\n" +
+                            "Content-Length: 5\r\n" +
+                            "Transfer-Encoding: chunked\r\n\r\n" +
+                            "0\r\n\r\n";
+        HttpRequest request = parseRequest(requestStr);
         assertFalse(request.decoderResult().isFailure());
-        assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
+        assertTrue(request.headers().contains("Transfer-Encoding", "chunked"));
         assertFalse(request.headers().contains("Content-Length"));
         channel.readInbound();
         assertFalse(channel.finish());
@@ -552,33 +567,240 @@ public class HttpRequestDecoderTest {
     @Test
     public void testHttpMessageDecoderResult() {
         String requestStr = "PUT /some/path HTTP/1.1\r\n" +
-                "Content-Length: 11\r\n" +
-                "Connection: close\r\n\r\n" +
-                "Lorem ipsum";
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(requestStr, US_ASCII)));
-        HttpRequest request = channel.readInbound();
+                            "Content-Length: 11\r\n" +
+                            "Connection: close\r\n\r\n" +
+                            "Lorem ipsum";
+        HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isSuccess());
-        assertThat(request.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
+        assertThat(request.decoderResult()).isInstanceOf(HttpMessageDecoderResult.class);
         HttpMessageDecoderResult decoderResult = (HttpMessageDecoderResult) request.decoderResult();
-        assertThat(decoderResult.initialLineLength(), is(23));
-        assertThat(decoderResult.headerSize(), is(35));
-        assertThat(decoderResult.totalSize(), is(58));
+        assertThat(decoderResult.initialLineLength()).isEqualTo(23);
+        assertThat(decoderResult.headerSize()).isEqualTo(35);
+        assertThat(decoderResult.totalSize()).isEqualTo(58);
         HttpContent<?> c = channel.readInbound();
         c.close();
         assertFalse(channel.finish());
     }
 
-    private static void testInvalidHeaders0(String request) {
-        testInvalidHeaders0(preferredAllocator().copyOf(request, US_ASCII));
+    @Test
+    public void cookieHeaderDecodingSingleCookie() {
+        String cookieString = "Cookie: myCookie=myValue";
+        HttpHeaders headers = parseRequestWithCookies(cookieString).headers();
+        assertThat(headers.getCookies()).hasSize(1);
+        HttpCookiePair cookie = headers.getCookies().iterator().next();
+        assertNotNull(cookie);
+        assertEquals("myValue", cookie.value());
     }
 
-    private static void testInvalidHeaders0(Buffer requestBuffer) {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(requestBuffer));
-        HttpRequest request = channel.readInbound();
-        assertThat(request.decoderResult().cause(), instanceOf(IllegalArgumentException.class));
-        assertTrue(request.decoderResult().isFailure());
-        assertFalse(channel.finish());
+    @Test
+    public void cookieHeaderDecodingMultipleCookies() {
+        String c1 = "myCookie=myValue;";
+        String c2 = "myCookie2=myValue2;";
+        String c3 = "myCookie3=myValue3;";
+
+        HttpHeaders headers = parseRequestWithCookies("Cookie: " + c1 + c2 + c3).headers();
+        assertThat(headers.getCookies()).hasSize(3);
+        Iterator<HttpCookiePair> it = headers.getCookies().iterator();
+        HttpCookiePair cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue", cookie.value());
+        cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue2", cookie.value());
+        cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue3", cookie.value());
+    }
+
+    @Test
+    public void cookieHeaderDecodingAllMultipleCookies() {
+        String c1 = "myCookie=myValue;";
+        String c2 = "myCookie=myValue2;";
+        String c3 = "myCookie=myValue3;";
+
+        HttpHeaders headers = parseRequestWithCookies("Cookie: " + c1 + c2 + c3).headers();
+        assertThat(headers.getCookies()).hasSize(3);
+        Iterator<HttpCookiePair> it = headers.getCookies().iterator();
+        HttpCookiePair cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue", cookie.value());
+        cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue2", cookie.value());
+        cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue3", cookie.value());
+    }
+
+    @Test
+    public void cookieHeaderDecodingGoogleAnalyticsCookie() {
+        String source =
+            "ARPT=LWUKQPSWRTUN04CKKJI; " +
+            "kw-2E343B92-B097-442c-BFA5-BE371E0325A2=unfinished_furniture; " +
+            "__utma=48461872.1094088325.1258140131.1258140131.1258140131.1; " +
+            "__utmb=48461872.13.10.1258140131; __utmc=48461872; " +
+            "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|" +
+                    "utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance/clearance/32/dept.html";
+        HttpHeaders headers = parseRequestWithCookies("Cookie: " + source).headers();
+        Iterator<HttpCookiePair> it = headers.getCookies().iterator();
+        HttpCookiePair c;
+
+        c = it.next();
+        assertEquals("ARPT", c.name());
+        assertEquals("LWUKQPSWRTUN04CKKJI", c.value());
+
+        c = it.next();
+        assertEquals("kw-2E343B92-B097-442c-BFA5-BE371E0325A2", c.name());
+        assertEquals("unfinished_furniture", c.value());
+
+        c = it.next();
+        assertEquals("__utma", c.name());
+        assertEquals("48461872.1094088325.1258140131.1258140131.1258140131.1", c.value());
+
+        c = it.next();
+        assertEquals("__utmb", c.name());
+        assertEquals("48461872.13.10.1258140131", c.value());
+
+        c = it.next();
+        assertEquals("__utmc", c.name());
+        assertEquals("48461872", c.value());
+
+        c = it.next();
+        assertEquals("__utmz", c.name());
+        assertEquals("48461872.1258140131.1.1.utmcsr=overstock.com|" +
+                "utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance/clearance/32/dept.html",
+                c.value());
+
+        assertFalse(it.hasNext());
+    }
+
+    @Test
+    public void cookieHeaderDecodingLongValue() {
+        String longValue =
+                "b___$Q__$ha__<NC=MN(F__%#4__<NC=MN(F__2_d____#=IvZB__2_F____'=KqtH__2-9____" +
+                "'=IvZM__3f:____$=HbQW__3g'____%=J^wI__3g-____%=J^wI__3g1____$=HbQW__3g2____" +
+                "$=HbQW__3g5____%=J^wI__3g9____$=HbQW__3gT____$=HbQW__3gX____#=J^wI__3gY____" +
+                "#=J^wI__3gh____$=HbQW__3gj____$=HbQW__3gr____$=HbQW__3gx____#=J^wI__3h_____" +
+                "$=HbQW__3h$____#=J^wI__3h'____$=HbQW__3h_____$=HbQW__3h0____%=J^wI__3h1____" +
+                "#=J^wI__3h2____$=HbQW__3h4____$=HbQW__3h7____$=HbQW__3h8____%=J^wI__3h:____" +
+                "#=J^wI__3h@____%=J^wI__3hB____$=HbQW__3hC____$=HbQW__3hL____$=HbQW__3hQ____" +
+                "$=HbQW__3hS____%=J^wI__3hU____$=HbQW__3h[____$=HbQW__3h^____$=HbQW__3hd____" +
+                "%=J^wI__3he____%=J^wI__3hf____%=J^wI__3hg____$=HbQW__3hh____%=J^wI__3hi____" +
+                "%=J^wI__3hv____$=HbQW__3i/____#=J^wI__3i2____#=J^wI__3i3____%=J^wI__3i4____" +
+                "$=HbQW__3i7____$=HbQW__3i8____$=HbQW__3i9____%=J^wI__3i=____#=J^wI__3i>____" +
+                "%=J^wI__3iD____$=HbQW__3iF____#=J^wI__3iH____%=J^wI__3iM____%=J^wI__3iS____" +
+                "#=J^wI__3iU____%=J^wI__3iZ____#=J^wI__3i]____%=J^wI__3ig____%=J^wI__3ij____" +
+                "%=J^wI__3ik____#=J^wI__3il____$=HbQW__3in____%=J^wI__3ip____$=HbQW__3iq____" +
+                "$=HbQW__3it____%=J^wI__3ix____#=J^wI__3j_____$=HbQW__3j%____$=HbQW__3j'____" +
+                "%=J^wI__3j(____%=J^wI__9mJ____'=KqtH__=SE__<NC=MN(F__?VS__<NC=MN(F__Zw`____" +
+                "%=KqtH__j+C__<NC=MN(F__j+M__<NC=MN(F__j+a__<NC=MN(F__j_.__<NC=MN(F__n>M____" +
+                "'=KqtH__s1X____$=MMyc__s1_____#=MN#O__ypn____'=KqtH__ypr____'=KqtH_#%h_____" +
+                "%=KqtH_#%o_____'=KqtH_#)H6__<NC=MN(F_#*%'____%=KqtH_#+k(____'=KqtH_#-E_____" +
+                "'=KqtH_#1)w____'=KqtH_#1)y____'=KqtH_#1*M____#=KqtH_#1*p____'=KqtH_#14Q__<N" +
+                "C=MN(F_#14S__<NC=MN(F_#16I__<NC=MN(F_#16N__<NC=MN(F_#16X__<NC=MN(F_#16k__<N" +
+                "C=MN(F_#17@__<NC=MN(F_#17A__<NC=MN(F_#1Cq____'=KqtH_#7)_____#=KqtH_#7)b____" +
+                "#=KqtH_#7Ww____'=KqtH_#?cQ____'=KqtH_#His____'=KqtH_#Jrh____'=KqtH_#O@M__<N" +
+                "C=MN(F_#O@O__<NC=MN(F_#OC6__<NC=MN(F_#Os.____#=KqtH_#YOW____#=H/Li_#Zat____" +
+                "'=KqtH_#ZbI____%=KqtH_#Zbc____'=KqtH_#Zbs____%=KqtH_#Zby____'=KqtH_#Zce____" +
+                "'=KqtH_#Zdc____%=KqtH_#Zea____'=KqtH_#ZhI____#=KqtH_#ZiD____'=KqtH_#Zis____" +
+                "'=KqtH_#Zj0____#=KqtH_#Zj1____'=KqtH_#Zj[____'=KqtH_#Zj]____'=KqtH_#Zj^____" +
+                "'=KqtH_#Zjb____'=KqtH_#Zk_____'=KqtH_#Zk6____#=KqtH_#Zk9____%=KqtH_#Zk<____" +
+                "'=KqtH_#Zl>____'=KqtH_#]9R____$=H/Lt_#]I6____#=KqtH_#]Z#____%=KqtH_#^*N____" +
+                "#=KqtH_#^:m____#=KqtH_#_*_____%=J^wI_#`-7____#=KqtH_#`T>____'=KqtH_#`T?____" +
+                "'=KqtH_#`TA____'=KqtH_#`TB____'=KqtH_#`TG____'=KqtH_#`TP____#=KqtH_#`U_____" +
+                "'=KqtH_#`U/____'=KqtH_#`U0____#=KqtH_#`U9____'=KqtH_#aEQ____%=KqtH_#b<)____" +
+                "'=KqtH_#c9-____%=KqtH_#dxC____%=KqtH_#dxE____%=KqtH_#ev$____'=KqtH_#fBi____" +
+                "#=KqtH_#fBj____'=KqtH_#fG)____'=KqtH_#fG+____'=KqtH_#g<d____'=KqtH_#g<e____" +
+                "'=KqtH_#g=J____'=KqtH_#gat____#=KqtH_#s`D____#=J_#p_#sg?____#=J_#p_#t<a____" +
+                "#=KqtH_#t<c____#=KqtH_#trY____$=JiYj_#vA$____'=KqtH_#xs_____'=KqtH_$$rO____" +
+                "#=KqtH_$$rP____#=KqtH_$(_%____'=KqtH_$)]o____%=KqtH_$_@)____'=KqtH_$_k]____" +
+                "'=KqtH_$1]+____%=KqtH_$3IO____%=KqtH_$3J#____'=KqtH_$3J.____'=KqtH_$3J:____" +
+                "#=KqtH_$3JH____#=KqtH_$3JI____#=KqtH_$3JK____%=KqtH_$3JL____'=KqtH_$3JS____" +
+                "'=KqtH_$8+M____#=KqtH_$99d____%=KqtH_$:Lw____#=LK+x_$:N@____#=KqtG_$:NC____" +
+                "#=KqtG_$:hW____'=KqtH_$:i[____'=KqtH_$:ih____'=KqtH_$:it____'=KqtH_$:kO____" +
+                "'=KqtH_$>*B____'=KqtH_$>hD____+=J^x0_$?lW____'=KqtH_$?ll____'=KqtH_$?lm____" +
+                "%=KqtH_$?mi____'=KqtH_$?mx____'=KqtH_$D7]____#=J_#p_$D@T____#=J_#p_$V<g____" +
+                "'=KqtH";
+
+        HttpHeaders headers = parseRequestWithCookies("Cookie: bh=\"" + longValue + "\";").headers();
+        assertThat(headers.getCookies()).hasSize(1);
+        HttpCookiePair c = headers.getCookies().iterator().next();
+        assertEquals("bh", c.name());
+        assertEquals(longValue, c.value());
+    }
+
+    /**
+     * In Netty 5 and beyond, we no longer support RFC 2965 cookies, so they will parse as if they are RFC 6265 cookies.
+     * In RFC 6265, the $ character no longer has any special meaning when used as a cookie name prefix.
+     */
+    @Test
+    public void cookieHeaderDecodingOldRFC2965Cookies() {
+        String source = "$Version=\"1\"; " +
+                "Part_Number1=\"Riding_Rocket_0023\"; $Path=\"/acme/ammo\"; " +
+                "Part_Number2=\"Rocket_Launcher_0001\"; $Path=\"/acme\"";
+
+        HttpHeaders headers = parseRequestWithCookies("Cookie: " + source).headers();
+        Iterator<HttpCookiePair> it = headers.getCookies().iterator();
+        HttpCookiePair c;
+
+        c = it.next();
+        assertEquals("$Version", c.name());
+        assertEquals("1", c.value());
+
+        c = it.next();
+        assertEquals("Part_Number1", c.name());
+        assertEquals("Riding_Rocket_0023", c.value());
+
+        c = it.next();
+        assertEquals("$Path", c.name());
+        assertEquals("/acme/ammo", c.value());
+
+        c = it.next();
+        assertEquals("Part_Number2", c.name());
+        assertEquals("Rocket_Launcher_0001", c.value());
+
+        // Duplicate cookie names are strongly discouraged, but we still support them.
+        c = it.next();
+        assertEquals("$Path", c.name());
+        assertEquals("/acme", c.value());
+
+        assertFalse(it.hasNext());
+    }
+
+    @Test
+    public void cookieHeaderRejectCookieValueWithSemicolon() {
+        HttpHeaders headers = parseRequestWithCookies("Cookie: name=\"foo;bar\";").headers();
+        // The cookie should be there, but fail to parse.
+        assertThrows(IllegalArgumentException.class, () -> headers.getCookies().iterator().next());
+    }
+
+    @Test
+    public void cookieHeaderCaseSensitiveNames() {
+        HttpHeaders headers = parseRequestWithCookies("Cookie: session_id=a; Session_id=b;").headers();
+        Iterator<HttpCookiePair> it = headers.getCookies().iterator();
+        HttpCookiePair c;
+
+        c = it.next();
+        assertEquals("session_id", c.name());
+        assertEquals("a", c.value());
+
+        c = it.next();
+        assertEquals("Session_id", c.name());
+        assertEquals("b", c.value());
+
+        assertFalse(it.hasNext());
+    }
+
+    private HttpRequest parseRequestWithCookies(String cookieString) {
+        String requestStr = "GET / HTTP/1.1\r\n" +
+                            "Host: example.com\r\n" +
+                            cookieString +
+                            "\r\n\r\n";
+        return parseRequest(requestStr);
+    }
+
+    private HttpRequest parseRequest(String requestStr) {
+        assertTrue(channel.writeInbound(allocator.copyOf(requestStr, US_ASCII)));
+        return channel.readInbound();
     }
 }

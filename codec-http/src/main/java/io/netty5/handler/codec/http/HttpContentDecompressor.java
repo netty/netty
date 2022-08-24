@@ -54,7 +54,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
     }
 
     @Override
-    protected Decompressor newContentDecoder(String contentEncoding) throws Exception {
+    protected Decompressor newContentDecoder(CharSequence contentEncoding) throws Exception {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
             X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return ZlibDecompressor.newFactory(ZlibWrapper.GZIP).get();

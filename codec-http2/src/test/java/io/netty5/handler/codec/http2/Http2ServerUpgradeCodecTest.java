@@ -21,11 +21,11 @@ import io.netty5.channel.DefaultChannelId;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -72,7 +72,7 @@ public class Http2ServerUpgradeCodecTest {
             codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
         }
         channel.executor().execute(() -> {
-            assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
+            assertTrue(codec.prepareUpgradeResponse(ctx, request, HttpHeaders.newHeaders()));
             codec.upgradeTo(ctx, request);
         });
 

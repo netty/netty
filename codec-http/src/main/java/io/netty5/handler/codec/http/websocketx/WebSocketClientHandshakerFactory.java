@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 
 import java.net.URI;
 

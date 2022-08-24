@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -60,7 +59,7 @@ public class HttpInvalidMessageTest {
         DecoderResult dr = req.decoderResult();
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
-        assertEquals("Good Value", req.headers().get(of("Good_Name")));
+        assertEquals("Good Value", req.headers().get("Good_Name"));
         assertEquals("/maybe-something", req.uri());
         ensureInboundTrafficDiscarded(ch);
     }
@@ -93,7 +92,7 @@ public class HttpInvalidMessageTest {
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
         assertEquals("Maybe OK", res.status().reasonPhrase());
-        assertEquals("Good Value", res.headers().get(of("Good_Name")));
+        assertEquals("Good Value", res.headers().get("Good_Name"));
         ensureInboundTrafficDiscarded(ch);
     }
 

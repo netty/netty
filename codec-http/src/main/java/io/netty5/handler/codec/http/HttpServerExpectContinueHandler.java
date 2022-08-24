@@ -31,7 +31,7 @@ import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
  * {@link HttpResponse} to {@link HttpRequest}s which contain a 'expect: 100-continue' header. It
  * should only be used for applications which do <b>not</b> install the {@link HttpObjectAggregator}.
  * <p>
- * By default it accepts all expectations.
+ * By default, it accepts all expectations.
  * <p>
  * Since {@link HttpServerExpectContinueHandler} expects {@link HttpRequest}s it should be added after {@link
  * HttpServerCodec} but before any other handlers that might send a {@link HttpResponse}. <blockquote>
@@ -63,7 +63,7 @@ public class HttpServerExpectContinueHandler implements ChannelHandler {
 
     private static DefaultFullHttpResponse newEmptyResponse(BufferAllocator allocator, HttpResponseStatus status) {
         final DefaultFullHttpResponse resp = new DefaultFullHttpResponse(HTTP_1_1, status, allocator.allocate(0));
-        resp.headers().set(CONTENT_LENGTH, 0);
+        resp.headers().set(CONTENT_LENGTH, HttpHeaderValues.ZERO);
         return resp;
     }
 

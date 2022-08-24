@@ -14,7 +14,6 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-
 /**
  * {@link WebSocketHandshakeException} that is used when a handshake failed due a configured timeout.
  */

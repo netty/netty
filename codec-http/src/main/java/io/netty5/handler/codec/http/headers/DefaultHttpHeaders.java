@@ -51,6 +51,7 @@ import static io.netty5.handler.codec.http.headers.HeaderUtils.pathMatches;
 import static io.netty5.handler.codec.http.headers.HeaderUtils.validateToken;
 import static io.netty5.util.AsciiString.contentEquals;
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
+import static io.netty5.util.AsciiString.trim;
 import static java.util.Collections.emptyIterator;
 
 /**
@@ -82,8 +83,51 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     }
 
     @Override
+    public boolean contains(CharSequence key, CharSequence value) {
+        return contains(key, value, DefaultHttpHeaders::containsCommaSeparatedTrimmedCaseSensitive);
+    }
+
+    @Override
     public boolean containsIgnoreCase(final CharSequence name, final CharSequence value) {
-        return contains(name, value, AsciiString::contentEqualsIgnoreCase);
+        return contains(name, value, DefaultHttpHeaders::containsCommaSeparatedTrimmedCaseInsensitive);
+    }
+
+    private static boolean containsCommaSeparatedTrimmedCaseSensitive(CharSequence expected, CharSequence rawNext) {
+        int begin = 0;
+        int end;
+        if ((end = AsciiString.indexOf(rawNext, ',', begin)) == -1) {
+            return contentEquals(trim(rawNext), expected);
+        }
+        do {
+            if (contentEquals(trim(rawNext.subSequence(begin, end)), expected)) {
+                return true;
+            }
+            begin = end + 1;
+        } while ((end = AsciiString.indexOf(rawNext, ',', begin)) != -1);
+
+        if (begin < rawNext.length()) {
+            return contentEquals(trim(rawNext.subSequence(begin, rawNext.length())), expected);
+        }
+        return false;
+    }
+
+    private static boolean containsCommaSeparatedTrimmedCaseInsensitive(CharSequence expected, CharSequence rawNext) {
+        int begin = 0;
+        int end;
+        if ((end = AsciiString.indexOf(rawNext, ',', begin)) == -1) {
+            return contentEqualsIgnoreCase(trim(rawNext), expected);
+        }
+        do {
+            if (contentEqualsIgnoreCase(trim(rawNext.subSequence(begin, end)), expected)) {
+                return true;
+            }
+            begin = end + 1;
+        } while ((end = AsciiString.indexOf(rawNext, ',', begin)) != -1);
+
+        if (begin < rawNext.length()) {
+            return contentEqualsIgnoreCase(trim(rawNext.subSequence(begin, rawNext.length())), expected);
+        }
+        return false;
     }
 
     @Nullable
@@ -607,6 +651,14 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         HeaderUtils.validateHeaderValue(value);
     }
 
+    @Override
+    public HttpHeaders copy() {
+        DefaultHttpHeaders copy = new DefaultHttpHeaders(
+                entries.length, validateNames, validateCookies, validateValues);
+        copy.putAll(this);
+        return copy;
+    }
+
     @Nullable
     @Override
     public CharSequence get(final CharSequence name) {
@@ -662,7 +714,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     @Override
     public HttpHeaders add(final HttpHeaders headers) {
         if (headers == this) {
-            return this;
+            throw new IllegalArgumentException("HttpHeaders object cannot be added to itself.");
         }
         if (headers instanceof MultiMap) {
             putAll((MultiMap<? extends CharSequence, ? extends CharSequence>) headers);
@@ -731,7 +783,8 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
 
     @Override
     public String toString() {
-        return toString(DEFAULT_HEADER_FILTER);
+//        return toString(DEFAULT_HEADER_FILTER);
+        return toString((k, v) -> v);
     }
 
     @Override

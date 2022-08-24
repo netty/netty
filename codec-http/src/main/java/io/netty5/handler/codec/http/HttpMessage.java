@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 
 /**
  * An interface that defines an HTTP message, providing common properties for

@@ -478,7 +478,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * @throws IllegalArgumentException if the specified status line is malformed
      */
     public static HttpResponseStatus parseLine(CharSequence line) {
-        return (line instanceof AsciiString) ? parseLine((AsciiString) line) : parseLine(line.toString());
+        return line instanceof AsciiString? parseLine((AsciiString) line) : parseLine(line.toString());
     }
 
     /**
@@ -591,9 +591,9 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * Returns the class of this {@link HttpResponseStatus}
      */
     public HttpStatusClass codeClass() {
-        HttpStatusClass type = this.codeClass;
+        HttpStatusClass type = codeClass;
         if (type == null) {
-            this.codeClass = type = HttpStatusClass.valueOf(code);
+            codeClass = type = HttpStatusClass.valueOf(code);
         }
         return type;
     }

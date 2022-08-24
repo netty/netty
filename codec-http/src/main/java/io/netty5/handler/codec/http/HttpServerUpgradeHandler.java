@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.internal.DelegatingChannelHandlerContext;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.channel.ChannelFutureListeners;
@@ -24,6 +25,7 @@ import io.netty5.util.concurrent.Future;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import static io.netty5.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
@@ -303,14 +305,15 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
         }
 
         // Make sure the CONNECTION header is present.
-        List<String> connectionHeaderValues = request.headers().getAll(HttpHeaderNames.CONNECTION);
+        Iterator<CharSequence> connectionHeaderValues = request.headers().valuesIterator(HttpHeaderNames.CONNECTION);
 
-        if (connectionHeaderValues == null || connectionHeaderValues.isEmpty()) {
+        if (connectionHeaderValues == null || !connectionHeaderValues.hasNext()) {
             return false;
         }
 
-        final StringBuilder concatenatedConnectionValue = new StringBuilder(connectionHeaderValues.size() * 10);
-        for (CharSequence connectionHeaderValue : connectionHeaderValues) {
+        final StringBuilder concatenatedConnectionValue = new StringBuilder();
+        while (connectionHeaderValues.hasNext()) {
+            CharSequence connectionHeaderValue = connectionHeaderValues.next();
             concatenatedConnectionValue.append(connectionHeaderValue).append(COMMA);
         }
         concatenatedConnectionValue.setLength(concatenatedConnectionValue.length() - 1);
@@ -350,7 +353,7 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
         ctx.fireChannelInboundEvent(new UpgradeEvent(upgradeProtocol, request));
 
         // Remove this handler from the pipeline.
-        ctx.pipeline().remove(HttpServerUpgradeHandler.this);
+        ctx.pipeline().remove(this);
 
         // Add the listener last to avoid firing upgrade logic after
         // the channel is already closed since the listener may fire

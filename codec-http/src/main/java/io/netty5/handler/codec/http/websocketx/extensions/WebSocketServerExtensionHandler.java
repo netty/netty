@@ -18,10 +18,10 @@ package io.netty5.handler.codec.http.websocketx.extensions;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 
@@ -34,11 +34,11 @@ import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
 
 /**
  * This handler negotiates and initializes the WebSocket Extensions.
- *
+ * <p>
  * It negotiates the extensions based on the client desired order,
  * ensures that the successfully negotiated extensions are consistent between them,
  * and initializes the channel pipeline with the extension decoder and encoder.
- *
+ * <p>
  * Find a basic implementation for compression extensions at
  * <tt>io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler</tt>.
  */
@@ -65,7 +65,7 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
             HttpRequest request = (HttpRequest) msg;
 
             if (WebSocketExtensionUtil.isWebsocketUpgrade(request.headers())) {
-                String extensionsHeader = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+                CharSequence extensionsHeader = request.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
                 if (extensionsHeader != null) {
                     List<WebSocketExtensionData> extensions =
@@ -110,7 +110,7 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
                 FutureListener<Void> listener = null;
                 if (WebSocketExtensionUtil.isWebsocketUpgrade(headers)) {
                     if (validExtensions != null) {
-                        String headerValue = headers.getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+                        CharSequence headerValue = headers.get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
                         List<WebSocketExtensionData> extraExtensions =
                                 new ArrayList<>(extensionHandshakers.size());
                         for (WebSocketServerExtension extension : validExtensions) {
@@ -132,9 +132,7 @@ public class WebSocketServerExtensionHandler implements ChannelHandler {
                             }
                         };
 
-                        if (newHeaderValue != null) {
-                            headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
-                        }
+                        headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
                     }
                     Future<Void> f = ctx.write(httpResponse);
                     if (listener != null) {

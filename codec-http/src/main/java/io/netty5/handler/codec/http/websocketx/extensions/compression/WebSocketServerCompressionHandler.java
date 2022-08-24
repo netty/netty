@@ -20,7 +20,7 @@ import io.netty5.handler.codec.http.websocketx.extensions.WebSocketServerExtensi
 /**
  * Extends <tt>io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketServerExtensionHandler</tt>
  * to handle the most common WebSocket Compression Extensions.
- *
+ * <p>
  * See <tt>io.netty5.example.http.websocketx.html5.WebSocketServer</tt> for usage.
  */
 public class WebSocketServerCompressionHandler extends WebSocketServerExtensionHandler {

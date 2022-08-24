@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,17 +31,17 @@ public class DefaultHttpRequestTest {
 
         // Insert sample keys.
         for (int i = 0; i < 1000; i ++) {
-            h.set(of(String.valueOf(i)), AsciiString.EMPTY_STRING);
+            h.set(String.valueOf(i), AsciiString.EMPTY_STRING);
         }
 
         // Remove in reversed order.
         for (int i = 999; i >= 0; i --) {
-            h.remove(of(String.valueOf(i)));
+            h.remove(String.valueOf(i));
         }
 
         // Check if random access returns nothing.
         for (int i = 0; i < 1000; i ++) {
-            assertNull(h.get(of(String.valueOf(i))));
+            assertNull(h.get(String.valueOf(i)));
         }
 
         // Check if sequential access returns nothing.

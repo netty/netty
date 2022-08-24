@@ -986,10 +986,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string with characters {@code <= \\u0020} removed from the beginning and the end.
      */
     public static CharSequence trim(CharSequence c) {
-        if (c instanceof AsciiString) {
+        if (c.getClass() == AsciiString.class) {
             return ((AsciiString) c).trim();
         }
-        if (c instanceof String) {
+        if (c.getClass() == String.class) {
             return ((String) c).trim();
         }
         int start = 0, last = c.length() - 1;
@@ -1227,7 +1227,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                     start + " would go out of bounds.");
         }
         final int startWithOffset = start + offset;
-        return (char) ((b2c(value[startWithOffset]) << 8) | b2c(value[startWithOffset + 1]));
+        return (char) (b2c(value[startWithOffset]) << 8 | b2c(value[startWithOffset + 1]));
     }
 
     public short parseShort() {
@@ -1545,6 +1545,28 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             }
         }
         return true;
+    }
+
+    /**
+     * Create a subsequence of the given sequence.
+     * Equivalent to {@link #subSequence(int, int)} and {@link String#substring(int, int)}.
+     *
+     * @param sequence The sequence to extract from.
+     * @param start The start index, inclusive.
+     * @param end The end index, exclusive.
+     * @return The subsequence.
+     */
+    public static CharSequence substring(CharSequence sequence, int start, int end) {
+        if (sequence.getClass() == AsciiString.class) {
+            return ((AsciiString) sequence).subSequence(start, end);
+        }
+        String str;
+        if (sequence.getClass() == String.class) {
+            str = (String) sequence;
+        } else {
+            str = sequence.toString();
+        }
+        return str.substring(start, end);
     }
 
     private static AsciiString[] toAsciiStringArray(String[] jdkResult) {

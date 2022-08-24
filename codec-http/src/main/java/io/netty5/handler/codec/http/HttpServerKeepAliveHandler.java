@@ -19,6 +19,7 @@ import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
 
 import static io.netty5.handler.codec.http.HttpUtil.isContentLengthSet;
@@ -126,8 +127,7 @@ public class HttpServerKeepAliveHandler implements ChannelHandler {
     }
 
     private static boolean isMultipart(HttpResponse response) {
-        String contentType = response.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        return contentType != null &&
-               contentType.regionMatches(true, 0, MULTIPART_PREFIX, 0, MULTIPART_PREFIX.length());
+        CharSequence contentType = response.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        return AsciiString.regionMatches(contentType, true, 0, MULTIPART_PREFIX, 0, MULTIPART_PREFIX.length());
     }
 }

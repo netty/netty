@@ -16,9 +16,11 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Send;
-import io.netty5.handler.codec.DefaultHeaders.NameValidator;
 import io.netty5.util.internal.StringUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map.Entry;
 
@@ -61,7 +63,7 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     }
 
     private void appendHeaders(StringBuilder buf) {
-        for (Entry<String, String> e : trailingHeaders()) {
+        for (Entry<CharSequence, CharSequence> e : trailingHeaders()) {
             buf.append(e.getKey());
             buf.append(": ");
             buf.append(e.getValue());
@@ -102,18 +104,18 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     }
 
     private static final class TrailingHttpHeaders extends DefaultHttpHeaders {
-        private static final NameValidator<CharSequence> TrailerNameValidator = name -> {
-            DefaultHttpHeaders.HttpNameValidator.validateName(name);
-            if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
-                    || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
-                    || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
-                throw new IllegalArgumentException("prohibited trailing header: " + name);
-            }
-        };
-
-        @SuppressWarnings({ "unchecked" })
         TrailingHttpHeaders(boolean validate) {
-            super(validate, validate ? TrailerNameValidator : NameValidator.NOT_NULL);
+            super(16, validate, validate, validate);
+        }
+
+        @Override
+        protected CharSequence validateKey(@Nullable CharSequence name) {
+            if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
+                || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
+                || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
+                throw new IllegalArgumentException("Prohibited trailing header: " + name);
+            }
+            return super.validateKey(name);
         }
     }
 }

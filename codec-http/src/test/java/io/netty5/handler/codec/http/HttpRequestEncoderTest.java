@@ -19,6 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -200,7 +201,7 @@ public class HttpRequestEncoderTest {
 
     /**
      * A test that checks for a NPE that would occur if when processing {@link EmptyLastHttpContent}
-     * when a certain initialization order of {@link EmptyHttpHeaders} would occur.
+     * when a certain initialization order of {@link HttpHeaders#emptyHeaders()} would occur.
      */
     @Test
     public void testForChunkedRequestNpe() {
@@ -271,7 +272,7 @@ public class HttpRequestEncoderTest {
     }
 
     /**
-     * This class is required to triggered the desired initialization order of {@link EmptyHttpHeaders}.
+     * This class is required to triggered the desired initialization order of {@link HttpHeaders#emptyHeaders()}.
      * If {@link DefaultHttpRequest} is used, the {@link HttpHeaders} class will be initialized before {@link HttpUtil}
      * and the test won't trigger the original issue.
      */
@@ -298,9 +299,7 @@ public class HttpRequestEncoderTest {
 
         @Override
         public HttpHeaders headers() {
-            DefaultHttpHeaders headers = new DefaultHttpHeaders();
-            headers.add("Transfer-Encoding", "chunked");
-            return headers;
+            return HttpHeaders.newHeaders().add("Transfer-Encoding", "chunked");
         }
 
         @Override

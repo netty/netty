@@ -58,7 +58,7 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
                 // Set Content-Length: 0
                 // https://httpstatuses.com/205
-                msg.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+                msg.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
             }
         }
     }

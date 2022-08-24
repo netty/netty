@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferClosedException;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Send;
 
 import static java.util.Objects.requireNonNull;
@@ -41,7 +42,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
                                   Buffer payload, boolean validateHeaders) {
         super(httpVersion, method, uri, validateHeaders);
         this.payload = requireNonNull(payload, "payload");
-        trailingHeader = new DefaultHttpHeaders(validateHeaders);
+        trailingHeader = HttpHeaders.newHeaders(validateHeaders);
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,

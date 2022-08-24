@@ -120,10 +120,10 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
         String uri = req.uri();
         boolean checkStartUri = uri.startsWith(websocketPath);
         boolean checkNextUri = "/".equals(websocketPath) || checkNextUri(uri, websocketPath);
-        return serverConfig.checkStartsWith() ? (checkStartUri && checkNextUri) : uri.equals(websocketPath);
+        return serverConfig.checkStartsWith() ? checkStartUri && checkNextUri : uri.equals(websocketPath);
     }
 
-    private boolean checkNextUri(String uri, String websocketPath) {
+    private static boolean checkNextUri(String uri, String websocketPath) {
         int len = websocketPath.length();
         if (uri.length() > len) {
             char nextUri = uri.charAt(len);
@@ -145,7 +145,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
             // SSL in use so use Secure WebSockets
             protocol = "wss";
         }
-        String host = req.headers().get(HttpHeaderNames.HOST);
+        CharSequence host = req.headers().get(HttpHeaderNames.HOST);
         return protocol + "://" + host + path;
     }
 

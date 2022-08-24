@@ -19,8 +19,8 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.handler.codec.http.FullHttpRequest;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -28,6 +28,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import static io.netty5.handler.codec.base64.Base64Dialect.URL_SAFE;
@@ -101,18 +102,22 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
 
     @Override
     public boolean prepareUpgradeResponse(ChannelHandlerContext ctx, FullHttpRequest upgradeRequest,
-            HttpHeaders headers) {
+                                          HttpHeaders headers) {
         try {
             // Decode the HTTP2-Settings header and set the settings on the handler to make
             // sure everything is fine with the request.
-            List<String> upgradeHeaders = upgradeRequest.headers().getAll(HTTP_UPGRADE_SETTINGS_HEADER);
-            if (upgradeHeaders.size() != 1) {
-                throw new IllegalArgumentException("There must be 1 and only 1 "
-                        + HTTP_UPGRADE_SETTINGS_HEADER + " header.");
+            Iterator<CharSequence> upgradeHeaders = upgradeRequest.headers().valuesIterator(HTTP_UPGRADE_SETTINGS_HEADER);
+            CharSequence settingHeader;
+            if (upgradeHeaders.hasNext()) {
+                settingHeader = upgradeHeaders.next();
+                if (!upgradeHeaders.hasNext()) {
+                    // Everything looks good.
+                    settings = decodeSettingsHeader(ctx, settingHeader);
+                    return true;
+                }
             }
-            settings = decodeSettingsHeader(ctx, upgradeHeaders.get(0));
-            // Everything looks good.
-            return true;
+            throw new IllegalArgumentException("There must be 1 and only 1 "
+                                               + HTTP_UPGRADE_SETTINGS_HEADER + " header.");
         } catch (Throwable cause) {
             logger.info("Error during upgrade to HTTP/2", cause);
             return false;

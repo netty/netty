@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -30,6 +31,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -123,10 +125,13 @@ public class HttpServerUpgradeHandlerTest {
 
         channel.flushOutbound();
         try (Buffer upgradeMessage = channel.readOutbound()) {
-            String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
-                    "connection: upgrade\r\n" +
-                    "upgrade: nextprotocol\r\n\r\n";
-            assertEquals(expectedHttpResponse, upgradeMessage.toString(US_ASCII));
+            String upgradeMsgStr = upgradeMessage.toString(US_ASCII);
+            assertThat(upgradeMsgStr).startsWith("HTTP/1.1 101 Switching Protocols\r\n");
+            assertThat(upgradeMsgStr.lines()).contains(
+                    "connection: upgrade",
+                    "upgrade: nextprotocol"
+            );
+            assertThat(upgradeMsgStr).endsWith("\r\n\r\n");
             assertTrue(upgradeMessage.isAccessible());
         }
         assertFalse(channel.finishAndReleaseAll());
@@ -144,7 +149,7 @@ public class HttpServerUpgradeHandlerTest {
                 new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, factory) {
             @Override
             protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
-                return !req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false);
+                return !req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade");
             }
         };
 
@@ -163,8 +168,8 @@ public class HttpServerUpgradeHandlerTest {
 
         HttpRequest req = channel.readInbound();
         assertFalse(req instanceof FullHttpRequest); // Should not be aggregated.
-        assertTrue(req.headers().contains(HttpHeaderNames.CONNECTION, "Upgrade", false));
-        assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false));
+        assertTrue(req.headers().contains(HttpHeaderNames.CONNECTION, "Upgrade"));
+        assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade"));
         assertTrue(channel.readInbound() instanceof LastHttpContent);
         assertNull(channel.readInbound());
 
@@ -197,7 +202,7 @@ public class HttpServerUpgradeHandlerTest {
 
         HttpRequest req = channel.readInbound();
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
-        assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "h2c", false));
+        assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "h2c"));
         assertFalse(req.headers().contains(HttpHeaderNames.CONNECTION));
         Resource.dispose(req);
         assertNull(channel.readInbound());

@@ -24,7 +24,7 @@ import static io.netty5.handler.codec.http.HttpObjectEncoder.CRLF_SHORT;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 final class HttpHeadersEncoder {
-    private static final short COLON_AND_SPACE_SHORT = (COLON << 8) | SP;
+    private static final short COLON_AND_SPACE_SHORT = COLON << 8 | SP;
 
     private HttpHeadersEncoder() {
     }

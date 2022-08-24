@@ -23,10 +23,13 @@ import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.PrematureChannelClosureException;
 import io.netty5.handler.codec.TooLongFrameException;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.AsciiString;
 import io.netty5.util.ByteProcessor;
 import io.netty5.util.internal.AppendableCharSequence;
 
-import java.util.List;
+import java.util.Arrays;
+import java.util.Iterator;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
@@ -499,10 +502,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (msg.status().code() != HttpResponseStatus.SWITCHING_PROTOCOLS.code()) {
             return false;
         }
-        String newProtocol = msg.headers().get(HttpHeaderNames.UPGRADE);
+        CharSequence newProtocol = msg.headers().get(HttpHeaderNames.UPGRADE);
         return newProtocol == null ||
-                !newProtocol.contains(HttpVersion.HTTP_1_0.text()) &&
-                !newProtocol.contains(HttpVersion.HTTP_1_1.text());
+               !AsciiString.contains(newProtocol, HttpVersion.HTTP_1_0.text()) &&
+               !AsciiString.contains(newProtocol, HttpVersion.HTTP_1_1.text());
     }
 
     /**
@@ -609,17 +612,18 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         HttpMessageDecoderResult decoderResult = new HttpMessageDecoderResult(lineParser.size, headerParser.size);
         message.setDecoderResult(decoderResult);
 
-        List<String> contentLengthFields = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-        if (!contentLengthFields.isEmpty()) {
+        Iterator<CharSequence> contentLengthFields = headers.valuesIterator(HttpHeaderNames.CONTENT_LENGTH);
+        boolean hasContentLength = contentLengthFields.hasNext();
+        if (hasContentLength) {
             HttpVersion version = message.protocolVersion();
-            boolean isHttp10OrEarlier = version.majorVersion() < 1 || (version.majorVersion() == 1
-                    && version.minorVersion() == 0);
+            boolean isHttp10OrEarlier = version.majorVersion() < 1 || version.majorVersion() == 1
+                                                                      && version.minorVersion() == 0;
             // Guard against multiple Content-Length headers as stated in
             // https://tools.ietf.org/html/rfc7230#section-3.3.2:
             contentLength = HttpUtil.normalizeAndGetContentLength(contentLengthFields,
                     isHttp10OrEarlier, allowDuplicateContentLengths);
             if (contentLength != -1) {
-                headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+                headers.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(contentLength));
             }
         }
 
@@ -627,7 +631,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
         } else if (HttpUtil.isTransferEncodingChunked(message)) {
-            if (!contentLengthFields.isEmpty() && message.protocolVersion() == HttpVersion.HTTP_1_1) {
+            if (hasContentLength && message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 handleTransferEncodingChunkedWithContentLength(message);
             }
             return State.READ_CHUNK_SIZE;
@@ -643,7 +647,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * The default behavior is to <i>remove</i> the Content-Length field, but this method could be overridden
      * to change the behavior (to, e.g., throw an exception and produce an invalid message).
      * <p>
-     * See: https://tools.ietf.org/html/rfc7230#section-3.3.3
+     * See: <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230 section-3.3.3</a>:
      * <pre>
      *     If a message is received with both a Transfer-Encoding and a
      *     Content-Length header field, the Transfer-Encoding overrides the
@@ -654,10 +658,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      *     a message downstream.
      * </pre>
      * Also see:
-     * https://github.com/apache/tomcat/blob/b693d7c1981fa7f51e58bc8c8e72e3fe80b7b773/
-     * java/org/apache/coyote/http11/Http11Processor.java#L747-L755
-     * https://github.com/nginx/nginx/blob/0ad4393e30c119d250415cb769e3d8bc8dce5186/
-     * src/http/ngx_http_request.c#L1946-L1953
+     * https://github.com/apache/tomcat/blob/b693d7c1981/java/org/apache/coyote/http11/Http11Processor.java#L747-L755
+     * https://github.com/nginx/nginx/blob/0ad4393e30c11/src/http/ngx_http_request.c#L1946-L1953
      */
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
         message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
@@ -690,14 +692,17 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         while (line.length() > 0) {
             char firstChar = line.charAtUnsafe(0);
             if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                List<String> current = trailer.trailingHeaders().getAll(lastHeader);
-                if (!current.isEmpty()) {
-                    int lastPos = current.size() - 1;
+                Iterator<CharSequence> itr = trailer.trailingHeaders().valuesIterator(lastHeader);
+                CharSequence last = null;
+                while (itr.hasNext()) {
+                    last = itr.next();
+                }
+                if (last != null) {
+                    itr.remove();
                     //please do not make one line from below code
                     //as it breaks +XX:OptimizeStringConcat optimization
                     String lineTrimmed = line.toString().trim();
-                    String currentLastPos = current.get(lastPos);
-                    current.set(lastPos, currentLastPos + lineTrimmed);
+                    trailer.trailingHeaders().add(lastHeader, last + lineTrimmed);
                 }
             } else {
                 splitHeader(line);
@@ -787,7 +792,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     // is done in the DefaultHttpHeaders implementation.
                     //
                     // In the case of decoding a response we will "skip" the whitespace.
-                    (!isDecodingRequest() && isOWS(ch))) {
+                !isDecodingRequest() && isOWS(ch)) {
                 break;
             }
         }
@@ -852,7 +857,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             } else if (!isOWS(c)) {
                 // Only OWS is supported for whitespace
                 throw new IllegalArgumentException("Invalid separator, only a single space or horizontal tab allowed," +
-                        " but received a '" + c + "' (0x" + Integer.toHexString(c) + ")");
+                                                   " but received a '" + c + "' (0x" + Integer.toHexString(c) + ')');
             }
         }
         return sb.length();

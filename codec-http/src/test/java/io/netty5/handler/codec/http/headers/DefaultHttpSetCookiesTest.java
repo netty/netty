@@ -224,7 +224,7 @@ class DefaultHttpSetCookiesTest {
 
         cookieItr = headers.getSetCookiesIterator("qwerty");
         assertTrue(cookieItr.hasNext());
-        assertTrue(areSetCookiesEqual(new TestSetCookie("qwerty", "12345", null, "somecompany.co.uk", null,
+        assertTrue(areSetCookiesEqual(new TestSetCookie("qwerty", "12345", "", "somecompany.co.uk", null,
                 null, null, false, false, false), cookieItr.next()));
         assertFalse(cookieItr.hasNext());
     }

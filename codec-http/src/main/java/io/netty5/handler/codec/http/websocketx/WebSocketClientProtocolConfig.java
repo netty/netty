@@ -15,8 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.handler.codec.http.EmptyHttpHeaders;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 
 import java.net.URI;
 import java.util.Objects;
@@ -167,7 +166,7 @@ public final class WebSocketClientProtocolConfig {
                 null,
                 WebSocketVersion.V13,
                 false,
-                EmptyHttpHeaders.INSTANCE,
+                HttpHeaders.emptyHeaders(),
                 65536,
                 DEFAULT_PERFORM_MASKING,
                 DEFAULT_ALLOW_MASK_MISMATCH,

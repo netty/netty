@@ -27,8 +27,8 @@ import static io.netty5.handler.codec.http.HttpConstants.SP;
 public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
     private static final char QUESTION_MARK = '?';
-    private static final short SLASH_AND_SPACE_SHORT = (SLASH << 8) | SP;
-    private static final int SPACE_SLASH_AND_SPACE_MEDIUM = (SP << 16) | SLASH_AND_SPACE_SHORT;
+    private static final short SLASH_AND_SPACE_SHORT = SLASH << 8 | SP;
+    private static final int SPACE_SLASH_AND_SPACE_MEDIUM = SP << 16 | SLASH_AND_SPACE_SHORT;
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {

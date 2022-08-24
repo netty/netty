@@ -15,6 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -31,7 +33,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param status  the status of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, true, false);
+        this(version, status, true);
     }
 
     /**
@@ -42,24 +44,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
-        this(version, status, validateHeaders, false);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param version           the HTTP version of this response
-     * @param status            the status of this response
-     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
-     * @param singleFieldHeaders {@code true} to check and enforce that headers with the same name are appended
-     * to the same entry and comma separated.
-     * See <a href="https://tools.ietf.org/html/rfc7230#section-3.2.2">RFC 7230, 3.2.2</a>.
-     * {@code false} to allow multiple header entries with the same name to
-     * coexist.
-     */
-    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
-                               boolean singleFieldHeaders) {
-        super(version, validateHeaders, singleFieldHeaders);
+        super(version, validateHeaders);
         this.status = requireNonNull(status, "status");
     }
 

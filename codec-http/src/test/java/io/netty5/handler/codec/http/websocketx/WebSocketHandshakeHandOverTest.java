@@ -21,10 +21,10 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
-import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpServerCodec;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -122,7 +122,7 @@ public class WebSocketHandshakeHandOverTest {
         assertTrue(serverReceivedHandshake);
         assertNotNull(serverHandshakeComplete);
         assertEquals("/test", serverHandshakeComplete.requestUri());
-        assertEquals(7, serverHandshakeComplete.requestHeaders().size());
+        assertThat(serverHandshakeComplete.requestHeaders()).hasSize(7);
         assertEquals("test-proto-2", serverHandshakeComplete.selectedSubprotocol());
 
         // Transfer the handshake response and the websocket message to the client
@@ -231,7 +231,7 @@ public class WebSocketHandshakeHandOverTest {
     public void testClientHandshakerForceClose() throws Exception {
         final WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
                 new URI("ws://localhost:1234/test"), WebSocketVersion.V13, null, true,
-                EmptyHttpHeaders.INSTANCE, Integer.MAX_VALUE, true, false, 20);
+                HttpHeaders.emptyHeaders(), Integer.MAX_VALUE, true, false, 20);
 
         EmbeddedChannel serverChannel = createServerChannel(
                 new CloseNoOpServerProtocolHandler("/test"),
