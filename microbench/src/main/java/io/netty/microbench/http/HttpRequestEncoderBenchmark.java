@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -46,15 +47,14 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 
-@State(Scope.Benchmark)
-@Fork(1)
-@Threads(1)
+@State(Scope.Thread)
+@Fork(2)
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
-public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
+public class HttpRequestEncoderBenchmark extends AbstractMicrobenchmark {
     private HttpRequestEncoder encoder;
     private FullHttpRequest fullRequest;
     private LastHttpContent lastContent;
@@ -69,8 +69,11 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
     @Param({ "true", "false" })
     public boolean voidPromise;
 
+    @Param({ "false", "true" })
+    public boolean typePollution;
+
     @Setup(Level.Trial)
-    public void setup() {
+    public void setup() throws Exception {
         byte[] bytes = new byte[256];
         content = Unpooled.buffer(bytes.length);
         content.writeBytes(bytes);
@@ -95,6 +98,11 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
                 handleUnexpectedException(t);
             }
         };
+        if (typePollution) {
+            for (int i = 0; i < 20000; i++) {
+                differentTypes();
+            }
+        }
     }
 
     @TearDown(Level.Trial)
@@ -116,6 +124,15 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void chunked() throws Exception {
+        encoder.write(context, chunkedRequest, newPromise());
+        encoder.write(context, lastContent, newPromise());
+    }
+
+    @Benchmark
+    public void differentTypes() throws Exception {
+        encoder.write(context, contentLengthRequest, newPromise());
+        encoder.write(context, lastContent, newPromise());
+        encoder.write(context, fullRequest, newPromise());
         encoder.write(context, chunkedRequest, newPromise());
         encoder.write(context, lastContent, newPromise());
     }
