@@ -20,16 +20,7 @@ import io.netty5.buffer.api.Buffer;
 import java.net.SocketAddress;
 
 /**
- * A skeletal server-side {@link Channel} implementation.  A server-side
- * {@link Channel} does not allow the following operations:
- * <ul>
- * <li>{@link #connect(SocketAddress)}</li>
- * <li>{@link #disconnect()}</li>
- * <li>{@link #write(Object)}</li>
- * <li>{@link #flush()}</li>
- * <li>{@link #shutdown(ChannelShutdownDirection)}</li>
- * <li>and the shortcut methods which calls the methods mentioned above
- * </ul>
+ * A skeletal {@link ServerChannel} implementation.
  */
 public abstract class AbstractServerChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
         extends AbstractChannel<P, L, R> implements ServerChannel {
@@ -81,12 +72,12 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
+    protected final boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean doFinishConnect(R requestedRemoteAddress) {
+    protected final boolean doFinishConnect(R requestedRemoteAddress) {
         throw new UnsupportedOperationException();
     }
 }

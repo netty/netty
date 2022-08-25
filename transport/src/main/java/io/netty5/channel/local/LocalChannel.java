@@ -208,12 +208,10 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     private void tryClose(boolean isActive) {
-        if (isActive) {
-            closeTransport(newPromise());
-        } else {
+        if (!isActive) {
             releaseInboundBuffers();
-            closeForciblyTransport();
         }
+        closeTransport(newPromise());
     }
 
     @Override

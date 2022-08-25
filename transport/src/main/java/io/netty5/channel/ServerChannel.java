@@ -15,17 +15,28 @@
  */
 package io.netty5.channel;
 
-import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.util.concurrent.Future;
+
+import java.net.SocketAddress;
 
 /**
- * A {@link Channel} that accepts an incoming connection attempt and creates
- * its child {@link Channel}s by accepting them. {@link ServerSocketChannel} is
- * a good example.
+ * A {@link Channel} that accepts an incoming connection attempts and creates
+ * its child {@link Channel}s by accepting them.
+ * A {@link ServerChannel} does not allow the following operations and so will fail the returned
+ * {@link Future} of these operations:
+ * <ul>
+ * <li>{@link #connect(SocketAddress)}</li>
+ * <li>{@link #disconnect()}</li>
+ * <li>{@link #write(Object)}</li>
+ * <li>{@link #flush()}</li>
+ * <li>{@link #shutdown(ChannelShutdownDirection)}</li>
+ * </ul>
  */
 public interface ServerChannel extends Channel {
 
     /**
-     * Returns the {@link EventLoopGroup} that is used to register the child {@link Channel}s on.
+     * Returns the {@link EventLoopGroup} that is used to register the child {@link Channel}s on after accepting
+     * these.
      */
     EventLoopGroup childEventLoopGroup();
 }

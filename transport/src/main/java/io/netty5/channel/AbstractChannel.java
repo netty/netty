@@ -129,7 +129,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private WriteSink writeSink;
 
-    private MessageSizeEstimator.Handle estimatorHandler;
+    private MessageSizeEstimator.Handle estimatorHandle;
     private boolean inWriteFlushed;
     /** true if the channel has never been registered, false otherwise */
     private boolean neverRegistered = true;
@@ -204,6 +204,16 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         fireChannelWritabilityChangedTask = () -> pipeline().fireChannelWritabilityChanged();
     }
 
+    /**
+     * Validate that the {@link EventLoopGroup} supports the given {@link Class channel type}.
+     * If validation fails this will throw a runtime exception.
+     *
+     * @param group         the group to check against
+     * @param name          the name of the param that is used when throwing an exception.
+     * @param channelType   the {@link Channel} type.
+     * @return              the group itself
+     * @param <T>           the concreate type of the {@link EventLoopGroup}.
+     */
     protected static <T extends EventLoopGroup> T validateEventLoopGroup(
             T group, String name, Class<? extends Channel> channelType) {
         requireNonNull(group, name);
@@ -294,7 +304,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     private long totalPending() {
-        ChannelOutboundBuffer buf = outboundBuffer();
+        ChannelOutboundBuffer buf = outboundBuffer;
         if (buf == null) {
             return -1;
         }
@@ -432,6 +442,14 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return writeSink;
     }
 
+    private MessageSizeEstimator.Handle sizeEstimatorHandle() {
+        assertEventLoop();
+        if (estimatorHandle == null) {
+            estimatorHandle = getMessageSizeEstimator().newHandle();
+        }
+        return estimatorHandle;
+    }
+
     private void registerTransport(final Promise<Void> promise) {
         assertEventLoop();
 
@@ -490,7 +508,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     private void closeNowAndFail(Promise<Void> promise, Throwable cause) {
-        closeForciblyTransport();
+        try {
+            cancelConnect();
+            doClose();
+        } catch (Exception e) {
+            logger.warn("Failed to close a channel.", e);
+        }
+
         closePromise.setClosed();
         safeSetFailure(promise, cause);
     }
@@ -718,17 +742,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         deregister(newPromise(), wasActive && !isActive());
     }
 
-    protected final void closeForciblyTransport() {
-        assertEventLoop();
-
-        try {
-            cancelConnect();
-            doClose();
-        } catch (Exception e) {
-            logger.warn("Failed to close a channel.", e);
-        }
-    }
-
     private void cancelConnect() {
         Promise<Void> promise = connectPromise;
         if (promise != null) {
@@ -744,7 +757,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    protected final void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise) {
+    private void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise) {
         assertEventLoop();
 
         if (!promise.setUncancellable()) {
@@ -881,7 +894,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     /**
-     * Try reading from the underlying transport now.
+     * Reading from the underlying transport now until there is nothing more to read or the
+     * {@link ReadHandleFactory.ReadHandle} is telling us to stop.
      */
     protected final void readNow() {
         assert executor().inEventLoop();
@@ -896,6 +910,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         readSink.readLoop();
     }
 
+    /**
+     * Shutdown the read side of this channel. Depending on if half-closure is supported or not this will either
+     * just shutdown the {@link ChannelShutdownDirection#Inbound inbound} or close the channel completely.
+     */
     protected final void shutdownReadSide() {
         if (!isShutdown(ChannelShutdownDirection.Inbound)) {
             if (isAllowHalfClosure()) {
@@ -915,7 +933,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     /**
-     * Clear any previous scheduled read. By default this method does nothing but implementations might override it to
+     * Clear any previous scheduled read. By default, this method does nothing but implementations might override it to
      * add extra logic.
      */
     protected void doClearScheduledRead() {
@@ -972,10 +990,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         int size;
         try {
             msg = filterOutboundMessage(msg);
-            if (estimatorHandler == null) {
-                estimatorHandler = getMessageSizeEstimator().newHandle();
-            }
-            size = estimatorHandler.size(msg);
+            size = sizeEstimatorHandle().size(msg);
             if (size < 0) {
                 size = 0;
             }
@@ -1019,7 +1034,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     /**
-     * Writing previous flushed messages if {@link #isWriteFlushedScheduled()} returns {@code false}. If {
+     * Writing previous flushed messages if {@link #isWriteFlushedScheduled()} returns {@code false}, otherwise
+     * do nothing.
      */
     protected final void writeFlushed() {
         assertEventLoop();
@@ -1115,7 +1131,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    private ClosedChannelException newClosedChannelException(Throwable cause, String method) {
+    private static ClosedChannelException newClosedChannelException(Throwable cause, String method) {
         ClosedChannelException exception =
                 StacklessClosedChannelException.newInstance(AbstractChannel.class, method);
         if (cause != null) {
@@ -1124,7 +1140,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return exception;
     }
 
-    private void sendOutboundEventTransport(Object event, Promise<Void> promise) {
+    private static void sendOutboundEventTransport(Object event, Promise<Void> promise) {
         Resource.dispose(event);
         promise.setSuccess(null);
     }
@@ -1141,7 +1157,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
      */
-    private void safeSetSuccess(Promise<Void> promise) {
+    private static void safeSetSuccess(Promise<Void> promise) {
         if (!promise.trySuccess(null)) {
             logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
         }
@@ -1150,7 +1166,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
      */
-    private void safeSetFailure(Promise<Void> promise, Throwable cause) {
+    private static void safeSetFailure(Promise<Void> promise, Throwable cause) {
         if (!promise.tryFailure(cause)) {
             logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
         }
@@ -1187,7 +1203,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Appends the remote address to the message of the exceptions caused by connection attempt failure.
      */
-    protected static Throwable annotateConnectException(Throwable cause, SocketAddress remoteAddress) {
+    private static Throwable annotateConnectException(Throwable cause, SocketAddress remoteAddress) {
         if (cause instanceof ConnectException) {
             return new AnnotatedConnectException((ConnectException) cause, remoteAddress);
         }
@@ -1212,44 +1228,45 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     /**
-     * Returns the {@link ChannelOutboundBuffer} that is used by this {@link AbstractChannel}. This might be
-     * {@code null} if no more writes are allowed.
-     *
-     * @return the outbound buffer.
-     */
-    final ChannelOutboundBuffer outboundBuffer() {
-        return outboundBuffer;
-    }
-
-    /**
      * Returns the {@link SocketAddress} which is bound locally.
+     *
+     * @return the local address if any, {@code null} otherwise.
      */
     protected abstract L localAddress0();
 
     /**
      * Return the {@link SocketAddress} which the {@link Channel} is connected to.
+     *
+     * @return the remote address if any, {@code null} otherwise.
      */
     protected abstract R remoteAddress0();
 
     /**
      * Bind the {@link Channel} to the {@link SocketAddress}
+     *
+     * @param localAddress  the {@link SocketAddress} to bound to.
+     * @throws Exception    when an error happens.
      */
     protected abstract void doBind(SocketAddress localAddress) throws Exception;
 
     /**
      * Disconnect this {@link Channel} from its remote peer
+     *
+     * @throws Exception    thrown on error.
      */
     protected abstract void doDisconnect() throws Exception;
 
     /**
      * Close the {@link Channel}
+     *
+     * @throws Exception    thrown on error.
      */
     protected abstract void doClose() throws Exception;
 
     /**
      * Shutdown one direction of the {@link Channel}.
      *
-     * @param direction     the direction to shutdown.
+     * @param direction     the direction to shut down.
      * @throws Exception    thrown on error.
      */
     protected abstract void doShutdown(ChannelShutdownDirection direction) throws Exception;
@@ -1257,14 +1274,16 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /**
      * Schedule a read operation.
      *
-     * @param wasReadPendingAlready {@code true} if a read was already pending when {@link #read()} was called.
+     * @param wasReadPendingAlready {@code true} if a read was already pending when {@link #read()}
+     *                              was called.
+     * @throws Exception            thrown on error.
      */
     protected abstract void doRead(boolean wasReadPendingAlready) throws Exception;
 
     /**
-     * Called in a loop when writes should be performed until this methods returns {@code false} or there are
+     * Called in a loop when writes should be performed until this method returns {@code false} or there are
      * no more messages to write.
-     * Implementations are responsible of handling partial writes, which for example means that if {@link Buffer}s
+     * Implementations are responsible for handling partial writes, which for example means that if {@link Buffer}s
      * are written partial implementations need to ensure the {@link Buffer#readerOffset() readerOffset} is updated
      * accordingly.
      *
@@ -1273,36 +1292,41 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *                                              {@link WriteSink#complete(long, long, int, boolean)} or
      *                                              {@link WriteSink#complete(long, Throwable, boolean)} must be called
      *                                              exactly once before this method returns non-exceptional.
-     * @throws Exception                            if an error happened during writing.
+     * @throws Exception                            if an error happened during writing. This will also terminate the
+     *                                              write loop.
      */
     protected abstract void doWriteNow(WriteSink writeSink) throws Exception;
 
     /**
-     * Connect to remote peer.
+     * Connect to remote peer. This method should never be directly called.
      *
      * @param remoteAddress     the address of the remote peer.
      * @param localAddress      the local address of this channel.
      * @param initialData       the initial data that is written during connect
-     *                          (if {@link ChannelOption#TCP_FASTOPEN_CONNECT} is supported)
-     * @return                  {@code true} if the connect was completed, {@code false} if {@link #finishConnect()}
-     *                          will be called later again to try finishing the connect.
+     *                          (if {@link ChannelOption#TCP_FASTOPEN_CONNECT} is supported and configured).
+     *                          If data is written care must be taken to update the
+     *                          {@link Buffer#readerOffset() reader offset}.
+     * @return                  {@code true} if the connect operation was completed, {@code false} if
+     *                          {@link #finishConnect()} will be called later again to try finish connecting.
      * @throws Exception        thrown on error.
      */
     protected abstract boolean doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) throws Exception;
 
     /**
-     * Finish a connect request.
+     * Finish a connect request. This method should never be directly called, use {@link #finishConnect()} instead.
      *
      * @param requestedRemoteAddress    the remote address of the peer.
-     * @return                  {@code true} if the connect was completed, {@code false} if {@link #finishConnect()}
-     *                          will be called later again to try finishing the connect.
-     * @throws Exception        thrown on error.
+     * @return                          {@code true} if the connect operations was completed,
+     *                                  {@code false} if {@link #finishConnect()}
+     *                                  will be called later again to try finishing the connect operation.
+     * @throws Exception                thrown on error.
      */
     protected abstract boolean doFinishConnect(R requestedRemoteAddress) throws Exception;
 
     /**
-     * Returns if a connect request was issued before and we are waiting for {@link #finishConnect()} to be called.
+     * Returns if a connect operation was issued before, and {@link #finishConnect()} must be called once the connect
+     * operation can be finished.
      *
      * @return {@code true} if there is an outstanding connect request.
      */
@@ -1330,9 +1354,12 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             }
 
             boolean wasActive = isActive();
-            int readable = 0;
             Buffer message = null;
-            if (isOptionSupported(ChannelOption.TCP_FASTOPEN_CONNECT) && getOption(TCP_FASTOPEN_CONNECT)) {
+
+            // outbound buffer could be null in theory if the channel was closed in the meantime.
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer != null &&
+                    isOptionSupported(ChannelOption.TCP_FASTOPEN_CONNECT) && getOption(TCP_FASTOPEN_CONNECT)) {
                 outboundBuffer.addFlush();
                 Object current = outboundBuffer.current();
                 if (current instanceof Buffer) {
@@ -1417,19 +1444,28 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     /**
-     * Should be called once the connect request is ready to be completed.
+     * Should be called once the connect request is ready to be completed and {@link #isConnectPending()}
+     * is {@code true}.
+     * Calling this method if no {@link #isConnectPending() connect is pending} will result in an
+     * {@link AlreadyConnectedException}.
+     *
+     * @return {@code true} if the connect operation completed, {@code false} otherwise.
      */
-    protected final void finishConnect() {
+    protected final boolean finishConnect() {
         // Note this method is invoked by the event loop only if the connection attempt was
         // neither cancelled nor timed out.
         assertEventLoop();
+
+        if (!isConnectPending()) {
+            throw new AlreadyConnectedException();
+        }
 
         boolean connectStillInProgress = false;
         try {
             boolean wasActive = isActive();
             if (!doFinishConnect(requestedRemoteAddress)) {
                 connectStillInProgress = true;
-                return;
+                return false;
             }
             requestedRemoteAddress = null;
             fulfillConnectPromise(connectPromise, wasActive);
@@ -1445,20 +1481,36 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 connectPromise = null;
             }
         }
+        return true;
     }
 
     /**
-     * Invoked when a new message is added to a {@link ChannelOutboundBuffer} of this {@link AbstractChannel}, so that
+     * Invoked when a new message is added to to the outbound queue of this {@link AbstractChannel}, so that
      * the {@link Channel} implementation converts the message to another. (e.g. heap buffer -> direct buffer)
+     *
+     * @param msg           the message to filter / convert.
+     * @throws Exception    thrown on error.
      */
     protected Object filterOutboundMessage(Object msg) throws Exception {
         return msg;
     }
 
+    /**
+     * Validate a {@link DefaultFileRegion}
+     *
+     * @param region        the region to validate.
+     * @param position      the requested position
+     * @throws IOException  thrown if requested position is invalid.
+     */
     protected static void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
         DefaultFileRegion.validate(region, position);
     }
 
+    /**
+     * Returns {@code true} if the implementation supports disconnecting and re-connecting, {@code false} otherwise.
+     *
+     * @return {@code true} if supported.
+     */
     protected final boolean isSupportingDisconnect() {
         return supportingDisconnect;
     }
@@ -1502,9 +1554,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * Override to add support for more {@link ChannelOption}s.
      * You need to also call {@link super} after handling the extra options.
      *
-     * @param option    the {@link ChannelOption}.
-     * @return          the value for the option
-     * @param <T>       the value type.
+     * @param option                            the {@link ChannelOption}.
+     * @return                                  the value for the option.
+     * @param <T>                               the value type.
      * @throws UnsupportedOperationException    if the {@link ChannelOption} is not supported.
      */
     protected  <T> T getExtendedOption(ChannelOption<T> option) {
@@ -1513,7 +1565,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     @Override
     public final <T> Channel setOption(ChannelOption<T> option, T value) {
-        validate(option, value);
+        requireNonNull(option, "option");
+        option.validate(value);
 
         if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
@@ -1542,10 +1595,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     /**
      * Override to add support for more {@link ChannelOption}s.
-     * You need to also call {@link super} after handling the extra options.
+     * You need to also call {@code super} after handling the extra options.
      *
-     * @param option    the {@link ChannelOption}.
-     * @param <T>       the value type.
+     * @param option                            the {@link ChannelOption}.
+     * @param <T>                               the value type.
      * @throws UnsupportedOperationException    if the {@link ChannelOption} is not supported.
      */
     protected <T> void setExtendedOption(ChannelOption<T> option, T value) {
@@ -1562,7 +1615,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     /**
      * Override to add support for more {@link ChannelOption}s.
-     * You need to also call {@link super} after handling the extra options.
+     * You need to also call {@code super} after handling the extra options.
      *
      * @param option    the {@link ChannelOption}.
      * @return          {@code true} if supported, {@code false} otherwise.
@@ -1578,15 +1631,20 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 ALLOW_HALF_CLOSURE);
     }
 
+    /**
+     * Creates a new {@link Set} that holds the given {@link ChannelOption}s. Sub-classes might use this method for
+     * supporting their own {@link ChannelOption}s.
+     *
+     * @param options the options.
+     * @return        the {@link Set} that holds all the options.
+     */
     protected static Set<ChannelOption<?>> newSupportedIdentityOptionsSet(ChannelOption<?>... options) {
+        if (options == null || options.length == 0) {
+            return Collections.emptySet();
+        }
         Set<ChannelOption<?>> supportedOptionsSet = Collections.newSetFromMap(new IdentityHashMap<>());
         Collections.addAll(supportedOptionsSet, options);
         return Collections.unmodifiableSet(supportedOptionsSet);
-    }
-
-    private <T> void validate(ChannelOption<T> option, T value) {
-        requireNonNull(option, "option");
-        option.validate(value);
     }
 
     private int getConnectTimeoutMillis() {
@@ -1594,8 +1652,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     private void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        checkPositiveOrZero(connectTimeoutMillis, "connectTimeoutMillis");
-        this.connectTimeoutMillis = connectTimeoutMillis;
+        this.connectTimeoutMillis = checkPositiveOrZero(connectTimeoutMillis, "connectTimeoutMillis");
     }
 
     private BufferAllocator getBufferAllocator() {
@@ -1603,8 +1660,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     private void setBufferAllocator(BufferAllocator bufferAllocator) {
-        requireNonNull(bufferAllocator, "bufferAllocator");
-        this.bufferAllocator = bufferAllocator;
+        this.bufferAllocator = requireNonNull(bufferAllocator, "bufferAllocator");
     }
 
     @SuppressWarnings("unchecked")
@@ -1625,7 +1681,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         this.writeHandleFactory = requireNonNull(writeHandleFactory, "writeHandleFactory");
     }
 
-    protected final boolean isAutoRead() {
+    private boolean isAutoRead() {
         return autoRead == 1;
     }
 
@@ -1669,11 +1725,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     }
 
     private void setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        requireNonNull(estimator, "estimator");
-        msgSizeEstimator = estimator;
+        msgSizeEstimator = requireNonNull(estimator, "estimator");
     }
 
-    protected final boolean isAllowHalfClosure() {
+    private boolean isAllowHalfClosure() {
         return allowHalfClosure;
     }
 
@@ -1765,10 +1820,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    protected void runAfterTransportAction() {
-        // Noop
-    }
-
     protected static class DefaultAbstractChannelPipeline extends DefaultChannelPipeline {
         protected DefaultAbstractChannelPipeline(AbstractChannel<?, ?, ?> channel) {
             super(channel);
@@ -1790,91 +1841,92 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         @Override
         protected final void registerTransport(Promise<Void> promise) {
-            AbstractChannel<?, ?, ?> channel = abstractChannel();
-            channel.registerTransport(promise);
-            channel.runAfterTransportAction();
+            abstractChannel().registerTransport(promise);
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void bindTransport(SocketAddress localAddress, Promise<Void> promise) {
-            AbstractChannel<?, ?, ?> channel = abstractChannel();
-            channel.bindTransport(localAddress, promise);
-            channel.runAfterTransportAction();
+            abstractChannel().bindTransport(localAddress, promise);
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void connectTransport(
                 SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            AbstractChannel<?, ?, ?> channel = abstractChannel();
-            channel.connectTransport(remoteAddress, localAddress, promise);
-            channel.runAfterTransportAction();
+            abstractChannel().connectTransport(remoteAddress, localAddress, promise);
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void disconnectTransport(Promise<Void> promise) {
-            AbstractChannel<?, ?, ?> channel = abstractChannel();
-            channel.disconnectTransport(promise);
-            channel.runAfterTransportAction();
+            abstractChannel().disconnectTransport(promise);
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void closeTransport(Promise<Void> promise) {
-            AbstractChannel<?, ?, ?> channel = abstractChannel();
             abstractChannel().closeTransport(promise);
-            channel.runAfterTransportAction();
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void shutdownTransport(ChannelShutdownDirection direction, Promise<Void> promise) {
-            AbstractChannel<?, ?, ?> channel = abstractChannel();
-            channel.shutdownTransport(direction, promise);
-            channel.runAfterTransportAction();
+            abstractChannel().shutdownTransport(direction, promise);
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void deregisterTransport(Promise<Void> promise) {
             AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.deregisterTransport(promise);
-            channel.runAfterTransportAction();
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void readTransport(ReadBufferAllocator readBufferAllocator) {
             AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.readTransport(readBufferAllocator);
-            channel.runAfterTransportAction();
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void writeTransport(Object msg, Promise<Void> promise) {
             AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.writeTransport(msg, promise);
-            channel.runAfterTransportAction();
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void flushTransport() {
             AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.flushTransport();
-            channel.runAfterTransportAction();
+            runAfterTransportOperation();
         }
 
         @Override
         protected final void sendOutboundEventTransport(Object event, Promise<Void> promise) {
             AbstractChannel<?, ?, ?> channel = abstractChannel();
             channel.sendOutboundEventTransport(event, promise);
-            channel.runAfterTransportAction();
+            runAfterTransportOperation();
         }
 
         @Override
         protected final boolean isTransportSupportingDisconnect() {
             return abstractChannel().isSupportingDisconnect();
         }
+
+        /**
+         * Override to add extra logic after each `*Transport` method call.
+         */
+        protected void runAfterTransportOperation() {
+            // Noop
+        }
     }
 
     /**
      * Return the {@link BufferAllocator} that is used to allocate {@link Buffer} that are used for reading.
-     * By default this will just return {@link #bufferAllocator()}. Sub-classes might override this if some special
+     * By default, this will just return {@link #bufferAllocator()}. Sub-classes might override this if some special
      * allocator is needed.
      *
      * @return the {@link BufferAllocator} that is used to allocate {@link Buffer}s that are used for reading.
@@ -1926,7 +1978,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         /**
          * Allocate a {@link Buffer} with a capacity that is probably large enough to read all inbound data and
-         * small enough not to waste its space.
+         * small enough not to waste space.
          *
          * @return the allocated {@link Buffer}.
          */
@@ -2105,7 +2157,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         /**
-         * The number of flushed messages that are ready to be written by either calling
+         * The number of flushed messages that are ready to be written. The messages can be accessed by either calling
          * {@link #currentFlushedMessage()} or {@link #forEachFlushedMessage(Predicate)}.
          *
          * @return the number of messages.
