@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Disabled;

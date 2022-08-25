@@ -15,7 +15,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.handler.codec.http2.Http2Headers.PseudoHeaderName;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
+import io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName;
 import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -37,7 +38,7 @@ public class DefaultHttp2HeadersTest {
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                new DefaultHttp2Headers().add(null, "foo");
+                Http2Headers.newHeaders().add(null, "foo");
             }
         });
     }
@@ -47,7 +48,7 @@ public class DefaultHttp2HeadersTest {
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+                Http2Headers.newHeaders().add(StringUtil.EMPTY_STRING, "foo");
             }
         });
     }
@@ -64,7 +65,7 @@ public class DefaultHttp2HeadersTest {
     public void testPseudoHeadersWithRemovePreservesPseudoIterationOrder() {
         Http2Headers headers = newHeaders();
 
-        Http2Headers nonPseudoHeaders = new DefaultHttp2Headers();
+        Http2Headers nonPseudoHeaders = Http2Headers.newHeaders();
         for (Entry<CharSequence, CharSequence> entry : headers) {
             if (entry.getKey().length() == 0 || entry.getKey().charAt(0) != ':' &&
                 !nonPseudoHeaders.contains(entry.getKey())) {
@@ -101,7 +102,7 @@ public class DefaultHttp2HeadersTest {
         headers.add("name1", "value1").scheme("nothing");
         verifyPseudoHeadersFirst(headers);
 
-        Http2Headers other = new DefaultHttp2Headers().add("name2", "value2").authority("foo");
+        Http2Headers other = Http2Headers.newHeaders().add("name2", "value2").authority("foo");
         verifyPseudoHeadersFirst(other);
 
         headers.add(other);
@@ -118,7 +119,7 @@ public class DefaultHttp2HeadersTest {
     @Test
     public void testSetHeadersOrdersPseudoHeadersCorrectly() {
         Http2Headers headers = newHeaders();
-        Http2Headers other = new DefaultHttp2Headers().add("name2", "value2").authority("foo");
+        Http2Headers other = Http2Headers.newHeaders().add("name2", "value2").authority("foo");
 
         headers.set(other);
         verifyPseudoHeadersFirst(headers);
@@ -130,10 +131,10 @@ public class DefaultHttp2HeadersTest {
     @Test
     public void testSetAllOrdersPseudoHeadersCorrectly() {
         Http2Headers headers = newHeaders();
-        Http2Headers other = new DefaultHttp2Headers().add("name2", "value2").authority("foo");
+        Http2Headers other = Http2Headers.newHeaders().add("name2", "value2").authority("foo");
 
         int headersSizeBefore = headers.size();
-        headers.setAll(other);
+        headers.replace(other);
         verifyPseudoHeadersFirst(headers);
         verifyAllPseudoHeadersPresent(headers);
         assertEquals(headersSizeBefore + 1, headers.size());
@@ -155,7 +156,7 @@ public class DefaultHttp2HeadersTest {
 
     @Test
     public void testClearResetsPseudoHeaderDivision() {
-        DefaultHttp2Headers http2Headers = new DefaultHttp2Headers();
+        Http2Headers http2Headers = Http2Headers.newHeaders();
         http2Headers.method("POST");
         http2Headers.set("some", "value");
         http2Headers.clear();
@@ -168,13 +169,13 @@ public class DefaultHttp2HeadersTest {
         Http2Headers headers = newHeaders();
         assertTrue(headers.contains("name1", "value2"));
         assertFalse(headers.contains("name1", "Value2"));
-        assertTrue(headers.contains("2name", "Value3", true));
-        assertFalse(headers.contains("2name", "Value3", false));
+        assertTrue(headers.containsIgnoreCase("2name", "Value3"));
+        assertFalse(headers.contains("2name", "Value3"));
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {
         for (PseudoHeaderName pseudoName : PseudoHeaderName.values()) {
-            assertNotNull(headers.get(pseudoName.value()));
+            assertNotNull(headers.get(pseudoName.value()), () -> "did not find pseudo-header " + pseudoName);
         }
     }
 
@@ -191,7 +192,7 @@ public class DefaultHttp2HeadersTest {
     }
 
     private static Http2Headers newHeaders() {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.add(of("name1"), of("value1"), of("value2"));
         headers.method(of("POST"));
         headers.add(of("2name"), of("value3"));

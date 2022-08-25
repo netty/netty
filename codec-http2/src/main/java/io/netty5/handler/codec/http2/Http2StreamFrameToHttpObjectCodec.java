@@ -38,6 +38,7 @@ import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
@@ -196,7 +197,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         if (msg instanceof HttpRequest) {
             msg.headers().set(
                     HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(),
-                    connectionScheme(ctx));
+                    connectionScheme(ctx).name());
         }
 
         return HttpConversionUtil.toHttp2Headers(msg, validateHeaders);

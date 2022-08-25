@@ -15,8 +15,12 @@
  */
 package io.netty5.handler.codec.http2.headers;
 
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.util.AsciiString;
+
+import java.util.Iterator;
 
 /**
  * HTTP/2 headers. This works similar to {@link HttpHeaders} with the following HTTP/2 specific modifications:
@@ -159,6 +163,16 @@ public interface Http2Headers extends HttpHeaders {
             return requestOnly;
         }
     }
+
+    /**
+     * Create a headers instance that is expected to remain empty.
+     *
+     * @return A new headers instance that use up as few resources as possible.
+     */
+    static Http2Headers emptyHeaders() {
+        return newHeaders(2, false, false, false);
+    }
+
     /**
      * Create a header instance with default size hint, and all validation checks turned on.
      *
@@ -169,12 +183,94 @@ public interface Http2Headers extends HttpHeaders {
     }
 
     /**
+     * Create a headers instance with default size hint, and all validation checks turned on.
+     *
+     * @param validate {@code true} to validate header names, values, and cookies.
+     * @return A new empty headers instance.
+     */
+    static Http2Headers newHeaders(boolean validate) {
+        return newHeaders(16, validate, validate, validate);
+    }
+
+    /**
      * Create a header instance with the given size hint, and the given validation checks turned on.
      *
      * @return A new empty header instance with the given configuration.
      */
     static Http2Headers newHeaders(int sizeHint, boolean checkNames, boolean checkCookies, boolean checkValues) {
         return new DefaultHttp2Headers(sizeHint, checkNames, checkCookies, checkValues);
+    }
+
+    @Override
+    Http2Headers copy();
+
+    @Override
+    Http2Headers add(CharSequence name, CharSequence value);
+
+    @Override
+    Http2Headers add(CharSequence name, Iterable<? extends CharSequence> values);
+
+    @Override
+    default Http2Headers add(CharSequence name, Iterator<? extends CharSequence> valuesItr) {
+        HttpHeaders.super.add(name, valuesItr);
+        return this;
+    }
+
+    @Override
+    Http2Headers add(CharSequence name, CharSequence... values);
+
+    @Override
+    Http2Headers add(HttpHeaders headers);
+
+    @Override
+    Http2Headers set(CharSequence name, CharSequence value);
+
+    @Override
+    Http2Headers set(CharSequence name, Iterable<? extends CharSequence> values);
+
+    @Override
+    default Http2Headers set(CharSequence name, Iterator<? extends CharSequence> valueItr) {
+        HttpHeaders.super.set(name, valueItr);
+        return this;
+    }
+
+    @Override
+    default Http2Headers set(CharSequence name, CharSequence... values) {
+        HttpHeaders.super.set(name, values);
+        return this;
+    }
+
+    @Override
+    default Http2Headers set(final HttpHeaders headers) {
+        HttpHeaders.super.set(headers);
+        return this;
+    }
+
+    @Override
+    default Http2Headers replace(final HttpHeaders headers) {
+        HttpHeaders.super.replace(headers);
+        return this;
+    }
+
+    @Override
+    Http2Headers clear();
+
+    @Override
+    Http2Headers addCookie(HttpCookiePair cookie);
+
+    @Override
+    default Http2Headers addCookie(final CharSequence name, final CharSequence value) {
+        HttpHeaders.super.addCookie(name, value);
+        return this;
+    }
+
+    @Override
+    Http2Headers addSetCookie(HttpSetCookie cookie);
+
+    @Override
+    default Http2Headers addSetCookie(final CharSequence name, final CharSequence value) {
+        HttpHeaders.super.addSetCookie(name, value);
+        return this;
     }
 
     /**

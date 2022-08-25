@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -164,7 +165,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void emptyHeadersShouldMatch() throws Exception {
-        final Http2Headers headers = EmptyHttp2Headers.INSTANCE;
+        final Http2Headers headers = Http2Headers.emptyHeaders();
         writer.writeHeaders(ctx, STREAM_ID, headers, 0, true);
         readFrames();
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0), eq(true));
@@ -172,7 +173,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void emptyHeadersWithPaddingShouldMatch() throws Exception {
-        final Http2Headers headers = EmptyHttp2Headers.INSTANCE;
+        final Http2Headers headers = Http2Headers.emptyHeaders();
         writer.writeHeaders(ctx, STREAM_ID, headers, MAX_PADDING, true);
         readFrames();
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(MAX_PADDING), eq(true));
@@ -258,7 +259,7 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void emptyPushPromiseShouldMatch() throws Exception {
-        final Http2Headers headers = EmptyHttp2Headers.INSTANCE;
+        final Http2Headers headers = Http2Headers.emptyHeaders();
         writer.writePushPromise(ctx, STREAM_ID, 2, headers, 0);
         readFrames();
         verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(2), eq(headers), eq(0));
@@ -411,13 +412,13 @@ public class Http2FrameRoundtripTest {
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers(false).method(AsciiString.of("GET")).scheme(AsciiString.of("https"))
+        return Http2Headers.newHeaders(false).method(AsciiString.of("GET")).scheme(AsciiString.of("https"))
                 .authority(AsciiString.of("example.org")).path(AsciiString.of("/some/path/resource2"))
                 .add(randomString(), randomString());
     }
 
     private static Http2Headers largeHeaders() {
-        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
+        Http2Headers headers = Http2Headers.newHeaders(false);
         for (int i = 0; i < 100; ++i) {
             String key = "this-is-a-test-header-key-" + i;
             String value = "this-is-a-test-header-value-" + i;
@@ -428,7 +429,7 @@ public class Http2FrameRoundtripTest {
 
     private static Http2Headers headersOfSize(final int minSize) {
         final AsciiString singleByte = new AsciiString(new byte[]{0}, false);
-        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
+        Http2Headers headers = Http2Headers.newHeaders(false);
         for (int size = 0; size < minSize; size += 2) {
             headers.add(singleByte, singleByte);
         }
@@ -436,7 +437,7 @@ public class Http2FrameRoundtripTest {
     }
 
     private static Http2Headers binaryHeaders() {
-        DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
+        Http2Headers headers = Http2Headers.newHeaders(false);
         for (int ix = 0; ix < 10; ++ix) {
             headers.add(randomString(), randomString());
         }

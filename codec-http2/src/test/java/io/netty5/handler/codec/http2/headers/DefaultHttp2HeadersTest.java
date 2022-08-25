@@ -16,7 +16,10 @@
 package io.netty5.handler.codec.http2.headers;
 
 import io.netty5.handler.codec.http.headers.AbstractHttpHeadersTest;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http2.Http2Exception;
 import io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName;
+import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
@@ -29,6 +32,7 @@ import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultHttp2HeadersTest extends AbstractHttpHeadersTest {
@@ -40,6 +44,35 @@ public class DefaultHttp2HeadersTest extends AbstractHttpHeadersTest {
     @Override
     protected Http2Headers newHeaders(int initialSizeHint) {
         return Http2Headers.newHeaders(initialSizeHint, true, true, true);
+    }
+
+    @Override
+    @Test
+    public void invalidHeaderNameOutOfRangeCharacter() {
+        final HttpHeaders headers = newHeaders();
+        assertThrows(Http2Exception.class, () -> headers.add(String.valueOf((char) -1), "foo"));
+    }
+
+    @Override
+    @Test
+    public void invalidHeaderNameOutOfRangeCharacterAsciiString() {
+        final HttpHeaders headers = newHeaders();
+        assertThrows(Http2Exception.class, () ->
+                headers.add(AsciiString.cached(String.valueOf((char) -1)), "foo"));
+    }
+
+    @Override
+    @Test
+    public void invalidHeaderNameCharacter() {
+        final HttpHeaders headers = newHeaders();
+        assertThrows(Http2Exception.class, () -> headers.add("=", "foo"));
+    }
+
+    @Override
+    @Test
+    public void invalidHeaderNameCharacterAsciiString() {
+        final HttpHeaders headers = newHeaders();
+        assertThrows(Http2Exception.class, () -> headers.add(AsciiString.cached("="), "foo"));
     }
 
     @Test
@@ -115,13 +148,13 @@ public class DefaultHttp2HeadersTest extends AbstractHttpHeadersTest {
         String normalValue = "normal";
 
         ArrayList<Entry<CharSequence, CharSequence>> list = new ArrayList<>();
-        list.add(Map.entry("Some-Header1", normalValue));
-        list.add(Map.entry("Some-Header1", normalValue));
-        list.add(Map.entry("Some-Header2", normalValue));
-        list.add(Map.entry("Some-Header3", normalValue));
-        list.add(Map.entry("Some-Header4", normalValue));
-        list.add(Map.entry("Some-Header4", normalValue));
-        list.add(Map.entry("Some-Header5", normalValue));
+        list.add(Map.entry("some-header1", normalValue));
+        list.add(Map.entry("some-header1", normalValue));
+        list.add(Map.entry("some-header2", normalValue));
+        list.add(Map.entry("some-header3", normalValue));
+        list.add(Map.entry("some-header4", normalValue));
+        list.add(Map.entry("some-header4", normalValue));
+        list.add(Map.entry("some-header5", normalValue));
         list.add(Map.entry(PseudoHeaderName.METHOD.value(), pseudoValue));
         list.add(Map.entry(PseudoHeaderName.SCHEME.value(), pseudoValue));
         list.add(Map.entry(PseudoHeaderName.AUTHORITY.value(), pseudoValue));

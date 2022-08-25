@@ -20,11 +20,12 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpStatusClass;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http2.Http2Connection.Endpoint;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import java.util.List;
+import java.util.Iterator;
 
 import static io.netty5.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
@@ -311,7 +312,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 }
 
                 return bytesToReturn;
-            } catch (Http2Exception | RuntimeException e) {
+            } catch (RuntimeException e) {
                 // If an exception happened during delivery, the listener may have returned part
                 // of the bytes before the error occurred. If that's the case, subtract that from
                 // the total processed bytes so that we don't return too many bytes.
@@ -332,7 +333,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
+                                  short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             boolean allowHalfClosedRemote = false;
             boolean isTrailers = false;
@@ -381,12 +382,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             if (!isTrailers) {
                 // extract the content-length header
-                List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-                if (contentLength != null && !contentLength.isEmpty()) {
+                Iterator<CharSequence> contentLength = headers.valuesIterator(HttpHeaderNames.CONTENT_LENGTH);
+                if (contentLength.hasNext()) {
                     try {
                         long cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
                         if (cLength != -1) {
-                            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, cLength);
+                            headers.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(cLength));
                             stream.setProperty(contentLengthKey, new ContentLength(cLength));
                         }
                     } catch (IllegalArgumentException e) {

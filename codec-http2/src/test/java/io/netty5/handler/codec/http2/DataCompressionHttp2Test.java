@@ -28,6 +28,7 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
@@ -134,7 +135,7 @@ public class DataCompressionHttp2Test {
     @Test
     public void justHeadersNoData() throws Exception {
         bootstrapEnv(0);
-        final Http2Headers headers = new DefaultHttp2Headers().method(GET).path(PATH)
+        final Http2Headers headers = Http2Headers.newHeaders().method(GET).path(PATH)
                 .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
         runInChannel(clientChannel, () -> {
@@ -151,7 +152,7 @@ public class DataCompressionHttp2Test {
         final String text = "";
         final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
         runInChannel(clientChannel, () -> {
@@ -168,7 +169,7 @@ public class DataCompressionHttp2Test {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
         runInChannel(clientChannel, () -> {
@@ -187,7 +188,7 @@ public class DataCompressionHttp2Test {
         final Buffer data1 = bb(text1);
         final Buffer data2 = bb(text2);
         bootstrapEnv(data1.readableBytes() + data2.readableBytes());
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
         runInChannel(clientChannel, () -> {
@@ -205,7 +206,7 @@ public class DataCompressionHttp2Test {
         final String text = "";
         final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
 
         runInChannel(clientChannel, () -> {
@@ -222,7 +223,7 @@ public class DataCompressionHttp2Test {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
 
         runInChannel(clientChannel, () -> {
@@ -239,7 +240,7 @@ public class DataCompressionHttp2Test {
         final String text = "";
         final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
 
         runInChannel(clientChannel, () -> {
@@ -256,7 +257,7 @@ public class DataCompressionHttp2Test {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final Buffer data = bb(text);
         bootstrapEnv(data.readableBytes());
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
 
         runInChannel(clientChannel, () -> {
@@ -275,7 +276,7 @@ public class DataCompressionHttp2Test {
         new Random().nextBytes(bytes);
         bootstrapEnv(BUFFER_SIZE);
         final Buffer data = bb(bytes);
-        final Http2Headers headers = new DefaultHttp2Headers()
+        final Http2Headers headers = Http2Headers.newHeaders()
                 .method(POST).path(PATH).set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
 
         runInChannel(clientChannel, () -> {

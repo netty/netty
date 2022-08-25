@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
@@ -143,6 +144,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      * @return a new {@link Http2Headers} object which will store the results of the decode operation.
      */
     protected Http2Headers newHeaders() {
-        return new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
+        return Http2Headers.newHeaders(
+                (int) headerArraySizeAccumulator, validateHeaders, validateHeaders, validateHeaders);
     }
 }

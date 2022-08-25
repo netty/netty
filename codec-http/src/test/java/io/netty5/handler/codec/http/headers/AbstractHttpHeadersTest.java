@@ -494,26 +494,26 @@ public abstract class AbstractHttpHeadersTest {
     }
 
     @Test
-    void invalidHeaderNameOutOfRangeCharacter() {
+    public void invalidHeaderNameOutOfRangeCharacter() {
         final HttpHeaders headers = newHeaders();
         assertThrows(IllegalArgumentException.class, () -> headers.add(String.valueOf((char) -1), "foo"));
     }
 
     @Test
-    void invalidHeaderNameOutOfRangeCharacterAsciiString() {
+    public void invalidHeaderNameOutOfRangeCharacterAsciiString() {
         final HttpHeaders headers = newHeaders();
         assertThrows(IllegalArgumentException.class, () ->
                 headers.add(AsciiString.cached(String.valueOf((char) -1)), "foo"));
     }
 
     @Test
-    void invalidHeaderNameCharacter() {
+    public void invalidHeaderNameCharacter() {
         final HttpHeaders headers = newHeaders();
         assertThrows(IllegalArgumentException.class, () -> headers.add("=", "foo"));
     }
 
     @Test
-    void invalidHeaderNameCharacterAsciiString() {
+    public void invalidHeaderNameCharacterAsciiString() {
         final HttpHeaders headers = newHeaders();
         assertThrows(IllegalArgumentException.class, () -> headers.add(AsciiString.cached("="), "foo"));
     }

@@ -74,8 +74,7 @@ public class HpackHuffmanTest {
 
     @Test
     public void testDecodeIllegalPadding() throws Http2Exception {
-        final byte[] buf = new byte[1];
-        buf[0] = 0x00; // '0', invalid padding
+        final byte[] buf = { 0x00 }; // '0', invalid padding
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {

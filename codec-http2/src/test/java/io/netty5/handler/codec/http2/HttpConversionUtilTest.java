@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -35,6 +35,7 @@ import static io.netty5.handler.codec.http.HttpHeaderNames.TRANSFER_ENCODING;
 import static io.netty5.handler.codec.http.HttpHeaderNames.UPGRADE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty5.handler.codec.http.HttpHeaderValues.TRAILERS;
+import static io.netty5.util.AsciiString.of;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -48,18 +49,18 @@ public class HttpConversionUtilTest {
     @Test
     public void connectNoPath() throws Exception {
         String authority = "netty.io:80";
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.authority(authority);
         headers.method(HttpMethod.CONNECT.asciiName());
         HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, true);
         assertNotNull(request);
         assertEquals(authority, request.uri());
-        assertEquals(authority, request.headers().get(HOST));
+        assertEquals(of(authority), request.headers().get(HOST));
     }
 
     @Test
     public void setHttp2AuthorityWithoutUserInfo() {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
 
         HttpConversionUtil.setHttp2Authority("foo", headers);
         assertEquals(new AsciiString("foo"), headers.authority());
@@ -67,7 +68,7 @@ public class HttpConversionUtilTest {
 
     @Test
     public void setHttp2AuthorityWithUserInfo() {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
 
         HttpConversionUtil.setHttp2Authority("info@foo", headers);
         assertEquals(new AsciiString("foo"), headers.authority());
@@ -78,7 +79,7 @@ public class HttpConversionUtilTest {
 
     @Test
     public void setHttp2AuthorityNullOrEmpty() {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
 
         HttpConversionUtil.setHttp2Authority(null, headers);
         assertNull(headers.authority());
@@ -92,84 +93,84 @@ public class HttpConversionUtilTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() {
-                HttpConversionUtil.setHttp2Authority("info@", new DefaultHttp2Headers());
+                HttpConversionUtil.setHttp2Authority("info@", Http2Headers.newHeaders());
             }
         });
     }
 
     @Test
     public void stripTEHeaders() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(TE, GZIP);
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertTrue(out.isEmpty());
     }
 
     @Test
     public void stripTEHeadersExcludingTrailers() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(TE, GZIP);
         inHeaders.add(TE, TRAILERS);
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertSame(TRAILERS, out.get(TE));
     }
 
     @Test
     public void stripTEHeadersCsvSeparatedExcludingTrailers() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(TE, GZIP + "," + TRAILERS);
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertSame(TRAILERS, out.get(TE));
     }
 
     @Test
     public void stripTEHeadersCsvSeparatedAccountsForValueSimilarToTrailers() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(TE, GZIP + "," + TRAILERS + "foo");
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertFalse(out.contains(TE));
     }
 
     @Test
     public void stripTEHeadersAccountsForValueSimilarToTrailers() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(TE, TRAILERS + "foo");
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertFalse(out.contains(TE));
     }
 
     @Test
     public void stripTEHeadersAccountsForOWS() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(TE, " " + TRAILERS + ' ');
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertSame(TRAILERS, out.get(TE));
     }
 
     @Test
     public void stripConnectionHeadersAndNominees() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(CONNECTION, "foo");
         inHeaders.add("foo", "bar");
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertTrue(out.isEmpty());
     }
 
     @Test
     public void stripConnectionNomineesWithCsv() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(CONNECTION, "foo,  bar");
         inHeaders.add("foo", "baz");
         inHeaders.add("bar", "qux");
         inHeaders.add("hello", "world");
-        Http2Headers out = new DefaultHttp2Headers();
+        Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertEquals(1, out.size());
         assertSame("world", out.get("hello"));
@@ -210,12 +211,12 @@ public class HttpConversionUtilTest {
 
     @Test
     public void addHttp2ToHttpHeadersCombinesCookies() throws Http2Exception {
-        Http2Headers inHeaders = new DefaultHttp2Headers();
+        Http2Headers inHeaders = Http2Headers.newHeaders();
         inHeaders.add("yes", "no");
         inHeaders.add(COOKIE, "foo=bar");
         inHeaders.add(COOKIE, "bax=baz");
 
-        HttpHeaders outHeaders = new DefaultHttpHeaders();
+        HttpHeaders outHeaders = HttpHeaders.newHeaders();
 
         HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
         assertEquals("no", outHeaders.get("yes"));
@@ -224,7 +225,7 @@ public class HttpConversionUtilTest {
 
     @Test
     public void connectionSpecificHeadersShouldBeRemoved() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders();
         inHeaders.add(CONNECTION, "keep-alive");
         inHeaders.add(HOST, "example.com");
         @SuppressWarnings("deprecation")
@@ -236,7 +237,7 @@ public class HttpConversionUtilTest {
         inHeaders.add(TRANSFER_ENCODING, "chunked");
         inHeaders.add(UPGRADE, "h2c");
 
-        Http2Headers outHeaders = new DefaultHttp2Headers();
+        Http2Headers outHeaders = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, outHeaders);
 
         assertFalse(outHeaders.contains(CONNECTION));
@@ -249,12 +250,12 @@ public class HttpConversionUtilTest {
 
     @Test
     public void http2ToHttpHeaderTest() throws Exception {
-        Http2Headers http2Headers = new DefaultHttp2Headers();
+        Http2Headers http2Headers = Http2Headers.newHeaders();
         http2Headers.status("200");
         http2Headers.path("/meow"); // HTTP/2 Header response should not contain 'path' in response.
         http2Headers.set("cat", "meow");
 
-        HttpHeaders httpHeaders = new DefaultHttpHeaders();
+        HttpHeaders httpHeaders = HttpHeaders.newHeaders();
         HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, true);
         assertFalse(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
         assertEquals("meow", httpHeaders.get("cat"));

@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -99,7 +100,7 @@ public class DefaultHttp2FrameWriterTest {
     @Test
     public void writeHeaders() throws Exception {
         int streamId = 1;
-        Http2Headers headers = new DefaultHttp2Headers()
+        Http2Headers headers = Http2Headers.newHeaders()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
         frameWriter.writeHeaders(ctx, streamId, headers, 0, true);
@@ -118,7 +119,7 @@ public class DefaultHttp2FrameWriterTest {
     @Test
     public void writeHeadersWithPadding() throws Exception {
         int streamId = 1;
-        Http2Headers headers = new DefaultHttp2Headers()
+        Http2Headers headers = Http2Headers.newHeaders()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
         frameWriter.writeHeaders(ctx, streamId, headers, 5, true);
@@ -137,7 +138,7 @@ public class DefaultHttp2FrameWriterTest {
     @Test
     public void writeHeadersNotEndStream() throws Exception {
         int streamId = 1;
-        Http2Headers headers = new DefaultHttp2Headers()
+        Http2Headers headers = Http2Headers.newHeaders()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
         frameWriter.writeHeaders(ctx, streamId, headers, 0, false);
@@ -181,7 +182,7 @@ public class DefaultHttp2FrameWriterTest {
     @Test
     public void writeLargeHeaders() throws Exception {
         int streamId = 1;
-        Http2Headers headers = new DefaultHttp2Headers()
+        Http2Headers headers = Http2Headers.newHeaders()
                 .method("GET").path("/").authority("foo.com").scheme("https");
         headers = dummyHeaders(headers, 20);
 
@@ -222,7 +223,7 @@ public class DefaultHttp2FrameWriterTest {
     @Test
     public void writeLargeHeaderWithPadding() throws Exception {
         int streamId = 1;
-        Http2Headers headers = new DefaultHttp2Headers()
+        Http2Headers headers = Http2Headers.newHeaders()
                 .method("GET").path("/").authority("foo.com").scheme("https");
         headers = dummyHeaders(headers, 20);
 

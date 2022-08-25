@@ -16,12 +16,12 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpServerCodec;
@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -180,7 +181,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertEquals(HttpMethod.GET, request.method());
         assertEquals("/", request.uri());
         assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
-        assertEquals(new DefaultHttpHeaders().add("Host", "example.com"), request.headers());
+        assertEquals(HttpHeaders.newHeaders().add("Host", "example.com"), request.headers());
 
         ((LastHttpContent<?>) channel.readInbound()).close();
 
@@ -229,11 +230,13 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertFalse(stream.isHeadersSent());
 
-        String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
-                "connection: upgrade\r\n" +
-                "upgrade: h2c\r\n\r\n";
         try (Buffer responseBuffer = channel.readOutbound()) {
-            assertEquals(expectedHttpResponse, responseBuffer.toString(StandardCharsets.UTF_8));
+            String response = responseBuffer.toString(StandardCharsets.UTF_8);
+            assertThat(response).startsWith("HTTP/1.1 101 Switching Protocols\r\n");
+            assertThat(response).contains(
+                    "connection: upgrade\r\n",
+                    "upgrade: h2c\r\n");
+            assertThat(response).endsWith("\r\n\r\n");
         }
 
         // Check that the preface was send (a.k.a the settings frame)

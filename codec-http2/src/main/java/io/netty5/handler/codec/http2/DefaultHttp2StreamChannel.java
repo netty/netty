@@ -32,6 +32,7 @@ import io.netty5.channel.MessageSizeEstimator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.Resource;
 import io.netty5.util.DefaultAttributeMap;
 import io.netty5.util.concurrent.EventExecutor;
@@ -588,7 +589,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
         if (writeFrame) {
             // Write a headers frame with endOfStream flag set
-            writeTransport(new DefaultHttp2HeadersFrame(EmptyHttp2Headers.INSTANCE, true), newPromise());
+            writeTransport(new DefaultHttp2HeadersFrame(Http2Headers.emptyHeaders(), true), newPromise());
         }
         outputShutdown = true;
         promise.setSuccess(null);

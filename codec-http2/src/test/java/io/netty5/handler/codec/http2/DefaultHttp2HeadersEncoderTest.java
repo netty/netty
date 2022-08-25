@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ public class DefaultHttp2HeadersEncoderTest {
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers().method(new AsciiString("GET")).add(new AsciiString("a"), new AsciiString("1"))
+        return Http2Headers.newHeaders().method(new AsciiString("GET")).add(new AsciiString("a"), new AsciiString("1"))
                 .add(new AsciiString("a"), new AsciiString("2"));
     }
 }

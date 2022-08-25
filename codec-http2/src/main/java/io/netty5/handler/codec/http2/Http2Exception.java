@@ -29,7 +29,7 @@ import static java.util.Objects.requireNonNull;
  * Exception thrown when an HTTP/2 error was encountered.
  */
 @UnstableApi
-public class Http2Exception extends Exception {
+public class Http2Exception extends RuntimeException {
     private static final long serialVersionUID = -6941186345430164209L;
     private final Http2Error error;
     private final ShutdownHint shutdownHint;

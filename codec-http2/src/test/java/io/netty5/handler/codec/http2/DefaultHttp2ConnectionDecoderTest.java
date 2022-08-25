@@ -19,6 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -42,9 +43,7 @@ import static io.netty5.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty5.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -282,7 +281,7 @@ public class DefaultHttp2ConnectionDecoderTest {
             var ex = assertThrows(Http2Exception.class, () -> {
                 decode().onDataRead(ctx, STREAM_ID, data, padding, true);
             });
-            assertThat(ex, not(instanceOf(Http2Exception.StreamException.class)));
+            assertThat(ex).isNotInstanceOf(Http2Exception.StreamException.class);
             verify(localFlow)
                     .receiveFlowControlledFrame(eq(null), eq(data), eq(padding), eq(true));
             verify(localFlow).consumeBytes(eq(null), eq(processedBytes));
@@ -418,14 +417,14 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadForUnknownStreamShouldThrow() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
         assertThrows(Http2Exception.class, () -> {
-            decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+            decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         });
     }
 
     @Test
     public void headersReadForStreamThatAlreadySentResetShouldBeIgnored() throws Exception {
         when(stream.isResetSent()).thenReturn(true);
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
 
@@ -439,7 +438,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadForUnknownStreamAfterGoAwayShouldBeIgnored() throws Exception {
         mockGoAwaySent();
         when(connection.stream(STREAM_ID)).thenReturn(null);
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
 
@@ -453,9 +452,9 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadForUnknownStreamShouldCreateStream() throws Exception {
         final int streamId = 5;
         when(remote.createStream(eq(streamId), anyBoolean())).thenReturn(stream);
-        decode().onHeadersRead(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
         verify(remote).createStream(eq(streamId), eq(false));
-        verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
@@ -463,27 +462,27 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void headersReadForUnknownStreamShouldCreateHalfClosedStream() throws Exception {
         final int streamId = 5;
         when(remote.createStream(eq(streamId), anyBoolean())).thenReturn(stream);
-        decode().onHeadersRead(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true);
+        decode().onHeadersRead(ctx, streamId, Http2Headers.emptyHeaders(), 0, true);
         verify(remote).createStream(eq(streamId), eq(true));
-        verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
     @Test
     public void headersReadForPromisedStreamShouldHalfOpenStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         verify(stream).open(false);
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
     @Test
     public void trailersDoNotEndStreamThrows() throws Exception {
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         // Trailers must end the stream!
         assertThrows(Http2Exception.class, () -> {
-            decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+            decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         });
     }
 
@@ -498,16 +497,16 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     private void tooManyHeaderThrows(final boolean eos) throws Exception {
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
         // We already received the trailers!
         assertThrows(Http2Exception.class, () -> {
-            decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, eos);
+            decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, eos);
         });
     }
 
     private static Http2Headers informationalHeaders() {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.status(HttpResponseStatus.CONTINUE.codeAsText());
         return headers;
     }
@@ -537,12 +536,12 @@ public class DefaultHttp2ConnectionDecoderTest {
         for (int i = 0; i < infoHeaderCount; ++i) {
             decode().onHeadersRead(ctx, STREAM_ID, informationalHeaders(), 0, false);
         }
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         if (eos) {
-            decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, eos);
+            decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, eos);
         } else {
             assertThrows(Http2Exception.class, () -> {
-                decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, eos);
+                decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, eos);
             });
         }
     }
@@ -550,10 +549,10 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void headersReadForPromisedStreamShouldCloseStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
         verify(stream).open(true);
         verify(lifecycleManager).closeStreamRemote(eq(stream), eq(future));
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
@@ -561,9 +560,9 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void headersDependencyNotCreatedShouldCreateAndSucceed() throws Exception {
         final short weight = 1;
-        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, STREAM_DEPENDENCY_ID,
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), STREAM_DEPENDENCY_ID,
                 weight, true, 0, true);
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(STREAM_DEPENDENCY_ID),
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()), eq(STREAM_DEPENDENCY_ID),
                 eq(weight), eq(true), eq(0), eq(true));
         verify(remoteFlow).updateDependencyTree(eq(STREAM_ID), eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true));
         verify(lifecycleManager).closeStreamRemote(eq(stream), any(Future.class));
@@ -572,7 +571,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void pushPromiseReadAfterGoAwaySentShouldBeIgnored() throws Exception {
         mockGoAwaySent();
-        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
@@ -580,7 +579,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void pushPromiseReadAfterGoAwayShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
         mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
-        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0);
         verify(remote).reservePushStream(anyInt(), any(Http2Stream.class));
         verify(listener).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
@@ -589,16 +588,16 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void pushPromiseReadForUnknownStreamShouldThrow() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
         assertThrows(Http2Exception.class, () -> {
-            decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+            decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0);
         });
     }
 
     @Test
     public void pushPromiseReadShouldSucceed() throws Exception {
-        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0);
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
-                eq(EmptyHttp2Headers.INSTANCE), eq(0));
+                eq(Http2Headers.emptyHeaders()), eq(0));
     }
 
     @Test
@@ -765,12 +764,12 @@ public class DefaultHttp2ConnectionDecoderTest {
             mockFlowControl(processedBytes);
             if (negative) {
                 assertThrows(Http2Exception.StreamException.class, () -> {
-                    decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
-                            .setLong(HttpHeaderNames.CONTENT_LENGTH, -1L), padding, false);
+                    decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.newHeaders()
+                            .set(HttpHeaderNames.CONTENT_LENGTH, "-1"), padding, false);
                 });
             } else {
-                decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
-                        .setLong(HttpHeaderNames.CONTENT_LENGTH, 1L), padding, false);
+                decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.newHeaders()
+                        .set(HttpHeaderNames.CONTENT_LENGTH, "1"), padding, false);
                 assertThrows(Http2Exception.StreamException.class, () -> {
                     decode().onDataRead(ctx, STREAM_ID, data, padding, true);
                 });
@@ -801,7 +800,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(connection.isServer()).thenReturn(true);
 
         assertThrows(Http2Exception.StreamException.class, () -> {
-            decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
+            decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.newHeaders()
                     .set(HttpHeaderNames.CONTENT_LENGTH, length), padding, false);
         });
 
@@ -824,8 +823,8 @@ public class DefaultHttp2ConnectionDecoderTest {
         final int padding = 10;
         when(connection.isServer()).thenReturn(true);
         assertThrows(Http2Exception.StreamException.class, () -> {
-            decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
-                    .setLong(HttpHeaderNames.CONTENT_LENGTH, negative? -1L : 1L), padding, true);
+            decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.newHeaders()
+                    .set(HttpHeaderNames.CONTENT_LENGTH, negative? "-1" : "1"), padding, true);
         });
 
         // Verify that the event was absorbed and not propagated to the observer.
@@ -846,20 +845,20 @@ public class DefaultHttp2ConnectionDecoderTest {
     private void multipleHeadersContentLength(boolean same) throws Exception {
         final int padding = 10;
         when(connection.isServer()).thenReturn(true);
-        final Http2Headers headers = new DefaultHttp2Headers();
+        final Http2Headers headers = Http2Headers.newHeaders();
         if (same) {
-            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
-            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
+            headers.add(HttpHeaderNames.CONTENT_LENGTH, "0");
+            headers.add(HttpHeaderNames.CONTENT_LENGTH, "0");
         } else {
-            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
-            headers.addLong(HttpHeaderNames.CONTENT_LENGTH, 1);
+            headers.add(HttpHeaderNames.CONTENT_LENGTH, "0");
+            headers.add(HttpHeaderNames.CONTENT_LENGTH, "1");
         }
 
         if (same) {
             decode().onHeadersRead(ctx, STREAM_ID, headers, padding, true);
             verify(listener, times(1)).onHeadersRead(eq(ctx), anyInt(),
                     any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
-            assertEquals(1, headers.getAll(HttpHeaderNames.CONTENT_LENGTH).size());
+            assertThat(headers.values(HttpHeaderNames.CONTENT_LENGTH)).hasSize(1);
         } else {
             assertThrows(Http2Exception.StreamException.class, () -> {
                 decode().onHeadersRead(ctx, STREAM_ID, headers, padding, true);

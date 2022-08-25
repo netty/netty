@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,7 +73,7 @@ public class DefaultHttp2FrameReaderTest {
         final int streamId = 1;
 
         try (Buffer input = onHeapAllocator().allocate(256)) {
-            Http2Headers headers = new DefaultHttp2Headers()
+            Http2Headers headers = Http2Headers.newHeaders()
                     .authority("foo")
                     .method("get")
                     .path("/")
@@ -90,14 +91,14 @@ public class DefaultHttp2FrameReaderTest {
         final int streamId = 1;
 
         try (Buffer input = onHeapAllocator().allocate(256)) {
-            Http2Headers headers = new DefaultHttp2Headers()
+            Http2Headers headers = Http2Headers.newHeaders()
                     .authority("foo")
                     .method("get")
                     .path("/")
                     .scheme("https");
             writeHeaderFrame(input, streamId, headers,
                     new Http2Flags().endOfHeaders(false).endOfStream(true));
-            writeContinuationFrame(input, streamId, new DefaultHttp2Headers().add("foo", "bar"),
+            writeContinuationFrame(input, streamId, Http2Headers.newHeaders().add("foo", "bar"),
                     new Http2Flags().endOfHeaders(true));
 
             frameReader.readFrame(ctx, input, listener);
@@ -126,7 +127,7 @@ public class DefaultHttp2FrameReaderTest {
         final int streamId = 1;
 
         try (Buffer input = onHeapAllocator().allocate(256)) {
-            Http2Headers headers = new DefaultHttp2Headers()
+            Http2Headers headers = Http2Headers.newHeaders()
                     .authority("foo")
                     .method("get")
                     .path("/")
@@ -147,14 +148,14 @@ public class DefaultHttp2FrameReaderTest {
     @Test
     public void failedWhenContinuationFrameStreamIdMismatch() throws Http2Exception {
         try (Buffer input = onHeapAllocator().allocate(256)) {
-            Http2Headers headers = new DefaultHttp2Headers()
+            Http2Headers headers = Http2Headers.newHeaders()
                     .authority("foo")
                     .method("get")
                     .path("/")
                     .scheme("https");
             writeHeaderFrame(input, 1, headers,
                              new Http2Flags().endOfHeaders(false).endOfStream(true));
-            writeContinuationFrame(input, 3, new DefaultHttp2Headers().add("foo", "bar"),
+            writeContinuationFrame(input, 3, Http2Headers.newHeaders().add("foo", "bar"),
                     new Http2Flags().endOfHeaders(true));
 
             assertThrows(Http2Exception.class, new Executable() {
@@ -169,7 +170,7 @@ public class DefaultHttp2FrameReaderTest {
     @Test
     public void failedWhenContinuationFrameNotFollowHeaderFrame() throws Http2Exception {
         try (Buffer input = onHeapAllocator().allocate(256)) {
-            writeContinuationFrame(input, 1, new DefaultHttp2Headers().add("foo", "bar"),
+            writeContinuationFrame(input, 1, Http2Headers.newHeaders().add("foo", "bar"),
                                    new Http2Flags().endOfHeaders(true));
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
@@ -183,7 +184,7 @@ public class DefaultHttp2FrameReaderTest {
     @Test
     public void failedWhenHeaderFrameDependsOnItself() throws Http2Exception {
         try (Buffer input = onHeapAllocator().allocate(256)) {
-            Http2Headers headers = new DefaultHttp2Headers()
+            Http2Headers headers = Http2Headers.newHeaders()
                     .authority("foo")
                     .method("get")
                     .path("/")
@@ -205,7 +206,7 @@ public class DefaultHttp2FrameReaderTest {
     public void readHeaderAndData() throws Http2Exception {
         try (Buffer input = onHeapAllocator().allocate(256);
              Buffer dataPayload = onHeapAllocator().allocate(256)) {
-            Http2Headers headers = new DefaultHttp2Headers()
+            Http2Headers headers = Http2Headers.newHeaders()
                     .authority("foo")
                     .method("get")
                     .path("/")

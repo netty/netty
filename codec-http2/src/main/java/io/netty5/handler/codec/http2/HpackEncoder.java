@@ -34,6 +34,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 
 import java.nio.charset.StandardCharsets;

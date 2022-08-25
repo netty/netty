@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -215,7 +216,7 @@ public class Http2MultiplexTransportTest {
                             if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
                                 executorService.schedule(() -> {
                                     ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
-                                            new DefaultHttp2Headers(), false)).addListener(future -> {
+                                            Http2Headers.newHeaders(), false)).addListener(future -> {
                                         ctx.write(new DefaultHttp2DataFrame(
                                                 bb("Hello World").send(), true));
                                         ctx.channel().executor().execute(ctx::flush);
@@ -252,7 +253,7 @@ public class Http2MultiplexTransportTest {
                 }
             });
             Http2StreamChannel streamChannel = h2Bootstrap.open().asStage().get();
-            streamChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).asStage().sync();
+            streamChannel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders(), true)).asStage().sync();
 
             latch.await();
         } finally {
@@ -402,7 +403,7 @@ public class Http2MultiplexTransportTest {
                                     h2Bootstrap.open().addListener(future -> {
                                         if (future.isSuccess()) {
                                             future.getNow().writeAndFlush(new DefaultHttp2HeadersFrame(
-                                                    new DefaultHttp2Headers(), false));
+                                                    Http2Headers.newHeaders(), false));
                                         }
                                     });
 
@@ -488,7 +489,7 @@ public class Http2MultiplexTransportTest {
                                 public void channelRead(final ChannelHandlerContext ctx, Object msg) {
                                     if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
                                         ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
-                                                new DefaultHttp2Headers(), false))
+                                                Http2Headers.newHeaders(), false))
                                            .addListener(future -> {
                                                    ctx.writeAndFlush(new DefaultHttp2DataFrame(
                                                            bb("Hello World").send(),
@@ -547,7 +548,7 @@ public class Http2MultiplexTransportTest {
                                     h2Bootstrap.open().addListener(future -> {
                                         if (future.isSuccess()) {
                                             future.getNow().writeAndFlush(new DefaultHttp2HeadersFrame(
-                                                    new DefaultHttp2Headers(), true));
+                                                    Http2Headers.newHeaders(), true));
                                         }
                                     });
                                 }

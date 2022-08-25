@@ -28,7 +28,6 @@ import io.netty5.util.AsciiString;
 import io.netty5.util.ByteProcessor;
 import io.netty5.util.internal.AppendableCharSequence;
 
-import java.util.Arrays;
 import java.util.Iterator;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositive;

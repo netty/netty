@@ -16,8 +16,13 @@
 package io.netty5.handler.codec.http2.headers;
 
 import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.headers.MultiMap;
+import io.netty5.handler.codec.http2.Http2Exception;
+import io.netty5.util.AsciiString;
+import io.netty5.util.ByteProcessor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -26,6 +31,10 @@ import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty5.util.AsciiString.isUpperCase;
+
 /**
  * Default implementation of {@link Http2Headers}.
  *
@@ -33,6 +42,8 @@ import java.util.function.Supplier;
  * of the public API for this class. Only the methods declared in {@link HttpHeaders} are considered public API.
  */
 public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Headers {
+    private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = value -> !isUpperCase(value);
+
     /**
      * Create a new instance.
      *
@@ -50,18 +61,138 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
     @Override
     protected CharSequence validateKey(@Nullable CharSequence name) {
         if (name == null || name.length() == 0) {
-            throw new IllegalArgumentException("Empty header names are not allowed");
+            throw connectionError(PROTOCOL_ERROR, "empty headers are not allowed [%s]", name);
         }
         if (validateNames) {
             if (PseudoHeaderName.hasPseudoHeaderFormat(name)) {
                 if (!PseudoHeaderName.isPseudoHeader(name)) {
-                    throw new IllegalArgumentException(name + " is not a standard pseudo-header.");
+                    throw connectionError(PROTOCOL_ERROR, name + " is not a standard pseudo-header.");
                 }
             } else {
-                validateHeaderName(name);
+                try {
+                    validateHeaderName(name);
+                } catch (Exception e) {
+                    throw connectionError(PROTOCOL_ERROR, e, "header name contain illegal characters [%s]", name);
+                }
+                if (name instanceof AsciiString) {
+                    int index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
+                    if (index != -1) {
+                        throw connectionError(PROTOCOL_ERROR, "invalid header name [%s]", name);
+                    }
+                } else {
+                    for (int i = 0; i < name.length(); ++i) {
+                        if (isUpperCase(name.charAt(i))) {
+                            throw connectionError(PROTOCOL_ERROR, "invalid header name [%s]", name);
+                        }
+                    }
+                }
             }
         }
         return name;
+    }
+
+    @Override
+    public Http2Headers copy() {
+        DefaultHttp2Headers copy = new DefaultHttp2Headers(
+                size(), validateNames, validateCookies, validateValues);
+        copy.add(this);
+        return copy;
+    }
+
+    @Override
+    public Http2Headers add(CharSequence name, CharSequence value) {
+        super.add(name, value);
+        return this;
+    }
+
+    @Override
+    public Http2Headers add(CharSequence name, Iterable<? extends CharSequence> values) {
+        super.add(name, values);
+        return this;
+    }
+
+    @Override
+    public Http2Headers add(CharSequence name, Iterator<? extends CharSequence> valuesItr) {
+        super.add(name, valuesItr);
+        return this;
+    }
+
+    @Override
+    public Http2Headers add(CharSequence name, CharSequence... values) {
+        super.add(name, values);
+        return this;
+    }
+
+    @Override
+    public Http2Headers add(HttpHeaders headers) {
+        super.add(headers);
+        return this;
+    }
+
+    @Override
+    public Http2Headers set(CharSequence name, CharSequence value) {
+        super.set(name, value);
+        return this;
+    }
+
+    @Override
+    public Http2Headers set(CharSequence name, Iterable<? extends CharSequence> values) {
+        super.set(name, values);
+        return this;
+    }
+
+    @Override
+    public Http2Headers set(CharSequence name, Iterator<? extends CharSequence> valueItr) {
+        super.set(name, valueItr);
+        return this;
+    }
+
+    @Override
+    public Http2Headers set(CharSequence name, CharSequence... values) {
+        super.set(name, values);
+        return this;
+    }
+
+    @Override
+    public Http2Headers set(final HttpHeaders headers) {
+        super.set(headers);
+        return this;
+    }
+
+    @Override
+    public Http2Headers replace(final HttpHeaders headers) {
+        super.replace(headers);
+        return this;
+    }
+
+    @Override
+    public Http2Headers clear() {
+        super.clear();
+        return this;
+    }
+
+    @Override
+    public Http2Headers addCookie(HttpCookiePair cookie) {
+        super.addCookie(cookie);
+        return this;
+    }
+
+    @Override
+    public Http2Headers addCookie(final CharSequence name, final CharSequence value) {
+        super.addCookie(name, value);
+        return this;
+    }
+
+    @Override
+    public Http2Headers addSetCookie(HttpSetCookie cookie) {
+        super.addSetCookie(cookie);
+        return this;
+    }
+
+    @Override
+    public Http2Headers addSetCookie(final CharSequence name, final CharSequence value) {
+        super.addSetCookie(name, value);
+        return this;
     }
 
     @Override

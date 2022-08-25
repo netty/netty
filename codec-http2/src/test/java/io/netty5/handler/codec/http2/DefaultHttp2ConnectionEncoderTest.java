@@ -21,10 +21,10 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -142,7 +142,7 @@ public class DefaultHttp2ConnectionEncoderTest {
                     return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                 });
         when(writer.writeHeaders(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(),
-                anyInt(), anyBoolean()))
+                                 anyInt(), anyBoolean()))
                 .then((Answer<Future<Void>>) invocationOnMock -> {
                     if (streamClosed) {
                         fail("Stream already closed");
@@ -257,7 +257,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         final Buffer data = dummyData();
         encoder.writeData(ctx, STREAM_ID, data, 0, false);
         when(remoteFlow.hasFlowControlled(any(Http2Stream.class))).thenReturn(true);
-        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
         List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
         assertFalse(capturedWrites.get(0).merge(ctx, capturedWrites.get(1)));
     }
@@ -287,8 +287,8 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
         writeAllFlowControlledFrames();
         final int streamId = 6;
-        Future<Void> f = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+        Future<Void> f = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
+        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()), eq(0),
                 eq(false));
         assertTrue(f.isSuccess());
     }
@@ -299,9 +299,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         Http2Stream parent = createStream(STREAM_ID, false);
         reservePushStream(PUSH_STREAM_ID, parent);
 
-        encoder.writeHeaders(ctx, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        encoder.writeHeaders(ctx, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         assertEquals(HALF_CLOSED_REMOTE, stream(PUSH_STREAM_ID).state());
-        verify(writer).writeHeaders(eq(ctx), eq(PUSH_STREAM_ID), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer).writeHeaders(eq(ctx), eq(PUSH_STREAM_ID), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
     }
 
@@ -309,13 +309,13 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void trailersDoNotEndStreamThrows() {
         writeAllFlowControlledFrames();
         final int streamId = 6;
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
 
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        Future<Void> future = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
 
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
     }
 
@@ -323,16 +323,16 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void trailersDoNotEndStreamWithDataThrows() {
         writeAllFlowControlledFrames();
         final int streamId = 6;
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
 
         Http2Stream stream = connection.stream(streamId);
         when(remoteFlow.hasFlowControlled(eq(stream))).thenReturn(true);
 
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        Future<Void> future = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
 
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
     }
 
@@ -349,16 +349,16 @@ public class DefaultHttp2ConnectionEncoderTest {
     private void tooManyHeadersThrows(boolean eos) {
         writeAllFlowControlledFrames();
         final int streamId = 6;
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, true);
 
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos);
+        Future<Void> future = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, eos);
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
 
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(true));
     }
 
@@ -389,24 +389,24 @@ public class DefaultHttp2ConnectionEncoderTest {
         for (int i = 0; i < infoHeaderCount; ++i) {
             encoder.writeHeaders(ctx, streamId, infoHeaders, 0, false);
         }
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
 
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos);
+        Future<Void> future = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, eos);
         assertTrue(future.isDone());
         assertEquals(eos, future.isSuccess());
 
         verify(writer, times(infoHeaderCount)).writeHeaders(eq(ctx), eq(streamId), eq(infoHeaders),
                 eq(0), eq(false));
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
         if (eos) {
-            verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+            verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                     eq(0), eq(true));
         }
     }
 
     private static Http2Headers informationalHeaders() {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.status(HttpResponseStatus.CONTINUE.codeAsText());
         return headers;
     }
@@ -424,20 +424,20 @@ public class DefaultHttp2ConnectionEncoderTest {
     private void tooManyHeadersWithDataThrows(boolean eos) {
         writeAllFlowControlledFrames();
         final int streamId = 6;
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
 
         Http2Stream stream = connection.stream(streamId);
         when(remoteFlow.hasFlowControlled(eq(stream))).thenReturn(true);
 
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, true);
 
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos);
+        Future<Void> future = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, eos);
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
 
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(true));
     }
 
@@ -472,18 +472,18 @@ public class DefaultHttp2ConnectionEncoderTest {
         Http2Stream stream = connection.stream(streamId);
         when(remoteFlow.hasFlowControlled(eq(stream))).thenReturn(true);
 
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
 
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos);
+        Future<Void> future = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, eos);
         assertTrue(future.isDone());
         assertEquals(eos, future.isSuccess());
 
         verify(writer, times(infoHeaderCount)).writeHeaders(eq(ctx), eq(streamId), eq(infoHeaders),
                 eq(0), eq(false));
-        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
         if (eos) {
-            verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+            verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                     eq(0), eq(true));
         }
     }
@@ -492,7 +492,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void pushPromiseWriteAfterGoAwayReceivedShouldFail() throws Exception {
         createStream(STREAM_ID, false);
         goAwayReceived(0);
-        Future<Void> future = encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+        Future<Void> future = encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0);
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
     }
@@ -500,10 +500,10 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void pushPromiseWriteShouldReserveStream() throws Exception {
         createStream(STREAM_ID, false);
-        encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+        encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0);
         assertEquals(RESERVED_LOCAL, stream(PUSH_STREAM_ID).state());
         verify(writer).writePushPromise(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
-                eq(EmptyHttp2Headers.INSTANCE), eq(0));
+                eq(Http2Headers.emptyHeaders()), eq(0));
     }
 
     @Test
@@ -555,7 +555,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void rstStreamShouldCloseStream() throws Exception {
         // Create the stream and send headers.
         writeAllFlowControlledFrames();
-        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
 
         // Now verify that a stream reset is performed.
         stream(STREAM_ID);
@@ -612,7 +612,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void headersWriteShouldHalfCloseStream() throws Exception {
         writeAllFlowControlledFrames();
         createStream(STREAM_ID, false);
-        Future<Void> f = encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        Future<Void> f = encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
 
         assertTrue(f.isSuccess());
         verify(lifecycleManager).closeStreamLocal(eq(stream(STREAM_ID)), eq(f));
@@ -623,7 +623,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         writeAllFlowControlledFrames();
         Http2Stream parent = createStream(STREAM_ID, false);
         Http2Stream stream = reservePushStream(PUSH_STREAM_ID, parent);
-        Future<Void> f = encoder.writeHeaders(ctx, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        Future<Void> f = encoder.writeHeaders(ctx, PUSH_STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
         assertEquals(HALF_CLOSED_REMOTE, stream.state());
         assertTrue(f.isSuccess());
         verify(lifecycleManager).closeStreamLocal(eq(stream), eq(f));
@@ -633,12 +633,12 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void headersWriteShouldHalfCloseAfterOnErrorForPreCreatedStream() throws Exception {
         final Throwable ex = new RuntimeException();
         // Fake an encoding error, like HPACK's HeaderListSizeException
-        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(true)))
+        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()), eq(0), eq(true)))
             .thenReturn(ImmediateEventExecutor.INSTANCE.newFailedFuture(ex));
 
         writeAllFlowControlledFrames();
         Http2Stream stream = createStream(STREAM_ID, false);
-        Future<Void> f = encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        Future<Void> f = encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
 
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
@@ -652,11 +652,11 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void headersWriteShouldHalfCloseAfterOnErrorForImplicitlyCreatedStream() throws Exception {
         final Throwable ex = new RuntimeException();
         // Fake an encoding error, like HPACK's HeaderListSizeException
-        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(true)))
+        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()), eq(0), eq(true)))
             .thenReturn(ImmediateEventExecutor.INSTANCE.newFailedFuture(ex));
 
         writeAllFlowControlledFrames();
-        Future<Void> f = encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        Future<Void> f = encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
 
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
@@ -710,8 +710,8 @@ public class DefaultHttp2ConnectionEncoderTest {
         writeAllFlowControlledFrames();
         createStream(STREAM_ID, false);
         goAwaySent(0);
-        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE),
+        encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
     }
 
@@ -728,8 +728,8 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void canWriteHeaderFrameAfterGoAwayReceived() throws Http2Exception {
         writeAllFlowControlledFrames();
         goAwayReceived(STREAM_ID);
-        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE),
+        encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
     }
 
@@ -737,8 +737,8 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void headersWithNoPriority() {
         writeAllFlowControlledFrames();
         final int streamId = 6;
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false);
-        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
+        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()),
                 eq(0), eq(false));
     }
 
@@ -746,9 +746,9 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void headersWithPriority() {
         writeAllFlowControlledFrames();
         final int streamId = 6;
-        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 10, DEFAULT_PRIORITY_WEIGHT,
+        encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 10, DEFAULT_PRIORITY_WEIGHT,
                 true, 1, false);
-        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(10),
+        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(Http2Headers.emptyHeaders()), eq(10),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(true), eq(1), eq(false));
     }
 

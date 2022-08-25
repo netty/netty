@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -32,7 +33,7 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-            boolean endStream) throws Http2Exception {
+                              boolean endStream) throws Http2Exception {
     }
 
     @Override

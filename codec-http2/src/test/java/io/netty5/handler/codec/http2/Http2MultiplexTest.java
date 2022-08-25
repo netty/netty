@@ -26,6 +26,7 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.Resource;
@@ -75,7 +76,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class Http2MultiplexTest {
-    private final Http2Headers request = new DefaultHttp2Headers()
+    private final Http2Headers request = Http2Headers.newHeaders()
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
             .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
 
@@ -146,7 +147,7 @@ public class Http2MultiplexTest {
         Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
-                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()));
                 ctx.writeAndFlush(new DefaultHttp2UnknownFrame((byte) 99, new Http2Flags()));
                 ctx.fireChannelActive();
             }
@@ -218,7 +219,7 @@ public class Http2MultiplexTest {
         // header frame and data frame
         verifyFramesMultiplexedToCorrectChannel(channel, handler, 2);
 
-        channel.write(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+        channel.write(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()));
         assertFalse(channel.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(handler.isOutboundShutdown());
 
@@ -261,8 +262,8 @@ public class Http2MultiplexTest {
 
     private void headerMultipleContentLengthValidationShouldPropagate(boolean endStream) throws Exception {
         final LastInboundHandler inboundHandler = new LastInboundHandler();
-        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 0);
-        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 1);
+        request.add(HttpHeaderNames.CONTENT_LENGTH, "0");
+        request.add(HttpHeaderNames.CONTENT_LENGTH, "1");
         Http2StreamChannel channel = newInboundStream(3, endStream, inboundHandler);
 
         assertThrows(StreamException.class, new Executable() {
@@ -354,19 +355,19 @@ public class Http2MultiplexTest {
     private void headerContentLengthNotMatchValidationShouldPropagate(
             boolean closeLocal, boolean endStream, boolean trailer) throws Exception {
         final LastInboundHandler inboundHandler = new LastInboundHandler();
-        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 1);
+        request.add(HttpHeaderNames.CONTENT_LENGTH, "1");
         Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
         assertTrue(channel.isActive());
 
         if (closeLocal) {
-            channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).asStage().sync();
+            channel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders(), true)).asStage().sync();
             assertEquals(Http2Stream.State.HALF_CLOSED_LOCAL, channel.stream().state());
         } else {
             assertEquals(Http2Stream.State.OPEN, channel.stream().state());
         }
 
         if (trailer) {
-            frameInboundWriter.writeInboundHeaders(channel.stream().id(), new DefaultHttp2Headers(), 0, endStream);
+            frameInboundWriter.writeInboundHeaders(channel.stream().id(), Http2Headers.newHeaders(), 0, endStream);
         } else {
             frameInboundWriter.writeInboundData(channel.stream().id(), bb("foo"), 0, endStream);
         }
@@ -577,7 +578,7 @@ public class Http2MultiplexTest {
         ChannelHandler handler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
-                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()));
                 ctx.fireChannelActive();
             }
         };
@@ -611,7 +612,7 @@ public class Http2MultiplexTest {
         Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
-                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()));
                 ctx.fireChannelActive();
             }
         });
@@ -665,13 +666,13 @@ public class Http2MultiplexTest {
         final Http2StreamChannel childChannel = newOutboundStream(inboundHandler);
         assertTrue(childChannel.isActive());
 
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 eq(headers), anyInt(), anyBoolean())).thenAnswer(invocationOnMock ->
             ImmediateEventExecutor.INSTANCE.newFailedFuture(
                         new StreamException(childChannel.stream().id(), Http2Error.STREAM_CLOSED, "Stream Closed")));
         final Future<Void> future = childChannel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()));
 
         parentChannel.flush();
 
@@ -697,7 +698,7 @@ public class Http2MultiplexTest {
         assertTrue(inboundHandler.isChannelActive());
 
         // Write to the child channel
-        Http2Headers headers = new DefaultHttp2Headers().scheme("https").method("GET").path("/foo.txt");
+        Http2Headers headers = Http2Headers.newHeaders().scheme("https").method("GET").path("/foo.txt");
         childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
 
         // Read from the child channel
@@ -728,7 +729,7 @@ public class Http2MultiplexTest {
         Http2StreamChannel childChannel = newOutboundStream(handler);
         assertTrue(childChannel.isActive());
 
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                eq(headers), anyInt(), anyBoolean())).thenAnswer(invocationOnMock ->
                ImmediateEventExecutor.INSTANCE.newFailedFuture(new Http2NoMoreStreamIdsException()));
@@ -810,7 +811,7 @@ public class Http2MultiplexTest {
         final AtomicBoolean channelOpen = new AtomicBoolean(true);
         final AtomicBoolean channelActive = new AtomicBoolean(true);
 
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 eq(headers), anyInt(), anyBoolean())).thenAnswer(invocationOnMock -> {
             Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
@@ -865,7 +866,7 @@ public class Http2MultiplexTest {
         assertTrue(childChannel.isActive());
 
         assertTrue(childChannel.isWritable());
-        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()));
         parentChannel.flush();
 
         // Test for initial window size
@@ -888,7 +889,7 @@ public class Http2MultiplexTest {
         assertTrue(childChannel.isWritable());
         assertTrue(parentChannel.isActive());
 
-        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()));
         parentChannel.flush();
 
         assertTrue(childChannel.isWritable());

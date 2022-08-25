@@ -40,6 +40,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.StringUtil;
 
 import java.io.InputStream;
@@ -194,7 +195,7 @@ final class HpackTestCase {
     }
 
     private static Http2Headers toHttp2Headers(List<HpackHeaderField> inHeaders) {
-        Http2Headers headers = new DefaultHttp2Headers(false);
+        Http2Headers headers = Http2Headers.newHeaders(false);
         for (HpackHeaderField e : inHeaders) {
             headers.add(e.name, e.value);
         }

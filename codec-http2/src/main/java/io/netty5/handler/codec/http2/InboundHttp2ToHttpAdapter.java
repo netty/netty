@@ -24,6 +24,7 @@ import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpStatusClass;
 import io.netty5.handler.codec.http.HttpUtil;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
@@ -276,10 +277,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
             // Add headers for dependency and weight.
             // See https://github.com/netty/netty/issues/5866
             if (streamDependency != Http2CodecUtil.CONNECTION_STREAM_ID) {
-                msg.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),
-                        streamDependency);
+                msg.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),
+                        String.valueOf(streamDependency));
             }
-            msg.headers().setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), weight);
+            msg.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), String.valueOf(weight));
 
             processHeadersEnd(ctx, stream, msg, endOfStream);
         }
@@ -315,9 +316,9 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
                     promisedStreamId);
         }
 
-        msg.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);
-        msg.headers().setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(),
-                Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
+        msg.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), String.valueOf(streamId));
+        msg.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(),
+                String.valueOf(Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT));
 
         processHeadersEnd(ctx, promisedStream, msg, false);
     }
