@@ -758,14 +758,6 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     @Override
-    protected void runAfterTransportAction() {
-        super.runAfterTransportAction();
-        if (!((EmbeddedEventLoop) executor()).running) {
-            runPendingTasks();
-        }
-    }
-
-    @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
         return true;
     }
@@ -788,6 +780,14 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
         @Override
         protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
             handleInboundMessage(msg);
+        }
+
+        @Override
+        protected void runAfterTransportOperation() {
+            super.runAfterTransportOperation();
+            if (!((EmbeddedEventLoop) executor()).running) {
+                runPendingTasks();
+            }
         }
     }
 }
