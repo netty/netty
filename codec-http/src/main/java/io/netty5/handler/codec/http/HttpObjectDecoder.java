@@ -615,8 +615,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         boolean hasContentLength = contentLengthFields.hasNext();
         if (hasContentLength) {
             HttpVersion version = message.protocolVersion();
-            boolean isHttp10OrEarlier = version.majorVersion() < 1 || version.majorVersion() == 1
-                                                                      && version.minorVersion() == 0;
+            boolean isHttp10OrEarlier = version.majorVersion() < 1 ||
+                                        (version.majorVersion() == 1 && version.minorVersion() == 0);
             // Guard against multiple Content-Length headers as stated in
             // https://tools.ietf.org/html/rfc7230#section-3.3.2:
             contentLength = HttpUtil.normalizeAndGetContentLength(contentLengthFields,

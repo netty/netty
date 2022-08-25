@@ -204,6 +204,8 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                             value = setCookieString.subSequence(begin, i);
                             if (validateContent) {
                                 // Increment by 3 because we are skipping DQUOTE SEMI SP
+                                // See https://www.rfc-editor.org/rfc/rfc6265#section-4.1.1
+                                // Specifically, how set-cookie-string interacts with quoted cookie-value.
                                 i += 3;
                             } else {
                                 // When validation is disabled, we need to check if there's an SP to skip
@@ -221,13 +223,6 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                     }
                     ++i;
                     break;
-//                case '%':
-//                    if (validateContent) {
-//                        extractAndValidateCookieHexValue(setCookieString, i);
-//                    }
-//                    // Increment by 4 because we are skipping %0x##
-//                    i += 4;
-//                    break;
                 case ';':
                     // end of value, or end of av-value
                     if (i + 1 == length && validateContent) {

@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.COOKIE;
 import static io.netty5.handler.codec.http.HttpHeaderNames.SET_COOKIE;
@@ -93,39 +95,29 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     }
 
     private static boolean containsCommaSeparatedTrimmedCaseSensitive(CharSequence expected, CharSequence rawNext) {
-        int begin = 0;
-        int end;
-        if ((end = AsciiString.indexOf(rawNext, ',', begin)) == -1) {
-            return contentEquals(trim(rawNext), expected);
-        }
-        do {
-            if (contentEquals(trim(rawNext.subSequence(begin, end)), expected)) {
-                return true;
-            }
-            begin = end + 1;
-        } while ((end = AsciiString.indexOf(rawNext, ',', begin)) != -1);
-
-        if (begin < rawNext.length()) {
-            return contentEquals(trim(rawNext.subSequence(begin, rawNext.length())), expected);
-        }
-        return false;
+        return containsCommaSeparatedTrimmed(expected, rawNext, AsciiString::contentEquals);
     }
 
     private static boolean containsCommaSeparatedTrimmedCaseInsensitive(CharSequence expected, CharSequence rawNext) {
+        return containsCommaSeparatedTrimmed(expected, rawNext, AsciiString::contentEqualsIgnoreCase);
+    }
+
+    private static boolean containsCommaSeparatedTrimmed(CharSequence expected, CharSequence rawNext,
+                                                         BiPredicate<CharSequence, CharSequence> equality) {
         int begin = 0;
         int end;
         if ((end = AsciiString.indexOf(rawNext, ',', begin)) == -1) {
-            return contentEqualsIgnoreCase(trim(rawNext), expected);
+            return equality.test(trim(rawNext), expected);
         }
         do {
-            if (contentEqualsIgnoreCase(trim(rawNext.subSequence(begin, end)), expected)) {
+            if (equality.test(trim(rawNext.subSequence(begin, end)), expected)) {
                 return true;
             }
             begin = end + 1;
         } while ((end = AsciiString.indexOf(rawNext, ',', begin)) != -1);
 
         if (begin < rawNext.length()) {
-            return contentEqualsIgnoreCase(trim(rawNext.subSequence(begin, rawNext.length())), expected);
+            return equality.test(trim(rawNext.subSequence(begin, rawNext.length())), expected);
         }
         return false;
     }
@@ -783,8 +775,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
 
     @Override
     public String toString() {
-//        return toString(DEFAULT_HEADER_FILTER);
-        return toString((k, v) -> v);
+        return toString(DEFAULT_HEADER_FILTER);
     }
 
     @Override

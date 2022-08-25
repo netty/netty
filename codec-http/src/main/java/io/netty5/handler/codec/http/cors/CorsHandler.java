@@ -237,10 +237,14 @@ public class CorsHandler implements ChannelHandler {
     }
 
     private static CharSequence toCsv(Iterable<?> headerValues) {
-        StringJoiner joiner = new StringJoiner(",");
-        for (Object value : headerValues) {
-            joiner.add(StringUtil.escapeCsv(String.valueOf(value), true));
+        Iterator<?> itr = headerValues.iterator();
+        if (!itr.hasNext()) {
+            return AsciiString.EMPTY_STRING;
         }
+        StringJoiner joiner = new StringJoiner(",");
+        do {
+            joiner.add(StringUtil.escapeCsv(String.valueOf(itr.next()), true));
+        } while (itr.hasNext());
         return joiner.toString();
     }
 

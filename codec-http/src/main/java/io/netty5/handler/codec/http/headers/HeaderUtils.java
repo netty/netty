@@ -32,6 +32,7 @@ package io.netty5.handler.codec.http.headers;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
+import io.netty5.util.ByteProcessor;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -496,7 +497,8 @@ public final class HeaderUtils {
          * @return the next {@link HttpCookiePair} value for {@link #next()}, or {@code null} if all have been parsed.
          */
         private HttpCookiePair findNext(CharSequence cookieHeaderValue) {
-            int semiIndex = nextDelimiter(cookieHeaderValue);
+            int semiIndex = cookieHeaderValue instanceof AsciiString?
+                    nextDelimiterAscii((AsciiString) cookieHeaderValue) : nextDelimiter(cookieHeaderValue);
             HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(cookieHeaderValue, nextNextStart, semiIndex);
             if (semiIndex > 0) {
                 if (cookieHeaderValue.length() - 2 <= semiIndex) {
@@ -513,9 +515,30 @@ public final class HeaderUtils {
             return next;
         }
 
-        private int nextDelimiter(CharSequence cookieHeaderValue) {
-            boolean inQuotes = false;
+        private int nextDelimiterAscii(AsciiString cookieHeaderValue) {
+            ByteProcessor visitor = new ByteProcessor() {
+                boolean inQuotes;
+                @Override
+                public boolean process(byte c) {
+                    if (c == ';') {
+                        if (inQuotes) {
+                            throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
+                        }
+                        return true;
+                    }
+                    if (c == '"') {
+                        inQuotes = !inQuotes;
+                    }
+                    return false;
+                }
+            };
             int len = cookieHeaderValue.length();
+            return cookieHeaderValue.forEachByte(nextNextStart, len - nextNextStart, visitor);
+        }
+
+        private int nextDelimiter(CharSequence cookieHeaderValue) {
+            int len = cookieHeaderValue.length();
+            boolean inQuotes = false;
             for (int i = nextNextStart; i < len; i++) {
                 char c = cookieHeaderValue.charAt(i);
                 if (c == ';') {

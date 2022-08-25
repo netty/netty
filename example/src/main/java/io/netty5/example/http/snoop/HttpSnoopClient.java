@@ -91,7 +91,7 @@ public final class HttpSnoopClient {
             // Set some example cookies.
             request.headers()
                    .addCookie(new DefaultHttpCookiePair("my-cookie", "foo"))
-                    .addCookie(new DefaultHttpCookiePair("another-cookie", "bar"));
+                   .addCookie(new DefaultHttpCookiePair("another-cookie", "bar"));
 
             // Send the HTTP request.
             ch.writeAndFlush(request);

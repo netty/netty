@@ -1560,7 +1560,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (sequence.getClass() == AsciiString.class) {
             return ((AsciiString) sequence).subSequence(start, end);
         }
-        String str;
+        final String str;
         if (sequence.getClass() == String.class) {
             str = (String) sequence;
         } else {

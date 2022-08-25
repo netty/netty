@@ -24,7 +24,6 @@ import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.headers.HttpSetCookie.SameSite;
 import io.netty5.util.Resource;
-import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
