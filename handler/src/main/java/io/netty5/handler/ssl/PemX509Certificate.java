@@ -20,7 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.CharsetUtil;
 
 import java.math.BigInteger;
@@ -176,8 +176,8 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     @Override
     public Buffer content() {
         if (!content.isAccessible()) {
-            throw Statics.attachTrace((ResourceSupport<?, ?>) content,
-                                      new IllegalStateException("PemX509Certificate is closed."));
+            throw InternalBufferUtils.attachTrace((ResourceSupport<?, ?>) content,
+                                                  new IllegalStateException("PemX509Certificate is closed."));
         }
 
         return content;

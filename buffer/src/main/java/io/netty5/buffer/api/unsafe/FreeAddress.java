@@ -17,7 +17,7 @@ package io.netty5.buffer.api.unsafe;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Drop;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.internal.PlatformDependent;
 
 class FreeAddress implements Runnable, Drop<Buffer> {
@@ -32,7 +32,7 @@ class FreeAddress implements Runnable, Drop<Buffer> {
     @Override
     public void run() {
         PlatformDependent.freeMemory(address);
-        Statics.MEM_USAGE_NATIVE.add(-size);
+        InternalBufferUtils.MEM_USAGE_NATIVE.add(-size);
     }
 
     @Override

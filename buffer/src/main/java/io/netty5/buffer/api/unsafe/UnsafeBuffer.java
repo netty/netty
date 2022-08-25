@@ -26,9 +26,9 @@ import io.netty5.buffer.api.ComponentIterator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
-import io.netty5.buffer.api.internal.Statics;
-import io.netty5.buffer.api.internal.Statics.UncheckedLoadByte;
+import io.netty5.buffer.api.internal.InternalBufferUtils.UncheckedLoadByte;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.UnsafeAccess;
 import sun.misc.Unsafe;
@@ -42,12 +42,12 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
-import static io.netty5.buffer.api.internal.Statics.bbslice;
-import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
-import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
-import static io.netty5.buffer.api.internal.Statics.checkLength;
-import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bbslice;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bufferIsReadOnly;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.checkImplicitCapacity;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.checkLength;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.nativeAddressWithOffset;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
@@ -106,7 +106,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
     @Override
     protected RuntimeException createResourceClosedException() {
-        return Statics.bufferIsClosed(this);
+        return InternalBufferUtils.bufferIsClosed(this);
     }
 
     @Override
@@ -293,7 +293,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     @Override
     public void copyInto(int srcPos, Buffer dest, int destPos, int length) {
         if (!dest.isAccessible()) {
-            throw Statics.bufferIsClosed(dest);
+            throw InternalBufferUtils.bufferIsClosed(dest);
         }
         checkCopyIntoArgs(srcPos, length, destPos, dest.capacity());
         if (dest.readOnly()) {
@@ -310,7 +310,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
                             base, address + srcPos, destUnsafe.base, destUnsafe.address + destPos, length);
                 }
             } else {
-                Statics.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
+                InternalBufferUtils.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
             }
         } finally {
             Reference.reachabilityFence(memory);
@@ -432,8 +432,8 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     public int bytesBefore(Buffer needle) {
         try {
             UncheckedLoadByte uncheckedLoadByte = UnsafeBuffer::uncheckedLoadByte;
-            return Statics.bytesBefore(this, uncheckedLoadByte,
-                                       needle, needle instanceof UnsafeBuffer ? uncheckedLoadByte : null);
+            return InternalBufferUtils.bytesBefore(this, uncheckedLoadByte,
+                                                   needle, needle instanceof UnsafeBuffer ? uncheckedLoadByte : null);
         } finally {
             Reference.reachabilityFence(memory);
         }
@@ -517,7 +517,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
 
         // Allocate a bigger buffer.
         long newSize = capacity() + (long) Math.max(size - writableBytes(), minimumGrowth);
-        Statics.assertValidBufferSize(newSize);
+        InternalBufferUtils.assertValidBufferSize(newSize);
         UnsafeBuffer buffer = (UnsafeBuffer) control.getAllocator().allocate((int) newSize);
 
         // Copy contents.
@@ -1347,7 +1347,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     private BufferClosedException bufferIsClosed() {
-        return attachTrace(Statics.bufferIsClosed(this));
+        return attachTrace(InternalBufferUtils.bufferIsClosed(this));
     }
 
     private IndexOutOfBoundsException outOfBounds(int index, int size) {

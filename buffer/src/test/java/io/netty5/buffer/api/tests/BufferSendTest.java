@@ -29,8 +29,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 
-import static io.netty5.buffer.api.internal.Statics.acquire;
-import static io.netty5.buffer.api.internal.Statics.isOwned;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.acquire;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.isOwned;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;

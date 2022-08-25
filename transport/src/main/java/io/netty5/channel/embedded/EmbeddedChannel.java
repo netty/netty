@@ -17,7 +17,7 @@ package io.netty5.channel.embedded;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
@@ -729,7 +729,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
         if (msg instanceof ResourceSupport<?, ?>) {
             // Prevent the close in ChannelOutboundBuffer.remove() from ending the lifecycle of this message.
             // This allows tests to examine the message.
-            handleOutboundMessage(Statics.acquire((ResourceSupport<?, ?>) msg));
+            handleOutboundMessage(InternalBufferUtils.acquire((ResourceSupport<?, ?>) msg));
         } else if (msg instanceof Resource<?>) {
             // Resource life-cycle otherwise normally ends in ChannelOutboundBuffer.remove(), but using send()
             // here allows the close() in remove() to become a no-op.

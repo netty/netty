@@ -20,7 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BufferImplicitCapacityTest extends BufferTestSupport {

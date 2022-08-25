@@ -16,7 +16,7 @@
 package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -31,7 +31,7 @@ import static io.netty5.buffer.api.MemoryManager.using;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@Isolated // Cannot run in parallel with any other tests because we access Statics.MEM_USAGE_NATIVE.
+@Isolated // Cannot run in parallel with any other tests because we access InternalBufferUtils.MEM_USAGE_NATIVE.
 public class BufferCleanerTest extends BufferTestSupport {
     @SuppressWarnings("unused")
     private static volatile int sink;
@@ -51,14 +51,14 @@ public class BufferCleanerTest extends BufferTestSupport {
     @ParameterizedTest
     @MethodSource("unsafeAllocators")
     public void bufferMustBeClosedByCleaner(Fixture fixture) throws InterruptedException {
-        var initial = Statics.MEM_USAGE_NATIVE.sum();
+        var initial = InternalBufferUtils.MEM_USAGE_NATIVE.sum();
         int allocationSize = 1024;
         allocateAndForget(fixture, allocationSize);
         long sum = 0;
         for (int i = 0; i < 15; i++) {
             System.gc();
             System.runFinalization();
-            sum = Statics.MEM_USAGE_NATIVE.sum() - initial;
+            sum = InternalBufferUtils.MEM_USAGE_NATIVE.sum() - initial;
             if (sum < allocationSize) {
                 // The memory must have been cleaned.
                 return;

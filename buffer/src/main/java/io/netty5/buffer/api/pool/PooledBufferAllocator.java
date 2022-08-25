@@ -23,7 +23,7 @@ import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.StandardAllocationTypes;
 import io.netty5.buffer.api.internal.ArcDrop;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.NettyRuntime;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.FastThreadLocal;
@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static io.netty5.buffer.api.internal.Statics.allocatorClosedException;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.allocatorClosedException;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
@@ -315,7 +315,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         if (closed) {
             throw allocatorClosedException();
         }
-        Statics.assertValidBufferSize(size);
+        InternalBufferUtils.assertValidBufferSize(size);
         UntetheredMemory memory = allocateUntethered(size);
         Drop<Buffer> drop = memory.drop();
         Buffer buffer = manager.recoverMemory(pooledAllocatorControl, memory.memory(), drop);

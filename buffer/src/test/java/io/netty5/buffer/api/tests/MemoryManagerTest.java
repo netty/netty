@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceConfigurationError;
 
-import static io.netty5.buffer.api.internal.Statics.isOwned;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.isOwned;
 import static io.netty5.buffer.api.tests.BufferTestSupport.assertEquals;
 import static io.netty5.buffer.api.tests.BufferTestSupport.verifyWriteInaccessible;
 import static org.assertj.core.api.Assertions.assertThat;

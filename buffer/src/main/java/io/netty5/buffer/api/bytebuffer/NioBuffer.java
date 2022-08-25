@@ -26,12 +26,11 @@ import io.netty5.buffer.api.ComponentIterator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.Owned;
 import io.netty5.buffer.api.internal.AdaptableBuffer;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.NotReadOnlyReadableComponent;
-import io.netty5.buffer.api.internal.Statics;
-import io.netty5.buffer.api.internal.Statics.UncheckedLoadByte;
+import io.netty5.buffer.api.internal.InternalBufferUtils.UncheckedLoadByte;
 
 import java.io.IOException;
-import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
@@ -39,14 +38,14 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
-import static io.netty5.buffer.api.internal.Statics.bbput;
-import static io.netty5.buffer.api.internal.Statics.bbslice;
-import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
-import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
-import static io.netty5.buffer.api.internal.Statics.checkLength;
-import static io.netty5.buffer.api.internal.Statics.nativeAddressWithOffset;
-import static io.netty5.buffer.api.internal.Statics.setMemory;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bbput;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bbslice;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bufferIsReadOnly;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.checkImplicitCapacity;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.checkLength;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.nativeAddressWithOffset;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.setMemory;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 
@@ -90,7 +89,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     protected RuntimeException createResourceClosedException() {
-        return Statics.bufferIsClosed(this);
+        return InternalBufferUtils.bufferIsClosed(this);
     }
 
     @Override
@@ -158,7 +157,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     private long nativeAddress() {
-        return Statics.nativeAddressOfDirectByteBuffer(rmem);
+        return InternalBufferUtils.nativeAddressOfDirectByteBuffer(rmem);
     }
 
     @Override
@@ -269,7 +268,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             return;
         }
 
-        Statics.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
+        InternalBufferUtils.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
     }
 
     @Override
@@ -370,8 +369,8 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     @Override
     public int bytesBefore(Buffer needle) {
         UncheckedLoadByte uncheckedLoadByte = NioBuffer::uncheckedLoadByte;
-        return Statics.bytesBefore(this, uncheckedLoadByte,
-                                   needle, needle instanceof NioBuffer ? uncheckedLoadByte : null);
+        return InternalBufferUtils.bytesBefore(this, uncheckedLoadByte,
+                                               needle, needle instanceof NioBuffer ? uncheckedLoadByte : null);
     }
 
     /**
@@ -451,7 +450,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
         // Allocate a bigger buffer.
         long newSize = capacity() + (long) Math.max(size - writableBytes(), minimumGrowth);
-        Statics.assertValidBufferSize(newSize);
+        InternalBufferUtils.assertValidBufferSize(newSize);
         NioBuffer buffer = (NioBuffer) control.getAllocator().allocate((int) newSize);
 
         // Copy contents.
@@ -1197,7 +1196,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     private BufferClosedException bufferIsClosed() {
-        return attachTrace(Statics.bufferIsClosed(this));
+        return attachTrace(InternalBufferUtils.bufferIsClosed(this));
     }
 
     private IndexOutOfBoundsException outOfBounds(int index, int size) {

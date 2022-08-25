@@ -43,7 +43,7 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
     private static <T extends Buffer> CleanerDrop<T> innerWrap(Drop<T> drop, MemoryManager manager) {
         CleanerDrop<T> cleanerDrop = new CleanerDrop<>();
         GatedRunner<T> runner = new GatedRunner<>(drop, manager);
-        cleanerDrop.cleanable = Statics.CLEANER.register(cleanerDrop, runner);
+        cleanerDrop.cleanable = InternalBufferUtils.CLEANER.register(cleanerDrop, runner);
         cleanerDrop.runner = runner;
         return cleanerDrop;
     }

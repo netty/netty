@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.Stream.Builder;
 
-import static io.netty5.buffer.api.internal.Statics.acquire;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.acquire;
 import static io.netty5.buffer.api.tests.Fixture.Properties.COMPOSITE;
 import static io.netty5.buffer.api.tests.Fixture.Properties.DIRECT;
 import static io.netty5.buffer.api.tests.Fixture.Properties.HEAP;

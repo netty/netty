@@ -15,14 +15,14 @@
  */
 package io.netty5.buffer.api;
 
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.WrappingAllocation;
 
 import java.nio.charset.Charset;
 import java.util.function.Supplier;
 
-import static io.netty5.buffer.api.internal.Statics.allocatorClosedException;
-import static io.netty5.buffer.api.internal.Statics.standardDrop;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.allocatorClosedException;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.standardDrop;
 
 class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     private final MemoryManager manager;
@@ -49,7 +49,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
         if (closed) {
             throw allocatorClosedException();
         }
-        Statics.assertValidBufferSize(size);
+        InternalBufferUtils.assertValidBufferSize(size);
         return manager.allocateShared(this, size, standardDrop(manager), allocationType);
     }
 

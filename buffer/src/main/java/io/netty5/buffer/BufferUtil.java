@@ -18,7 +18,7 @@ package io.netty5.buffer;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
@@ -165,7 +165,7 @@ public final class BufferUtil {
      */
     public static boolean equals(Buffer first, int firstReaderOffset, Buffer second, int secondReaderOffset,
                                  int length) {
-        return Statics.equals(first, firstReaderOffset, second, secondReaderOffset, length);
+        return InternalBufferUtils.equals(first, firstReaderOffset, second, secondReaderOffset, length);
     }
 
     /**

@@ -22,7 +22,7 @@ import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.StandardAllocationTypes;
 import io.netty5.buffer.api.internal.ArcDrop;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.WrappingAllocation;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -30,7 +30,7 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import java.lang.ref.Cleaner;
 import java.util.function.Function;
 
-import static io.netty5.buffer.api.internal.Statics.convert;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.convert;
 
 /**
  * This memory manager produces and manages {@link Buffer} instances that are using {@code Unsafe} to allocate and
@@ -63,12 +63,12 @@ public final class UnsafeMemoryManager implements MemoryManager {
         final long address;
         final UnsafeMemory memory;
         final int size32 = Math.toIntExact(size);
-        Cleaner cleaner = Statics.CLEANER;
-        Drop<Buffer> drop = Statics.NO_OP_DROP;
+        Cleaner cleaner = InternalBufferUtils.CLEANER;
+        Drop<Buffer> drop = InternalBufferUtils.NO_OP_DROP;
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
             base = null;
             address = PlatformDependent.allocateMemory(size);
-            Statics.MEM_USAGE_NATIVE.add(size);
+            InternalBufferUtils.MEM_USAGE_NATIVE.add(size);
             memory = new UnsafeMemory(base, address, size32);
             FreeAddress freeAddress = new FreeAddress(address, size32);
             if (FREE_IMMEDIATELY) {

@@ -17,8 +17,8 @@ package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -485,7 +485,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.allocate(8)) {
             ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7});
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(source);
             }
             assertThat(buffer.capacity()).isEqualTo(source.capacity());
@@ -499,7 +499,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buffer = allocator.allocate(8)) {
             ByteBuffer source = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6});
             buffer.writeByte((byte) -1).readByte();
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(source);
             }
             assertThat(buffer.capacity()).isEqualTo(8);
@@ -575,7 +575,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.allocate(8)) {
             ByteBuffer source = ByteBuffer.allocateDirect(8).put(new byte[] {0, 1, 2, 3, 4, 5, 6, 7}).flip();
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(source);
             }
             assertThat(buffer.capacity()).isEqualTo(8);
@@ -589,7 +589,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buffer = allocator.allocate(8)) {
             ByteBuffer source = ByteBuffer.allocateDirect(7).put(new byte[] {0, 1, 2, 3, 4, 5, 6}).flip();
             buffer.writeByte((byte) -1).readByte();
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(source);
             }
             assertThat(buffer.capacity()).isEqualTo(8);
@@ -659,7 +659,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.allocate(8)) {
             byte[] expected = {0, 1, 2, 3, 4, 5, 6, 7};
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(expected);
             }
             assertThat(buffer.capacity()).isEqualTo(8);
@@ -672,7 +672,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buffer = allocator.allocate(8)) {
             buffer.writeByte((byte) -1).readByte();
             byte[] expected = {0, 1, 2, 3, 4, 5, 6};
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(expected);
             }
             assertThat(buffer.capacity()).isEqualTo(8);
@@ -741,7 +741,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.allocate(8)) {
             byte[] expected = {0, 1, 2, 3, 4, 5, 6, 7};
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(expected, 1, expected.length - 1);
             }
             assertThat(buffer.capacity()).isEqualTo(8);
@@ -754,7 +754,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buffer = allocator.allocate(8)) {
             buffer.writeByte((byte) -1).readByte();
             byte[] expected = {0, 1, 2, 3, 4, 5, 6};
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer)) {
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer)) {
                 buffer.writeBytes(expected, 1, expected.length - 1);
             }
             assertThat(buffer.capacity()).isEqualTo(8);
@@ -827,7 +827,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.allocate(8)) {
             byte[] expectedByteArray = {0, 1, 2, 3, 4, 5, 6, 7};
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer);
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer);
                  Buffer expected = allocator.copyOf(expectedByteArray)) {
                 buffer.writeBytes(expected);
             }
@@ -841,7 +841,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
              Buffer buffer = allocator.allocate(8)) {
             buffer.writeByte((byte) -1).readByte();
             byte[] expectedByteArray = {0, 1, 2, 3, 4, 5, 6};
-            try (Resource<?> ignore = Statics.acquire((ResourceSupport<?, ?>) buffer);
+            try (Resource<?> ignore = InternalBufferUtils.acquire((ResourceSupport<?, ?>) buffer);
                  Buffer expected = allocator.copyOf(expectedByteArray)) {
                 buffer.writeBytes(expected);
             }
