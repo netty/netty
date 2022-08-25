@@ -346,14 +346,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             int cnt = array.count();
 
             if (cnt >= 1) {
-                    // Try to use gathering writes via sendmmsg(...) syscall.
-                    int offset = 0;
-                    NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
+                // Try to use gathering writes via sendmmsg(...) syscall.
+                int offset = 0;
+                NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
                 long sentBytes = 0;
                 long notSentBytes = 0;
-                int send = 0;
                 try {
-                    send = socket.sendmmsg(packets, offset, cnt);
+                    int send = socket.sendmmsg(packets, offset, cnt);
                     for (int i = 0; i < cnt; i++) {
                         int count = packets[i].count();
                         if (i < send) {
