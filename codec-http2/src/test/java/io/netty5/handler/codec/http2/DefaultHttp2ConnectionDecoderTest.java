@@ -562,8 +562,8 @@ public class DefaultHttp2ConnectionDecoderTest {
         final short weight = 1;
         decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), STREAM_DEPENDENCY_ID,
                 weight, true, 0, true);
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()), eq(STREAM_DEPENDENCY_ID),
-                eq(weight), eq(true), eq(0), eq(true));
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(Http2Headers.emptyHeaders()),
+                                       eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true), eq(0), eq(true));
         verify(remoteFlow).updateDependencyTree(eq(STREAM_ID), eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true));
         verify(lifecycleManager).closeStreamRemote(eq(stream), any(Future.class));
     }

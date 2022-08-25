@@ -32,6 +32,8 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.DefaultHttp2Headers;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -73,7 +75,7 @@ public class HpackDecoderBenchmark extends AbstractMicrobenchmark {
     @BenchmarkMode(Mode.Throughput)
     public void decode(final Blackhole bh) throws Http2Exception {
         HpackDecoder hpackDecoder = new HpackDecoder(Integer.MAX_VALUE);
-        Http2Headers headers = new DefaultHttp2Headers() {
+        Http2Headers headers = new DefaultHttp2Headers(16, false, false, false) {
             @Override
             public Http2Headers add(CharSequence name, CharSequence value) {
                 bh.consume(sensitive);

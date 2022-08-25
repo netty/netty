@@ -106,7 +106,8 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         try {
             // Decode the HTTP2-Settings header and set the settings on the handler to make
             // sure everything is fine with the request.
-            Iterator<CharSequence> upgradeHeaders = upgradeRequest.headers().valuesIterator(HTTP_UPGRADE_SETTINGS_HEADER);
+            Iterator<CharSequence> upgradeHeaders = upgradeRequest.headers().valuesIterator(
+                    HTTP_UPGRADE_SETTINGS_HEADER);
             CharSequence settingHeader;
             if (upgradeHeaders.hasNext()) {
                 settingHeader = upgradeHeaders.next();

@@ -52,7 +52,7 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
                                                                             .writeBytes(CONTENT));
             response.headers()
                     .set(CONTENT_TYPE, TEXT_PLAIN)
-                    .setInt(CONTENT_LENGTH, response.payload().readableBytes());
+                    .set(CONTENT_LENGTH, String.valueOf(response.payload().readableBytes()));
 
             if (keepAlive) {
                 if (!req.protocolVersion().isKeepAliveDefault()) {

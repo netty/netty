@@ -999,7 +999,8 @@ public class HttpResponseDecoderTest {
 
     @Test
     public void setCookieHeaderDecodingWeirdNames1() {
-        String cookieString = "Set-Cookie: path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; domain=.www.google.com";
+        String cookieString = "Set-Cookie: path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; " +
+                              "domain=.www.google.com";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("path");
         assertEquals("path", cookie.name());
         assertEquals("", cookie.value());

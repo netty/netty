@@ -60,7 +60,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
+        response.headers().set(CONTENT_LENGTH, String.valueOf(response.payload().readableBytes()));
 
         boolean keepAlive = HttpUtil.isKeepAlive(req);
         if (keepAlive) {

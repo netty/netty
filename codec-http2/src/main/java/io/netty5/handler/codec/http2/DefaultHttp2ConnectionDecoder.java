@@ -333,7 +333,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                                  short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
+                                  short weight, boolean exclusive, int padding, boolean endOfStream)
+                throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             boolean allowHalfClosedRemote = false;
             boolean isTrailers = false;

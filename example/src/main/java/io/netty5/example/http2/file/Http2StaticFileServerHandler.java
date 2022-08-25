@@ -21,13 +21,12 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.DefaultHttp2DataFrame;
-import io.netty5.handler.codec.http2.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty5.handler.codec.http2.Http2DataChunkedInput;
 import io.netty5.handler.codec.http2.Http2DataFrame;
 import io.netty5.handler.codec.http2.Http2FrameStream;
-import io.netty5.handler.codec.http2.Http2Headers;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.stream.ChunkedFile;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -176,9 +175,9 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
             }
             long fileLength = raf.length();
 
-            Http2Headers headers = new DefaultHttp2Headers();
+            Http2Headers headers = Http2Headers.newHeaders();
             headers.status("200");
-            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, fileLength);
+            headers.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(fileLength));
 
             setContentTypeHeader(headers, file);
             setDateAndCacheHeaders(headers, file);
@@ -273,7 +272,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
         Buffer buffer = ctx.bufferAllocator().allocate(buf.length());
         buffer.writeCharSequence(buf.toString(), UTF_8);
 
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.status(OK.toString());
         headers.add(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 
@@ -282,7 +281,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
     }
 
     private void sendRedirect(ChannelHandlerContext ctx, String newUri) {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.status(FOUND.toString());
         headers.add(HttpHeaderNames.LOCATION, newUri);
 
@@ -290,7 +289,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
     }
 
     private void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.status(status.toString());
         headers.add(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
@@ -311,7 +310,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
      * @param ctx Context
      */
     private void sendNotModified(ChannelHandlerContext ctx) {
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.status(NOT_MODIFIED.toString());
         setDateHeader(headers);
 

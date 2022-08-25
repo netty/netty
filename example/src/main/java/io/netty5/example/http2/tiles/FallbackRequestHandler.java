@@ -54,7 +54,7 @@ public final class FallbackRequestHandler extends SimpleChannelInboundHandler<Ht
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
-        response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
+        response.headers().set(CONTENT_LENGTH, String.valueOf(response.payload().readableBytes()));
 
         ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);
     }

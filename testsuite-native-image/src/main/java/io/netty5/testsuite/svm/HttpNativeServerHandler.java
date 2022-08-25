@@ -50,7 +50,7 @@ public class HttpNativeServerHandler extends SimpleChannelInboundHandler<HttpObj
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK,
                     ctx.bufferAllocator().allocate(CONTENT.length).writeBytes(CONTENT));
             response.headers().set(CONTENT_TYPE, "text/plain");
-            response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
+            response.headers().set(CONTENT_LENGTH, String.valueOf(response.payload().readableBytes()));
 
             if (!keepAlive) {
                 ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);

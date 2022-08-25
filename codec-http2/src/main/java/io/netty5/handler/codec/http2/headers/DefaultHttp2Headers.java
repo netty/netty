@@ -53,7 +53,7 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
      * @param validateCookies {@code true} to validate cookie contents when parsing.
      * @param validateValues  {@code true} to validate header values.
      */
-    protected DefaultHttp2Headers(int arraySizeHint, boolean validateNames, boolean validateCookies,
+    public DefaultHttp2Headers(int arraySizeHint, boolean validateNames, boolean validateCookies,
                                   boolean validateValues) {
         super(arraySizeHint, validateNames, validateCookies, validateValues);
     }

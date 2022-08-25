@@ -986,10 +986,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string with characters {@code <= \\u0020} removed from the beginning and the end.
      */
     public static CharSequence trim(CharSequence c) {
-        if (c.getClass() == AsciiString.class) {
+        if (c instanceof AsciiString) {
             return ((AsciiString) c).trim();
         }
-        if (c.getClass() == String.class) {
+        if (c instanceof String) {
             return ((String) c).trim();
         }
         int start = 0, last = c.length() - 1;
