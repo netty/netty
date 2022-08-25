@@ -17,18 +17,14 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -51,42 +47,6 @@ public class ChannelOutboundBufferTest {
         } finally {
             executor.shutdownGracefully();
         }
-    }
-
-    @Test
-    public void flushingEmptyBuffers() throws InterruptedException {
-        testChannelOutboundBuffer((buffer, executor) -> {
-            Buffer buf = BufferAllocator.onHeapUnpooled().allocate(0);
-            buffer.addMessage(buf, 0, executor.newPromise());
-            buffer.addFlush();
-            AtomicInteger messageCounter = new AtomicInteger();
-            MessageProcessor<RuntimeException> messageProcessor = msg -> {
-                assertNotNull(msg);
-                messageCounter.incrementAndGet();
-                return true;
-            };
-            buffer.forEachFlushedMessage(messageProcessor);
-            assertThat(messageCounter.get()).isOne();
-            buffer.removeBytes(0); // This must remove the empty buffer.
-            messageCounter.set(0);
-            buffer.forEachFlushedMessage(messageProcessor);
-            assertThat(messageCounter.get()).isZero();
-        });
-    }
-
-    @Test
-    public void removeBytes() throws InterruptedException {
-        testChannelOutboundBuffer((buffer, executor) -> {
-            Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII);
-            int size = buf.readableBytes();
-            buffer.addMessage(buf, size, executor.newPromise());
-            buffer.addFlush();
-            buffer.removeBytes(size / 2);
-            assertThat(buffer.current()).isNotNull();
-            buffer.removeBytes(size);
-            assertNull(buffer.current());
-            assertTrue(buffer.isEmpty());
-        });
     }
 
     @Test
@@ -159,10 +119,9 @@ public class ChannelOutboundBufferTest {
     }
 
     private static void release(ChannelOutboundBuffer buffer) {
-        for (;;) {
-            if (!buffer.remove()) {
-                break;
-            }
+        while (!buffer.isEmpty()) {
+            assertTrue(buffer.remove());
         }
+        assertFalse(buffer.remove());
     }
 }

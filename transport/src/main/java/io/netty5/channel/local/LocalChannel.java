@@ -15,17 +15,16 @@
  */
 package io.netty5.channel.local;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
@@ -279,7 +278,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+    protected void doWriteNow(WriteSink writeSink) throws Exception {
         switch (state) {
         case OPEN:
         case BOUND:
@@ -293,48 +292,40 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         final LocalChannel peer = this.peer;
 
         writeInProgress = true;
+
+        Object msg = writeSink.currentFlushedMessage();
+        // It is possible the peer could have closed while we are writing, and in this case we should
+        // simulate real socket behavior and ensure the write operation is failed.
+        if (peer.state == State.CONNECTED) {
+            if (msg instanceof ReferenceCounted) {
+                peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
+            } else if (msg instanceof ResourceSupport) {
+                peer.inboundBuffer.add(Statics.acquire((ResourceSupport<?, ?>) msg));
+            } else if (msg instanceof Resource) {
+                peer.inboundBuffer.add(((Resource<?>) msg).send().receive());
+            } else {
+                peer.inboundBuffer.add(msg);
+            }
+            writeSink.complete(0, 0, 1, true);
+        } else {
+            writeSink.complete(0, 0, 0, false);
+        }
+    }
+
+    @Override
+    protected void writeLoopComplete(boolean allWritten) {
         try {
-            boolean continueWriting;
-            do {
-                Object msg = in.current();
-                if (msg == null) {
-                    writeHandle.lastWrite(0, 0, 0);
-                    break;
-                }
-                try {
-                    // It is possible the peer could have closed while we are writing, and in this case we should
-                    // simulate real socket behavior and ensure the write operation is failed.
-                    if (peer.state == State.CONNECTED) {
-                        if (msg instanceof ReferenceCounted) {
-                            peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
-                        } else if (msg instanceof ResourceSupport) {
-                            peer.inboundBuffer.add(Statics.acquire((ResourceSupport<?, ?>) msg));
-                        } else if (msg instanceof Resource) {
-                            peer.inboundBuffer.add(((Resource<?>) msg).send().receive());
-                        } else {
-                            peer.inboundBuffer.add(msg);
-                        }
-                        continueWriting = writeHandle.lastWrite(0, 0, 1);
-                        in.remove();
-                    } else {
-                        writeHandle.lastWrite(0, 0, 0);
-                        break;
-                    }
-                } catch (Throwable cause) {
-                    in.remove(cause);
-                    continueWriting = writeHandle.lastWrite(0, 0, 0);
-                }
-            } while (continueWriting);
-        } finally {
             // The following situation may cause trouble:
             // 1. Write (with promise X)
             // 2. promise X is completed when in.remove() is called, and a listener on this promise calls close()
             // 3. Then the close event will be executed for the peer before the write events, when the write events
             // actually happened before the close event.
             writeInProgress = false;
-        }
 
-        finishPeerRead(peer);
+            finishPeerRead(peer);
+        } finally {
+            super.writeLoopComplete(allWritten);
+        }
     }
 
     private void finishPeerRead(final LocalChannel peer) {
@@ -394,7 +385,8 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData)
+            throws Exception {
         if (state == State.CONNECTED) {
             throw new AlreadyConnectedException();
         }

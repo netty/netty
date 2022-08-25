@@ -19,11 +19,9 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.nio.AbstractNioByteChannel;
 import io.netty5.channel.socket.SocketChannelWriteHandleFactory;
 import io.netty5.util.concurrent.Future;
@@ -86,6 +84,7 @@ public class NioSocketChannel
 
     private final ProtocolFamily family;
     private final ByteBufferCollector collector = new ByteBufferCollector();
+
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
@@ -233,7 +232,7 @@ public class NioSocketChannel
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer data) throws Exception {
         if (localAddress != null) {
             doBind0(localAddress);
         }
@@ -284,66 +283,47 @@ public class NioSocketChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+    protected void doWriteNow(WriteSink writeSink)
+            throws Exception {
         SocketChannel ch = javaChannel();
-        if (in.isEmpty()) {
-            writeHandle.lastWrite(0, 0, 0);
-            // Directly return
-            return;
+        // Ensure the pending writes are made of Buffers only.
+        collector.prepare(1024, writeSink.estimatedMaxBytesPerGatheringWrite());
+        writeSink.forEachFlushedMessage(collector);
+        ByteBuffer[] nioBuffers = collector.nioBuffers();
+        int nioBufferCnt = collector.nioBufferCount();
+
+        long attemptedBytes;
+        long localWrittenBytes;
+
+        // Always use nioBuffers() to workaround data-corruption.
+        // See https://github.com/netty/netty/issues/2761
+        switch (nioBufferCnt) {
+            case 0:
+                // We have something else beside ByteBuffers to write so fallback to normal writes.
+                super.doWriteNow(writeSink);
+                return;
+            case 1: {
+                // Only one ByteBuf so use non-gathering write
+                // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
+                // to check if the total size of all the buffers is non-zero.
+                ByteBuffer buffer = nioBuffers[0];
+                attemptedBytes = buffer.remaining();
+                localWrittenBytes = ch.write(buffer);
+                break;
+            }
+            default: {
+                // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
+                // to check if the total size of all the buffers is non-zero.
+                // We limit the max amount to int above so cast is safe
+                attemptedBytes = collector.nioBufferSize();
+                localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                break;
+            }
         }
-        boolean continueWriting;
-        try {
-            do {
-                // Ensure the pending writes are made of ByteBufs only.
-                long maxBytesPerGatheringWrite = writeHandle.estimatedMaxBytesPerGatheringWrite();
-                ByteBuffer[] nioBuffers = collector.collect(in, 1024, maxBytesPerGatheringWrite);
-                int nioBufferCnt = collector.nioBufferCount();
 
-                // Always use nioBuffers() to workaround data-corruption.
-                // See https://github.com/netty/netty/issues/2761
-                switch (nioBufferCnt) {
-                    case 0:
-                        // We have something else beside ByteBuffers to write so fallback to normal writes.
-                        continueWriting = writeOne(in, writeHandle);
-                        break;
-                    case 1: {
-                        // Only one ByteBuf so use non-gathering write
-                        // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
-                        // to check if the total size of all the buffers is non-zero.
-                        ByteBuffer buffer = nioBuffers[0];
-                        int attemptedBytes = buffer.remaining();
-                        final int localWrittenBytes = ch.write(buffer);
-                        if (localWrittenBytes <= 0) {
-                            writeHandle.lastWrite(attemptedBytes, localWrittenBytes, 0);
-                            return;
-                        }
-                        in.removeBytes(localWrittenBytes);
-
-                        continueWriting = writeHandle.lastWrite(attemptedBytes, localWrittenBytes,
-                                attemptedBytes == localWrittenBytes ? 1 : 0);
-                        break;
-                    }
-                    default: {
-                        // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
-                        // to check if the total size of all the buffers is non-zero.
-                        // We limit the max amount to int above so cast is safe
-                        long attemptedBytes = collector.nioBufferSize();
-                        final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
-                        if (localWrittenBytes <= 0) {
-                            writeHandle.lastWrite(attemptedBytes, localWrittenBytes, 0);
-                            return;
-                        }
-                        in.removeBytes(localWrittenBytes);
-
-                        continueWriting = writeHandle.lastWrite(attemptedBytes, localWrittenBytes,
-                                attemptedBytes == localWrittenBytes ? 1 : 0);
-                        break;
-                    }
-                }
-            } while (continueWriting);
-        } finally {
-            collector.reset();
-        }
+        // Update readerOffset of buffers and return how many are completely written.
+        int messages = writeSink.updateBufferReaderOffsets(localWrittenBytes);
+        writeSink.complete(attemptedBytes, localWrittenBytes, messages, localWrittenBytes > 0);
     }
 
     @Override

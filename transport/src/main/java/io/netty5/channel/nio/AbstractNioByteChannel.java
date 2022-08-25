@@ -20,7 +20,6 @@ import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FileRegion;
 import io.netty5.util.internal.StringUtil;
@@ -83,86 +82,45 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
         }
     }
 
-    /**
-     * Write objects to the OS.
-     * @param in the collection which contains objects to write.
-     * @return write result.
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link Buffer} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>-1 - if an attempt to write data was made to the OS, but no
-     *     data was accepted</li>
-     * </ul>
-     * @throws Exception if an I/O exception occurs during write.
-     */
-    protected final boolean writeOne(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
-            throws Exception {
-        Object msg = in.current();
-        if (msg == null) {
-            writeHandle.lastWrite(0, 0, 0);
-            return false;
-        }
-        final long attemptedBytesWrite;
-        final long localFlushAmount;
-        final int messageWritten;
+    @Override
+    protected void doWriteNow(WriteSink writeSink) throws Exception {
+        Object msg = writeSink.currentFlushedMessage();
 
+        final long attemptedBytesWrite;
+        final long actualBytesWrite;
+        final int messages;
+        final boolean continueWriting;
         if (msg instanceof Buffer) {
             Buffer buf = (Buffer) msg;
             if (buf.readableBytes() == 0) {
                 attemptedBytesWrite = 0;
-                localFlushAmount = 0;
-                messageWritten = 1;
+                actualBytesWrite = 0;
+                messages = 1;
+                continueWriting = true;
             } else {
                 attemptedBytesWrite = buf.readableBytes();
-                localFlushAmount = doWriteBytes(buf);
-                if (localFlushAmount > 0) {
-                    if (buf.readableBytes() == 0) {
-                        messageWritten = 1;
-                    } else {
-                        messageWritten = 0;
-                    }
-                } else {
-                    writeHandle.lastWrite(attemptedBytesWrite, localFlushAmount, 0);
-                    return false;
-                }
+                actualBytesWrite = doWriteBytes(buf);
+                messages = actualBytesWrite == attemptedBytesWrite ? 1 : 0;
+                continueWriting = actualBytesWrite > 0;
             }
         } else if (msg instanceof FileRegion) {
             FileRegion region = (FileRegion) msg;
             if (region.transferred() >= region.count()) {
                 attemptedBytesWrite = 0;
-                localFlushAmount = 0;
-                messageWritten = 1;
+                actualBytesWrite = 0;
+                messages = 1;
+                continueWriting = true;
             } else {
                 attemptedBytesWrite = region.count();
-                localFlushAmount = doWriteFileRegion(region);
-                if (localFlushAmount > 0) {
-                    if (region.transferred() >= attemptedBytesWrite) {
-                        messageWritten = 1;
-                    } else {
-                        messageWritten = 0;
-                    }
-                } else {
-                    writeHandle.lastWrite(attemptedBytesWrite, localFlushAmount, 0);
-                    return false;
-                }
+                actualBytesWrite = doWriteFileRegion(region);
+                messages = actualBytesWrite == attemptedBytesWrite ? 1 : 0;
+                continueWriting = actualBytesWrite > 0;
             }
         } else {
             // Should not reach here.
             throw new Error();
         }
-        if (messageWritten != 0) {
-            in.remove();
-        }
-        return writeHandle.lastWrite(attemptedBytesWrite, localFlushAmount, messageWritten);
-    }
-
-    @Override
-    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
-        boolean continueWriting;
-        do {
-            continueWriting = writeOne(in, writeHandle);
-        } while (continueWriting);
+        writeSink.complete(attemptedBytesWrite, actualBytesWrite, messages, continueWriting);
     }
 
     @Override

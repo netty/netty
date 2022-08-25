@@ -17,11 +17,11 @@ package io.netty5.channel.unix;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferComponent;
-import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.unix.Buffer.addressSize;
 import static io.netty5.channel.unix.Buffer.allocateDirectWithNativeOrder;
@@ -49,7 +49,7 @@ import static java.lang.Math.min;
  * <a href="https://rkennke.wordpress.com/2007/07/30/efficient-jni-programming-iv-wrapping-native-data-objects/"
  * >Efficient JNI programming IV: Wrapping native data objects</a>.
  */
-public final class IovArray implements MessageProcessor<RuntimeException> {
+public final class IovArray implements Predicate<Object> {
 
     /** The size of an address which should be 8 for 64 bits and 4 for 32 bits. */
     private static final int ADDRESS_SIZE = addressSize();
@@ -190,10 +190,10 @@ public final class IovArray implements MessageProcessor<RuntimeException> {
 
     /**
      * Set the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(long, long, int)} or
-     * {@link #processMessage(Object)}.
+     * {@link #test(Object)}.
      * <p>
      * This will not impact the existing state of the {@link IovArray}, and only applies to subsequent calls to
-     * {@link #add(long, long, int)} or {@link #processMessage(Object)}.
+     * {@link #add(long, long, int)} or {@link #test(Object)}.
      * <p>
      * In order to ensure some progress is made at least one {@link Buffer} will be accepted even if it's size exceeds
      * this value.
@@ -226,7 +226,7 @@ public final class IovArray implements MessageProcessor<RuntimeException> {
     }
 
     @Override
-    public boolean processMessage(Object msg) {
+    public boolean test(Object msg) {
         if (msg instanceof Buffer) {
             var buffer = (Buffer) msg;
             if (buffer.readableBytes() == 0) {

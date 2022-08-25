@@ -15,6 +15,8 @@
  */
 package io.netty5.channel;
 
+import io.netty5.buffer.api.Buffer;
+
 import java.net.SocketAddress;
 
 /**
@@ -69,7 +71,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     }
 
     @Override
-    protected final void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
+    protected final void doWriteNow(WriteSink writeSink) {
         throw new UnsupportedOperationException();
     }
 
@@ -79,7 +81,7 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
         throw new UnsupportedOperationException();
     }
 

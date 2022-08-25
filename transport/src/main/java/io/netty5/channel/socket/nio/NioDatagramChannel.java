@@ -20,13 +20,11 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
@@ -344,7 +342,7 @@ public final class NioDatagramChannel
 
     @Override
     protected boolean doConnect(SocketAddress remoteAddress,
-            SocketAddress localAddress) throws Exception {
+            SocketAddress localAddress, Buffer initialData) throws Exception {
         if (localAddress != null) {
             doBind0(localAddress);
         }
@@ -411,12 +409,8 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected boolean doWriteMessage(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) {
-        Object msg = in.current();
-        if (msg == null) {
-            writeHandle.lastWrite(0, 0, 0);
-            return false;
-        }
+    protected void doWriteNow(WriteSink writeSink) throws Exception {
+        Object msg = writeSink.currentFlushedMessage();
         final SocketAddress remoteAddress;
         final Buffer buf;
         if (msg instanceof AddressedEnvelope) {
@@ -431,8 +425,8 @@ public final class NioDatagramChannel
 
         final int length = buf.readableBytes();
         if (length == 0) {
-            in.remove();
-            return writeHandle.lastWrite(0, 0, 1);
+            writeSink.complete(0, 0, 1, true);
+            return;
         }
 
         int readable = buf.readableBytes();
@@ -450,18 +444,12 @@ public final class NioDatagramChannel
             } else {
                 writtenBytes = write(buf, remoteAddress);
             }
-            if (writtenBytes > 0) {
-                in.remove();
-                return writeHandle().lastWrite(readable, writtenBytes, 1);
-            }
-            writeHandle().lastWrite(readable, writtenBytes, 0);
-            return false;
+            writeSink.complete(readable, writtenBytes,  writtenBytes > 0 ? 1 : 0, writtenBytes > 0);
         } catch (Throwable e) {
             // Continue on write error as a DatagramChannel can write to multiple remote peers
             //
             // See https://github.com/netty/netty/issues/2665
-            in.remove(e);
-            return writeHandle().lastWrite(readable, 0, 0);
+            writeSink.complete(readable, e, true);
         }
     }
 

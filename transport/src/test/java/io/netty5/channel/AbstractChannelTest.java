@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -145,7 +146,7 @@ public class AbstractChannelTest {
             private boolean active;
 
             @Override
-            protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+            protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initalData) {
                 active = true;
                 return true;
             }
@@ -157,8 +158,7 @@ public class AbstractChannelTest {
             }
 
             @Override
-            protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle)
-                    throws Exception {
+            protected void doWriteNow(WriteSink writeHandle) throws Exception {
                 throw ioException;
             }
 
@@ -216,7 +216,7 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initalData) {
             throw new UnsupportedOperationException();
         }
 
@@ -253,8 +253,8 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
-            // NOOP
+        protected void doWriteNow(WriteSink writeSink) throws Exception {
+            throw new UnsupportedOperationException();
         }
 
         @Override

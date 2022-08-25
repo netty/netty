@@ -22,7 +22,6 @@ import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.channel.ReadHandleFactory;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
@@ -32,7 +31,6 @@ import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.DatagramChannel;
@@ -336,71 +334,53 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
-        boolean continueWriting;
-        do {
-            if (in.isEmpty()) {
-                // Wrote all messages.
-                break;
-            }
-            // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
-            if (Native.IS_SUPPORTING_SENDMMSG && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
-                    in.size() > 1 ||
-                    // We only handle UDP_SEGMENT in sendmmsg.
-                    in.current() instanceof SegmentedDatagramPacket) {
-                NativeDatagramPacketArray array = cleanDatagramPacketArray();
-                array.add(in, isConnected(), Integer.MAX_VALUE);
-                int cnt = array.count();
+    protected void doWriteNow(WriteSink writeSink) throws Exception {
+        // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
 
-                if (cnt >= 1) {
-                        // Try to use gathering writes via sendmmsg(...) syscall.
-                        int offset = 0;
-                        NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
-                    long sentBytes = 0;
-                    long notSentBytes = 0;
-                    int send = 0;
-                    try {
-                        send = socket.sendmmsg(packets, offset, cnt);
-                        if (send == 0) {
-                            // Did not write all messages.
-                            break;
-                        }
-                        for (int i = 0; i < cnt; i++) {
-                            int count = packets[i].count();
-                            if (i < send) {
-                                sentBytes += count;
-                                in.remove();
-                            } else {
-                                notSentBytes += count;
-                            }
-                        }
-                    } catch (IOException e) {
-                        for (int i = 0; i < cnt; i++) {
-                            int count = packets[i].count();
+        if (Native.IS_SUPPORTING_SENDMMSG && socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                writeSink.numFlushedMessages() > 1 ||
+                // We only handle UDP_SEGMENT in sendmmsg.
+                writeSink.currentFlushedMessage() instanceof SegmentedDatagramPacket) {
+            NativeDatagramPacketArray array = cleanDatagramPacketArray();
+            writeSink.forEachFlushedMessage(array.addFunction(isConnected(), Integer.MAX_VALUE));
+            int cnt = array.count();
+
+            if (cnt >= 1) {
+                // Try to use gathering writes via sendmmsg(...) syscall.
+                int offset = 0;
+                NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
+                long sentBytes = 0;
+                long notSentBytes = 0;
+                try {
+                    int send = socket.sendmmsg(packets, offset, cnt);
+                    for (int i = 0; i < cnt; i++) {
+                        int count = packets[i].count();
+                        if (i < send) {
+                            sentBytes += count;
+                        } else {
                             notSentBytes += count;
                         }
-
-                        // Continue on write error as a DatagramChannel can write to multiple remote peers
-                        //
-                        // See https://github.com/netty/netty/issues/2665
-                        in.remove(e);
                     }
-                    continueWriting = writeHandle.lastWrite(sentBytes + notSentBytes, sentBytes, send);
-                } else {
-                    continueWriting = doWriteMessage(in, writeHandle);
+                    writeSink.complete(sentBytes + notSentBytes, sentBytes, send, send > 0);
+                } catch (IOException e) {
+                    for (int i = 0; i < cnt; i++) {
+                        int count = packets[i].count();
+                        notSentBytes += count;
+                    }
+                    // Continue on write error as a DatagramChannel can write to multiple remote peers
+                    //
+                    // See https://github.com/netty/netty/issues/2665
+                    writeSink.complete(sentBytes + notSentBytes, e, true);
                 }
-            } else {
-                continueWriting = doWriteMessage(in, writeHandle);
+                return;
             }
-        } while (continueWriting);
+        }
+        doWriteMessage(writeSink);
     }
 
-    private boolean doWriteMessage(ChannelOutboundBuffer in,  WriteHandleFactory.WriteHandle writeHandle)
+    private void doWriteMessage(WriteSink writeSink)
             throws Exception {
-        Object msg = in.current();
-        if (msg == null) {
-            return writeHandle.lastWrite(0, 0, 0);
-        }
+        Object msg = writeSink.currentFlushedMessage();
         final Buffer data;
         final SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
@@ -414,17 +394,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         }
 
         if (data.readableBytes() == 0) {
-            in.remove();
-            return writeHandle.lastWrite(0, 0, 1);
+            writeSink.complete(0, 0, 1, true);
+            return;
         }
 
         long result = doWriteOrSendBytes(data, remoteAddress, false);
-        if (result > 0) {
-            in.remove();
-            return writeHandle.lastWrite(data.readableBytes(), result, 1);
-        }
-        writeHandle.lastWrite(data.readableBytes(), result, 0);
-        return false;
+        writeSink.complete(data.readableBytes(),  result, result > 0 ? 1: 0, result > 0);
     }
 
     @Override
@@ -490,8 +465,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        if (super.doConnect(remoteAddress, localAddress)) {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData)
+            throws Exception {
+        if (super.doConnect(remoteAddress, localAddress, initialData)) {
             connected = true;
             return true;
         }
@@ -536,6 +512,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
 
                     return actualBytesRead == 0 ? ReadState.All : ReadState.Closed;
                 }
+
+                buf.skipWritableBytes(actualBytesRead);
                 packet = new DatagramPacket(buf, localAddress(), remoteAddress());
             } else {
                 final DomainDatagramSocketAddress remoteAddress;

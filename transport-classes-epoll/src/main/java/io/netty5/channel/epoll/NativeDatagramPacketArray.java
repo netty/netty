@@ -16,9 +16,6 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferComponent;
-import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Limits;
@@ -29,6 +26,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.function.Predicate;
 
 import static io.netty5.channel.unix.Limits.UIO_MAX_IOV;
 import static io.netty5.channel.unix.NativeInetAddress.copyIpv4MappedIpv6Address;
@@ -109,24 +107,38 @@ final class NativeDatagramPacketArray {
                 return false;
             }
             for (var c = first; c != null; c = c.nextReadable()) {
-                int writableBytes = c.readableBytes();
-                int byteCount = segmentLen == 0? writableBytes : Math.min(writableBytes, segmentLen);
-                if (iovArray.addReadable(c, byteCount)) {
-                    NativeDatagramPacket p = packets[count];
-                    long packetAddr = iovArray.memoryAddress(iovArrayStart);
-                    p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
-                    count++;
-                    c.skipReadableBytes(byteCount);
+                if (segmentLen == 0) {
+                    int readableBytes = c.readableBytes();
+                    if (iovArray.addReadable(c, readableBytes)) {
+                        c.skipReadableBytes(readableBytes);
+                    } else {
+                        break;
+                    }
+                } else {
+                    // In the case of segments we need to add each of the segments in a loop.
+                    while (c.readableBytes() > 0) {
+                        int byteCount = Math.min(c.readableBytes(), segmentLen);
+                        if (iovArray.addReadable(c, byteCount)) {
+                            c.skipReadableBytes(byteCount);
+                        } else {
+                            break;
+                        }
+                    }
                 }
             }
+            // Add one packet for sendmmsg(...) now.
+            NativeDatagramPacket p = packets[count];
+            long packetAddr = iovArray.memoryAddress(iovArrayStart);
+            p.init(packetAddr, iovArray.count() - iovArrayStart, segmentLen, recipient);
+            count++;
             return true;
         }
     }
 
-    void add(ChannelOutboundBuffer buffer, boolean connected, int maxMessagesPerWrite) throws Exception {
+    Predicate<Object> addFunction(boolean connected, int maxMessagesPerWrite) {
         processor.connected = connected;
         processor.maxMessagesPerWrite = maxMessagesPerWrite;
-        buffer.forEachFlushedMessage(processor);
+        return processor;
     }
 
     /**
@@ -152,12 +164,12 @@ final class NativeDatagramPacketArray {
         iovArray.release();
     }
 
-    private final class MyMessageProcessor implements MessageProcessor<RuntimeException> {
+    private final class MyMessageProcessor implements Predicate<Object> {
         private boolean connected;
         private int maxMessagesPerWrite;
 
         @Override
-        public boolean processMessage(Object msg) {
+        public boolean test(Object msg) {
             final boolean added;
             if (msg instanceof DatagramPacket) {
                 DatagramPacket packet = (DatagramPacket) msg;
