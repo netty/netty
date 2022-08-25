@@ -17,12 +17,12 @@ package io.netty5.channel.local;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
 import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
@@ -298,7 +298,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
             if (msg instanceof ReferenceCounted) {
                 peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
             } else if (msg instanceof ResourceSupport) {
-                peer.inboundBuffer.add(Statics.acquire((ResourceSupport<?, ?>) msg));
+                peer.inboundBuffer.add(InternalBufferUtils.acquire((ResourceSupport<?, ?>) msg));
             } else if (msg instanceof Resource) {
                 peer.inboundBuffer.add(((Resource<?>) msg).send().receive());
             } else {

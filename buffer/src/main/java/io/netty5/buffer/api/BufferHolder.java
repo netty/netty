@@ -16,7 +16,7 @@
 package io.netty5.buffer.api;
 
 import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 
@@ -42,7 +42,8 @@ import static java.lang.invoke.MethodHandles.lookup;
  * @param <T> The concrete {@link BufferHolder} type.
  */
 public abstract class BufferHolder<T extends Resource<T>> implements Resource<T> {
-    private static final VarHandle BUF = Statics.findVarHandle(lookup(), BufferHolder.class, "buf", Buffer.class);
+    private static final VarHandle BUF = InternalBufferUtils.findVarHandle(
+            lookup(), BufferHolder.class, "buf", Buffer.class);
     private Buffer buf;
 
     /**

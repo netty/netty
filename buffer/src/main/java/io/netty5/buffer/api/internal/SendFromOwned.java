@@ -22,7 +22,7 @@ import io.netty5.util.Send;
 
 import java.lang.invoke.VarHandle;
 
-import static io.netty5.buffer.api.internal.Statics.findVarHandle;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.findVarHandle;
 import static java.lang.invoke.MethodHandles.lookup;
 
 public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T>> implements Send<I> {

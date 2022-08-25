@@ -37,11 +37,11 @@ public abstract class AdaptableBuffer<T extends ResourceSupport<Buffer, T>>
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof Buffer && Statics.equals(this, (Buffer) o);
+        return o instanceof Buffer && InternalBufferUtils.equals(this, (Buffer) o);
     }
 
     @Override
     public int hashCode() {
-        return Statics.hashCode(this);
+        return InternalBufferUtils.hashCode(this);
     }
 }

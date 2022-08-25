@@ -40,7 +40,7 @@ import static io.netty5.util.CharsetUtil.US_ASCII;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
-public interface Statics {
+public interface InternalBufferUtils {
     LongAdder MEM_USAGE_NATIVE = new LongAdder();
     Cleaner CLEANER = Cleaner.create();
     Drop<Buffer> NO_OP_DROP = new Drop<>() {

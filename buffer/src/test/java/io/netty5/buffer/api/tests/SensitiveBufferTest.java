@@ -21,7 +21,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
@@ -197,7 +197,7 @@ public class SensitiveBufferTest {
             @Override
             public void drop(Buffer obj) {
                 Object memory = manager.unwrapRecoverableMemory(obj);
-                try (Buffer buf = manager.recoverMemory(() -> null, memory, Statics.NO_OP_DROP)) {
+                try (Buffer buf = manager.recoverMemory(() -> null, memory, InternalBufferUtils.NO_OP_DROP)) {
                     int capacity = buf.capacity();
                     for (int i = 0; i < capacity; i++) {
                         assertEquals((byte) 0, buf.getByte(i));

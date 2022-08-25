@@ -16,7 +16,7 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
@@ -144,7 +144,7 @@ class EngineWrapper {
             for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
                 // Some SSLEngine implementations require their input buffers be mutable. Let's try to accommodate.
                 // See https://bugs.openjdk.java.net/browse/JDK-8283577 for the details.
-                ByteBuffer byteBuffer = Statics.tryGetWritableBufferFromReadableComponent(c);
+                ByteBuffer byteBuffer = InternalBufferUtils.tryGetWritableBufferFromReadableComponent(c);
                 if (byteBuffer == null) {
                     byteBuffer = c.readableBuffer();
                 }

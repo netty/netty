@@ -19,7 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.ByteCursor;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -136,7 +136,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
                     assertEquals(expectedValue, bufferValue);
                     assertEquals(bufferValue, index + 1);
                     assertThrows(ReadOnlyBufferException.class, () -> buffer.put(0, (byte) 0xFF));
-                    var writableBuffer = Statics.tryGetWritableBufferFromReadableComponent(component);
+                    var writableBuffer = InternalBufferUtils.tryGetWritableBufferFromReadableComponent(component);
                     if (writableBuffer != null) {
                         int pos = writableBuffer.position();
                         bufferValue = writableBuffer.getInt();

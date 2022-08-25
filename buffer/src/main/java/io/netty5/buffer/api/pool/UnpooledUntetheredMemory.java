@@ -21,7 +21,7 @@ import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.internal.DropCaptor;
 
-import static io.netty5.buffer.api.internal.Statics.standardDrop;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.standardDrop;
 
 @SuppressWarnings("unchecked")
 class UnpooledUntetheredMemory implements UntetheredMemory {

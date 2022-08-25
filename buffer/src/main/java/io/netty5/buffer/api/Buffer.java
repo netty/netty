@@ -16,7 +16,7 @@
 package io.netty5.buffer.api;
 
 import io.netty5.buffer.api.ComponentIterator.Next;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.Resource;
 
 import java.io.IOException;
@@ -403,7 +403,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return This buffer.
      */
     default Buffer writeCharSequence(CharSequence source, Charset charset) {
-        Statics.writeCharSequence(source, this, charset);
+        InternalBufferUtils.writeCharSequence(source, this, charset);
         return this;
     }
 
@@ -418,7 +418,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * this buffer.
      */
     default CharSequence readCharSequence(int length, Charset charset) {
-        return Statics.readCharSequence(this, length, charset);
+        return InternalBufferUtils.readCharSequence(this, length, charset);
     }
 
     /**
@@ -1117,6 +1117,6 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return Buffer's readable bytes as a string.
      */
     default String toString(Charset charset) {
-        return Statics.toString(this, charset);
+        return InternalBufferUtils.toString(this, charset);
     }
 }

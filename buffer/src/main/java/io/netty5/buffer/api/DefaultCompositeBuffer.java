@@ -16,8 +16,8 @@
 package io.netty5.buffer.api;
 
 import io.netty5.buffer.api.ComponentIterator.Next;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
 import io.netty5.util.SafeCloseable;
 import io.netty5.util.Send;
 
@@ -39,11 +39,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
-import static io.netty5.buffer.api.internal.Statics.MAX_BUFFER_SIZE;
-import static io.netty5.buffer.api.internal.Statics.bufferIsClosed;
-import static io.netty5.buffer.api.internal.Statics.bufferIsReadOnly;
-import static io.netty5.buffer.api.internal.Statics.checkImplicitCapacity;
-import static io.netty5.buffer.api.internal.Statics.checkLength;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bufferIsClosed;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bufferIsReadOnly;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.checkImplicitCapacity;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.checkLength;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.PlatformDependent.roundToPowerOfTwo;
 import static java.lang.Math.addExact;
@@ -763,7 +763,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public int bytesBefore(Buffer needle) {
-        return Statics.bytesBefore(this, null, needle, null);
+        return InternalBufferUtils.bytesBefore(this, null, needle, null);
     }
 
     @Override
@@ -873,7 +873,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         int growth = Math.max(size - writableBytes(), minimumGrowth);
-        Statics.assertValidBufferSize(capacity() + (long) growth);
+        InternalBufferUtils.assertValidBufferSize(capacity() + (long) growth);
         Buffer extension = allocator.allocate(growth);
         unsafeExtendWith(extension);
         return this;
@@ -908,7 +908,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         long newSize = capacity() + extensionCapacity;
-        Statics.assertValidBufferSize(newSize);
+        InternalBufferUtils.assertValidBufferSize(newSize);
 
         Buffer[] restoreTemp = bufs; // We need this to restore our buffer array, in case offset computations fail.
         try {
@@ -1419,7 +1419,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     private boolean allConstituentsAreOwned() {
         boolean result = true;
         for (Buffer buf : bufs) {
-            result &= Statics.isOwned((ResourceSupport<?, ?>) buf);
+            result &= InternalBufferUtils.isOwned((ResourceSupport<?, ?>) buf);
         }
         return result;
     }
@@ -1545,12 +1545,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof Buffer && Statics.equals(this, (Buffer) o);
+        return o instanceof Buffer && InternalBufferUtils.equals(this, (Buffer) o);
     }
 
     @Override
     public int hashCode() {
-        return Statics.hashCode(this);
+        return InternalBufferUtils.hashCode(this);
     }
 
     // <editor-fold defaultstate="collapsed" desc="Torn buffer access.">

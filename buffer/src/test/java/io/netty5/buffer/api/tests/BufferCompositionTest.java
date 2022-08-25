@@ -23,7 +23,7 @@ import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.Drop;
 import io.netty5.util.Send;
 import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -32,8 +32,8 @@ import org.opentest4j.TestAbortedException;
 import java.lang.reflect.Field;
 import java.util.List;
 
-import static io.netty5.buffer.api.internal.Statics.acquire;
-import static io.netty5.buffer.api.internal.Statics.isOwned;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.acquire;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.isOwned;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -734,7 +734,7 @@ public class BufferCompositionTest extends BufferTestSupport {
                 }
             };
             try {
-                Statics.unsafeSetDrop((ResourceSupport<?, ?>) composite, throwingDrop);
+                InternalBufferUtils.unsafeSetDrop((ResourceSupport<?, ?>) composite, throwingDrop);
             } catch (Exception e) {
                 composite.close();
                 throw e;

@@ -21,14 +21,14 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.StandardAllocationTypes;
-import io.netty5.buffer.api.internal.Statics;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.WrappingAllocation;
 
 import java.nio.ByteBuffer;
 import java.util.function.Function;
 
-import static io.netty5.buffer.api.internal.Statics.bbslice;
-import static io.netty5.buffer.api.internal.Statics.convert;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.bbslice;
+import static io.netty5.buffer.api.internal.InternalBufferUtils.convert;
 
 /**
  * This memory manager produces and manages {@link Buffer} instances that are backed by NIO {@link ByteBuffer}
@@ -64,7 +64,7 @@ public final class ByteBufferMemoryManager implements MemoryManager {
     }
 
     private static Drop<Buffer> drop() {
-        return Statics.NO_OP_DROP;
+        return InternalBufferUtils.NO_OP_DROP;
     }
 
     @Override
@@ -94,7 +94,7 @@ public final class ByteBufferMemoryManager implements MemoryManager {
     @Override
     public void clearMemory(Object memory) {
         ByteBuffer buffer = (ByteBuffer) memory;
-        Statics.setMemory(buffer, buffer.capacity(), (byte) 0);
+        InternalBufferUtils.setMemory(buffer, buffer.capacity(), (byte) 0);
     }
 
     @Override
