@@ -447,10 +447,14 @@ public final class HeaderUtils {
      * An {@link Iterator} of {@link HttpCookiePair} designed to iterate across multiple values of
      * {@link HttpHeaderNames#COOKIE}.
      */
-    public abstract static class CookiesIterator implements Iterator<HttpCookiePair> {
+    public abstract static class AbstractCookiesIterator implements Iterator<HttpCookiePair>, ByteProcessor {
         @Nullable
         private HttpCookiePair next;
         private int nextNextStart;
+        /**
+         * Used for more accurate error reporting in the delimiter search.
+         */
+        private boolean inQuotes;
 
         @Override
         public final boolean hasNext() {
@@ -515,42 +519,36 @@ public final class HeaderUtils {
             return next;
         }
 
-        private int nextDelimiterAscii(AsciiString cookieHeaderValue) {
-            ByteProcessor visitor = new ByteProcessor() {
-                boolean inQuotes;
-                @Override
-                public boolean process(byte c) {
-                    if (c == ';') {
-                        if (inQuotes) {
-                            throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
-                        }
-                        return true;
-                    }
-                    if (c == '"') {
-                        inQuotes = !inQuotes;
-                    }
-                    return false;
-                }
-            };
-            int len = cookieHeaderValue.length();
-            return cookieHeaderValue.forEachByte(nextNextStart, len - nextNextStart, visitor);
-        }
-
         private int nextDelimiter(CharSequence cookieHeaderValue) {
+            inQuotes = false;
             int len = cookieHeaderValue.length();
-            boolean inQuotes = false;
             for (int i = nextNextStart; i < len; i++) {
-                char c = cookieHeaderValue.charAt(i);
-                if (c == ';') {
-                    if (inQuotes) {
-                        throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
-                    }
+                char value = cookieHeaderValue.charAt(i);
+                if (!process((byte) value)) {
                     return i;
-                } else if (c == '"') {
-                    inQuotes = !inQuotes;
                 }
             }
             return AsciiString.INDEX_NOT_FOUND;
+        }
+
+        private int nextDelimiterAscii(AsciiString cookieHeaderValue) {
+            inQuotes = false;
+            int len = cookieHeaderValue.length();
+            return cookieHeaderValue.forEachByte(nextNextStart, len - nextNextStart, this);
+        }
+
+        @Override
+        public boolean process(byte value) {
+            if (value == ';') {
+                if (inQuotes) {
+                    throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
+                }
+                return true;
+            }
+            if (value == '"') {
+                inQuotes = !inQuotes;
+            }
+            return false;
         }
     }
 
@@ -558,7 +556,7 @@ public final class HeaderUtils {
      * An {@link Iterator} of {@link HttpCookiePair} designed to iterate across multiple values of
      * {@link HttpHeaderNames#COOKIE} for a specific {@link HttpCookiePair#name() cookie-name}.
      */
-    public abstract static class CookiesByNameIterator implements Iterator<HttpCookiePair> {
+    public abstract static class AbstractCookiesByNameIterator implements Iterator<HttpCookiePair> {
         private final CharSequence cookiePairName;
         private int nextNextStart;
         @Nullable
@@ -570,7 +568,7 @@ public final class HeaderUtils {
          * @param cookiePairName Each return value of {@link #next()} will have {@link HttpCookiePair#name()} equivalent
          * to this value.
          */
-        protected CookiesByNameIterator(final CharSequence cookiePairName) {
+        protected AbstractCookiesByNameIterator(final CharSequence cookiePairName) {
             this.cookiePairName = cookiePairName;
         }
 

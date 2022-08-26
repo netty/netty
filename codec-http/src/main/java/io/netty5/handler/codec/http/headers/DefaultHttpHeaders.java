@@ -29,6 +29,8 @@
  */
 package io.netty5.handler.codec.http.headers;
 
+import io.netty5.handler.codec.http.headers.HeaderUtils.AbstractCookiesByNameIterator;
+import io.netty5.handler.codec.http.headers.HeaderUtils.AbstractCookiesIterator;
 import io.netty5.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,7 +42,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.COOKIE;
 import static io.netty5.handler.codec.http.HttpHeaderNames.SET_COOKIE;
@@ -381,7 +382,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         return sizeBefore != size();
     }
 
-    private static final class CookiesIterator extends HeaderUtils.CookiesIterator {
+    private static final class CookiesIterator extends AbstractCookiesIterator {
         private final int cookieHeaderNameHash;
         @Nullable
         private MultiMapEntry<CharSequence, CharSequence> current;
@@ -405,7 +406,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         }
     }
 
-    private static final class CookiesByNameIterator extends HeaderUtils.CookiesByNameIterator {
+    private static final class CookiesByNameIterator extends AbstractCookiesByNameIterator {
         private final int cookieHeaderNameHash;
         @Nullable
         private MultiMapEntry<CharSequence, CharSequence> current;
