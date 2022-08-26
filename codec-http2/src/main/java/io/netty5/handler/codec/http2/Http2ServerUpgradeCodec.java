@@ -108,9 +108,8 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             // sure everything is fine with the request.
             Iterator<CharSequence> upgradeHeaders = upgradeRequest.headers().valuesIterator(
                     HTTP_UPGRADE_SETTINGS_HEADER);
-            CharSequence settingHeader;
             if (upgradeHeaders.hasNext()) {
-                settingHeader = upgradeHeaders.next();
+                CharSequence settingHeader = upgradeHeaders.next();
                 if (!upgradeHeaders.hasNext()) {
                     // Everything looks good.
                     settings = decodeSettingsHeader(ctx, settingHeader);

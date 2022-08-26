@@ -338,6 +338,8 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
             case ParsingDomain:
                 domain = "";
                 break;
+            default:
+                throw new Error("Unhandled parse state: " + parseState);
             }
         }
 

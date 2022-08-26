@@ -579,8 +579,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             do {
                 char firstChar = line.charAtUnsafe(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
-                    //please do not make one line from below code
-                    //as it breaks +XX:OptimizeStringConcat optimization
                     String trimmedLine = line.toString().trim();
                     String valueStr = String.valueOf(value);
                     value = valueStr + ' ' + trimmedLine;
