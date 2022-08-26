@@ -524,7 +524,7 @@ public final class HeaderUtils {
             int len = cookieHeaderValue.length();
             for (int i = nextNextStart; i < len; i++) {
                 char value = cookieHeaderValue.charAt(i);
-                if (!process((byte) value)) {
+                if (process((byte) value)) {
                     return i;
                 }
             }
