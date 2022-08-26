@@ -23,7 +23,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,6 +34,7 @@ import org.mockito.ArgumentMatcher;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -229,7 +229,7 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogBufferDataRead() throws Exception {
-        try (Buffer msg = preferredAllocator().copyOf("hello", CharsetUtil.UTF_8)) {
+        try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
             EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
             channel.writeInbound(msg.copy());
             verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", true)));
@@ -243,7 +243,7 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogBufferDataReadWithSimpleFormat() throws Exception {
-        try (Buffer msg = preferredAllocator().copyOf("hello", CharsetUtil.UTF_8)) {
+        try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
             EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
             channel.writeInbound(msg.copy());
             verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));

@@ -21,9 +21,7 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBe
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.function.Executable;
@@ -64,6 +62,8 @@ import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
 import static java.lang.Integer.MAX_VALUE;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1092,7 +1092,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSNIMatchersWithSNINameWithUnderscore(SSLEngineTestParam param) throws Exception {
-        byte[] name = "rb8hx3pww30y3tvw0mwy.v1_1".getBytes(CharsetUtil.UTF_8);
+        byte[] name = "rb8hx3pww30y3tvw0mwy.v1_1".getBytes(UTF_8);
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
@@ -1105,7 +1105,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             SSLParameters parameters = new SSLParameters();
             parameters.setSNIMatchers(Collections.singletonList(new SimpleSNIMatcher(name)));
             engine.setSSLParameters(parameters);
-            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("other".getBytes(CharsetUtil.UTF_8)));
+            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("other".getBytes(UTF_8)));
         } finally {
             cleanupServerSslEngine(engine);
             ssc.delete();
@@ -1230,8 +1230,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
             ByteBuffer cTOs = ByteBuffer.allocate(netBufferMax);
             ByteBuffer sTOc = ByteBuffer.allocate(netBufferMax);
 
-            ByteBuffer clientOut = ByteBuffer.wrap("Hi Server, I'm Client".getBytes(CharsetUtil.US_ASCII));
-            ByteBuffer serverOut = ByteBuffer.wrap("Hello Client, I'm Server".getBytes(CharsetUtil.US_ASCII));
+            ByteBuffer clientOut = ByteBuffer.wrap("Hi Server, I'm Client".getBytes(US_ASCII));
+            ByteBuffer serverOut = ByteBuffer.wrap("Hello Client, I'm Server".getBytes(US_ASCII));
 
             // This implementation is largely imitated from
             // https://docs.oracle.com/javase/8/docs/technotes/
@@ -1300,8 +1300,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                     byte[] seed = new byte[serverRandom.length + clientRandom.length];
                     System.arraycopy(serverRandom, 0, seed, 0, serverRandom.length);
                     System.arraycopy(clientRandom, 0, seed, serverRandom.length, clientRandom.length);
-                    byte[] keyBlock = PseudoRandomFunction.hash(serverMasterKey,
-                            "key expansion".getBytes(CharsetUtil.US_ASCII), seed, keyBlockSize, "HmacSha256");
+                    byte[] keyBlock = PseudoRandomFunction.hash(
+                            serverMasterKey, "key expansion".getBytes(US_ASCII), seed, keyBlockSize, "HmacSha256");
 
                     int offset = 0;
                     byte[] clientWriteMac = Arrays.copyOfRange(keyBlock, offset, offset + macSize);

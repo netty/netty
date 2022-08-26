@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -23,13 +22,14 @@ import org.junit.jupiter.api.function.Executable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty5.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -127,12 +127,12 @@ public class HttpUtilTest {
 
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(contentType));
+        assertEquals(UTF_8, HttpUtil.getCharset(message));
+        assertEquals(UTF_8, HttpUtil.getCharset(contentType));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, UPPER_CASE_NORMAL_CONTENT_TYPE);
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE));
+        assertEquals(UTF_8, HttpUtil.getCharset(message));
+        assertEquals(UTF_8, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE));
     }
 
     @Test
@@ -155,13 +155,12 @@ public class HttpUtilTest {
 
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message, CharsetUtil.ISO_8859_1));
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(contentType, CharsetUtil.ISO_8859_1));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(message, ISO_8859_1));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(contentType, ISO_8859_1));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, UPPER_CASE_NORMAL_CONTENT_TYPE);
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message, CharsetUtil.ISO_8859_1));
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE,
-                CharsetUtil.ISO_8859_1));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(message, ISO_8859_1));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE, ISO_8859_1));
     }
 
     @Test
@@ -173,8 +172,8 @@ public class HttpUtilTest {
             "http://localhost:7788/foo");
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, NORMAL_CONTENT_TYPE_WITH_PARAMETERS);
 
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(NORMAL_CONTENT_TYPE_WITH_PARAMETERS));
+        assertEquals(UTF_8, HttpUtil.getCharset(message));
+        assertEquals(UTF_8, HttpUtil.getCharset(NORMAL_CONTENT_TYPE_WITH_PARAMETERS));
 
         assertEquals("utf-8", HttpUtil.getCharsetAsSequence(message));
         assertEquals("utf-8", HttpUtil.getCharsetAsSequence(NORMAL_CONTENT_TYPE_WITH_PARAMETERS));
@@ -188,30 +187,29 @@ public class HttpUtilTest {
 
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, SIMPLE_CONTENT_TYPE);
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(SIMPLE_CONTENT_TYPE));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(message));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(SIMPLE_CONTENT_TYPE));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, SIMPLE_CONTENT_TYPE);
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(SIMPLE_CONTENT_TYPE, StandardCharsets.UTF_8));
+        assertEquals(UTF_8, HttpUtil.getCharset(message, UTF_8));
+        assertEquals(UTF_8, HttpUtil.getCharset(SIMPLE_CONTENT_TYPE, UTF_8));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_WITH_INCORRECT_CHARSET);
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(CONTENT_TYPE_WITH_INCORRECT_CHARSET));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(message));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(CONTENT_TYPE_WITH_INCORRECT_CHARSET));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_WITH_INCORRECT_CHARSET);
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
-        assertEquals(CharsetUtil.UTF_8,
-                     HttpUtil.getCharset(CONTENT_TYPE_WITH_INCORRECT_CHARSET, StandardCharsets.UTF_8));
+        assertEquals(UTF_8, HttpUtil.getCharset(message, UTF_8));
+        assertEquals(UTF_8,
+                     HttpUtil.getCharset(CONTENT_TYPE_WITH_INCORRECT_CHARSET, UTF_8));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME);
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
-        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(message));
+        assertEquals(ISO_8859_1, HttpUtil.getCharset(CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME);
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
-        assertEquals(CharsetUtil.UTF_8,
-                HttpUtil.getCharset(CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME, StandardCharsets.UTF_8));
+        assertEquals(UTF_8, HttpUtil.getCharset(message, UTF_8));
+        assertEquals(UTF_8, HttpUtil.getCharset(CONTENT_TYPE_WITH_ILLEGAL_CHARSET_NAME, UTF_8));
     }
 
     @Test

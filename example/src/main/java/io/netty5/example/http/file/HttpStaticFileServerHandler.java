@@ -33,7 +33,6 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.stream.ChunkedFile;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SystemPropertyUtil;
 
@@ -301,7 +300,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         buf.append("</ul></body></html>\r\n");
 
         Buffer buffer = ctx.bufferAllocator().allocate(buf.length());
-        buffer.writeCharSequence(buf.toString(), CharsetUtil.UTF_8);
+        buffer.writeCharSequence(buf.toString(), UTF_8);
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, buffer);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");

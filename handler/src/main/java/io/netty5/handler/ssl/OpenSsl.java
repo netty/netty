@@ -19,7 +19,6 @@ import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.NativeLibraryLoader;
 import io.netty5.util.internal.PlatformDependent;
@@ -46,6 +45,7 @@ import static io.netty5.handler.ssl.SslUtils.TLSV13_CIPHER_SUITES;
 import static io.netty5.handler.ssl.SslUtils.addIfSupported;
 import static io.netty5.handler.ssl.SslUtils.isTLSv13Cipher;
 import static io.netty5.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * Tells if <a href="https://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -264,7 +264,7 @@ public final class OpenSsl {
                                                "AEAD-CHACHA20-POLY1305-SHA256");
                         }
 
-                        try (PemEncoded privateKey = PemPrivateKey.valueOf(KEY.getBytes(CharsetUtil.US_ASCII))) {
+                        try (PemEncoded privateKey = PemPrivateKey.valueOf(KEY.getBytes(US_ASCII))) {
                             // Let's check if we can set a callback, which may not work if the used OpenSSL version
                             // is to old.
                             SSLContext.setCertificateCallback(sslCtx, null);
@@ -473,7 +473,7 @@ public final class OpenSsl {
      */
     static X509Certificate selfSignedCertificate() throws CertificateException {
         return (X509Certificate) SslContext.X509_CERT_FACTORY.generateCertificate(
-                new ByteArrayInputStream(CERT.getBytes(CharsetUtil.US_ASCII))
+                new ByteArrayInputStream(CERT.getBytes(US_ASCII))
         );
     }
 

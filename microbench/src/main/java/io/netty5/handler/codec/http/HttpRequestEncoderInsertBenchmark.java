@@ -18,12 +18,13 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+
+import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpConstants.CR;
@@ -104,7 +105,7 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
                 }
             }
 
-            buf.writeBytes(uri.getBytes(CharsetUtil.UTF_8));
+            buf.writeBytes(uri.getBytes(StandardCharsets.UTF_8));
 
             buf.writeByte(SP);
             request.protocolVersion().encode(buf);

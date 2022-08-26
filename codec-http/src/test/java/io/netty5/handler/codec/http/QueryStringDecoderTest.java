@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -25,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -243,10 +243,8 @@ public class QueryStringDecoderTest {
     }
 
     private static void assertQueryString(String expected, String actual, boolean semicolonIsNormalChar) {
-        QueryStringDecoder ed = new QueryStringDecoder(expected, CharsetUtil.UTF_8, true,
-                1024, semicolonIsNormalChar);
-        QueryStringDecoder ad = new QueryStringDecoder(actual, CharsetUtil.UTF_8, true,
-                1024, semicolonIsNormalChar);
+        QueryStringDecoder ed = new QueryStringDecoder(expected, UTF_8, true, 1024, semicolonIsNormalChar);
+        QueryStringDecoder ad = new QueryStringDecoder(actual, UTF_8, true, 1024, semicolonIsNormalChar);
         assertEquals(ed.path(), ad.path());
         assertEquals(ed.parameters(), ad.parameters());
     }

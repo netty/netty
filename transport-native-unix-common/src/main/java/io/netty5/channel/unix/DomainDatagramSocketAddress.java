@@ -16,7 +16,8 @@
 package io.netty5.channel.unix;
 
 import io.netty5.channel.socket.DomainSocketAddress;
-import io.netty5.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Act as special {@link DomainSocketAddress} to be able to easily pass all needed data from JNI without the need
@@ -34,7 +35,7 @@ public final class DomainDatagramSocketAddress extends DomainSocketAddress {
 
     public DomainDatagramSocketAddress(byte[] socketPath, int receivedAmount,
                                        DomainDatagramSocketAddress localAddress) {
-        super(new String(socketPath, CharsetUtil.UTF_8));
+        super(new String(socketPath, StandardCharsets.UTF_8));
         this.localAddress = localAddress;
         this.receivedAmount = receivedAmount;
     }

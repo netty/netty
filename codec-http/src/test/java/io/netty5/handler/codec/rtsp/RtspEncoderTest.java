@@ -25,10 +25,10 @@ import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -61,7 +61,7 @@ public class RtspEncoderTest {
         ch.writeOutbound(request);
 
         try (Buffer buf = ch.readOutbound()) {
-            String actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(UTF_8);
             assertEquals(expected, actual);
         }
     }
@@ -83,7 +83,7 @@ public class RtspEncoderTest {
 
         byte[] content = ("stream_state\r\n"
                         + "position\r\n"
-                        + "scale\r\n").getBytes(CharsetUtil.UTF_8);
+                        + "scale\r\n").getBytes(UTF_8);
 
         FullHttpRequest request = new DefaultFullHttpRequest(
                 RtspVersions.RTSP_1_0,
@@ -100,7 +100,7 @@ public class RtspEncoderTest {
         ch.writeOutbound(request);
 
         try (Buffer buf = ch.readOutbound()) {
-            String actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(UTF_8);
             assertEquals(expected, actual);
         }
     }
@@ -126,7 +126,7 @@ public class RtspEncoderTest {
         ch.writeOutbound(response);
 
         try (Buffer buf = ch.readOutbound()) {
-            String actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(UTF_8);
             assertEquals(expected, actual);
         }
     }
@@ -149,7 +149,7 @@ public class RtspEncoderTest {
 
         byte[] content = ("position: 24\r\n"
                         + "stream_state: playing\r\n"
-                        + "scale: 1.00\r\n").getBytes(CharsetUtil.UTF_8);
+                        + "scale: 1.00\r\n").getBytes(UTF_8);
 
         FullHttpResponse response = new DefaultFullHttpResponse(
                 RtspVersions.RTSP_1_0, RtspResponseStatuses.OK, preferredAllocator().allocate(content.length));
@@ -166,7 +166,7 @@ public class RtspEncoderTest {
         ch.writeOutbound(response);
 
         try (Buffer buf = ch.readOutbound()) {
-            String actual = buf.toString(CharsetUtil.UTF_8);
+            String actual = buf.toString(UTF_8);
             assertEquals(expected, actual);
         }
     }

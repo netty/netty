@@ -20,13 +20,14 @@ import io.netty5.buffer.api.MemoryManager;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpRequestDecoder;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
-import io.netty5.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * This benchmark is based on HttpRequestDecoderTest class.
@@ -79,7 +80,7 @@ public class HttpRequestDecoderBenchmark extends AbstractMicrobenchmark {
                 "1234567890\r\n" +
                 "1234567890\r\n" +
                 "1234567890\r\n"
-        ).getBytes(CharsetUtil.US_ASCII);
+        ).getBytes(StandardCharsets.US_ASCII);
     }
 
     @Benchmark

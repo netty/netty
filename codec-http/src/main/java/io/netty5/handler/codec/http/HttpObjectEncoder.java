@@ -20,10 +20,10 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.FileRegion;
 import io.netty5.handler.codec.MessageToMessageEncoder;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.StringUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -191,7 +191,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (contentLength > 0) {
             String lengthHex = Long.toHexString(contentLength);
             Buffer buf = ctx.bufferAllocator().allocate(lengthHex.length() + 2);
-            buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
+            buf.writeCharSequence(lengthHex, StandardCharsets.US_ASCII);
             buf.writeShort(CRLF_SHORT);
             out.add(buf);
             out.add(encode(msg));

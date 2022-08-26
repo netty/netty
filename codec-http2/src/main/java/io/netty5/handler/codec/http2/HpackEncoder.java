@@ -35,8 +35,8 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -276,7 +276,7 @@ final class HpackEncoder {
             } else {
                 // Only ASCII is allowed in http2 headers, so its fine to use this.
                 // https://tools.ietf.org/html/rfc7540#section-8.1.2
-                out.writeCharSequence(string, CharsetUtil.ISO_8859_1);
+                out.writeCharSequence(string, StandardCharsets.ISO_8859_1);
             }
         }
     }

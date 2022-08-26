@@ -16,7 +16,6 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -35,6 +34,7 @@ import java.security.cert.X509Certificate;
 import java.util.Collections;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -147,8 +147,8 @@ public class SslContextBuilderTest {
                 "hq7/O+wB4VuP+r7qx+PWN2dSTpCwzHbaQDCmVceZ3PXPlKFdDuYNk/ENuEI8QBRf\n" +
                 "MjM6q9YhnIAeAXFleZAoSETEDyfGBIi/NDe5wzA=\n" +
                 "-----END PRIVATE KEY-----";
-        ByteArrayInputStream certStream = new ByteArrayInputStream(cert.getBytes(CharsetUtil.US_ASCII));
-        ByteArrayInputStream keyStream = new ByteArrayInputStream(key.getBytes(CharsetUtil.US_ASCII));
+        ByteArrayInputStream certStream = new ByteArrayInputStream(cert.getBytes(US_ASCII));
+        ByteArrayInputStream keyStream = new ByteArrayInputStream(key.getBytes(US_ASCII));
         final SslContextBuilder builder;
         try {
             if (server) {

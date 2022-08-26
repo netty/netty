@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.util.CharsetUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -65,7 +64,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
                     }
                 }
             }
-            buf.writeByte(SP).writeCharSequence(uriCharSequence, CharsetUtil.UTF_8);
+            buf.writeByte(SP).writeCharSequence(uriCharSequence, StandardCharsets.UTF_8);
             if (needSlash) {
                 // write "/ " after uri
                 buf.writeShort(SLASH_AND_SPACE_SHORT);

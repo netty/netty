@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -148,7 +147,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         int base = binaryData.readerOffset();
         try {
             binaryData.skipReadableBytes(2);
-            return binaryData.toString(CharsetUtil.UTF_8);
+            return binaryData.toString(StandardCharsets.UTF_8);
         } finally {
             binaryData.readerOffset(base);
         }

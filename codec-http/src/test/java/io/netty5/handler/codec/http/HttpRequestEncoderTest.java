@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -208,7 +207,7 @@ public class HttpRequestEncoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder());
         assertTrue(channel.writeOutbound(new CustomHttpRequest()));
         assertTrue(channel.writeOutbound(new DefaultHttpContent(
-                preferredAllocator().allocate(16).writeCharSequence("test", CharsetUtil.US_ASCII))));
+                preferredAllocator().allocate(16).writeCharSequence("test", US_ASCII))));
         assertTrue(channel.writeOutbound(new EmptyLastHttpContent(preferredAllocator())));
         assertTrue(channel.finishAndReleaseAll());
     }

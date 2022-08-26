@@ -17,7 +17,8 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 import static io.netty5.handler.codec.http.HttpConstants.SP;
 import static io.netty5.util.ByteProcessor.FIND_ASCII_SPACE;
@@ -559,7 +560,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         codeAsText = new AsciiString(codeString);
         this.reasonPhrase = reasonPhrase;
         if (bytes) {
-            this.bytes = (codeString + ' ' + reasonPhrase).getBytes(CharsetUtil.US_ASCII);
+            this.bytes = (codeString + ' ' + reasonPhrase).getBytes(StandardCharsets.US_ASCII);
         } else {
             this.bytes = null;
         }
@@ -635,9 +636,9 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     void encode(Buffer buf) {
         if (bytes == null) {
-            buf.writeCharSequence(codeAsText, CharsetUtil.US_ASCII);
+            buf.writeCharSequence(codeAsText, StandardCharsets.US_ASCII);
             buf.writeByte(SP);
-            buf.writeCharSequence(reasonPhrase, CharsetUtil.US_ASCII);
+            buf.writeCharSequence(reasonPhrase, StandardCharsets.US_ASCII);
         } else {
             buf.writeBytes(bytes);
         }

@@ -19,10 +19,10 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Iterator;
 import java.util.Map;
@@ -104,7 +104,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
                 int contentLength = content.readableBytes();
                 byte[] arr = new byte[contentLength];
                 content.readBytes(arr, 0, contentLength);
-                System.out.println(new String(arr, 0, contentLength, CharsetUtil.UTF_8));
+                System.out.println(new String(arr, 0, contentLength, StandardCharsets.UTF_8));
             }
 
             entry.getValue().setSuccess(null);

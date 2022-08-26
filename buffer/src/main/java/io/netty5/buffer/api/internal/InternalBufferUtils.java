@@ -17,10 +17,10 @@ package io.netty5.buffer.api.internal;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferClosedException;
+import io.netty5.buffer.api.BufferComponent;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.BufferComponent;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.PlatformDependent;
 
@@ -36,8 +36,8 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 
-import static io.netty5.util.CharsetUtil.US_ASCII;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Objects.requireNonNull;
 
 public interface InternalBufferUtils {

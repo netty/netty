@@ -39,8 +39,8 @@ import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty5.handler.codec.http.HttpMethod.GET;
@@ -67,7 +67,7 @@ public final class Http2Client {
     static final String URL = System.getProperty("url", "/whatever");
     static final String URL2 = System.getProperty("url2");
     static final String URL2DATA = System.getProperty("url2data", "test data!");
-    static final byte[] URL_2_DATA_BYTES = URL2DATA.getBytes(CharsetUtil.UTF_8);
+    static final byte[] URL_2_DATA_BYTES = URL2DATA.getBytes(StandardCharsets.UTF_8);
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.

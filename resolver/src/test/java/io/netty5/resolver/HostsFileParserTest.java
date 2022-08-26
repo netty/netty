@@ -15,7 +15,6 @@
  */
 package io.netty5.resolver;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.ResourcesUtil;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +24,7 @@ import java.io.StringReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Map;
 
@@ -87,7 +87,7 @@ public class HostsFileParserTest {
             return;
         }
         testParseFile(HostsFileParser.parse(ResourcesUtil.getFile(getClass(),  "hosts-unicode"),
-                                            CharsetUtil.UTF_8, CharsetUtil.ISO_8859_1, unicodeCharset));
+                                            StandardCharsets.UTF_8, StandardCharsets.ISO_8859_1, unicodeCharset));
     }
 
     private static void testParseFile(HostsFileEntries entries) throws IOException {

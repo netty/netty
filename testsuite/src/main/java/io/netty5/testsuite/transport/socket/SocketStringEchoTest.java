@@ -26,7 +26,6 @@ import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty5.handler.codec.Delimiters;
 import io.netty5.handler.codec.string.StringDecoder;
 import io.netty5.handler.codec.string.StringEncoder;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -37,6 +36,8 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 public class SocketStringEchoTest extends AbstractSocketTest {
 
@@ -88,8 +89,8 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-                sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addLast("decoder", new StringDecoder(ISO_8859_1));
+                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", sh);
             }
         });
@@ -98,8 +99,8 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-                sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addLast("decoder", new StringDecoder(ISO_8859_1));
+                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", ch);
             }
         });

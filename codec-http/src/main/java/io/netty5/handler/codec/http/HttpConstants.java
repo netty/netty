@@ -15,9 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.util.CharsetUtil;
-
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public final class HttpConstants {
 
@@ -69,7 +68,7 @@ public final class HttpConstants {
     /**
      * Default character set (UTF-8)
      */
-    public static final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
+    public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     /**
      * Horizontal space

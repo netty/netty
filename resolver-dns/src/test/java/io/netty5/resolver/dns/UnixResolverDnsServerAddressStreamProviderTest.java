@@ -15,13 +15,13 @@
  */
 package io.netty5.resolver.dns;
 
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -273,7 +273,7 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
 
     private File buildFile(Path tempDir, String contents) throws IOException {
         Path path = tempDir.resolve("netty-dns-" + UUID.randomUUID().toString().substring(24) + ".txt");
-        Files.write(path, contents.getBytes(CharsetUtil.UTF_8));
+        Files.write(path, contents.getBytes(StandardCharsets.UTF_8));
         return path.toFile();
     }
 

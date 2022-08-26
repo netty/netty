@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
 
 import java.net.URI;
@@ -24,6 +23,7 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.Objects;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -61,7 +61,7 @@ public class QueryStringEncoder {
     public QueryStringEncoder(String uri, Charset charset) {
         Objects.requireNonNull(charset, "charset");
         uriBuilder = new StringBuilder(uri);
-        this.charset = CharsetUtil.UTF_8.equals(charset) ? null : charset;
+        this.charset = UTF_8.equals(charset) ? null : charset;
     }
 
     /**

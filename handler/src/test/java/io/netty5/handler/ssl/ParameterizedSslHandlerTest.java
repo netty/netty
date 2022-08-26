@@ -38,7 +38,6 @@ import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.util.concurrent.Promise;
@@ -60,6 +59,7 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -651,7 +651,7 @@ public class ParameterizedSslHandlerTest {
 
         @Override
         protected void messageReceived(ChannelHandlerContext ctx, Buffer msg) {
-            readQueue.append(msg.toString(CharsetUtil.US_ASCII));
+            readQueue.append(msg.toString(StandardCharsets.US_ASCII));
             if (readQueue.length() >= toWrite.length()) {
                 doneLatch.countDown();
             }
@@ -684,10 +684,7 @@ public class ParameterizedSslHandlerTest {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             try {
                 cause.printStackTrace(new PrintStream(out));
-                readQueue.append(out.toString(CharsetUtil.US_ASCII.name()));
-            } catch (UnsupportedEncodingException ignore) {
-                // Let's just fallback to using toString().
-                readQueue.append(cause);
+                readQueue.append(out.toString(StandardCharsets.US_ASCII));
             } finally {
                 doneLatch.countDown();
                 try {

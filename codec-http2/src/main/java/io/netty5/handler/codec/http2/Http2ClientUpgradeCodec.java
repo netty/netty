@@ -15,13 +15,13 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.util.Send;
 import io.netty5.util.collection.CharObjectMap;
 import io.netty5.util.internal.UnstableApi;
 
@@ -33,7 +33,7 @@ import static io.netty5.handler.codec.base64.Base64Dialect.URL_SAFE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**

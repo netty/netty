@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.util.CharsetUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -163,7 +163,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.keepAliveDefault = keepAliveDefault;
 
         if (bytes) {
-            this.bytes = text.getBytes(CharsetUtil.US_ASCII);
+            this.bytes = text.getBytes(StandardCharsets.US_ASCII);
         } else {
             this.bytes = null;
         }
@@ -248,7 +248,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     void encode(Buffer buf) {
         if (bytes == null) {
-            buf.writeCharSequence(text, CharsetUtil.US_ASCII);
+            buf.writeCharSequence(text, StandardCharsets.US_ASCII);
         } else {
             buf.writeBytes(bytes);
         }

@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -127,7 +126,7 @@ public class HttpServerUpgradeHandlerTest {
             String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
                     "connection: upgrade\r\n" +
                     "upgrade: nextprotocol\r\n\r\n";
-            assertEquals(expectedHttpResponse, upgradeMessage.toString(CharsetUtil.US_ASCII));
+            assertEquals(expectedHttpResponse, upgradeMessage.toString(US_ASCII));
             assertTrue(upgradeMessage.isAccessible());
         }
         assertFalse(channel.finishAndReleaseAll());

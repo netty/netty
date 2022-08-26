@@ -17,8 +17,9 @@ package io.netty5.handler.codec.string;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,12 +36,12 @@ public class LineEncoderTest {
     }
 
     private static void testLineEncode(LineSeparator lineSeparator, String msg) {
-        EmbeddedChannel channel = new EmbeddedChannel(new LineEncoder(lineSeparator, CharsetUtil.UTF_8));
+        EmbeddedChannel channel = new EmbeddedChannel(new LineEncoder(lineSeparator, StandardCharsets.UTF_8));
         assertTrue(channel.writeOutbound(msg));
         try (Buffer buf = channel.readOutbound()) {
             byte[] data = new byte[buf.readableBytes()];
             buf.readBytes(data, 0, data.length);
-            byte[] expected = (msg + lineSeparator.value()).getBytes(CharsetUtil.UTF_8);
+            byte[] expected = (msg + lineSeparator.value()).getBytes(StandardCharsets.UTF_8);
             assertArrayEquals(expected, data);
             assertNull(channel.readOutbound());
             assertFalse(channel.finish());

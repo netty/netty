@@ -29,7 +29,6 @@ import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +40,7 @@ import org.mockito.MockitoAnnotations;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
@@ -160,7 +160,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -177,7 +177,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -197,7 +197,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(text1 + text2, serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(text1 + text2, serverOut.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -214,7 +214,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -231,7 +231,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -248,7 +248,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -265,7 +265,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -284,8 +284,8 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(data.readerOffset(0).toString(CharsetUtil.UTF_8),
-                     serverOut.toString(CharsetUtil.UTF_8.name()));
+        assertEquals(data.readerOffset(0).toString(StandardCharsets.UTF_8),
+                     serverOut.toString(StandardCharsets.UTF_8));
     }
 
     private void bootstrapEnv(int serverOutSize) throws Exception {

@@ -31,10 +31,10 @@ import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.StringUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -122,7 +122,7 @@ public class AutobahnServerHandler implements ChannelHandler {
             ChannelHandlerContext ctx, HttpRequest req, FullHttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.status().code() != 200) {
-            res.payload().writeCharSequence(res.status().toString(), CharsetUtil.UTF_8);
+            res.payload().writeCharSequence(res.status().toString(), StandardCharsets.UTF_8);
             setContentLength(res, res.payload().readableBytes());
         }
 

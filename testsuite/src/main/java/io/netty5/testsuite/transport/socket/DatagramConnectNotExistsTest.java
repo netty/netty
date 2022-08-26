@@ -21,7 +21,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.testsuite.transport.TestsuitePermutation;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -32,6 +31,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.net.PortUnreachableException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -69,7 +69,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
             assertTrue(datagramChannel.isActive());
             BufferAllocator allocator = datagramChannel.bufferAllocator();
             datagramChannel.writeAndFlush(
-                        allocator.copyOf("test".getBytes(CharsetUtil.US_ASCII))).asStage().sync();
+                        allocator.copyOf("test".getBytes(StandardCharsets.US_ASCII))).asStage().sync();
             assertTrue(promise.asFuture().asStage().sync().getNow() instanceof PortUnreachableException);
         } finally {
             if (datagramChannel != null) {

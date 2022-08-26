@@ -22,13 +22,13 @@ import io.netty5.channel.DefaultAddressedEnvelope;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.string.StringEncoder;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +44,7 @@ public class DatagramPacketEncoderTest {
     public void setUp() {
         channel = new EmbeddedChannel(
                 new DatagramPacketEncoder<String>(
-                        new StringEncoder(CharsetUtil.UTF_8)));
+                        new StringEncoder(StandardCharsets.UTF_8)));
     }
 
     @AfterEach
@@ -68,7 +68,7 @@ public class DatagramPacketEncoderTest {
         assertTrue(channel.writeOutbound(
                 new DefaultAddressedEnvelope<>("netty", recipient, sender)));
         try (DatagramPacket packet = channel.readOutbound()) {
-            assertEquals("netty", packet.content().toString(CharsetUtil.UTF_8));
+            assertEquals("netty", packet.content().toString(StandardCharsets.UTF_8));
             assertEquals(recipient, packet.recipient());
             assertEquals(sender, packet.sender());
         }

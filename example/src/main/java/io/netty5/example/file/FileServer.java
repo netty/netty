@@ -34,7 +34,8 @@ import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.stream.ChunkedWriteHandler;
-import io.netty5.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Server that accept the path of a file an echo back its content.
@@ -72,9 +73,9 @@ public final class FileServer {
                          p.addLast(sslCtx.newHandler(ch.bufferAllocator()));
                      }
                      p.addLast(
-                             new StringEncoder(CharsetUtil.UTF_8),
+                             new StringEncoder(StandardCharsets.UTF_8),
                              new LineBasedFrameDecoder(8192),
-                             new StringDecoder(CharsetUtil.UTF_8),
+                             new StringDecoder(StandardCharsets.UTF_8),
                              new ChunkedWriteHandler(),
                              new FileServerHandler());
                  }

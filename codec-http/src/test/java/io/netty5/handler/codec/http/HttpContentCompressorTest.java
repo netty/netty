@@ -17,12 +17,12 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.compression.ZlibWrapper;
+import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -31,7 +31,7 @@ import static io.netty5.buffer.BufferUtil.hexDump;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty5.util.CharsetUtil.US_ASCII;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;

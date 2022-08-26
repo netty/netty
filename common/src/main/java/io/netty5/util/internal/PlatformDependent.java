@@ -15,7 +15,6 @@
  */
 package io.netty5.util.internal;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
@@ -39,6 +38,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -206,7 +206,7 @@ public final class PlatformDependent {
                     if (file.exists()) {
                         try (BufferedReader reader = new BufferedReader(
                                 new InputStreamReader(
-                                        new FileInputStream(file), CharsetUtil.UTF_8))) {
+                                        new FileInputStream(file), StandardCharsets.UTF_8))) {
 
                             String line;
                             while ((line = reader.readLine()) != null) {

@@ -17,7 +17,6 @@ package io.netty5.handler.ssl.util;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.base64.Base64;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -40,6 +39,7 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * Generates a temporary self-signed certificate for testing purposes.
@@ -309,7 +309,7 @@ public final class SelfSignedCertificate {
         try (Buffer wrappedBuf = onHeapAllocator().copyOf(key.getEncoded());
              Buffer encodedBuf = Base64.encode(wrappedBuf, true)) {
             keyText = "-----BEGIN PRIVATE KEY-----\n" +
-                      encodedBuf.toString(CharsetUtil.US_ASCII) +
+                      encodedBuf.toString(US_ASCII) +
                       "\n-----END PRIVATE KEY-----\n";
         }
 
@@ -321,7 +321,7 @@ public final class SelfSignedCertificate {
 
         OutputStream keyOut = new FileOutputStream(keyFile);
         try {
-            keyOut.write(keyText.getBytes(CharsetUtil.US_ASCII));
+            keyOut.write(keyText.getBytes(US_ASCII));
             keyOut.close();
             keyOut = null;
         } finally {
@@ -336,7 +336,7 @@ public final class SelfSignedCertificate {
              Buffer encodedBuf = Base64.encode(wrappedBuf, true)) {
             // Encode the certificate into a CRT file.
             certText = "-----BEGIN CERTIFICATE-----\n" +
-                       encodedBuf.toString(CharsetUtil.US_ASCII) +
+                       encodedBuf.toString(US_ASCII) +
                        "\n-----END CERTIFICATE-----\n";
         }
 
@@ -345,7 +345,7 @@ public final class SelfSignedCertificate {
 
         OutputStream certOut = new FileOutputStream(certFile);
         try {
-            certOut.write(certText.getBytes(CharsetUtil.US_ASCII));
+            certOut.write(certText.getBytes(US_ASCII));
             certOut.close();
             certOut = null;
         } finally {

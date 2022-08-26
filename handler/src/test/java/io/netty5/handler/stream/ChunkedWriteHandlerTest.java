@@ -21,7 +21,6 @@ import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.internal.PlatformDependent;
@@ -35,6 +34,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -155,11 +155,11 @@ public class ChunkedWriteHandlerTest {
     // https://stackoverflow.com/a/10426305
     @Test
     public void testListenerNotifiedWhenIsEnd() throws Exception {
-        Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
+        Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(StandardCharsets.ISO_8859_1));
 
         ChunkedInput<Buffer> input = new ChunkedInput<Buffer>() {
             private boolean done;
-            private final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
+            private final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(StandardCharsets.ISO_8859_1));
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -344,7 +344,7 @@ public class ChunkedWriteHandlerTest {
 
         ChunkedInput<Buffer> notifiableInput = new ChunkedInput<Buffer>() {
             private boolean done;
-            private final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
+            private final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(StandardCharsets.ISO_8859_1));
 
             @Override
             public boolean isEndOfInput() throws Exception {
@@ -395,7 +395,7 @@ public class ChunkedWriteHandlerTest {
     // See https://github.com/netty/netty/issues/8700.
     @Test
     public void testStopConsumingChunksWhenFailed() throws Exception {
-        final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(CharsetUtil.ISO_8859_1));
+        final Buffer buffer = onHeapAllocator().copyOf("Test".getBytes(StandardCharsets.ISO_8859_1));
         final AtomicInteger chunks = new AtomicInteger(0);
 
         ChunkedInput<Buffer> nonClosableInput = new ChunkedInput<Buffer>() {

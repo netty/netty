@@ -19,12 +19,12 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.BufferHolder;
 import io.netty5.buffer.api.SensitiveBufferAllocator;
-import io.netty5.util.CharsetUtil;
 
 import javax.security.auth.Destroyable;
 import java.security.PrivateKey;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * This is a special purpose implementation of a {@link PrivateKey} which allows the
@@ -42,8 +42,8 @@ import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements PrivateKey, PemEncoded {
     private static final long serialVersionUID = 7978017465645018936L;
 
-    private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
-    private static final byte[] END_PRIVATE_KEY = "\n-----END PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(US_ASCII);
+    private static final byte[] END_PRIVATE_KEY = "\n-----END PRIVATE KEY-----\n".getBytes(US_ASCII);
 
     private static final String PKCS8_FORMAT = "PKCS#8";
 

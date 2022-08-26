@@ -23,12 +23,12 @@ import java.util.Random;
 
 import static io.netty5.util.AsciiString.contains;
 import static io.netty5.util.AsciiString.containsIgnoreCase;
-import static io.netty5.util.CharsetUtil.ISO_8859_1;
-import static io.netty5.util.CharsetUtil.US_ASCII;
-import static io.netty5.util.CharsetUtil.UTF_16;
-import static io.netty5.util.CharsetUtil.UTF_16BE;
-import static io.netty5.util.CharsetUtil.UTF_16LE;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_16;
+import static java.nio.charset.StandardCharsets.UTF_16BE;
+import static java.nio.charset.StandardCharsets.UTF_16LE;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

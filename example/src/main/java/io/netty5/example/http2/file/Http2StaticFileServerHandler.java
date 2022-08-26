@@ -29,7 +29,6 @@ import io.netty5.handler.codec.http2.Http2FrameStream;
 import io.netty5.handler.codec.http2.Http2Headers;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
 import io.netty5.handler.stream.ChunkedFile;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SystemPropertyUtil;
 
@@ -39,7 +38,6 @@ import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
@@ -58,6 +56,7 @@ import static io.netty5.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED
 import static io.netty5.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty5.handler.codec.http.HttpResponseStatus.NOT_MODIFIED;
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -210,7 +209,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
 
     private static String sanitizeUri(String uri) throws UnsupportedEncodingException {
         // Decode the path.
-        uri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
+        uri = URLDecoder.decode(uri, UTF_8);
 
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             return null;
@@ -272,7 +271,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
         buf.append("</ul></body></html>\r\n");
 
         Buffer buffer = ctx.bufferAllocator().allocate(buf.length());
-        buffer.writeCharSequence(buf.toString(), CharsetUtil.UTF_8);
+        buffer.writeCharSequence(buf.toString(), UTF_8);
 
         Http2Headers headers = new DefaultHttp2Headers();
         headers.status(OK.toString());
@@ -299,7 +298,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
         headersFrame.stream(stream);
 
         Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
-                ctx.bufferAllocator().copyOf(("Failure: " + status + "\r\n").getBytes(CharsetUtil.UTF_8)).send(), true);
+                ctx.bufferAllocator().copyOf(("Failure: " + status + "\r\n").getBytes(UTF_8)).send(), true);
         dataFrame.stream(stream);
 
         ctx.write(headersFrame);

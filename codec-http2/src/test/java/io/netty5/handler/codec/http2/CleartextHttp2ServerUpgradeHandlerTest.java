@@ -32,10 +32,10 @@ import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.CleartextHttp2ServerUpgradeHandler.PriorKnowledgeUpgradeEvent;
 import io.netty5.handler.codec.http2.Http2Stream.State;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -170,7 +170,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         String requestString = "GET / HTTP/1.1\r\n" +
                          "Host: example.com\r\n\r\n";
-        Buffer inbound = onHeapAllocator().copyOf(requestString, CharsetUtil.US_ASCII);
+        Buffer inbound = onHeapAllocator().copyOf(requestString, StandardCharsets.US_ASCII);
 
         assertTrue(channel.writeInbound(inbound));
 
@@ -208,7 +208,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     private void validateClearTextUpgrade(String upgradeString) {
         setUpServerChannel();
 
-        Buffer upgrade = onHeapAllocator().copyOf(upgradeString, CharsetUtil.US_ASCII);
+        Buffer upgrade = onHeapAllocator().copyOf(upgradeString, StandardCharsets.US_ASCII);
 
         assertFalse(channel.writeInbound(upgrade));
 
@@ -233,7 +233,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                 "connection: upgrade\r\n" +
                 "upgrade: h2c\r\n\r\n";
         try (Buffer responseBuffer = channel.readOutbound()) {
-            assertEquals(expectedHttpResponse, responseBuffer.toString(CharsetUtil.UTF_8));
+            assertEquals(expectedHttpResponse, responseBuffer.toString(StandardCharsets.UTF_8));
         }
 
         // Check that the preface was send (a.k.a the settings frame)

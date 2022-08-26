@@ -30,6 +30,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -65,14 +66,14 @@ public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
      * Creates a new instance with the current system line separator and UTF-8 charset encoding.
      */
     public LineEncoder() {
-        this(LineSeparator.DEFAULT, CharsetUtil.UTF_8);
+        this(LineSeparator.DEFAULT, StandardCharsets.UTF_8);
     }
 
     /**
      * Creates a new instance with the specified line separator and UTF-8 charset encoding.
      */
     public LineEncoder(LineSeparator lineSeparator) {
-        this(lineSeparator, CharsetUtil.UTF_8);
+        this(lineSeparator, StandardCharsets.UTF_8);
     }
 
     /**

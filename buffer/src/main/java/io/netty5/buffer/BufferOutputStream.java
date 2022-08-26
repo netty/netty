@@ -16,12 +16,12 @@
 package io.netty5.buffer;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.util.CharsetUtil;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import static java.util.Objects.requireNonNull;
 
@@ -95,7 +95,7 @@ public final class BufferOutputStream extends OutputStream implements DataOutput
     @Override
     public void writeBytes(String s) throws IOException {
         prepareWrite(s.length()); // US ASCII has no multibyte values, so this works.
-        buffer.writeCharSequence(s, CharsetUtil.US_ASCII);
+        buffer.writeCharSequence(s, StandardCharsets.US_ASCII);
     }
 
     @Override

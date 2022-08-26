@@ -16,9 +16,10 @@
 
 package io.netty5.handler.ssl;
 
-import io.netty5.util.CharsetUtil;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 /**
@@ -31,7 +32,7 @@ public class PseudoRandomFunctionTest {
     public void testPrfSha256() {
         byte[] secret = Hex.decode("9b be 43 6b a9 40 f0 17 b1 76 52 84 9a 71 db 35");
         byte[] seed = Hex.decode("a0 ba 9f 93 6c da 31 18 27 a6 f7 96 ff d5 19 8c");
-        byte[] label = "test label".getBytes(CharsetUtil.US_ASCII);
+        byte[] label = "test label".getBytes(StandardCharsets.US_ASCII);
         byte[] expected = Hex.decode(
                  "e3 f2 29 ba 72 7b e1 7b" +
                  "8d 12 26 20 55 7c d4 53" +

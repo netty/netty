@@ -15,7 +15,6 @@
  */
 package io.netty5.util.internal;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -29,6 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -58,7 +58,7 @@ public final class NativeLibraryLoader {
 
     // Just use a-Z and numbers as valid ID bytes.
     private static final byte[] UNIQUE_ID_BYTES =
-            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(CharsetUtil.US_ASCII);
+            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(StandardCharsets.US_ASCII);
 
     static {
         String workdir = SystemPropertyUtil.get("io.netty5.native.workdir");
@@ -328,8 +328,8 @@ public final class NativeLibraryLoader {
     }
 
     static void tryPatchShadedLibraryIdAndSign(File libraryFile, String originalName) {
-        String newId = new String(generateUniqueId(originalName.length()), CharsetUtil.UTF_8);
-        if (!tryExec("install_name_tool -id " + newId + " " + libraryFile.getAbsolutePath())) {
+        String newId = new String(generateUniqueId(originalName.length()), StandardCharsets.UTF_8);
+        if (!tryExec("install_name_tool -id " + newId + ' ' + libraryFile.getAbsolutePath())) {
             return;
         }
 

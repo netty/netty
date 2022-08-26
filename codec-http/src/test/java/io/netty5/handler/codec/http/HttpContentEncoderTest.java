@@ -26,7 +26,6 @@ import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.compression.CompressionException;
 import io.netty5.handler.codec.compression.Compressor;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -36,6 +35,7 @@ import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty5.handler.codec.http.HttpMethod.GET;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -57,7 +57,7 @@ public class HttpContentEncoderTest {
                 private boolean finished;
                 @Override
                 public Buffer compress(Buffer input, BufferAllocator allocator) throws CompressionException {
-                    Buffer out = allocator.copyOf(String.valueOf(input.readableBytes()), CharsetUtil.US_ASCII);
+                    Buffer out = allocator.copyOf(String.valueOf(input.readableBytes()), US_ASCII);
                     input.skipReadableBytes(input.readableBytes());
                     return out;
                 }
@@ -100,15 +100,15 @@ public class HttpContentEncoderTest {
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("3"));
+        assertThat(chunk.payload().toString(US_ASCII), is("3"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("2"));
+        assertThat(chunk.payload().toString(US_ASCII), is("2"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("1"));
+        assertThat(chunk.payload().toString(US_ASCII), is("1"));
         chunk.close();
 
         chunk = ch.readOutbound();
@@ -136,15 +136,15 @@ public class HttpContentEncoderTest {
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("3"));
+        assertThat(chunk.payload().toString(US_ASCII), is("3"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("2"));
+        assertThat(chunk.payload().toString(US_ASCII), is("2"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("1"));
+        assertThat(chunk.payload().toString(US_ASCII), is("1"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -175,15 +175,15 @@ public class HttpContentEncoderTest {
 
         HttpContent<?> chunk;
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("3"));
+        assertThat(chunk.payload().toString(US_ASCII), is("3"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("2"));
+        assertThat(chunk.payload().toString(US_ASCII), is("2"));
         chunk.close();
 
         chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("1"));
+        assertThat(chunk.payload().toString(US_ASCII), is("1"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -215,7 +215,7 @@ public class HttpContentEncoderTest {
 
         try (HttpContent<?> c = ch.readOutbound()) {
             assertThat(c.payload().readableBytes(), is(2));
-            assertThat(c.payload().toString(CharsetUtil.US_ASCII), is("42"));
+            assertThat(c.payload().toString(US_ASCII), is("42"));
         }
 
         try (LastHttpContent<?> last = ch.readOutbound()) {
@@ -237,7 +237,7 @@ public class HttpContentEncoderTest {
         assertEncodedResponse(ch);
         try (HttpContent<?> c = ch.readOutbound()) {
             assertThat(c.payload().readableBytes(), is(2));
-            assertThat(c.payload().toString(CharsetUtil.US_ASCII), is("42"));
+            assertThat(c.payload().toString(US_ASCII), is("42"));
         }
 
         try (LastHttpContent<?> last = ch.readOutbound()) {
@@ -261,7 +261,7 @@ public class HttpContentEncoderTest {
 
         ch.writeOutbound(new EmptyLastHttpContent(preferredAllocator()));
         HttpContent<?> chunk = ch.readOutbound();
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("0"));
+        assertThat(chunk.payload().toString(US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.close();
 
@@ -294,7 +294,7 @@ public class HttpContentEncoderTest {
         // Content encoding shouldn't be modified.
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.payload().readableBytes(), is(0));
-        assertThat(res.payload().toString(CharsetUtil.US_ASCII), is(""));
+        assertThat(res.payload().toString(US_ASCII), is(""));
         res.close();
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -319,7 +319,7 @@ public class HttpContentEncoderTest {
         // Content encoding shouldn't be modified.
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.payload().readableBytes(), is(0));
-        assertThat(res.payload().toString(CharsetUtil.US_ASCII), is(""));
+        assertThat(res.payload().toString(US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
         assertEquals(DecoderResult.success(), res.decoderResult());
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -388,12 +388,12 @@ public class HttpContentEncoderTest {
         Object o = ch.readOutbound();
         assertThat(o, is(instanceOf(HttpContent.class)));
         HttpContent<?> chunk = (HttpContent<?>) o;
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("28"));
+        assertThat(chunk.payload().toString(US_ASCII), is("28"));
         chunk.close();
 
         chunk = ch.readOutbound();
         assertThat(chunk.payload().readableBytes(), greaterThan(0));
-        assertThat(chunk.payload().toString(CharsetUtil.US_ASCII), is("0"));
+        assertThat(chunk.payload().toString(US_ASCII), is("0"));
         chunk.close();
 
         chunk = ch.readOutbound();

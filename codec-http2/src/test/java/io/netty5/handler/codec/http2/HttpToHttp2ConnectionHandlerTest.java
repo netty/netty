@@ -59,7 +59,7 @@ import static io.netty5.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty5.handler.codec.http.HttpMethod.POST;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty5.handler.codec.http2.Http2TestUtil.of;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;

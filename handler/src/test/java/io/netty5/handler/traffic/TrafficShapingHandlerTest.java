@@ -28,7 +28,6 @@ import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.util.Attribute;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.EventExecutorGroup;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.AfterAll;
@@ -38,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -105,8 +105,8 @@ public class TrafficShapingHandlerTest {
             ch = bootstrap.connect(svrAddr).asStage().get();
             Attribute<Runnable> attr = ch.attr(AbstractTrafficShapingHandler.REOPEN_TASK);
             assertNull(attr.get());
-            ch.writeAndFlush(preferredAllocator().copyOf("foo".getBytes(CharsetUtil.UTF_8)));
-            ch.writeAndFlush(preferredAllocator().copyOf("bar".getBytes(CharsetUtil.UTF_8))).asStage().await();
+            ch.writeAndFlush(preferredAllocator().copyOf("foo", UTF_8));
+            ch.writeAndFlush(preferredAllocator().copyOf("bar", UTF_8)).asStage().await();
             assertNotNull(attr.get());
             final Channel clientChannel = ch;
             ch.executor().submit(() -> {

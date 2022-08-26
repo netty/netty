@@ -33,12 +33,12 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpRequestDecoder;
 import io.netty5.handler.codec.http.HttpResponseEncoder;
 import io.netty5.handler.codec.http.HttpServerCodec;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -471,7 +471,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private static String getResponseMessage(FullHttpResponse response) {
-        return response.payload().toString(CharsetUtil.UTF_8);
+        return response.payload().toString(StandardCharsets.UTF_8);
     }
 
     private class MockOutboundHandler implements ChannelHandler {

@@ -26,16 +26,15 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
 
-import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty5.handler.codec.http2.Http2Exception.headerListSizeError;
-import static io.netty5.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -195,7 +194,7 @@ public final class Http2CodecUtil {
             return allocator.allocate(0);
         }
 
-        return allocator.copyOf(cause.getMessage().getBytes(StandardCharsets.UTF_8));
+        return allocator.copyOf(cause.getMessage().getBytes(UTF_8));
     }
 
     /**

@@ -17,7 +17,6 @@ package io.netty5.channel;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
@@ -64,8 +63,8 @@ public class CoalescingBufferQueueTest {
         };
         emptyPromise = newPromise();
 
-        cat = BufferAllocator.offHeapUnpooled().copyOf("cat", CharsetUtil.US_ASCII);
-        mouse = BufferAllocator.offHeapUnpooled().copyOf("mouse", CharsetUtil.US_ASCII);
+        cat = BufferAllocator.offHeapUnpooled().copyOf("cat", US_ASCII);
+        mouse = BufferAllocator.offHeapUnpooled().copyOf("mouse", US_ASCII);
     }
 
     @AfterEach
@@ -81,7 +80,7 @@ public class CoalescingBufferQueueTest {
         assertQueueSize(8, false);
         Promise<Void> aggregatePromise = newPromise();
         assertEquals("catmous", dequeue(7, aggregatePromise));
-        Buffer remainder = BufferAllocator.offHeapUnpooled().copyOf("mous", CharsetUtil.US_ASCII);
+        Buffer remainder = BufferAllocator.offHeapUnpooled().copyOf("mous", US_ASCII);
         writeQueue.addFirst(remainder, aggregatePromise);
         Promise<Void> aggregatePromise2 = newPromise();
         assertEquals("mouse", dequeue(5, aggregatePromise2));
