@@ -40,9 +40,11 @@ import static java.util.Objects.requireNonNull;
  * {@link ByteBuffer}. It is often used in conjunction with {@code Headers} that require a {@link CharSequence}.
  * <p>
  * This class was designed to provide an immutable array of bytes, and caches some internal state based upon the value
- * of this array. However underlying access to this byte array is provided via not copying the array on construction or
- * {@link #array()}. If any changes are made to the underlying byte array it is the user's responsibility to call
- * {@link #arrayChanged()} so the state of this class can be reset.
+ * of this array. However, underlying access to this byte array is provided via not copying the array on construction or
+ * {@link #array()}.
+ * It is very important that the array is not changed, as it will violate internal invariants, and can cause undefined
+ * behavior. Especially so if the AsciiString, or any sub-string derived from it,
+ * are used as look-up keys in other data structures.
  */
 public final class AsciiString implements CharSequence, Comparable<CharSequence> {
     public static final AsciiString EMPTY_STRING = cached("");
@@ -60,7 +62,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     };
 
     /**
-     * If this value is modified outside the constructor then call {@link #arrayChanged()}.
+     * The array of data, backing this AsciiString.
      */
     private final byte[] value;
     /**
@@ -73,7 +75,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     private final int length;
     /**
-     * The hash code is cached after it is first computed. It can be reset with {@link #arrayChanged()}.
+     * The hash code is cached after it is first computed.
      */
     private int hash;
     /**
@@ -104,14 +106,14 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     public AsciiString(byte[] value, int start, int length, boolean copy) {
         if (copy) {
             this.value = Arrays.copyOfRange(value, start, start + length);
-            this.offset = 0;
+            offset = 0;
         } else {
             if (isOutOfBounds(start, length, value.length)) {
                 throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" +
                         length + ") <= " + "value.length(" + value.length + ')');
             }
             this.value = value;
-            this.offset = start;
+            offset = start;
         }
         this.length = length;
     }
@@ -153,14 +155,14 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                 offset = 0;
             } else {
                 this.value = value.array();
-                this.offset = start;
+                offset = start;
             }
         } else {
             this.value = PlatformDependent.allocateUninitializedArray(length);
             int oldPos = value.position();
             value.get(this.value, 0, length);
             value.position(oldPos);
-            this.offset = 0;
+            offset = 0;
         }
         this.length = length;
     }
@@ -186,7 +188,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         for (int i = 0, j = start; i < length; i++, j++) {
             this.value[i] = c2b(value[j]);
         }
-        this.offset = 0;
+        offset = 0;
         this.length = length;
     }
 
@@ -208,7 +210,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         encoder.encode(cbuf, nativeBuffer, true);
         final int bufferOffset = nativeBuffer.arrayOffset();
         this.value = Arrays.copyOfRange(nativeBuffer.array(), bufferOffset, bufferOffset + nativeBuffer.position());
-        this.offset = 0;
+        offset = 0;
         this.length =  this.value.length;
     }
 
@@ -233,7 +235,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         for (int i = 0, j = start; i < length; i++, j++) {
             this.value[i] = c2b(value.charAt(j));
         }
-        this.offset = 0;
+        offset = 0;
         this.length = length;
     }
 
@@ -333,7 +335,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         // We must do a range check here to enforce the access does not go outside our sub region of the array.
         // We rely on the array access itself to pick up the array out of bounds conditions
         if (index < 0 || index >= length) {
-            throw new IndexOutOfBoundsException("index: " + index + " must be in the range [0," + length + ")");
+            throw new IndexOutOfBoundsException("index: " + index + " must be in the range [0," + length + ')');
         }
         // Try to use unsafe to avoid double checking the index bounds
         if (PlatformDependent.hasUnsafe()) {
@@ -358,18 +360,9 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * During normal use cases the {@link AsciiString} should be immutable, but if the underlying array is shared,
-     * and changes then this needs to be called.
-     */
-    public void arrayChanged() {
-        string = null;
-        hash = 0;
-    }
-
-    /**
      * This gives direct access to the underlying storage array.
      * The {@link #toByteArray()} should be preferred over this method.
-     * If the return value is changed then {@link #arrayChanged()} must be called.
+     * The returned array must not be modified in any way.
      * @see #arrayOffset()
      * @see #isEntireArrayUsed()
      */
@@ -1125,7 +1118,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             }
         }
 
-        return res.toArray(new AsciiString[0]);
+        return res.toArray(EmptyArrays.EMPTY_ASCII_STRINGS);
     }
 
     /**
@@ -1155,7 +1148,28 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         AsciiString other = (AsciiString) obj;
         return length() == other.length() &&
                hashCode() == other.hashCode() &&
-               PlatformDependent.equals(array(), arrayOffset(), other.array(), other.arrayOffset(), length());
+               PlatformDependent.equals(value, offset, other.value, other.offset, length);
+    }
+
+    /**
+     * Check if this ascii string is equal to the other ascii string, but do so in constant time for any given length.
+     * <p>
+     * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
+     * <pre>{@code
+     *     String s1 = "foo";
+     *     String s2 = "foo";
+     *     String s3 = "foo";
+     *     String s4 = "goo";
+     *     boolean equals = (equalsConstantTime(s1, s2) & equalsConstantTime(s3, s4)) != 0;
+     * }</pre>
+     * @param other the ascii string to compare with.
+     * @return {@code 0} if not equal. {@code 1} if equal.
+     */
+    public int equalsConstantTime(AsciiString other) {
+        if (length != other.length) {
+            return 0;
+        }
+        return PlatformDependent.equalsConstantTime(value, offset, other.value, other.offset, length);
     }
 
     /**

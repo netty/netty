@@ -40,26 +40,22 @@ final class HpackUtil {
      * Compare two {@link CharSequence} objects without leaking timing information.
      * <p>
      * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
-     * <pre>
+     * <pre>{@code
      *     String s1 = "foo";
      *     String s2 = "foo";
      *     String s3 = "foo";
      *     String s4 = "goo";
      *     boolean equals = (equalsConstantTime(s1, s2) & equalsConstantTime(s3, s4)) != 0;
-     * </pre>
+     * }</pre>
      * @param s1 the first value.
      * @param s2 the second value.
      * @return {@code 0} if not equal. {@code 1} if equal.
      */
     static int equalsConstantTime(CharSequence s1, CharSequence s2) {
         if (s1 instanceof AsciiString && s2 instanceof AsciiString) {
-            if (s1.length() != s2.length()) {
-                return 0;
-            }
             AsciiString s1Ascii = (AsciiString) s1;
             AsciiString s2Ascii = (AsciiString) s2;
-            return PlatformDependent.equalsConstantTime(s1Ascii.array(), s1Ascii.arrayOffset(),
-                                                        s2Ascii.array(), s2Ascii.arrayOffset(), s1.length());
+            return s1Ascii.equalsConstantTime(s2Ascii);
         }
 
         return ConstantTimeUtils.equalsConstantTime(s1, s2);
