@@ -34,6 +34,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
@@ -603,6 +604,8 @@ final class HpackDecoder {
                     previousType = validate(streamId, name, previousType, headers, value);
                 }
                 headers.add(name, value);
+            } catch (HeaderValidationException ex) {
+                validationException = new Http2Exception(PROTOCOL_ERROR, ex.getMessage(), ex);
             } catch (Http2Exception ex) {
                 validationException = ex;
             }

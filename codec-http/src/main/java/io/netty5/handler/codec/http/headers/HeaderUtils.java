@@ -697,7 +697,7 @@ public final class HeaderUtils {
         //
         // field-name's token is equivalent to cookie-name's token, we can reuse the tchar mask for both:
         if (!TOKEN_CHARS.contains(value)) {
-            throw new IllegalCharacterException(
+            throw new HeaderValidationException(
                     value, "! / # / $ / % / & / ' / * / + / - / . / ^ / _ / ` / | / ~ / DIGIT / ALPHA");
         }
         return true;
@@ -723,8 +723,7 @@ public final class HeaderUtils {
         // Note: we do not support obs-fold.
         // Illegal chars are control chars (0-31) except HT (9), and DEL (127):
         if ((value & CONTROL_CHARS_MASK) == 0 && value != HT || value == DEL) {
-            throw new IllegalCharacterException(value,
-                    "(VCHAR / obs-text) [ 1*(SP / HTAB) (VCHAR / obs-text) ]");
+            throw new HeaderValidationException(value, "(VCHAR / obs-text) [ 1*(SP / HTAB) (VCHAR / obs-text) ]");
         }
         return true;
     }

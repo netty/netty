@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName;
 import io.netty5.util.internal.StringUtil;
@@ -35,7 +36,7 @@ public class DefaultHttp2HeadersTest {
 
     @Test
     public void nullHeaderNameNotAllowed() {
-        assertThrows(Http2Exception.class, new Executable() {
+        assertThrows(HeaderValidationException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 Http2Headers.newHeaders().add(null, "foo");
@@ -45,7 +46,7 @@ public class DefaultHttp2HeadersTest {
 
     @Test
     public void emptyHeaderNameNotAllowed() {
-        assertThrows(Http2Exception.class, new Executable() {
+        assertThrows(HeaderValidationException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 Http2Headers.newHeaders().add(StringUtil.EMPTY_STRING, "foo");
@@ -146,7 +147,7 @@ public class DefaultHttp2HeadersTest {
     public void testHeaderNameValidation() {
         final Http2Headers headers = newHeaders();
 
-        assertThrows(Http2Exception.class, new Executable() {
+        assertThrows(HeaderValidationException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 headers.add(of("Foo"), of("foo"));

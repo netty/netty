@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2.headers;
 
 import io.netty5.handler.codec.http.headers.AbstractHttpHeadersTest;
+import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http2.Http2Exception;
 import io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName;
@@ -50,14 +51,14 @@ public class DefaultHttp2HeadersTest extends AbstractHttpHeadersTest {
     @Test
     public void invalidHeaderNameOutOfRangeCharacter() {
         final HttpHeaders headers = newHeaders();
-        assertThrows(Http2Exception.class, () -> headers.add(String.valueOf((char) -1), "foo"));
+        assertThrows(HeaderValidationException.class, () -> headers.add(String.valueOf((char) -1), "foo"));
     }
 
     @Override
     @Test
     public void invalidHeaderNameOutOfRangeCharacterAsciiString() {
         final HttpHeaders headers = newHeaders();
-        assertThrows(Http2Exception.class, () ->
+        assertThrows(HeaderValidationException.class, () ->
                 headers.add(AsciiString.cached(String.valueOf((char) -1)), "foo"));
     }
 
@@ -65,14 +66,14 @@ public class DefaultHttp2HeadersTest extends AbstractHttpHeadersTest {
     @Test
     public void invalidHeaderNameCharacter() {
         final HttpHeaders headers = newHeaders();
-        assertThrows(Http2Exception.class, () -> headers.add("=", "foo"));
+        assertThrows(HeaderValidationException.class, () -> headers.add("=", "foo"));
     }
 
     @Override
     @Test
     public void invalidHeaderNameCharacterAsciiString() {
         final HttpHeaders headers = newHeaders();
-        assertThrows(Http2Exception.class, () -> headers.add(AsciiString.cached("="), "foo"));
+        assertThrows(HeaderValidationException.class, () -> headers.add(AsciiString.cached("="), "foo"));
     }
 
     @Test

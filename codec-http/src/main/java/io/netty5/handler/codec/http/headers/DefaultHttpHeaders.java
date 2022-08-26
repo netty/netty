@@ -609,7 +609,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     @Override
     protected CharSequence validateKey(@Nullable final CharSequence name) {
         if (name == null || name.length() == 0) {
-            throw new IllegalArgumentException("Empty header names are not allowed");
+            throw new HeaderValidationException("Empty header names are not allowed");
         }
         if (validateNames) {
             validateHeaderName(name);

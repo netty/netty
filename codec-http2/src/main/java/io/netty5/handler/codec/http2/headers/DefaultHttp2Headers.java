@@ -16,11 +16,11 @@
 package io.netty5.handler.codec.http2.headers;
 
 import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
+import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.headers.MultiMap;
-import io.netty5.handler.codec.http2.Http2Exception;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ByteProcessor;
 import org.jetbrains.annotations.Nullable;
@@ -31,8 +31,6 @@ import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty5.util.AsciiString.isUpperCase;
 
 /**
@@ -61,28 +59,24 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
     @Override
     protected CharSequence validateKey(@Nullable CharSequence name) {
         if (name == null || name.length() == 0) {
-            throw connectionError(PROTOCOL_ERROR, "empty headers are not allowed [%s]", name);
+            throw new HeaderValidationException("empty headers are not allowed");
         }
         if (validateNames) {
             if (PseudoHeaderName.hasPseudoHeaderFormat(name)) {
                 if (!PseudoHeaderName.isPseudoHeader(name)) {
-                    throw connectionError(PROTOCOL_ERROR, name + " is not a standard pseudo-header.");
+                    throw new HeaderValidationException("'" + name + "' is not a standard pseudo-header.");
                 }
             } else {
-                try {
-                    validateHeaderName(name);
-                } catch (Exception e) {
-                    throw connectionError(PROTOCOL_ERROR, e, "header name contain illegal characters [%s]", name);
-                }
+                validateHeaderName(name);
                 if (name instanceof AsciiString) {
                     int index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
                     if (index != -1) {
-                        throw connectionError(PROTOCOL_ERROR, "invalid header name [%s]", name);
+                        throw new HeaderValidationException("'" + name + "' is an invalid header name.");
                     }
                 } else {
                     for (int i = 0; i < name.length(); ++i) {
                         if (isUpperCase(name.charAt(i))) {
-                            throw connectionError(PROTOCOL_ERROR, "invalid header name [%s]", name);
+                            throw new HeaderValidationException("'" + name + "' is an invalid header name.");
                         }
                     }
                 }

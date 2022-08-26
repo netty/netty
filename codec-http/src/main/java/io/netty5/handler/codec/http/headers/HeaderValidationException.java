@@ -35,27 +35,27 @@ import static java.lang.Character.toChars;
 import static java.lang.Integer.toHexString;
 
 /**
- * Exception that clarifies an illegal character and expected values.
+ * Exception thrown when a header fails validation when added to {@link HttpHeaders}.
  */
-public final class IllegalCharacterException extends IllegalArgumentException {
+public final class HeaderValidationException extends IllegalArgumentException {
     private static final long serialVersionUID = 5109746801766842145L;
 
     /**
-     * Creates a new instance.
+     * Header validation failed with the given message.
      *
-     * @param value value of the character
+     * @param message the reason the header validation failed.
      */
-    public IllegalCharacterException(final byte value) {
-        super(message(value, null));
+    public HeaderValidationException(final String message) {
+        super(message);
     }
 
     /**
-     * Creates a new instance.
+     * Validation failed because the given byte value does not satisfy the given expectations.
      *
      * @param value value of the character
      * @param expected definition of expected value(s)
      */
-    public IllegalCharacterException(final byte value, final String expected) {
+    public HeaderValidationException(final byte value, final String expected) {
         super(message(value, expected));
     }
 
