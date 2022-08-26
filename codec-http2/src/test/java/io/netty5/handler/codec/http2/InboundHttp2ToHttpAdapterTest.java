@@ -39,7 +39,6 @@ import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
@@ -49,7 +48,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -60,6 +58,7 @@ import static io.netty5.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Excep
 import static io.netty5.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty5.handler.codec.http2.Http2TestUtil.of;
 import static io.netty5.handler.codec.http2.Http2TestUtil.runInChannel;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -227,8 +226,8 @@ public class InboundHttp2ToHttpAdapterTest {
                 .scheme(new AsciiString("https"))
                 .authority(new AsciiString("example.org"))
                 .path(new AsciiString("/some/path/resource2"))
-                .add(new AsciiString("çã".getBytes(CharsetUtil.UTF_8)),
-                        new AsciiString("Ãã".getBytes(CharsetUtil.UTF_8)));
+                .add(new AsciiString("çã".getBytes(UTF_8)),
+                        new AsciiString("Ãã".getBytes(UTF_8)));
         runInChannel(clientChannel, () -> {
             clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, true);
             clientChannel.flush();
@@ -241,7 +240,7 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestOneDataFrame() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "hello world";
-        Buffer hello = preferredAllocator().allocate(16).writeCharSequence(text, CharsetUtil.UTF_8);
+        Buffer hello = preferredAllocator().allocate(16).writeCharSequence(text, UTF_8);
         try (FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/some/path/resource2", hello, true)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
@@ -267,7 +266,7 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestMultipleDataFrames() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "hello world big time data!";
-        try (Buffer content = preferredAllocator().allocate(32).writeCharSequence(text, CharsetUtil.UTF_8);
+        try (Buffer content = preferredAllocator().allocate(32).writeCharSequence(text, UTF_8);
              FullHttpRequest request = new DefaultFullHttpRequest(
                      HTTP_1_1, GET, "/some/path/resource2", content.copy(), true)) {
             HttpHeaders httpHeaders = request.headers();
@@ -326,7 +325,7 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestTrailingHeaders() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "some data";
-        Buffer content = preferredAllocator().allocate(16).writeCharSequence(text, CharsetUtil.UTF_8);
+        Buffer content = preferredAllocator().allocate(16).writeCharSequence(text, UTF_8);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/some/path/resource2", content, true)) {
             HttpHeaders httpHeaders = request.headers();
@@ -361,10 +360,10 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestStreamDependencyInHttpMessageFlow() throws Exception {
         boostrapEnv(1, 2, 1);
         final String text = "hello world big time data!";
-        Buffer content = preferredAllocator().allocate(32).writeCharSequence(text, CharsetUtil.UTF_8);
+        Buffer content = preferredAllocator().allocate(32).writeCharSequence(text, UTF_8);
 
         final String text2 = "hello world big time data...number 2!!";
-        Buffer content2 = preferredAllocator().allocate(64).writeCharSequence(text2, CharsetUtil.UTF_8);
+        Buffer content2 = preferredAllocator().allocate(64).writeCharSequence(text2, UTF_8);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, HttpMethod.PUT, "/some/path/resource", content, true);
              FullHttpMessage<?> request2 = new DefaultFullHttpRequest(
@@ -404,9 +403,9 @@ public class InboundHttp2ToHttpAdapterTest {
     public void serverRequestPushPromise() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "hello world big time data!";
-        Buffer content = preferredAllocator().allocate(32).writeCharSequence(text, CharsetUtil.UTF_8);
+        Buffer content = preferredAllocator().allocate(32).writeCharSequence(text, UTF_8);
         final String text2 = "hello world smaller data?";
-        Buffer content2 = preferredAllocator().allocate(32).writeCharSequence(text2, CharsetUtil.UTF_8);
+        Buffer content2 = preferredAllocator().allocate(32).writeCharSequence(text2, UTF_8);
         try (FullHttpMessage<?> response = new DefaultFullHttpResponse(
                 HTTP_1_1, HttpResponseStatus.OK, content, true);
              FullHttpMessage<?> response2 = new DefaultFullHttpResponse(
@@ -482,7 +481,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpMessage<?> response = new DefaultFullHttpResponse(
                 HTTP_1_1, HttpResponseStatus.CONTINUE, preferredAllocator().allocate(0));
         final String text = "a big payload";
-        final Buffer payload = preferredAllocator().allocate(16).writeCharSequence(text, StandardCharsets.UTF_8);
+        final Buffer payload = preferredAllocator().allocate(16).writeCharSequence(text, UTF_8);
         final FullHttpMessage<?> request2 = new DefaultFullHttpRequest(request.protocolVersion(), request.method(),
                 request.uri(), payload, request.headers(), request.trailingHeaders());
         final FullHttpMessage<?> response2 = new DefaultFullHttpResponse(

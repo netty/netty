@@ -26,7 +26,6 @@ import io.netty5.handler.ssl.ReferenceCountedOpenSslEngine;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslProvider;
-import io.netty5.util.CharsetUtil;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -50,6 +49,8 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * ATTENTION: This is an incomplete example! In order to provide a fully functional
@@ -167,7 +168,7 @@ public class OcspServerExample {
             if (in == null) {
                 throw new FileNotFoundException("clazz=" + clazz + ", name=" + name);
             }
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, US_ASCII))) {
                 return parseCertificates(reader);
             }
         }

@@ -44,8 +44,8 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty5.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty5.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty5.handler.codec.http2.Http2Stream.State.IDLE;
-import static io.netty5.util.CharsetUtil.UTF_8;
 import static java.lang.Math.min;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 

@@ -34,7 +34,7 @@ import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtens
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV3;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateEncoder.EMPTY_DEFLATE_BLOCK;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -18,7 +18,6 @@ package io.netty5.channel.unix;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 
 import java.io.IOException;
@@ -41,6 +40,7 @@ import static io.netty5.channel.unix.Errors.ioResult;
 import static io.netty5.channel.unix.Errors.newIOException;
 import static io.netty5.channel.unix.NativeInetAddress.address;
 import static io.netty5.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Provides a JNI bridge to native socket operations.
@@ -350,7 +350,7 @@ public class Socket extends FileDescriptor {
             res = connect(fd, useIpv6(inetAddress), address.address, address.scopeId, inetSocketAddress.getPort());
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
-            res = connectDomainSocket(fd, unixDomainSocketAddress.path().getBytes(CharsetUtil.UTF_8));
+            res = connectDomainSocket(fd, unixDomainSocketAddress.path().getBytes(UTF_8));
         } else {
             throw new Error("Unexpected SocketAddress implementation " + socketAddress);
         }
@@ -386,7 +386,7 @@ public class Socket extends FileDescriptor {
             }
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress addr = (DomainSocketAddress) socketAddress;
-            int res = bindDomainSocket(fd, addr.path().getBytes(CharsetUtil.UTF_8));
+            int res = bindDomainSocket(fd, addr.path().getBytes(UTF_8));
             if (res < 0) {
                 throw newIOException("bind", res);
             }

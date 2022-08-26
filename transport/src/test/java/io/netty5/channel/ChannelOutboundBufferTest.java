@@ -17,12 +17,12 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -52,7 +52,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void cancelFirst() throws InterruptedException {
         testChannelOutboundBuffer((buffer, executor) -> {
-            try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII)) {
+            try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII)) {
                 int size = buf.readableBytes();
                 Promise<Void> promise = executor.newPromise();
                 buffer.addMessage(buf.copy(), size, promise);
@@ -74,7 +74,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void cancelLast() throws InterruptedException {
         testChannelOutboundBuffer((buffer, executor) -> {
-            try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII)) {
+            try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII)) {
                 int size = buf.readableBytes();
                 Promise<Void> promise = executor.newPromise();
                 buffer.addMessage(buf.copy(), size, executor.newPromise());
@@ -96,7 +96,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void cancelInBetween() throws InterruptedException {
         testChannelOutboundBuffer((buffer, executor) -> {
-            try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", CharsetUtil.US_ASCII)) {
+            try (Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII)) {
                 int size = buf.readableBytes();
                 buffer.addMessage(buf.copy(), size, executor.newPromise());
                 Promise<Void> promise = executor.newPromise();

@@ -16,7 +16,6 @@
 
 package io.netty5.handler.ssl;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -26,6 +25,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.PrivateKey;
 import java.security.PrivilegedAction;
@@ -204,7 +204,7 @@ final class BouncyCastlePemReader {
     }
 
     private static PEMParser newParser(InputStream keyInputStream) {
-        return new PEMParser(new InputStreamReader(keyInputStream, CharsetUtil.US_ASCII));
+        return new PEMParser(new InputStreamReader(keyInputStream, StandardCharsets.US_ASCII));
     }
 
     private BouncyCastlePemReader() { }

@@ -17,10 +17,9 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.PrematureChannelClosureException;
-import io.netty5.util.CharsetUtil;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.Charset;
@@ -29,6 +28,7 @@ import java.util.List;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -56,17 +56,17 @@ public class HttpResponseDecoderTest {
         final char[] bytes = new char[maxHeaderSize / 2 - 4];
         Arrays.fill(bytes, 'a');
 
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n", US_ASCII));
 
         // Write two 4096-byte headers (= 8192 bytes)
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "A:", CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "A:", US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", US_ASCII));
         assertNull(ch.readInbound());
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "B:", CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "B:", US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertNull(res.decoderResult().cause());
@@ -88,17 +88,17 @@ public class HttpResponseDecoderTest {
         final char[] bytes = new char[maxHeaderSize / 2 - 2];
         Arrays.fill(bytes, 'a');
 
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n", US_ASCII));
 
         // Write a 4096-byte header and a 4097-byte header to test an off-by-one case (= 8193 bytes)
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "A:", CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "A:", US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", US_ASCII));
         assertNull(ch.readInbound());
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "B: ", CharsetUtil.US_ASCII)); // Note an extra space.
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", CharsetUtil.US_ASCII));
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "B: ", US_ASCII)); // Note an extra space.
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), bytes, US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertTrue(res.decoderResult().cause() instanceof TooLongHttpHeaderException);
@@ -111,7 +111,7 @@ public class HttpResponseDecoderTest {
     public void testResponseChunked() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
-                CharsetUtil.US_ASCII));
+                                     US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -124,7 +124,7 @@ public class HttpResponseDecoderTest {
 
         for (int i = 0; i < 10; i++) {
             assertFalse(ch.writeInbound(copiedBuffer(ch.bufferAllocator(), Integer.toHexString(data.length) + "\r\n",
-                    CharsetUtil.US_ASCII)));
+                                                     US_ASCII)));
             assertTrue(ch.writeInbound(copiedBuffer(ch.bufferAllocator(), data)));
             try (HttpContent<?> content = ch.readInbound()) {
                 final Buffer payload = content.payload();
@@ -135,11 +135,11 @@ public class HttpResponseDecoderTest {
                 assertArrayEquals(data, decodedData);
             }
 
-            assertFalse(ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", CharsetUtil.US_ASCII)));
+            assertFalse(ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "\r\n", US_ASCII)));
         }
 
         // Write the last chunk.
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "0\r\n\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "0\r\n\r\n", US_ASCII));
 
         // Ensure the last chunk was decoded.
         try (LastHttpContent<?> content = ch.readInbound()) {
@@ -153,7 +153,7 @@ public class HttpResponseDecoderTest {
     @Test
     public void testClosureWithoutContentLength1() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n", US_ASCII));
 
         // Read the response headers.
         HttpResponse res = ch.readInbound();
@@ -178,7 +178,7 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
 
         // Write the partial response.
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n12345678", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n12345678", US_ASCII));
 
         // Read the response headers.
         HttpResponse res = ch.readInbound();
@@ -187,7 +187,7 @@ public class HttpResponseDecoderTest {
 
         // Read the partial content.
         try (HttpContent<?> content = ch.readInbound()) {
-            assertThat(content.payload().toString(CharsetUtil.US_ASCII), is("12345678"));
+            assertThat(content.payload().toString(US_ASCII), is("12345678"));
             assertThat(content, is(not(instanceOf(LastHttpContent.class))));
         }
 
@@ -210,7 +210,7 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(
                 copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
-                        CharsetUtil.US_ASCII));
+                             US_ASCII));
 
         // Read the response headers.
         HttpResponse res = ch.readInbound();
@@ -231,7 +231,7 @@ public class HttpResponseDecoderTest {
 
         // Write the partial response.
         ch.writeInbound(copiedBuffer(ch.bufferAllocator(),
-                "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\n12345678", CharsetUtil.US_ASCII));
+                                     "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\n12345678", US_ASCII));
 
         // Read the response headers.
         HttpResponse res = ch.readInbound();
@@ -241,7 +241,7 @@ public class HttpResponseDecoderTest {
 
         // Read the partial content.
         try (HttpContent<?> content = ch.readInbound()) {
-            assertThat(content.payload().toString(CharsetUtil.US_ASCII), is("12345678"));
+            assertThat(content.payload().toString(US_ASCII), is("12345678"));
             assertThat(content, is(not(instanceOf(LastHttpContent.class))));
         }
 
@@ -257,7 +257,7 @@ public class HttpResponseDecoderTest {
     @Test
     public void testLastResponseWithEmptyHeaderAndEmptyContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n", US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -276,7 +276,7 @@ public class HttpResponseDecoderTest {
     @Test
     public void testLastResponseWithoutContentLengthHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(copiedBuffer(ch.bufferAllocator(), "HTTP/1.1 200 OK\r\n\r\n", US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -302,7 +302,7 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(copiedBuffer(ch.bufferAllocator(),
                 "HTTP/1.1 200 OK\r\nX-Header: h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT       \r\n\r\n",
-                CharsetUtil.US_ASCII));
+                                     US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -333,7 +333,7 @@ public class HttpResponseDecoderTest {
                 "\r\n" +
                 "0\r\n" +
                 "\r\n",
-                CharsetUtil.US_ASCII)));
+                US_ASCII)));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -357,7 +357,7 @@ public class HttpResponseDecoderTest {
                         "Set-Cookie: t1=t1v1\r\n" +
                         "Set-Cookie: t2=t2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT\r\n" +
                         "\r\n",
-                CharsetUtil.US_ASCII));
+                        US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -385,7 +385,7 @@ public class HttpResponseDecoderTest {
                 "0\r\n" +
                 "Set-Cookie: t1=t1v1\r\n" +
                 "Set-Cookie: t2=t2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT\r\n" +
-                "\r\n").getBytes(CharsetUtil.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
 
         for (int i = 1; i < data.length; i++) {
             testLastResponseWithTrailingHeaderFragmented(data, i);
@@ -433,7 +433,7 @@ public class HttpResponseDecoderTest {
         ch.writeInbound(copiedBuffer(ch.bufferAllocator(),
                 "HTTP/1.1 200 OK\r\n" +
                         "Content-Length: 10\r\n" +
-                        "\r\n", CharsetUtil.US_ASCII));
+                        "\r\n", US_ASCII));
 
         byte[] data = new byte[10];
         for (int i = 0; i < data.length; i++) {
@@ -464,7 +464,7 @@ public class HttpResponseDecoderTest {
     public void testResponseWithContentLengthFragmented() {
         byte[] data = ("HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 10\r\n" +
-                "\r\n").getBytes(CharsetUtil.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
 
         for (int i = 1; i < data.length; i++) {
             testResponseWithContentLengthFragmented(data, i);
@@ -515,7 +515,7 @@ public class HttpResponseDecoderTest {
                        "Connection: Upgrade\r\n" +
                        "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n" +
                        "Sec-WebSocket-Protocol: chat\r\n\r\n")
-                .getBytes(CharsetUtil.US_ASCII);
+                .getBytes(US_ASCII);
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf(data)));
@@ -547,7 +547,7 @@ public class HttpResponseDecoderTest {
                        "Connection: Upgrade\r\n" +
                        "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n" +
                        "Sec-WebSocket-Protocol: chat\r\n\r\n")
-                .getBytes(CharsetUtil.US_ASCII);
+                .getBytes(US_ASCII);
         byte[] otherData = { 1, 2, 3, 4 };
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
@@ -615,7 +615,7 @@ public class HttpResponseDecoderTest {
                 "Transfer-Encoding: chunked\r\n\r\n" +
                 "NOT_A_CHUNK_LENGTH\r\n";
 
-        channel.writeInbound(copiedBuffer(channel.bufferAllocator(), responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        channel.writeInbound(copiedBuffer(channel.bufferAllocator(), responseWithIllegalChunk, US_ASCII));
         assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
 
         // Ensure that the decoder generates the last chunk with correct decoder result.
@@ -635,8 +635,7 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseInitialLine =
                 "HTTP/1.1 200 OK\r\n";
-        assertFalse(channel.writeInbound(copiedBuffer(channel.bufferAllocator(), responseInitialLine,
-                CharsetUtil.US_ASCII)));
+        assertFalse(channel.writeInbound(copiedBuffer(channel.bufferAllocator(), responseInitialLine, US_ASCII)));
         assertTrue(channel.finish());
         HttpMessage message = channel.readInbound();
         assertTrue(message.decoderResult().isFailure());
@@ -653,16 +652,16 @@ public class HttpResponseDecoderTest {
                 + "Transfer-Encoding: chunked\r\n"
                 + "Trailer: My-Trailer\r\n";
         assertFalse(channel.writeInbound(copiedBuffer(channel.bufferAllocator(),
-                headers.getBytes(CharsetUtil.US_ASCII))));
+                headers.getBytes(US_ASCII))));
         assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(),
-                "\r\n".getBytes(CharsetUtil.US_ASCII))));
+                "\r\n".getBytes(US_ASCII))));
 
         assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(),
-                "0\r\n", CharsetUtil.US_ASCII)));
+                                                     "0\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(),
-                "My-Trailer: 42\r\n", CharsetUtil.US_ASCII)));
+                                                     "My-Trailer: 42\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(),
-                "\r\n", CharsetUtil.US_ASCII)));
+                                                     "\r\n", US_ASCII)));
 
         HttpResponse response = channel.readInbound();
         assertEquals(2, response.headers().size());
@@ -685,7 +684,7 @@ public class HttpResponseDecoderTest {
                 "Transfer-Encoding : chunked\r\n" +
                 "Host: netty.io\n\r\n";
 
-        assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(), requestStr, CharsetUtil.US_ASCII)));
+        assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(), requestStr, US_ASCII)));
         HttpResponse response = channel.readInbound();
         assertFalse(response.decoderResult().isFailure());
         assertEquals(HttpHeaderValues.CHUNKED.toString(), response.headers().get(HttpHeaderNames.TRANSFER_ENCODING));
@@ -700,7 +699,7 @@ public class HttpResponseDecoderTest {
                 "Connection: close\r\n\r\n" +
                 "Lorem ipsum";
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
-        assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(), responseStr, CharsetUtil.US_ASCII)));
+        assertTrue(channel.writeInbound(copiedBuffer(channel.bufferAllocator(), responseStr, US_ASCII)));
         HttpResponse response = channel.readInbound();
         assertTrue(response.decoderResult().isSuccess());
         assertThat(response.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
@@ -758,9 +757,9 @@ public class HttpResponseDecoderTest {
     private void testHeaderNameStartsWithControlChar(int controlChar) {
         Buffer responseBuffer = preferredAllocator().allocate(256);
         responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
-                "Host: netty.io\r\n", CharsetUtil.US_ASCII);
+                "Host: netty.io\r\n", US_ASCII);
         responseBuffer.writeByte((byte) controlChar);
-        responseBuffer.writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII);
+        responseBuffer.writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", US_ASCII);
         testInvalidHeaders0(responseBuffer);
     }
 
@@ -792,10 +791,10 @@ public class HttpResponseDecoderTest {
     private void testHeaderNameEndsWithControlChar(int controlChar) {
         Buffer responseBuffer = preferredAllocator().allocate(256);
         responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
-                "Host: netty.io\r\n", CharsetUtil.US_ASCII);
-        responseBuffer.writeCharSequence("Transfer-Encoding", CharsetUtil.US_ASCII);
+                "Host: netty.io\r\n", US_ASCII);
+        responseBuffer.writeCharSequence("Transfer-Encoding", US_ASCII);
         responseBuffer.writeByte((byte) controlChar);
-        responseBuffer.writeCharSequence(": chunked\r\n\r\n", CharsetUtil.US_ASCII);
+        responseBuffer.writeCharSequence(": chunked\r\n\r\n", US_ASCII);
         testInvalidHeaders0(responseBuffer);
     }
 

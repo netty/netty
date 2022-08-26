@@ -27,7 +27,8 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.ssl.SslHandler;
-import io.netty5.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
@@ -93,7 +94,7 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
     private static void sendHttpResponse(ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
         if (res.status().code() != 200) {
-            res.payload().writeCharSequence(res.status().toString(), CharsetUtil.UTF_8);
+            res.payload().writeCharSequence(res.status().toString(), StandardCharsets.UTF_8);
             HttpUtil.setContentLength(res, res.payload().readableBytes());
         }
 

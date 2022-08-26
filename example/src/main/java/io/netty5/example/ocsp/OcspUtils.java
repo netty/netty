@@ -16,7 +16,6 @@
 
 package io.netty5.example.ocsp;
 
-import io.netty5.util.CharsetUtil;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
@@ -36,6 +35,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
@@ -81,7 +81,7 @@ public final class OcspUtils {
 
         byte[] encoded = taggedObject.getEncoded();
         int length = (int) encoded[1] & 0xFF;
-        String uri = new String(encoded, 2, length, CharsetUtil.UTF_8);
+        String uri = new String(encoded, 2, length, StandardCharsets.UTF_8);
         return URI.create(uri);
     }
 

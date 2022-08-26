@@ -17,9 +17,10 @@ package io.netty5.handler.codec.string;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -34,7 +35,7 @@ public class StringEncoderTest {
         try (Buffer buf = channel.readOutbound()) {
             byte[] data = new byte[buf.readableBytes()];
             buf.readBytes(data, 0, data.length);
-            Assertions.assertArrayEquals(msg.getBytes(CharsetUtil.UTF_8), data);
+            Assertions.assertArrayEquals(msg.getBytes(StandardCharsets.UTF_8), data);
             Assertions.assertNull(channel.readOutbound());
         }
         assertFalse(channel.finish());

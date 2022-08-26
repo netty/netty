@@ -36,7 +36,6 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -102,6 +101,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -1935,7 +1935,7 @@ public abstract class SSLEngineTest {
                 .build());
         SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
-        byte[] bytes = "Hello World".getBytes(CharsetUtil.US_ASCII);
+        byte[] bytes = "Hello World".getBytes(StandardCharsets.US_ASCII);
 
         try {
             ByteBuffer plainClientOut = allocateBuffer(param.type, client.getSession().getApplicationBufferSize());

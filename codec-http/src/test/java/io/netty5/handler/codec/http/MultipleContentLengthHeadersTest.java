@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -78,7 +77,7 @@ public class MultipleContentLengthHeadersTest {
                 assertThat(contentLengths, contains("1"));
                 LastHttpContent<?> body = channel.readInbound();
                 assertThat(body.payload().readableBytes(), is(1));
-                assertThat(body.payload().readCharSequence(1, CharsetUtil.US_ASCII).toString(), is("a"));
+                assertThat(body.payload().readCharSequence(1, US_ASCII).toString(), is("a"));
             } else {
                 assertInvalid(request);
             }

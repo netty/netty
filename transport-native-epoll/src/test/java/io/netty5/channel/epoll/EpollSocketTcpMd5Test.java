@@ -22,7 +22,6 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ConnectTimeoutException;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
@@ -38,8 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EpollSocketTcpMd5Test {
-    private static final byte[] SERVER_KEY = "abc".getBytes(CharsetUtil.US_ASCII);
-    private static final byte[] BAD_KEY = "def".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] SERVER_KEY = "abc".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] BAD_KEY = "def".getBytes(StandardCharsets.US_ASCII);
     private static EventLoopGroup GROUP;
     private EpollServerSocketChannel server;
 

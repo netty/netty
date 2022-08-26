@@ -15,7 +15,6 @@
  */
 package io.netty5.resolver;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -24,6 +23,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -141,7 +141,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
             // Ony windows there seems to be no standard for the encoding used for the hosts file, so let us
             // try multiple until we either were able to parse it or there is none left and so we return an
             // empty instance.
-            return parser.parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
+            return parser.parseSilently(Charset.defaultCharset(), StandardCharsets.UTF_16, StandardCharsets.UTF_8);
         }
         return parser.parseSilently();
     }

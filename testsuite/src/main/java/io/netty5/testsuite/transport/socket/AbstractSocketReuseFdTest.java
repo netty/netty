@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static io.netty5.util.CharsetUtil.US_ASCII;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
     @Override

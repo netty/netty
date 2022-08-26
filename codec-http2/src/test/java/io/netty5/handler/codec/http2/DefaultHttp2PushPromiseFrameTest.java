@@ -27,7 +27,6 @@ import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +38,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty5.util.internal.SilentDispose.autoClosing;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultHttp2PushPromiseFrameTest {
@@ -219,9 +219,9 @@ public class DefaultHttp2PushPromiseFrameTest {
 
                 try (AutoCloseable ignore = autoClosing(dataFrame)) {
                     if (dataFrame.stream().id() == 3) {
-                        assertEquals("Meow", dataFrame.content().toString(CharsetUtil.UTF_8));
+                        assertEquals("Meow", dataFrame.content().toString(UTF_8));
                     } else if (dataFrame.stream().id() == 2) {
-                        assertEquals("Meow, I am Pushed via HTTP/2", dataFrame.content().toString(CharsetUtil.UTF_8));
+                        assertEquals("Meow, I am Pushed via HTTP/2", dataFrame.content().toString(UTF_8));
                     } else {
                         ctx.writeAndFlush(new DefaultHttp2GoAwayFrame(Http2Error.REFUSED_STREAM));
                     }

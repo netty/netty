@@ -19,9 +19,9 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty5.handler.codec.TooLongFrameException;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,7 +42,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
             assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 1, 'A' })));
 
             try (Buffer buffer = channel.readInbound()) {
-                assertEquals("A", buffer.toString(CharsetUtil.ISO_8859_1));
+                assertEquals("A", buffer.toString(ISO_8859_1));
             }
         }
     }
@@ -60,7 +60,7 @@ public class LengthFieldBasedFrameDecoderForBufferTest {
             assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(new byte[] { 0, 0, 0, 0, 0, 1, 'A' })));
 
             try (Buffer buffer = channel.readInbound()) {
-                assertEquals("A", buffer.toString(CharsetUtil.ISO_8859_1));
+                assertEquals("A", buffer.toString(ISO_8859_1));
             }
         }
     }

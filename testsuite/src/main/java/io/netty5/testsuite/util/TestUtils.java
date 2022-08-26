@@ -15,7 +15,6 @@
  */
 package io.netty5.testsuite.util;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
@@ -32,6 +31,7 @@ import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -187,7 +187,7 @@ public final class TestUtils {
             }
 
             out = new FileOutputStream(file);
-            out.write(buf.toString().getBytes(CharsetUtil.UTF_8));
+            out.write(buf.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             logger.warn("Failed to dump threads: {}", filename, e);
         } finally {

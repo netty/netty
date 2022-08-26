@@ -30,7 +30,6 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -44,6 +43,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
@@ -102,7 +102,7 @@ public class FileRegionThrottleTest {
         Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch));
 
         long start = TrafficCounter.milliSecondFromNano();
-        cc.writeAndFlush(preferredAllocator().copyOf("send-file\n", CharsetUtil.US_ASCII)).asStage().sync();
+        cc.writeAndFlush(preferredAllocator().copyOf("send-file\n", StandardCharsets.US_ASCII)).asStage().sync();
         latch.await();
         long timeTaken = TrafficCounter.milliSecondFromNano() - start;
         assertTrue(timeTaken > 3000, "Data streamed faster than expected");

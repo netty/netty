@@ -18,13 +18,14 @@ package io.netty5.example.qotm;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 public class QuoteOfTheMomentClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
-        String response = msg.content().toString(CharsetUtil.UTF_8);
+        String response = msg.content().toString(StandardCharsets.UTF_8);
         if (response.startsWith("QOTM: ")) {
             System.out.println("Quote of the Moment: " + response.substring(6));
             ctx.close();

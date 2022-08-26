@@ -22,7 +22,8 @@ import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 public class HttpSnoopClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
@@ -53,7 +54,7 @@ public class HttpSnoopClientHandler extends SimpleChannelInboundHandler<HttpObje
         if (msg instanceof HttpContent) {
             HttpContent<?> content = (HttpContent<?>) msg;
 
-            System.err.print(content.payload().toString(CharsetUtil.UTF_8));
+            System.err.print(content.payload().toString(StandardCharsets.UTF_8));
             System.err.flush();
 
             if (content instanceof LastHttpContent) {

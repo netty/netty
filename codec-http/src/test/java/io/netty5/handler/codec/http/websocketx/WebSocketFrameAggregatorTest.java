@@ -18,10 +18,10 @@ package io.netty5.handler.codec.http.websocketx;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.TooLongFrameException;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -30,9 +30,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class WebSocketFrameAggregatorTest {
-    private static final byte[] content1 = "Content1".getBytes(CharsetUtil.UTF_8);
-    private static final byte[] content2 = "Content2".getBytes(CharsetUtil.UTF_8);
-    private static final byte[] content3 = "Content3".getBytes(CharsetUtil.UTF_8);
+    private static final byte[] content1 = "Content1".getBytes(UTF_8);
+    private static final byte[] content2 = "Content2".getBytes(UTF_8);
+    private static final byte[] content3 = "Content3".getBytes(UTF_8);
     private static final byte[] aggregatedContent = new byte[content1.length + content2.length + content3.length];
     static {
         System.arraycopy(content1, 0, aggregatedContent, 0, content1.length);

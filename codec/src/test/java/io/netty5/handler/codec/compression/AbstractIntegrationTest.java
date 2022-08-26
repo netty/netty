@@ -19,11 +19,11 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -78,7 +78,7 @@ public abstract class AbstractIntegrationTest {
     public void testRegular() throws Exception {
         final byte[] data = ("Netty is a NIO client server framework which enables " +
                 "quick and easy development of network applications such as protocol " +
-                "servers and clients.").getBytes(CharsetUtil.UTF_8);
+                "servers and clients.").getBytes(StandardCharsets.UTF_8);
         testIdentity(data, true);
         testIdentity(data, false);
     }

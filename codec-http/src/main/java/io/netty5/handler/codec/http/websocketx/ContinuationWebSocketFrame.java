@@ -17,7 +17,8 @@ package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Web Socket continuation frame containing continuation text or binary data. This is used for
@@ -65,7 +66,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Returns the text data in this frame.
      */
     public String text() {
-        return binaryData().toString(CharsetUtil.UTF_8);
+        return binaryData().toString(StandardCharsets.UTF_8);
     }
 
     /**
@@ -77,7 +78,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
         if (text == null || text.isEmpty()) {
             return allocator.allocate(0);
         } else {
-            return allocator.copyOf(text.getBytes(CharsetUtil.UTF_8));
+            return allocator.copyOf(text.getBytes(StandardCharsets.UTF_8));
         }
     }
 

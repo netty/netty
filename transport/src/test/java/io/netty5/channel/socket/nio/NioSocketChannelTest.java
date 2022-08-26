@@ -32,7 +32,6 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -50,6 +49,7 @@ import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NetworkChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -153,7 +153,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             byte[] buf = new byte[3];
             in.readFully(buf);
 
-            assertThat(new String(buf, CharsetUtil.US_ASCII), is("abc"));
+            assertThat(new String(buf, StandardCharsets.US_ASCII), is("abc"));
 
             s.close();
         } finally {

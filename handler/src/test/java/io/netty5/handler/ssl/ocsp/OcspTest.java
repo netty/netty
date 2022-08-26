@@ -37,7 +37,6 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,6 +46,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.SSLHandshakeException;
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -458,7 +458,7 @@ public class OcspTest {
         // Internet.
 
         return "I am a bogus OCSP staple. OpenSSL does not care about the format of the byte[]!"
-                .getBytes(CharsetUtil.US_ASCII);
+                .getBytes(StandardCharsets.US_ASCII);
     }
 
     private interface OcspClientCallback {

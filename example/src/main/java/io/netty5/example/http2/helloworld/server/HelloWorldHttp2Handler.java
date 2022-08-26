@@ -32,8 +32,8 @@ import io.netty5.handler.codec.http2.Http2Headers;
 import io.netty5.handler.codec.http2.Http2Settings;
 
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty5.util.CharsetUtil.US_ASCII;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A simple handler that responds with the message "Hello World!".

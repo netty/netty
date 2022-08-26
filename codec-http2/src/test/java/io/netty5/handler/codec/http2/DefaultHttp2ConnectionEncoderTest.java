@@ -42,7 +42,7 @@ import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty5.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

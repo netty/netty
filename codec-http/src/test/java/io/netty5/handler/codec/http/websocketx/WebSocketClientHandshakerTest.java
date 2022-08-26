@@ -35,12 +35,12 @@ import io.netty5.handler.codec.http.HttpRequestEncoder;
 import io.netty5.handler.codec.http.HttpResponseDecoder;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpVersion;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
@@ -207,7 +207,7 @@ public abstract class WebSocketClientHandshakerTest {
         assertTrue(websocketChannel.writeOutbound(
                 new BinaryWebSocketFrame(websocketChannel.bufferAllocator().copyOf(data))));
 
-        byte[] bytes = "HTTP/1.1 101 Switching Protocols\r\n\r\n".getBytes(CharsetUtil.US_ASCII);
+        byte[] bytes = "HTTP/1.1 101 Switching Protocols\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
 
         CompositeBuffer compositeBuffer = websocketChannel.bufferAllocator().compose();
         compositeBuffer.extendWith(websocketChannel.bufferAllocator().allocate(bytes.length).writeBytes(bytes).send());

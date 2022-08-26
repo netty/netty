@@ -21,8 +21,9 @@ import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty5.handler.codec.Delimiters;
 import io.netty5.handler.codec.TooLongFrameException;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,7 +47,7 @@ public class DelimiterBasedFrameDecoderTest {
 
             ch.writeInbound(ch.bufferAllocator().copyOf(new byte[] { 'A', 0 }));
             try (Buffer buf = ch.readInbound()) {
-                assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+                assertEquals("A", buf.toString(StandardCharsets.ISO_8859_1));
             }
         }
     }
@@ -66,7 +67,7 @@ public class DelimiterBasedFrameDecoderTest {
 
             ch.writeInbound(ch.bufferAllocator().copyOf(new byte[] { 0, 'A', 0 }));
             try (Buffer buf = ch.readInbound()) {
-                assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+                assertEquals("A", buf.toString(StandardCharsets.ISO_8859_1));
             }
         }
     }

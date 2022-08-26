@@ -18,12 +18,12 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.FileRegion;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.WritableByteChannel;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -43,23 +43,23 @@ public class HttpResponseEncoderTest {
         Buffer buffer = channel.readOutbound();
 
         assertEquals("HTTP/1.1 200 OK\r\n" + HttpHeaderNames.TRANSFER_ENCODING + ": " +
-                HttpHeaderValues.CHUNKED + "\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+                HttpHeaderValues.CHUNKED + "\r\n\r\n", buffer.toString(US_ASCII));
         buffer.close();
         assertTrue(channel.writeOutbound(FILE_REGION));
         buffer = channel.readOutbound();
-        assertEquals("80000000\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        assertEquals("80000000\r\n", buffer.toString(US_ASCII));
         buffer.close();
 
         FileRegion region = channel.readOutbound();
         assertSame(FILE_REGION, region);
         region.release();
         buffer = channel.readOutbound();
-        assertEquals("\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        assertEquals("\r\n", buffer.toString(US_ASCII));
         buffer.close();
 
         assertTrue(channel.writeOutbound(new EmptyLastHttpContent(preferredAllocator())));
         buffer = channel.readOutbound();
-        assertEquals("0\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        assertEquals("0\r\n\r\n", buffer.toString(US_ASCII));
         buffer.close();
 
         assertFalse(channel.finish());
@@ -142,7 +142,7 @@ public class HttpResponseEncoderTest {
             HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             assertTrue(channel.writeOutbound(response));
             buffer = channel.readOutbound();
-            assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+            assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(US_ASCII));
             buffer.close();
 
             // Test writing an empty buffer works when the encoder is not at ST_INIT.
@@ -166,7 +166,7 @@ public class HttpResponseEncoderTest {
 
     private static void testEmptyContent(boolean chunked) {
         String content = "netty rocks";
-        Buffer contentBuffer = preferredAllocator().allocate(16).writeCharSequence(content, CharsetUtil.US_ASCII);
+        Buffer contentBuffer = preferredAllocator().allocate(16).writeCharSequence(content, US_ASCII);
         int length = contentBuffer.readableBytes();
 
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
@@ -181,9 +181,9 @@ public class HttpResponseEncoderTest {
         Buffer buffer = channel.readOutbound();
         if (!chunked) {
             assertEquals("HTTP/1.1 200 OK\r\ncontent-length: " + length + "\r\n\r\n",
-                    buffer.toString(CharsetUtil.US_ASCII));
+                    buffer.toString(US_ASCII));
         } else {
-            assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+            assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(US_ASCII));
         }
         buffer.close();
 
@@ -298,7 +298,7 @@ public class HttpResponseEncoderTest {
         }
         responseText.append("\r\n");
 
-        assertEquals(responseText.toString(), buffer.toString(CharsetUtil.US_ASCII));
+        assertEquals(responseText.toString(), buffer.toString(US_ASCII));
 
         buffer.close();
 
@@ -394,7 +394,7 @@ public class HttpResponseEncoderTest {
                 if (buffer == null) {
                     break;
                 }
-                written.append(buffer.toString(CharsetUtil.US_ASCII));
+                written.append(buffer.toString(US_ASCII));
             }
         }
 

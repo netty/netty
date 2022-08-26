@@ -22,7 +22,6 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.EmptyArrays;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
@@ -45,6 +44,7 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -97,7 +97,7 @@ public class JdkZlibTest {
             '\n' +
             '\n' +
             '\n' +
-            "</body></html>").getBytes(CharsetUtil.UTF_8);
+            "</body></html>").getBytes(UTF_8);
 
     static {
         Random rand = ThreadLocalRandom.current();
@@ -239,7 +239,7 @@ public class JdkZlibTest {
 
     @Test
     public void testGZIP2() throws Exception {
-        byte[] bytes = "message".getBytes(CharsetUtil.UTF_8);
+        byte[] bytes = "message".getBytes(UTF_8);
         try (Buffer data = BufferAllocator.onHeapUnpooled().copyOf(bytes);
              Buffer deflatedData = BufferAllocator.onHeapUnpooled().copyOf(gzip(bytes))) {
             EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
@@ -452,7 +452,7 @@ public class JdkZlibTest {
             assertEquals(1, messages.size());
 
             try (Buffer msg = (Buffer) messages.poll()) {
-                assertEquals("a", msg.toString(CharsetUtil.UTF_8));
+                assertEquals("a", msg.toString(UTF_8));
             }
         } finally {
             assertFalse(chDecoderGZip.finish());
@@ -474,7 +474,7 @@ public class JdkZlibTest {
 
             for (String s : Arrays.asList("a", "b")) {
                 try (Buffer msg = (Buffer) messages.poll()) {
-                    assertEquals(s, msg.toString(CharsetUtil.UTF_8));
+                    assertEquals(s, msg.toString(UTF_8));
                 }
             }
         } finally {
@@ -505,7 +505,7 @@ public class JdkZlibTest {
 
             for (String s : Arrays.asList("a", "b")) {
                 try (Buffer msg = (Buffer) messages.poll()) {
-                    assertEquals(s, msg.toString(CharsetUtil.UTF_8));
+                    assertEquals(s, msg.toString(UTF_8));
                 }
             }
         } finally {
@@ -552,7 +552,7 @@ public class JdkZlibTest {
     public void testGZIP3() throws Exception {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
 
-        byte[] bytes = "Foo".getBytes(CharsetUtil.UTF_8);
+        byte[] bytes = "Foo".getBytes(UTF_8);
         Buffer data = chDecoderGZip.bufferAllocator().copyOf(bytes);
 
         try {

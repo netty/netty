@@ -27,8 +27,8 @@ import io.netty5.util.internal.StringUtil;
 import static io.netty5.handler.codec.http.HttpConstants.CR;
 import static io.netty5.handler.codec.http.HttpConstants.LF;
 import static io.netty5.handler.codec.http.HttpConstants.SP;
-import static io.netty5.util.CharsetUtil.US_ASCII;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Encodes an RTSP message represented in {@link HttpMessage} or an {@link HttpContent} into a {@link Buffer}.

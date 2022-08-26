@@ -317,7 +317,7 @@ public class QueryStringDecoder {
      * to decode, the argument itself is returned.
      * @param s The string to decode (can be empty).
      * @param charset The charset to use to decode the string (should really
-     * be {@link CharsetUtil#UTF_8}.
+     * be {@link java.nio.charset.StandardCharsets#UTF_8}.
      * @return The decoded string, or {@code s} if there's nothing to decode.
      * If the string to decode is {@code null}, returns an empty string.
      * @throws IllegalArgumentException if the string contains a malformed

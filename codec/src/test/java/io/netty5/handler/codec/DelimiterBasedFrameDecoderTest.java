@@ -17,10 +17,10 @@ package io.netty5.handler.codec;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -111,14 +111,14 @@ public class DelimiterBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
 
-        ch.writeInbound(ch.bufferAllocator().copyOf("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
+        ch.writeInbound(ch.bufferAllocator().copyOf("first\r\nsecond\nthird", StandardCharsets.US_ASCII));
 
         try (Buffer buf = ch.readInbound()) {
-            assertEquals("first", buf.toString(CharsetUtil.US_ASCII));
+            assertEquals("first", buf.toString(StandardCharsets.US_ASCII));
         }
 
         try (Buffer buf2 = ch.readInbound()) {
-            assertEquals("second", buf2.toString(CharsetUtil.US_ASCII));
+            assertEquals("second", buf2.toString(StandardCharsets.US_ASCII));
         }
 
         assertNull(ch.readInbound());

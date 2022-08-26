@@ -18,12 +18,12 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
 import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -37,7 +37,7 @@ public class HttpInvalidMessageTest {
     public void testRequestWithBadInitialLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("GET / HTTP/1.0 with extra\r\n", UTF_8));
         HttpRequest req = ch.readInbound();
         DecoderResult dr = req.decoderResult();
         assertFalse(dr.isSuccess());
@@ -49,13 +49,13 @@ public class HttpInvalidMessageTest {
     public void testRequestWithBadHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("GET /maybe-something HTTP/1.0\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("GET /maybe-something HTTP/1.0\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("Good_Name: Good Value\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("Bad=Name: Bad Value\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("\r\n", UTF_8));
         HttpRequest req = ch.readInbound();
         DecoderResult dr = req.decoderResult();
         assertFalse(dr.isSuccess());
@@ -69,7 +69,7 @@ public class HttpInvalidMessageTest {
     public void testResponseWithBadInitialLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("HTTP/1.0 BAD_CODE Bad Server\r\n", UTF_8));
         HttpResponse res = ch.readInbound();
         DecoderResult dr = res.decoderResult();
         assertFalse(dr.isSuccess());
@@ -81,13 +81,13 @@ public class HttpInvalidMessageTest {
     public void testResponseWithBadHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("HTTP/1.0 200 Maybe OK\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("HTTP/1.0 200 Maybe OK\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("Good_Name: Good Value\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("Bad=Name: Bad Value\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("\r\n", UTF_8));
         HttpResponse res = ch.readInbound();
         DecoderResult dr = res.decoderResult();
         assertFalse(dr.isSuccess());
@@ -101,11 +101,11 @@ public class HttpInvalidMessageTest {
     public void testBadChunk() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("GET / HTTP/1.0\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("GET / HTTP/1.0\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", UTF_8));
         ch.writeInbound(ch.bufferAllocator().allocate(32)
-                .writeCharSequence("BAD_LENGTH\r\n", CharsetUtil.UTF_8));
+                .writeCharSequence("BAD_LENGTH\r\n", UTF_8));
 
         HttpRequest req = ch.readInbound();
         assertTrue(req.decoderResult().isSuccess());

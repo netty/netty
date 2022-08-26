@@ -17,11 +17,10 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.internal.InternalBufferUtils;
+import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
-import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.InternalBufferUtils;
-import io.netty5.util.CharsetUtil;
 
 import java.math.BigInteger;
 import java.security.Principal;
@@ -34,6 +33,8 @@ import java.util.Set;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -51,8 +52,8 @@ import static java.util.Objects.requireNonNull;
  */
 public final class PemX509Certificate extends X509Certificate implements PemEncoded, Resource<PemX509Certificate> {
 
-    private static final byte[] BEGIN_CERT = "-----BEGIN CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
-    private static final byte[] END_CERT = "\n-----END CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] BEGIN_CERT = "-----BEGIN CERTIFICATE-----\n".getBytes(US_ASCII);
+    private static final byte[] END_CERT = "\n-----END CERTIFICATE-----\n".getBytes(US_ASCII);
 
     /**
      * Creates a {@link PemEncoded} value from the {@link X509Certificate}s.
@@ -348,6 +349,6 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
 
     @Override
     public String toString() {
-        return content.toString(CharsetUtil.UTF_8);
+        return content.toString(UTF_8);
     }
 }

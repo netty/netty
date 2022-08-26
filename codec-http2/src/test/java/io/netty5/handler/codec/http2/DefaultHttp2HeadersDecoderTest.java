@@ -27,7 +27,7 @@ import static io.netty5.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty5.handler.codec.http2.Http2TestUtil.newTestEncoder;
 import static io.netty5.handler.codec.http2.Http2TestUtil.randomBytes;
-import static io.netty5.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

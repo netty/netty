@@ -34,7 +34,6 @@ import io.netty5.handler.codec.http.QueryStringDecoder;
 import io.netty5.handler.codec.http.cookie.Cookie;
 import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty5.util.CharsetUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -107,7 +106,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
             Buffer content = httpContent.payload();
             if (content.readableBytes() > 0) {
                 buf.append("CONTENT: ");
-                buf.append(content.toString(CharsetUtil.UTF_8));
+                buf.append(content.toString(UTF_8));
                 buf.append("\r\n");
                 appendDecoderResult(buf, request);
             }

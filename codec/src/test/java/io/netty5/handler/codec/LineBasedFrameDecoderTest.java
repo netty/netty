@@ -17,9 +17,9 @@ package io.netty5.handler.codec;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,14 +34,14 @@ public class LineBasedFrameDecoderTest {
     public void testDecodeWithStrip() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, true, false));
 
-        ch.writeInbound(ch.bufferAllocator().copyOf("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
+        ch.writeInbound(ch.bufferAllocator().copyOf("first\r\nsecond\nthird", US_ASCII));
 
         try (Buffer buf = ch.readInbound()) {
-            assertEquals("first", buf.toString(CharsetUtil.US_ASCII));
+            assertEquals("first", buf.toString(US_ASCII));
         }
 
         try (Buffer buf2 = ch.readInbound()) {
-            assertEquals("second", buf2.toString(CharsetUtil.US_ASCII));
+            assertEquals("second", buf2.toString(US_ASCII));
         }
 
         assertNull(ch.readInbound());
@@ -52,14 +52,14 @@ public class LineBasedFrameDecoderTest {
     public void testDecodeWithoutStrip() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
-        ch.writeInbound(ch.bufferAllocator().copyOf("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
+        ch.writeInbound(ch.bufferAllocator().copyOf("first\r\nsecond\nthird", US_ASCII));
 
         try (Buffer buf = ch.readInbound()) {
-            assertEquals("first\r\n", buf.toString(CharsetUtil.US_ASCII));
+            assertEquals("first\r\n", buf.toString(US_ASCII));
         }
 
         try (Buffer buf2 = ch.readInbound()) {
-            assertEquals("second\n", buf2.toString(CharsetUtil.US_ASCII));
+            assertEquals("second\n", buf2.toString(US_ASCII));
         }
 
         assertNull(ch.readInbound());
@@ -72,14 +72,14 @@ public class LineBasedFrameDecoderTest {
 
         try {
             ch.writeInbound(
-                    ch.bufferAllocator().copyOf("12345678901234567890\r\nfirst\nsecond", CharsetUtil.US_ASCII));
+                    ch.bufferAllocator().copyOf("12345678901234567890\r\nfirst\nsecond", US_ASCII));
             fail();
         } catch (Exception e) {
             assertThat(e, is(instanceOf(TooLongFrameException.class)));
         }
 
         try (Buffer buf = ch.readInbound();
-             Buffer buf2 = ch.bufferAllocator().copyOf("first\n", CharsetUtil.US_ASCII)) {
+             Buffer buf2 = ch.bufferAllocator().copyOf("first\n", US_ASCII)) {
             assertThat(buf, is(buf2));
         }
 
@@ -90,16 +90,16 @@ public class LineBasedFrameDecoderTest {
     public void testTooLongLine2() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, false));
 
-        assertFalse(ch.writeInbound(ch.bufferAllocator().copyOf("12345678901234567", CharsetUtil.US_ASCII)));
+        assertFalse(ch.writeInbound(ch.bufferAllocator().copyOf("12345678901234567", US_ASCII)));
         try {
-            ch.writeInbound(ch.bufferAllocator().copyOf("890\r\nfirst\r\n", CharsetUtil.US_ASCII));
+            ch.writeInbound(ch.bufferAllocator().copyOf("890\r\nfirst\r\n", US_ASCII));
             fail();
         } catch (Exception e) {
             assertThat(e, is(instanceOf(TooLongFrameException.class)));
         }
 
         try (Buffer buf = ch.readInbound();
-             Buffer buf2 = ch.bufferAllocator().copyOf("first\r\n", CharsetUtil.US_ASCII)) {
+             Buffer buf2 = ch.bufferAllocator().copyOf("first\r\n", US_ASCII)) {
             assertThat(buf, is(buf2));
         }
 
@@ -111,18 +111,18 @@ public class LineBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, true));
 
         try {
-            ch.writeInbound(ch.bufferAllocator().copyOf("12345678901234567", CharsetUtil.US_ASCII));
+            ch.writeInbound(ch.bufferAllocator().copyOf("12345678901234567", US_ASCII));
             fail();
         } catch (Exception e) {
             assertThat(e, is(instanceOf(TooLongFrameException.class)));
         }
 
-        assertThat(ch.writeInbound(ch.bufferAllocator().copyOf("890", CharsetUtil.US_ASCII)), is(false));
+        assertThat(ch.writeInbound(ch.bufferAllocator().copyOf("890", US_ASCII)), is(false));
         assertThat(ch.writeInbound(
-                ch.bufferAllocator().copyOf("123\r\nfirst\r\n", CharsetUtil.US_ASCII)), is(true));
+                ch.bufferAllocator().copyOf("123\r\nfirst\r\n", US_ASCII)), is(true));
 
         try (Buffer buf = ch.readInbound();
-             Buffer buf2 = ch.bufferAllocator().copyOf("first\r\n", CharsetUtil.US_ASCII)) {
+             Buffer buf2 = ch.bufferAllocator().copyOf("first\r\n", US_ASCII)) {
             assertThat(buf, is(buf2));
         }
 
@@ -133,14 +133,14 @@ public class LineBasedFrameDecoderTest {
     public void testDecodeSplitsCorrectly() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("line\r\n.\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("line\r\n.\r\n", US_ASCII)));
 
         try (Buffer buf = ch.readInbound()) {
-            assertEquals("line\r\n", buf.toString(CharsetUtil.US_ASCII));
+            assertEquals("line\r\n", buf.toString(US_ASCII));
         }
 
         try (Buffer buf2 = ch.readInbound()) {
-            assertEquals(".\r\n", buf2.toString(CharsetUtil.US_ASCII));
+            assertEquals(".\r\n", buf2.toString(US_ASCII));
         }
 
         assertFalse(ch.finishAndReleaseAll());
@@ -150,19 +150,19 @@ public class LineBasedFrameDecoderTest {
     public void testFragmentedDecode() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
-        assertFalse(ch.writeInbound(ch.bufferAllocator().copyOf("huu", CharsetUtil.US_ASCII)));
+        assertFalse(ch.writeInbound(ch.bufferAllocator().copyOf("huu", US_ASCII)));
         assertNull(ch.readInbound());
 
-        assertFalse(ch.writeInbound(ch.bufferAllocator().copyOf("haa\r", CharsetUtil.US_ASCII)));
+        assertFalse(ch.writeInbound(ch.bufferAllocator().copyOf("haa\r", US_ASCII)));
         assertNull(ch.readInbound());
 
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("\nhuuhaa\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("\nhuuhaa\r\n", US_ASCII)));
         try (Buffer buf = ch.readInbound()) {
-            assertEquals("huuhaa\r\n", buf.toString(CharsetUtil.US_ASCII));
+            assertEquals("huuhaa\r\n", buf.toString(US_ASCII));
         }
 
         try (Buffer buf2 = ch.readInbound()) {
-            assertEquals("huuhaa\r\n", buf2.toString(CharsetUtil.US_ASCII));
+            assertEquals("huuhaa\r\n", buf2.toString(US_ASCII));
         }
 
         assertFalse(ch.finishAndReleaseAll());
@@ -172,14 +172,14 @@ public class LineBasedFrameDecoderTest {
     public void testEmptyLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, true, false));
 
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("\nabcna\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("\nabcna\r\n", US_ASCII)));
 
         try (Buffer buf = ch.readInbound()) {
-            assertEquals("", buf.toString(CharsetUtil.US_ASCII));
+            assertEquals("", buf.toString(US_ASCII));
         }
 
         try (Buffer buf2 = ch.readInbound()) {
-            assertEquals("abcna", buf2.toString(CharsetUtil.US_ASCII));
+            assertEquals("abcna", buf2.toString(US_ASCII));
         }
 
         assertFalse(ch.finishAndReleaseAll());

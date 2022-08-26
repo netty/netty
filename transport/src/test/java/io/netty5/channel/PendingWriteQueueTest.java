@@ -17,7 +17,6 @@ package io.netty5.channel;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Disabled;
@@ -28,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -86,7 +86,7 @@ public class PendingWriteQueueTest {
     }
 
     private static void assertWrite(ChannelHandler handler, int count) throws Exception {
-        try (Buffer buffer = preferredAllocator().copyOf("Test", CharsetUtil.US_ASCII)) {
+        try (Buffer buffer = preferredAllocator().copyOf("Test", US_ASCII)) {
             final EmbeddedChannel channel = new EmbeddedChannel(handler);
             channel.setOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1, 3));
 
@@ -119,7 +119,7 @@ public class PendingWriteQueueTest {
     }
 
     private static void assertWriteFails(ChannelHandler handler, int count) throws Exception {
-        try (Buffer buffer = preferredAllocator().copyOf("Test", CharsetUtil.US_ASCII)) {
+        try (Buffer buffer = preferredAllocator().copyOf("Test", US_ASCII)) {
             final EmbeddedChannel channel = new EmbeddedChannel(handler);
             Buffer[] buffers = new Buffer[count];
             for (int i = 0; i < buffers.length; i++) {

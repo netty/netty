@@ -17,7 +17,6 @@ package io.netty5.microbenchmark.common;
 
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
@@ -27,6 +26,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 @Threads(1)
@@ -46,7 +46,7 @@ public class AsciiStringBenchmark extends AbstractMicrobenchmark {
         byte[] bytes = new byte[size];
         random.nextBytes(bytes);
         asciiString = new AsciiString(bytes, false);
-        string = new String(bytes, CharsetUtil.US_ASCII);
+        string = new String(bytes, StandardCharsets.US_ASCII);
     }
 
     @Benchmark

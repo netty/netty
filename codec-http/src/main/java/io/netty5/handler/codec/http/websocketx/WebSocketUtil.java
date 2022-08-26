@@ -15,13 +15,14 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.FastThreadLocal;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
+
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * A utility class mainly for use by web sockets.
@@ -81,8 +82,8 @@ final class WebSocketUtil {
 
     static String calculateV13Accept(String nonce) {
         String concat = nonce + V13_ACCEPT_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(concat.getBytes(CharsetUtil.US_ASCII));
-        return WebSocketUtil.base64(sha1);
+        byte[] sha1 = sha1(concat.getBytes(US_ASCII));
+        return base64(sha1);
     }
 
     private WebSocketUtil() {

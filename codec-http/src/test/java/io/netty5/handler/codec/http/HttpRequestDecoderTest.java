@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -62,7 +61,7 @@ public class HttpRequestDecoderTest {
                 "Sec-WebSocket-Key2: 8 Xt754O3Q3QW 0   _60" + lineDelimiter +
                 "Content-Length: " + CONTENT_LENGTH + lineDelimiter2 +
                 "\r\n"  +
-                "12345678").getBytes(CharsetUtil.US_ASCII);
+                "12345678").getBytes(US_ASCII);
     }
 
     @Test

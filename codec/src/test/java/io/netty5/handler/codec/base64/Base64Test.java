@@ -17,12 +17,12 @@ package io.netty5.handler.codec.base64;
 
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,20 +36,20 @@ public class Base64Test {
     @Test
     public void testNotAddNewLineWhenEndOnLimit() {
         Buffer src = copiedBuffer("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcde",
-                                  CharsetUtil.US_ASCII);
+                                  StandardCharsets.US_ASCII);
         Buffer expectedEncoded =
                 copiedBuffer("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5emFiY2Rl",
-                        CharsetUtil.US_ASCII);
+                             StandardCharsets.US_ASCII);
         testEncode(src, expectedEncoded);
     }
 
     @Test
     public void testAddNewLine() {
         Buffer src = copiedBuffer("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz12345678",
-                CharsetUtil.US_ASCII);
+                                  StandardCharsets.US_ASCII);
         Buffer expectedEncoded =
                 copiedBuffer("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejEyMzQ1\nNjc4",
-                        CharsetUtil.US_ASCII);
+                             StandardCharsets.US_ASCII);
         testEncode(src, expectedEncoded);
     }
 
@@ -95,13 +95,13 @@ public class Base64Test {
                 "Kyc=";
 
         Buffer src = onHeapAllocator().copyOf(certFromString(cert).getEncoded());
-        Buffer expectedEncoded = copiedBuffer(expected, CharsetUtil.US_ASCII);
+        Buffer expectedEncoded = copiedBuffer(expected, StandardCharsets.US_ASCII);
         testEncode(src, expectedEncoded);
     }
 
     private static X509Certificate certFromString(String string) throws Exception {
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        ByteArrayInputStream bin = new ByteArrayInputStream(string.getBytes(CharsetUtil.US_ASCII));
+        ByteArrayInputStream bin = new ByteArrayInputStream(string.getBytes(StandardCharsets.US_ASCII));
         try {
             return (X509Certificate) factory.generateCertificate(bin);
         } finally {
@@ -158,7 +158,7 @@ public class Base64Test {
     public void decodingFailsOnInvalidInputByte() {
         char[] invalidChars = {'\u007F', '\u0080', '\u00BD', '\u00FF'};
         for (char invalidChar : invalidChars) {
-            try (Buffer buf = copiedBuffer("eHh4" + invalidChar, CharsetUtil.ISO_8859_1)) {
+            try (Buffer buf = copiedBuffer("eHh4" + invalidChar, StandardCharsets.ISO_8859_1)) {
                 Base64.decode(buf);
                 fail("Invalid character in not detected: " + invalidChar);
             } catch (IllegalArgumentException ignored) {

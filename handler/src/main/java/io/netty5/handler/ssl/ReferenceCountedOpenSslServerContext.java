@@ -20,7 +20,6 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
 import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -29,6 +28,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -278,7 +278,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
             if (engine != null) {
                 // TODO: In the next release of tcnative we should pass the byte[] directly in and not use a String.
-                return engine.checkSniHostnameMatch(hostname.getBytes(CharsetUtil.UTF_8));
+                return engine.checkSniHostnameMatch(hostname.getBytes(StandardCharsets.UTF_8));
             }
             logger.warn("No ReferenceCountedOpenSslEngine found for SSL pointer: {}", ssl);
             return false;

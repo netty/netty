@@ -27,7 +27,6 @@ import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.Decompressor;
 import io.netty5.handler.codec.compression.ZlibCodecFactory;
 import io.netty5.handler.codec.compression.ZlibWrapper;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
@@ -41,6 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -69,13 +70,13 @@ public class HttpContentDecoderTest {
         // baseline test: zlib library and test helpers work correctly.
         byte[] helloWorld = gzDecompress(GZ_HELLO_WORLD);
         assertEquals(HELLO_WORLD.length(), helloWorld.length);
-        assertEquals(HELLO_WORLD, new String(helloWorld, CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, new String(helloWorld, US_ASCII));
 
         String fullCycleTest = "full cycle test";
-        byte[] compressed = gzCompress(fullCycleTest.getBytes(CharsetUtil.US_ASCII));
+        byte[] compressed = gzCompress(fullCycleTest.getBytes(US_ASCII));
         byte[] decompressed = gzDecompress(compressed);
         assertEquals(decompressed.length, fullCycleTest.length());
-        assertEquals(fullCycleTest, new String(decompressed, CharsetUtil.US_ASCII));
+        assertEquals(fullCycleTest, new String(decompressed, US_ASCII));
     }
 
     @Test
@@ -89,7 +90,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("POST / HTTP/1.1\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(CharsetUtil.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -97,7 +98,7 @@ public class HttpContentDecoderTest {
 
         FullHttpRequest req = channel.readInbound();
         assertEquals(HELLO_WORLD.length(), req.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue());
-        assertEquals(HELLO_WORLD, req.payload().toString(CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, req.payload().toString(US_ASCII));
         req.close();
 
         assertHasInboundMessages(channel, false);
@@ -115,21 +116,21 @@ public class HttpContentDecoderTest {
         byte[] headers = ("HTTP/1.1 200 OK\r\n"
                 + "Transfer-Encoding: chunked\r\n"
                 + "Trailer: My-Trailer\r\n"
-                + "Content-Encoding: gzip\r\n\r\n").getBytes(StandardCharsets.US_ASCII);
+                + "Content-Encoding: gzip\r\n\r\n").getBytes(US_ASCII);
 
         channel.writeInbound(channel.bufferAllocator().allocate(headers.length).writeBytes(headers));
 
         String chunkLength = Integer.toHexString(GZ_HELLO_WORLD.length);
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence(chunkLength + "\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence(chunkLength + "\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
                 .writeBytes(GZ_HELLO_WORLD)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence("\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence("\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence("0\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence("0\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence("My-Trailer: 42\r\n\r\n\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence("My-Trailer: 42\r\n\r\n\r\n", US_ASCII)));
 
         Object ob1 = channel.readInbound();
         assertThat(ob1, is(instanceOf(DefaultHttpResponse.class)));
@@ -137,7 +138,7 @@ public class HttpContentDecoderTest {
         Object ob2 = channel.readInbound();
         assertThat(ob2, is(instanceOf(HttpContent.class)));
         HttpContent<?> content = (HttpContent<?>) ob2;
-        assertEquals(HELLO_WORLD, content.payload().toString(CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, content.payload().toString(US_ASCII));
         content.close();
 
         Object ob3 = channel.readInbound();
@@ -163,7 +164,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(StandardCharsets.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -173,7 +174,7 @@ public class HttpContentDecoderTest {
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
         FullHttpResponse resp = (FullHttpResponse) o;
         assertEquals(HELLO_WORLD.length(), resp.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue());
-        assertEquals(HELLO_WORLD, resp.payload().toString(CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, resp.payload().toString(US_ASCII));
         resp.close();
 
         assertHasInboundMessages(channel, false);
@@ -189,13 +190,13 @@ public class HttpContentDecoderTest {
 
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
                 "Transfer-Encoding: chunked\r\n" +
-                "\r\n").getBytes(StandardCharsets.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
         assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(headers)));
 
         String chunkLength = Integer.toHexString(HELLO_WORLD.length());
-        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(chunkLength + "\r\n", CharsetUtil.US_ASCII)));
-        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(HELLO_WORLD + "\r\n", CharsetUtil.US_ASCII)));
-        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf("0\r\n\r\n", CharsetUtil.US_ASCII)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(chunkLength + "\r\n", US_ASCII)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(HELLO_WORLD + "\r\n", US_ASCII)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf("0\r\n\r\n", US_ASCII)));
 
         Object o = channel.readInbound();
         assertThat(o, is(instanceOf(HttpResponse.class)));
@@ -203,7 +204,7 @@ public class HttpContentDecoderTest {
         o = channel.readInbound();
         assertThat(o, is(instanceOf(HttpContent.class)));
         try (HttpContent<?> resp = (HttpContent<?>) o) {
-            assertEquals(HELLO_WORLD, resp.payload().toString(CharsetUtil.US_ASCII));
+            assertEquals(HELLO_WORLD, resp.payload().toString(US_ASCII));
         }
 
         o = channel.readInbound();
@@ -228,7 +229,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
           "Content-Length: " + SAMPLE_BZ_BYTES.length + "\r\n" +
           "Content-Encoding: br\r\n" +
-          "\r\n").getBytes(StandardCharsets.US_ASCII);
+          "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(SAMPLE_BZ_BYTES.length)
@@ -238,7 +239,7 @@ public class HttpContentDecoderTest {
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
         FullHttpResponse resp = (FullHttpResponse) o;
         assertNull(resp.headers().get(HttpHeaderNames.CONTENT_ENCODING), "Content-Encoding header should be removed");
-        assertEquals(SAMPLE_STRING, resp.payload().toString(CharsetUtil.UTF_8),
+        assertEquals(SAMPLE_STRING, resp.payload().toString(UTF_8),
                 "Response body should match uncompressed string");
         resp.close();
 
@@ -260,7 +261,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
           "Content-Length: " + SAMPLE_BZ_BYTES.length + "\r\n" +
           "Content-Encoding: br\r\n" +
-          "\r\n").getBytes(StandardCharsets.US_ASCII);
+          "\r\n").getBytes(US_ASCII);
 
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
@@ -281,7 +282,7 @@ public class HttpContentDecoderTest {
         Object o = channel.readInbound();
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
         FullHttpResponse resp = (FullHttpResponse) o;
-        assertEquals(SAMPLE_STRING, resp.payload().toString(CharsetUtil.UTF_8),
+        assertEquals(SAMPLE_STRING, resp.payload().toString(UTF_8),
           "Response body should match uncompressed string");
         resp.close();
 
@@ -300,7 +301,7 @@ public class HttpContentDecoderTest {
         byte[] req = ("POST / HTTP/1.1\r\n" +
                      "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                      "Expect: 100-continue\r\n" +
-                     "\r\n").getBytes(StandardCharsets.US_ASCII);
+                     "\r\n").getBytes(US_ASCII);
         // note: the following writeInbound() returns false as there is no message is inbound buffer
         // until HttpObjectAggregator caches composes a complete message.
         // however, http response "100 continue" must be sent as soon as headers are received
@@ -330,7 +331,7 @@ public class HttpContentDecoderTest {
         byte[] req = ("POST / HTTP/1.1\r\n" +
                      "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                      "Expect: 100-continue\r\n" +
-                     "\r\n").getBytes(StandardCharsets.US_ASCII);
+                     "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req.length).writeBytes(req)));
 
         Object o = channel.readOutbound();
@@ -358,7 +359,7 @@ public class HttpContentDecoderTest {
                      "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                      "Expect: 100-continue\r\n" +
                      "Content-Encoding: gzip\r\n" +
-                     "\r\n").getBytes(StandardCharsets.US_ASCII);
+                     "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req.length).writeBytes(req)));
 
         Object o = channel.readOutbound();
@@ -386,7 +387,7 @@ public class HttpContentDecoderTest {
                      "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                      "Expect: 100-continue\r\n" +
                      "Content-Encoding: gzip\r\n" +
-                     "\r\n").getBytes(StandardCharsets.US_ASCII);
+                     "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req.length).writeBytes(req)));
 
         Object o = channel.readOutbound();
@@ -425,7 +426,7 @@ public class HttpContentDecoderTest {
         byte[] req1 = ("POST /1 HTTP/1.1\r\n" +
                 "Content-Length: " + (maxBytes + 1) + "\r\n" +
                 "Expect: 100-continue\r\n" +
-                "\r\n").getBytes(StandardCharsets.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req1.length).writeBytes(req1)));
 
         FullHttpResponse resp = channel.readOutbound();
@@ -435,7 +436,7 @@ public class HttpContentDecoderTest {
         byte[] req2 = ("POST /2 HTTP/1.1\r\n" +
                 "Content-Length: " + maxBytes + "\r\n" +
                 "Expect: 100-continue\r\n" +
-                "\r\n").getBytes(StandardCharsets.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req2.length).writeBytes(req2)));
 
         resp = channel.readOutbound();
@@ -468,7 +469,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("POST / HTTP/1.1\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(StandardCharsets.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -500,7 +501,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("POST / HTTP/1.1\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(StandardCharsets.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -533,7 +534,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(StandardCharsets.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -568,7 +569,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(StandardCharsets.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -598,7 +599,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("POST / HTTP/1.1\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(StandardCharsets.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -611,7 +612,7 @@ public class HttpContentDecoderTest {
 
         byte[] receivedContent = readContent(req, contentLength, true);
 
-        assertEquals(HELLO_WORLD, new String(receivedContent, CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, new String(receivedContent, US_ASCII));
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -628,7 +629,7 @@ public class HttpContentDecoderTest {
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
                          "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                          "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(StandardCharsets.US_ASCII);
+                         "\r\n").getBytes(US_ASCII);
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -641,7 +642,7 @@ public class HttpContentDecoderTest {
 
         byte[] receivedContent = readContent(resp, contentLength, true);
 
-        assertEquals(HELLO_WORLD, new String(receivedContent, CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, new String(receivedContent, US_ASCII));
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -657,7 +658,7 @@ public class HttpContentDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
         byte[] headers = ("HTTP/1.1 200 OK\r\n" +
                 "Content-Encoding: gzip\r\n" +
-                "\r\n").getBytes(StandardCharsets.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
                 .writeBytes(headers)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -672,7 +673,7 @@ public class HttpContentDecoderTest {
 
         byte[] receivedContent = readContent(resp, contentLength, false);
 
-        assertEquals(HELLO_WORLD, new String(receivedContent, CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, new String(receivedContent, US_ASCII));
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -738,7 +739,7 @@ public class HttpContentDecoderTest {
         byte[] req = ("POST / HTTP/1.1\r\n" +
                 "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                 "Transfer-Encoding: gzip\r\n" +
-                "\r\n").getBytes(StandardCharsets.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
         HttpRequestDecoder decoder = new HttpRequestDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
@@ -752,7 +753,7 @@ public class HttpContentDecoderTest {
 
         HttpContent<?> content = channel.readInbound();
         assertTrue(content.decoderResult().isSuccess());
-        assertEquals(HELLO_WORLD, content.payload().toString(CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, content.payload().toString(US_ASCII));
         content.close();
 
         LastHttpContent<?> lastHttpContent = channel.readInbound();
@@ -772,7 +773,7 @@ public class HttpContentDecoderTest {
                 "Content-Type: application/x-www-form-urlencoded\r\n" +
                 "Trailer: My-Trailer\r\n" +
                 "Transfer-Encoding: gzip, chunked\r\n" +
-                "\r\n").getBytes(StandardCharsets.US_ASCII);
+                "\r\n").getBytes(US_ASCII);
         HttpRequestDecoder decoder = new HttpRequestDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
@@ -781,15 +782,15 @@ public class HttpContentDecoderTest {
 
         String chunkLength = Integer.toHexString(GZ_HELLO_WORLD.length);
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence(chunkLength + "\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence(chunkLength + "\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
                 .writeBytes(GZ_HELLO_WORLD)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence("\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence("\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence("0\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence("0\r\n", US_ASCII)));
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(32)
-                .writeCharSequence("My-Trailer: 42\r\n\r\n", CharsetUtil.US_ASCII)));
+                .writeCharSequence("My-Trailer: 42\r\n\r\n", US_ASCII)));
 
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isSuccess());
@@ -798,7 +799,7 @@ public class HttpContentDecoderTest {
 
         HttpContent<?> chunk1 = channel.readInbound();
         assertTrue(chunk1.decoderResult().isSuccess());
-        assertEquals(HELLO_WORLD, chunk1.payload().toString(CharsetUtil.US_ASCII));
+        assertEquals(HELLO_WORLD, chunk1.payload().toString(US_ASCII));
         chunk1.close();
 
         LastHttpContent<?> chunk2 = channel.readInbound();

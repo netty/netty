@@ -18,12 +18,12 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -47,7 +47,7 @@ public class HttpServerCodecTest {
         int totalContentLength = maxChunkSize * 5;
         final byte[] data = ("PUT /test HTTP/1.1\r\n" +
                 "Content-Length: " + totalContentLength + "\r\n" +
-                "\r\n").getBytes(StandardCharsets.UTF_8);
+                "\r\n").getBytes(UTF_8);
         decoderEmbedder.writeInbound(decoderEmbedder.bufferAllocator().allocate(data.length).writeBytes(data));
 
         int offeredContentLength = (int) (maxChunkSize * 2.5);
@@ -81,7 +81,7 @@ public class HttpServerCodecTest {
         // Send the request headers.
         final byte[] data = ("PUT /upload-large HTTP/1.1\r\n" +
                 "Expect: 100-continue\r\n" +
-                "Content-Length: 1\r\n\r\n").getBytes(StandardCharsets.UTF_8);
+                "Content-Length: 1\r\n\r\n").getBytes(UTF_8);
         ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data));
 
         // Ensure the aggregator generates nothing.
@@ -89,7 +89,7 @@ public class HttpServerCodecTest {
 
         // Ensure the aggregator writes a 100 Continue response.
         try (Buffer continueResponse = ch.readOutbound()) {
-            assertThat(continueResponse.toString(CharsetUtil.UTF_8), is("HTTP/1.1 100 Continue\r\n\r\n"));
+            assertThat(continueResponse.toString(UTF_8), is("HTTP/1.1 100 Continue\r\n\r\n"));
         }
 
         // But nothing more.
@@ -111,13 +111,13 @@ public class HttpServerCodecTest {
         // Send the actual response.
         FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED,
                                                            preferredAllocator().allocate(16));
-        res.payload().writeBytes("OK".getBytes(CharsetUtil.UTF_8));
+        res.payload().writeBytes("OK".getBytes(UTF_8));
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
         ch.writeOutbound(res);
 
         // Ensure the encoder handles the response after handling 100 Continue.
         try (Buffer encodedRes = ch.readOutbound()) {
-            assertThat(encodedRes.toString(CharsetUtil.UTF_8),
+            assertThat(encodedRes.toString(UTF_8),
                     is("HTTP/1.1 201 Created\r\n" + HttpHeaderNames.CONTENT_LENGTH + ": 2\r\n\r\nOK"));
         }
 
@@ -129,7 +129,7 @@ public class HttpServerCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Send the request headers.
-        final byte[] data = "HEAD / HTTP/1.1\r\n\r\n".getBytes(StandardCharsets.UTF_8);
+        final byte[] data = "HEAD / HTTP/1.1\r\n\r\n".getBytes(UTF_8);
         assertTrue(ch.writeInbound(ch.bufferAllocator().allocate(data.length).writeBytes(data)));
 
         HttpRequest request = ch.readInbound();
@@ -145,7 +145,7 @@ public class HttpServerCodecTest {
         assertTrue(ch.finish());
 
         Buffer buf = ch.readOutbound();
-        assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
+        assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n", buf.toString(StandardCharsets.US_ASCII));
         buf.close();
 
         buf = ch.readOutbound();
@@ -160,7 +160,7 @@ public class HttpServerCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Send the request headers.
-        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("HEAD / HTTP/1.1\r\n\r\n", StandardCharsets.UTF_8)));
+        assertTrue(ch.writeInbound(ch.bufferAllocator().copyOf("HEAD / HTTP/1.1\r\n\r\n", UTF_8)));
 
         HttpRequest request = ch.readInbound();
         assertEquals(HttpMethod.HEAD, request.method());
@@ -176,13 +176,13 @@ public class HttpServerCodecTest {
 
         Buffer buf = ch.readOutbound();
         assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n",
-                buf.toString(CharsetUtil.US_ASCII));
+                buf.toString(StandardCharsets.US_ASCII));
         buf.close();
 
         assertFalse(ch.finishAndReleaseAll());
     }
 
     private static Buffer prepareDataChunk(BufferAllocator allocator, int size) {
-        return allocator.copyOf("a".repeat(Math.max(0, size)), StandardCharsets.UTF_8);
+        return allocator.copyOf("a".repeat(Math.max(0, size)), UTF_8);
     }
 }

@@ -25,8 +25,8 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ReflectiveChannelFactory;
 import io.netty5.channel.nio.NioHandler;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.dns.DefaultDnsQuestion;
@@ -41,7 +41,6 @@ import io.netty5.resolver.HostsFileEntriesProvider;
 import io.netty5.resolver.HostsFileEntriesResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.resolver.dns.TestDnsServer.TestResourceRecord;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -117,6 +116,8 @@ import static io.netty5.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty5.resolver.dns.DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
 import static io.netty5.resolver.dns.DnsServerAddresses.sequential;
 import static io.netty5.resolver.dns.TestDnsServer.newARecord;
+import static java.nio.charset.StandardCharsets.UTF_16;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -350,7 +351,7 @@ public class DnsNameResolverTest {
 
                 HostsFileEntriesProvider provider =
                         HostsFileEntriesProvider.parser()
-                                .parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
+                                .parseSilently(Charset.defaultCharset(), UTF_16, UTF_8);
                 windowsHostsFileLocalhostEntryExists =
                         provider.ipv4Entries().get("localhost") != null ||
                                 provider.ipv6Entries().get("localhost") != null;
@@ -2764,7 +2765,7 @@ public class DnsNameResolverTest {
             int len = data.getUnsignedByte(idx++);
             byte[] bytes = new byte[len];
             data.copyInto(idx, bytes, 0, len);
-            list.add(new String(bytes, CharsetUtil.UTF_8));
+            list.add(new String(bytes, UTF_8));
             idx += len;
         }
         return list;

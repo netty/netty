@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.util.AsciiString;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.UnstableApi;
 
@@ -24,12 +23,14 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.StringUtil.COMMA;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -308,25 +309,25 @@ public final class HttpUtil {
      * Fetch charset from message's Content-Type header.
      *
      * @param message entity to fetch Content-Type header from
-     * @return the charset from message's Content-Type header or {@link CharsetUtil#ISO_8859_1}
+     * @return the charset from message's Content-Type header or {@link StandardCharsets#ISO_8859_1}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(HttpMessage message) {
-        return getCharset(message, CharsetUtil.ISO_8859_1);
+        return getCharset(message, ISO_8859_1);
     }
 
     /**
      * Fetch charset from Content-Type header value.
      *
      * @param contentTypeValue Content-Type header value to parse
-     * @return the charset from message's Content-Type header or {@link CharsetUtil#ISO_8859_1}
+     * @return the charset from message's Content-Type header or {@link StandardCharsets#ISO_8859_1}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(CharSequence contentTypeValue) {
         if (contentTypeValue != null) {
-            return getCharset(contentTypeValue, CharsetUtil.ISO_8859_1);
+            return getCharset(contentTypeValue, ISO_8859_1);
         } else {
-            return CharsetUtil.ISO_8859_1;
+            return ISO_8859_1;
         }
     }
 
