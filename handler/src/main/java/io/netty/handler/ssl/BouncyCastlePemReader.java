@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.ssl;
 
 import io.netty.util.CharsetUtil;
@@ -45,11 +44,13 @@ import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
 import org.bouncycastle.pkcs.PKCSException;
 
 final class BouncyCastlePemReader {
-    private static Throwable UNAVAILABILITY_CAUSE;
-
+    private static final String BC_PROVIDER = "org.bouncycastle.jce.provider.BouncyCastleProvider";
+    private static final String BC_PEMPARSER = "org.bouncycastle.openssl.PEMParser";
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);
-    private static Provider bcProvider;
-    private static Boolean attemptedLoading = false;
+
+    private static volatile Throwable unavailabilityCause;
+    private static volatile Provider bcProvider;
+    private static volatile boolean attemptedLoading;
 
     public static boolean hasAttemptedLoading() {
         return attemptedLoading;
@@ -59,14 +60,14 @@ final class BouncyCastlePemReader {
         if (!hasAttemptedLoading()) {
             tryLoading();
         }
-        return UNAVAILABILITY_CAUSE == null;
+        return unavailabilityCause == null;
     }
 
     /**
      * @return the cause if unavailable. {@code null} if available.
      */
     public static Throwable unavailabilityCause() {
-        return UNAVAILABILITY_CAUSE;
+        return unavailabilityCause;
     }
 
     private static void tryLoading() {
@@ -74,19 +75,21 @@ final class BouncyCastlePemReader {
             @Override
             public Void run() {
                 try {
-                    Class<Provider> bcProviderClass
-                      = (Class<Provider>) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider",
-                              true, this.getClass().getClassLoader());
+                    ClassLoader classLoader = getClass().getClassLoader();
+                    // Check for bcprov-jdk15on:
+                    Class<Provider> bcProviderClass =
+                            (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                    // Check for bcpkix-jdk15on:
+                    Class.forName(BC_PEMPARSER, true, classLoader);
                     bcProvider = bcProviderClass.getConstructor().newInstance();
                     logger.debug("Bouncy Castle provider available");
                     attemptedLoading = true;
                 } catch (Throwable e) {
                     logger.debug("Cannot load Bouncy Castle provider", e);
-                    UNAVAILABILITY_CAUSE = e;
+                    unavailabilityCause = e;
                     attemptedLoading = true;
-                } finally {
-                    return null;
                 }
+                return null;
             }
         });
     }
@@ -192,8 +195,8 @@ final class BouncyCastlePemReader {
             if (pemParser != null) {
                 try {
                     pemParser.close();
-                } catch (Exception ignore) {
-                    logger.debug("Failed closing pem parser", ignore);
+                } catch (Exception exception) {
+                    logger.debug("Failed closing pem parser", exception);
                 }
             }
         }
