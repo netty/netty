@@ -236,11 +236,11 @@ final class HpackStaticTable {
     }
 
     private static final class HeaderNameIndex {
-        private final CharSequence name;
-        private final int index;
-        private final boolean emptyValue;
+        final CharSequence name;
+        final int index;
+        final boolean emptyValue;
 
-        private HeaderNameIndex(CharSequence name, int index, boolean emptyValue) {
+        HeaderNameIndex(CharSequence name, int index, boolean emptyValue) {
             this.name = name;
             this.index = index;
             this.emptyValue = emptyValue;
@@ -248,11 +248,11 @@ final class HpackStaticTable {
     }
 
     private static final class HeaderIndex {
-        private final CharSequence name;
-        private final CharSequence value;
-        private final int index;
+        final CharSequence name;
+        final CharSequence value;
+        final int index;
 
-        private HeaderIndex(CharSequence name, CharSequence value, int index) {
+        HeaderIndex(CharSequence name, CharSequence value, int index) {
             this.name = name;
             this.value = value;
             this.index = index;
