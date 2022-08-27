@@ -27,6 +27,8 @@ import io.netty5.util.AttributeMap;
 import io.netty5.util.DefaultAttributeMap;
 import io.netty5.util.internal.EmptyArrays;
 
+
+
 import javax.crypto.Cipher;
 import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.NoSuchPaddingException;
@@ -42,6 +44,7 @@ import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -1154,10 +1157,17 @@ public abstract class SslContext {
 
         // try BC first, if this fail fallback to original key extraction process
         if (BouncyCastlePemReader.isAvailable()) {
+            if (!keyInputStream.markSupported()) {
+                // We need an input stream that supports resetting, in case BouncyCastle fails to read.
+                keyInputStream = new BufferedInputStream(keyInputStream);
+            }
+            keyInputStream.mark(1048576); // Be able to reset up to 1 MiB of data.
             PrivateKey pk = BouncyCastlePemReader.getPrivateKey(keyInputStream, keyPassword);
             if (pk != null) {
                 return pk;
             }
+            // BouncyCastle could not read the key. Reset the input stream in case the input position changed.
+            keyInputStream.reset();
         }
 
         return getPrivateKeyFromByteBuffer(PemReader.readPrivateKey(keyInputStream), keyPassword);
