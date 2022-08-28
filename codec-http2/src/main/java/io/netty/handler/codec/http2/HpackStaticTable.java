@@ -117,12 +117,12 @@ final class HpackStaticTable {
         return new HpackHeaderField(AsciiString.cached(name), AsciiString.cached(value));
     }
 
+    // The table size and bit shift are chosen so that each hash bucket contains a single header name.
     private static final int HEADER_NAMES_TABLE_SIZE = 1 << 9;
 
-    // a bit shift chosen so that each header name will hash into a single bucket
     private static final int HEADER_NAMES_TABLE_SHIFT = PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? 22 : 18;
 
-    // A table holding header names and their associated indexes.
+    // A table mapping header names to their associated indexes.
     private static final HeaderNameIndex[] HEADER_NAMES = new HeaderNameIndex[HEADER_NAMES_TABLE_SIZE];
     static {
         // Iterate through the static table in reverse order to
@@ -140,14 +140,13 @@ final class HpackStaticTable {
         }
     }
 
+    // The table size and bit shift are chosen so that each hash bucket contains a single header.
     private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE = 1 << 6;
 
-    // a bit shift chosen so that each header will hash into a single bucket
     private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SHIFT =
       PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? 0 : 6;
 
-    // A table holding header names and values for non-empty values.
-    // This table is keyed by value which is possible since each non-empty value is unique.
+    // A table mapping headers with non-empty values to their associated indexes.
     private static final HeaderIndex[] HEADERS_WITH_NON_EMPTY_VALUES =
       new HeaderIndex[HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE];
     static {
