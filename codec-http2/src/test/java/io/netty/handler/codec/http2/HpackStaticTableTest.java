@@ -17,51 +17,14 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HpackStaticTableTest {
 
     @Test
-    public void testNullHeaderName() {
-        assertThrows(NullPointerException.class, new Executable() {
-            @Override
-            public void execute() {
-                HpackStaticTable.getIndex(null);
-            }
-        });
-    }
-
-    @Test
     public void testEmptyHeaderName() {
         assertEquals(-1, HpackStaticTable.getIndex(""));
-    }
-
-    @Test
-    public void testNullHeaderNameEmptyValue() {
-        assertThrows(NullPointerException.class, new Executable() {
-            @Override
-            public void execute() {
-                HpackStaticTable.getIndexInsensitive(null, "");
-            }
-        });
-    }
-
-    @Test
-    public void testEmptyHeaderNameNullValue() {
-        assertEquals(-1, HpackStaticTable.getIndexInsensitive("", null));
-    }
-
-    @Test
-    public void testNullHeaderNameAndValue() {
-        assertThrows(NullPointerException.class, new Executable() {
-            @Override
-            public void execute() {
-                HpackStaticTable.getIndexInsensitive(null, null);
-            }
-        });
     }
 
     @Test
@@ -103,11 +66,6 @@ public class HpackStaticTableTest {
     @Test
     public void testExistingHeaderNameAndEmptyValueMatch() {
         assertEquals(27, HpackStaticTable.getIndexInsensitive("content-language", ""));
-    }
-
-    @Test
-    public void testExistingHeaderNameAndNullValue() {
-        assertEquals(-1, HpackStaticTable.getIndexInsensitive("content-language", null));
     }
 
     @Test

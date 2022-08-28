@@ -38,7 +38,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 final class HpackStaticTable {
 
@@ -184,7 +183,6 @@ final class HpackStaticTable {
      * -1 if the header field name is not in the static table.
      */
     static int getIndex(CharSequence name) {
-        checkNotNull(name, "name");
         HeaderNameIndex entry = getEntry(name);
         return entry == null ? NOT_FOUND : entry.index;
     }
@@ -194,10 +192,6 @@ final class HpackStaticTable {
      * header field is not in the static table.
      */
     static int getIndexInsensitive(CharSequence name, CharSequence value) {
-        checkNotNull(name, "name");
-        if (value == null) {
-            return NOT_FOUND;
-        }
         if (value.length() == 0) {
             HeaderNameIndex entry = getEntry(name);
             return entry == null || !entry.emptyValue ? NOT_FOUND : entry.index;
