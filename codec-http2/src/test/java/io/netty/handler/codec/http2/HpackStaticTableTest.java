@@ -96,11 +96,6 @@ public class HpackStaticTableTest {
     }
 
     @Test
-    public void testLongHeaderValue() {
-        assertEquals(-1, HpackStaticTable.getIndexInsensitive(":scheme", "longer then longest static value"));
-    }
-
-    @Test
     public void testExistingHeaderNameAndEmptyValueMismatch() {
         assertEquals(-1, HpackStaticTable.getIndexInsensitive(":scheme", ""));
     }
