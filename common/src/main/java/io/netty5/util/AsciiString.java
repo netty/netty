@@ -1466,6 +1466,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return a == b;
         }
 
+        if (a.length() != b.length()) {
+            return false;
+        }
+
         if (a instanceof AsciiString) {
             return ((AsciiString) a).contentEqualsIgnoreCase(b);
         }
@@ -1473,15 +1477,8 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return ((AsciiString) b).contentEqualsIgnoreCase(a);
         }
 
-        if (a.length() != b.length()) {
-            return false;
-        }
-        for (int i = 0; i < a.length(); ++i) {
-            if (!equalsIgnoreCase(a.charAt(i),  b.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
+        // It's fairly safe to assume they're both Strings. The JDK method is better in that case.
+        return a.toString().equalsIgnoreCase(b.toString());
     }
 
     /**

@@ -52,20 +52,33 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     private static final String ENCODED_LABEL_SAMESITE = "; samesite=";
 
     private static ParseState parseStateOf(CharSequence fieldName) {
-        if (contentEqualsIgnoreCase("path", fieldName)) {
-            return ParseState.ParsingPath;
-        }
-        if (contentEqualsIgnoreCase("domain", fieldName)) {
-            return ParseState.ParsingDomain;
-        }
-        if (contentEqualsIgnoreCase("expires", fieldName)) {
-            return ParseState.ParsingExpires;
-        }
-        if (contentEqualsIgnoreCase("max-age", fieldName)) {
-            return ParseState.ParsingMaxAge;
-        }
-        if (contentEqualsIgnoreCase("samesite", fieldName)) {
-            return ParseState.ParsingSameSite;
+        // Try a binary search based on length. We can read length without bounds checks.
+        int len = fieldName.length();
+        if (len >= 4 && len <= 8) {
+            if (len < 7) {
+                if (len == 4) {
+                    if (contentEqualsIgnoreCase("path", fieldName)) {
+                        return ParseState.ParsingPath;
+                    }
+                } else if (len == 6) {
+                    if (contentEqualsIgnoreCase("domain", fieldName)) {
+                        return ParseState.ParsingDomain;
+                    }
+                }
+            } else {
+                if (len == 7) {
+                    if (contentEqualsIgnoreCase("expires", fieldName)) {
+                        return ParseState.ParsingExpires;
+                    }
+                    if (contentEqualsIgnoreCase("max-age", fieldName)) {
+                        return ParseState.ParsingMaxAge;
+                    }
+                } else {
+                    if (contentEqualsIgnoreCase("samesite", fieldName)) {
+                        return ParseState.ParsingSameSite;
+                    }
+                }
+            }
         }
         return ParseState.Unknown;
     }
