@@ -30,6 +30,7 @@
 package io.netty5.handler.codec.http.headers;
 
 import io.netty5.handler.codec.http.headers.HttpSetCookie.SameSite;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
@@ -42,6 +43,7 @@ import java.util.Set;
 import static io.netty5.handler.codec.http.headers.HttpHeaders.newHeaders;
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -650,6 +652,24 @@ class DefaultHttpSetCookiesTest {
         final Iterator<? extends HttpSetCookie> itr = headers.getSetCookiesIterator("qwerty");
         assertTrue(itr.hasNext());
         itr.remove();
+    }
+
+    @Test
+    void throwIfNoSpaceBeforeCookieAttributeValue() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("set-cookie", "first=12345;Extension");
+        headers.add("set-cookie", "second=12345;Expires=Mon, 22 Aug 2022 20:12:35 GMT");
+        throwIfNoSpaceBeforeCookieAttributeValue(headers);
+    }
+
+    private static void throwIfNoSpaceBeforeCookieAttributeValue(HttpHeaders headers) {
+        Exception exception;
+
+        exception = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("first"));
+        MatcherAssert.assertThat(exception.getMessage(), containsString("space is required after ;"));
+
+        exception = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("second"));
+        MatcherAssert.assertThat(exception.getMessage(), containsString("space is required after ;"));
     }
 
     @Test
