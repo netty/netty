@@ -174,8 +174,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 encodeHttpMessageLastContent(ctx, m, out);
             } else if (m instanceof HttpContent) {
                 encodeHttpMessageNotLastContent(ctx, m, out);
+            } else {
+                encodeJustHttpMessage(ctx, m, out);
             }
-            encodeJustHttpMessage(ctx, m, out);
         } else {
             encodeNotHttpMessageContentTypes(ctx, msg, out);
         }

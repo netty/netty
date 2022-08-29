@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
@@ -29,13 +30,11 @@ import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.concurrent.ExecutionException;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -180,6 +179,173 @@ public class HttpRequestEncoderTest {
     @Test
     public void testEmptyContentNotsChunkedWithTrailers() throws Exception {
         testEmptyContents(false, true);
+    }
+
+    // this is not using Full types on purpose!!!
+    private static class CustomFullHttpRequest extends DefaultHttpRequest implements LastHttpContent {
+        private final ByteBuf content;
+        private final HttpHeaders trailingHeader;
+
+        /**
+         * Used to cache the value of the hash code and avoid {@link IllegalReferenceCountException}.
+         */
+        private int hash;
+
+        CustomFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
+            this(httpVersion, method, uri, content, true);
+        }
+
+        CustomFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+                                     ByteBuf content, boolean validateHeaders) {
+            super(httpVersion, method, uri, validateHeaders);
+            this.content = checkNotNull(content, "content");
+            trailingHeader = new DefaultHttpHeaders(validateHeaders);
+        }
+
+        private CustomFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+                                     ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader) {
+            super(httpVersion, method, uri, headers);
+            this.content = checkNotNull(content, "content");
+            this.trailingHeader = checkNotNull(trailingHeader, "trailingHeader");
+        }
+
+        @Override
+        public HttpHeaders trailingHeaders() {
+            return trailingHeader;
+        }
+
+        @Override
+        public ByteBuf content() {
+            return content;
+        }
+
+        @Override
+        public int refCnt() {
+            return content.refCnt();
+        }
+
+        @Override
+        public CustomFullHttpRequest retain() {
+            content.retain();
+            return this;
+        }
+
+        @Override
+        public CustomFullHttpRequest retain(int increment) {
+            content.retain(increment);
+            return this;
+        }
+
+        @Override
+        public CustomFullHttpRequest touch() {
+            content.touch();
+            return this;
+        }
+
+        @Override
+        public CustomFullHttpRequest touch(Object hint) {
+            content.touch(hint);
+            return this;
+        }
+
+        @Override
+        public boolean release() {
+            return content.release();
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            return content.release(decrement);
+        }
+
+        @Override
+        public CustomFullHttpRequest setProtocolVersion(HttpVersion version) {
+            super.setProtocolVersion(version);
+            return this;
+        }
+
+        @Override
+        public CustomFullHttpRequest setMethod(HttpMethod method) {
+            super.setMethod(method);
+            return this;
+        }
+
+        @Override
+        public CustomFullHttpRequest setUri(String uri) {
+            super.setUri(uri);
+            return this;
+        }
+
+        @Override
+        public CustomFullHttpRequest copy() {
+            return replace(content().copy());
+        }
+
+        @Override
+        public CustomFullHttpRequest duplicate() {
+            return replace(content().duplicate());
+        }
+
+        @Override
+        public CustomFullHttpRequest retainedDuplicate() {
+            return replace(content().retainedDuplicate());
+        }
+
+        @Override
+        public CustomFullHttpRequest replace(ByteBuf content) {
+            CustomFullHttpRequest request = new CustomFullHttpRequest(protocolVersion(), method(), uri(), content,
+                    headers().copy(), trailingHeaders().copy());
+            request.setDecoderResult(decoderResult());
+            return request;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = this.hash;
+            if (hash == 0) {
+                if (ByteBufUtil.isAccessible(content())) {
+                    try {
+                        hash = 31 + content().hashCode();
+                    } catch (IllegalReferenceCountException ignored) {
+                        // Handle race condition between checking refCnt() == 0 and using the object.
+                        hash = 31;
+                    }
+                } else {
+                    hash = 31;
+                }
+                hash = 31 * hash + trailingHeaders().hashCode();
+                hash = 31 * hash + super.hashCode();
+                this.hash = hash;
+            }
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof DefaultFullHttpRequest)) {
+                return false;
+            }
+
+            DefaultFullHttpRequest other = (DefaultFullHttpRequest) o;
+
+            return super.equals(other) &&
+                    content().equals(other.content()) &&
+                    trailingHeaders().equals(other.trailingHeaders());
+        }
+    }
+
+    @Test
+    public void testCustomMessageEmptyLastContent() {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        HttpRequest customMsg = new CustomFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST, "/", Unpooled.EMPTY_BUFFER);
+        assertTrue(channel.writeOutbound(customMsg));
+        // Ensure we only produce ByteBuf instances.
+        ByteBuf head = channel.readOutbound();
+        assertTrue(head.release());
+        assertNull(channel.readOutbound());
+        assertFalse(channel.finish());
     }
 
     private void testEmptyContents(boolean chunked, boolean trailers) throws Exception {
