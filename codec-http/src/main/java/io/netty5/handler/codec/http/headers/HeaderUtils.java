@@ -106,47 +106,6 @@ public final class HeaderUtils {
         }
     }
 
-    static boolean equals(final HttpHeaders lhs, final HttpHeaders rhs) {
-        if (lhs.size() != rhs.size()) {
-            return false;
-        }
-
-        if (lhs == rhs) {
-            return true;
-        }
-
-        // The regular iterator is unsuitable for equality comparisons because the overall ordering is not
-        // in any specific order relative to the content of this MultiMap.
-        for (final CharSequence name : lhs.names()) {
-            final Iterator<? extends CharSequence> valueItr = lhs.valuesIterator(name);
-            final Iterator<? extends CharSequence> h2ValueItr = rhs.valuesIterator(name);
-            while (valueItr.hasNext() && h2ValueItr.hasNext()) {
-                if (!contentEquals(valueItr.next(), h2ValueItr.next())) {
-                    return false;
-                }
-            }
-            if (valueItr.hasNext() != h2ValueItr.hasNext()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    static int hashCode(final HttpHeaders headers) {
-        if (headers.isEmpty()) {
-            return 0;
-        }
-        int result = HASH_CODE_SEED;
-        for (final CharSequence key : headers.names()) {
-            result = 31 * result + AsciiString.hashCode(key);
-            final Iterator<? extends CharSequence> valueItr = headers.valuesIterator(key);
-            while (valueItr.hasNext()) {
-                result = 31 * result + AsciiString.hashCode(valueItr.next());
-            }
-        }
-        return result;
-    }
-
     /**
      * Returns {@code true} if {@code headers} indicates {@code transfer-encoding} {@code chunked}.
      * <p>

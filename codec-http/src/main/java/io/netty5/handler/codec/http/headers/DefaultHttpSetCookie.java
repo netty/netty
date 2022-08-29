@@ -563,28 +563,6 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     }
 
     /**
-     * Extract a hex value and validate according to the
-     * <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-octet</a> format.
-     *
-     * @param cookieHeaderValue The cookie's value.
-     * @param i The index where we detected a '%' character indicating a hex value is to follow.
-     */
-    private static void extractAndValidateCookieHexValue(final CharSequence cookieHeaderValue, final int i) {
-        if (cookieHeaderValue.length() - 3 <= i) {
-            throw new IllegalArgumentException("invalid hex encoded value");
-        }
-        char c2 = cookieHeaderValue.charAt(i + 1);
-        if (c2 != 'X' && c2 != 'x') {
-            throw new IllegalArgumentException("unexpected hex indicator " + c2);
-        }
-        c2 = cookieHeaderValue.charAt(i + 2);
-        final char c3 = cookieHeaderValue.charAt(i + 3);
-        // The MSB can only be 0,1,2 so we do a cheaper conversion of hex -> decimal.
-        final int hexValue = (c2 - '0') * 16 + hexToDecimal(c3);
-        validateCookieOctetHexValue(hexValue, i);
-    }
-
-    /**
      * <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">
      * cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E</a>
      *
@@ -619,10 +597,5 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     private static IllegalArgumentException unexpectedHexValue(int hexValue, int index) {
         return new IllegalArgumentException(
                 "Unexpected hex value at index " + index + ": " + Integer.toHexString(hexValue));
-    }
-
-    private static int hexToDecimal(final char c) {
-        return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? (c - 'a') + 10 : c >= 'A' && c < 'F' ?
-                (c - 'A') + 10 : -1;
     }
 }
