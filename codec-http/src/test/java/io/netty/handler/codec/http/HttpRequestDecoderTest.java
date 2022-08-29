@@ -22,7 +22,10 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
@@ -546,6 +549,23 @@ public class HttpRequestDecoderTest {
         LastHttpContent c = channel.readInbound();
         c.release();
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testOrderOfHeadersWithContentLength() {
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 5\r\n" +
+                "Connection: close\r\n\r\n" +
+                "hello";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        List<String> headers = new ArrayList<String>();
+        for (Map.Entry<String, String> header : request.headers()) {
+            headers.add(header.getKey());
+        }
+        assertEquals(Arrays.asList("Host", "Content-Length", "Connection"), headers, "ordered headers");
     }
 
     @Test
