@@ -127,18 +127,18 @@ public final class ChannelHandlerMetadataUtil {
 
         Set<Class<? extends ChannelHandler>> classes = reflections.getSubTypesOf(ChannelHandler.class);
         classes = classes.stream()
-                .filter(ChannelHandlerMetadataUtil::isTestClass)
+                .filter(ChannelHandlerMetadataUtil::isNotTestClass)
                 .filter(clazz -> Stream.of(packageNames).anyMatch(name -> clazz.getName().startsWith(name)))
                 .collect(Collectors.toSet());
         return classes;
     }
 
-    private static boolean isTestClass(Class<? extends ChannelHandler> clazz) {
+    private static boolean isNotTestClass(Class<? extends ChannelHandler> clazz) {
         String[] parts = clazz.getName().split("\\.");
         if (parts.length > 0) {
             URL classFile = clazz.getResource(parts[parts.length - 1] + ".class");
             if (classFile != null) {
-                return !classFile.toString().contains(File.separator + "test-classes" + File.separator);
+                return !classFile.toString().contains("/test-classes/");
             }
         }
         return true;
