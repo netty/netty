@@ -26,18 +26,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * We only need to test methods defined by {@link InternaLogger}.
+ * We only need to test methods defined by {@link InternalLogger}.
  */
 public abstract class AbstractInternalLoggerTest<T> {
     protected String loggerName = "foo";
     protected T mockLog;
     protected InternalLogger logger;
     protected final Map<String, Object> result = new HashMap<>();
-
-    @SuppressWarnings("unchecked")
-    protected <V> V getResult(String key) {
-        return (V) result.get(key);
-    }
 
     @Test
     public void testName() {

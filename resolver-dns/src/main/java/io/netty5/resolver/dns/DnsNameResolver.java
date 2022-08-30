@@ -940,7 +940,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         if (!doResolveCached(hostname, additionals, promise, resolveCache)) {
-            doResolveUncached(hostname, additionals, promise, resolveCache, true);
+            doResolveUncached(hostname, additionals, promise, resolveCache);
         }
     }
 
@@ -996,7 +996,7 @@ public class DnsNameResolver extends InetNameResolver {
     private void doResolveUncached(String hostname,
                                    DnsRecord[] additionals,
                                    final Promise<InetAddress> promise,
-                                   DnsCache resolveCache, boolean completeEarlyIfPossible) {
+                                   DnsCache resolveCache) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
         doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, true);
         allPromise.asFuture().addListener(future -> {

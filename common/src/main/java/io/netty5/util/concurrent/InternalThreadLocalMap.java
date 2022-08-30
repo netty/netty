@@ -13,11 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.util.concurrent;
 
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -40,8 +38,6 @@ final class InternalThreadLocalMap {
 
     /** Used by {@link FastThreadLocal} */
     private Object[] indexedVariables;
-
-    private BitSet cleanerFlags;
 
     static InternalThreadLocalMap getIfSet() {
         Thread thread = Thread.currentThread();
@@ -182,16 +178,5 @@ final class InternalThreadLocalMap {
     boolean isIndexedVariableSet(int index) {
         Object[] lookup = indexedVariables;
         return index < lookup.length && lookup[index] != UNSET;
-    }
-
-    boolean isCleanerFlagSet(int index) {
-        return cleanerFlags != null && cleanerFlags.get(index);
-    }
-
-    void setCleanerFlag(int index) {
-        if (cleanerFlags == null) {
-            cleanerFlags = new BitSet();
-        }
-        cleanerFlags.set(index);
     }
 }

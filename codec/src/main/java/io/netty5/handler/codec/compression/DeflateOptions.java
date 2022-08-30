@@ -18,40 +18,25 @@ package io.netty5.handler.codec.compression;
 import io.netty5.util.internal.ObjectUtil;
 
 /**
- * {@link DeflateOptions} holds {@link #compressionLevel()},
- * {@link #memLevel()} and {@link #windowBits()} for Deflate compression.
+ * {@link DeflateOptions} holds {@link #compressionLevel()} for Deflate compression.
  */
 public class DeflateOptions implements CompressionOptions {
 
     private final int compressionLevel;
-    private final int windowBits;
-    private final int memLevel;
 
     /**
      * @see StandardCompressionOptions#deflate()
      */
-    static final DeflateOptions DEFAULT = new DeflateOptions(
-            6, 15, 8
-    );
+    static final DeflateOptions DEFAULT = new DeflateOptions(6);
 
     /**
-     * @see StandardCompressionOptions#deflate(int, int, int)
+     * @see StandardCompressionOptions#deflate(int)
      */
-    DeflateOptions(int compressionLevel, int windowBits, int memLevel) {
+    DeflateOptions(int compressionLevel) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
-        this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
-        this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
     }
 
     public int compressionLevel() {
         return compressionLevel;
-    }
-
-    public int windowBits() {
-        return windowBits;
-    }
-
-    public int memLevel() {
-        return memLevel;
     }
 }

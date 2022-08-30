@@ -44,11 +44,9 @@ import static io.netty5.handler.codec.http.websocketx.extensions.compression.Def
  */
 abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     static final Supplier<Buffer> EMPTY_DEFLATE_BLOCK;
-    static final int EMPTY_DEFLATE_BLOCK_LENGTH;
     static {
         byte[] emptyDeflate = { 0x00 };
         EMPTY_DEFLATE_BLOCK = preferredAllocator().constBufferSupplier(emptyDeflate);
-        EMPTY_DEFLATE_BLOCK_LENGTH = emptyDeflate.length;
     }
 
     private final int compressionLevel;

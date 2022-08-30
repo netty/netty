@@ -213,7 +213,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownOutputAndInputSoLingerNoAssertError(TestInfo testInfo) throws Throwable {
-        run(testInfo, this::testShutdownOutputSoLingerNoAssertError);
+        run(testInfo, this::testShutdownOutputAndInputSoLingerNoAssertError);
     }
 
     public void testShutdownOutputAndInputSoLingerNoAssertError(Bootstrap cb) throws Throwable {

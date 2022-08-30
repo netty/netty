@@ -50,8 +50,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final ZstdOptions zstdOptions;
 
     private final int compressionLevel;
-    private final int windowBits;
-    private final int memLevel;
     private final int contentSizeThreshold;
     private final Map<String, Supplier<? extends Compressor>> factories;
 
@@ -64,8 +62,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Creates a new handler with the specified compression level, default
-     * window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * Creates a new handler with the specified compression level.
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
@@ -74,7 +71,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      */
     @Deprecated
     public HttpContentCompressor(int compressionLevel) {
-        this(compressionLevel, 15, 8, 0);
+        this(compressionLevel, 0);
     }
 
     /**
@@ -85,50 +82,14 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
      *        compression level is {@code 6}.
-     * @param windowBits
-     *        The base two logarithm of the size of the history buffer.  The
-     *        value should be in the range {@code 9} to {@code 15} inclusive.
-     *        Larger values result in better compression at the expense of
-     *        memory usage.  The default value is {@code 15}.
-     * @param memLevel
-     *        How much memory should be allocated for the internal compression
-     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
-     *        memory.  Larger values result in better and faster compression
-     *        at the expense of memory usage.  The default value is {@code 8}
-     */
-    @Deprecated
-    public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel) {
-        this(compressionLevel, windowBits, memLevel, 0);
-    }
-
-    /**
-     * Creates a new handler with the specified compression level, window size,
-     * and memory level..
-     *
-     * @param compressionLevel
-     *        {@code 1} yields the fastest compression and {@code 9} yields the
-     *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
-     * @param windowBits
-     *        The base two logarithm of the size of the history buffer.  The
-     *        value should be in the range {@code 9} to {@code 15} inclusive.
-     *        Larger values result in better compression at the expense of
-     *        memory usage.  The default value is {@code 15}.
-     * @param memLevel
-     *        How much memory should be allocated for the internal compression
-     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
-     *        memory.  Larger values result in better and faster compression
-     *        at the expense of memory usage.  The default value is {@code 8}
      * @param contentSizeThreshold
      *        The response body is compressed when the size of the response
      *        body exceeds the threshold. The value should be a non negative
      *        number. {@code 0} will enable compression for all responses.
      */
     @Deprecated
-    public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold) {
+    public HttpContentCompressor(int compressionLevel, int contentSizeThreshold) {
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
-        this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
-        this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
         brotliOptions = null;
         gzipOptions = null;
@@ -220,8 +181,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
 
         compressionLevel = -1;
-        windowBits = -1;
-        memLevel = -1;
         supportsCompressionOptions = true;
     }
 

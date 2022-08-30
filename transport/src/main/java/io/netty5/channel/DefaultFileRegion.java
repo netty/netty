@@ -105,12 +105,6 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         return count;
     }
 
-    @Deprecated
-    @Override
-    public long transfered() {
-        return transferred;
-    }
-
     @Override
     public long transferred() {
         return transferred;

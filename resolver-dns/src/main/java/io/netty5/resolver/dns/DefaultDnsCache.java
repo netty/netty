@@ -198,16 +198,12 @@ public class DefaultDnsCache implements DnsCache {
             return cause;
         }
 
-        String hostname() {
-            return hostname;
-        }
-
         @Override
         public String toString() {
             if (cause != null) {
                 return hostname + '/' + cause;
             } else {
-                return address.toString();
+                return String.valueOf(address);
             }
         }
     }

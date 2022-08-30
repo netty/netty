@@ -354,19 +354,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     }
 
     final Map.Entry<AttributeKey<?>, Object>[] newAttributesArray() {
-        return newAttributesArray(attrs0());
+        return newAttributesArray(attrs);
     }
 
     static Map.Entry<AttributeKey<?>, Object>[] newAttributesArray(Map<AttributeKey<?>, Object> attributes) {
         return attributes.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
-    }
-
-    final Map<ChannelOption<?>, Object> options0() {
-        return options;
-    }
-
-    final Map<AttributeKey<?>, Object> attrs0() {
-        return attrs;
     }
 
     final SocketAddress localAddress() {

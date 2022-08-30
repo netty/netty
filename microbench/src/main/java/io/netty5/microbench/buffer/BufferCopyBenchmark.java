@@ -88,9 +88,10 @@ public class BufferCopyBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public Buffer setBytes() {
+    public Buffer writeBytes() {
         byteBuffer.clear();
         buffer.resetOffsets();
+        buffer.writerOffset(index);
         return buffer.writeBytes(byteBuffer);
     }
 

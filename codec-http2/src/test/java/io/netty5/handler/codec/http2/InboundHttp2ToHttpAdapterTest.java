@@ -40,7 +40,6 @@ import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -707,16 +706,8 @@ public class InboundHttp2ToHttpAdapterTest {
         return clientChannel.pipeline().firstContext();
     }
 
-    private Promise<Void> newPromiseClient() {
-        return ctxClient().newPromise();
-    }
-
     private ChannelHandlerContext ctxServer() {
         return serverConnectedChannel.pipeline().firstContext();
-    }
-
-    private Promise<Void> newPromiseServer() {
-        return ctxServer().newPromise();
     }
 
     private interface HttpResponseListener {
