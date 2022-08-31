@@ -36,6 +36,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
@@ -416,6 +417,9 @@ final class HpackDecoder {
             throw streamError(streamId, PROTOCOL_ERROR,
                     "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
         }
+        if (!isValidHeaderValue(value)) {
+            throw streamError(streamId, PROTOCOL_ERROR, "Illegal header value given for header '%s'.", name);
+        }
 
         return HeaderType.REGULAR_HEADER;
     }
@@ -477,6 +481,43 @@ final class HpackDecoder {
         }
         // Note: We don't check PROTOCOL because the API presents no alternative way to access it.
         return false;
+    }
+
+    private static boolean isValidHeaderValue(CharSequence value) {
+        // Validate value to field-content rule.
+        //  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+        //  field-vchar    = VCHAR / obs-text
+        //  VCHAR          = %x21-7E ; visible (printing) characters
+        //  obs-text       = %x80-FF
+        //  SP             = %x20
+        //  HTAB           = %x09 ; horizontal tab
+        //  See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
+        //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
+        int length = value.length();
+        if (length == 0) {
+            return true;
+        }
+        final byte[] array;
+        final int start;
+        if (value instanceof AsciiString) {
+            AsciiString ascii = (AsciiString) value;
+            array = ascii.array();
+            start = ascii.arrayOffset();
+        } else {
+            array = value.toString().getBytes(CharsetUtil.US_ASCII);
+            start = 0;
+        }
+        byte b = array[start];
+        if (b < 0x21 || b == 0x7F) {
+            return false;
+        }
+        for (int i = start + 1; i < length; i++) {
+            b = array[i];
+            if (b < 0x20 && b != 0x09 || b == 0x7F) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private CharSequence readName(int index) throws Http2Exception {

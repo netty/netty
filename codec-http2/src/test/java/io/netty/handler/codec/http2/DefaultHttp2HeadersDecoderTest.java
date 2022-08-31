@@ -172,6 +172,42 @@ public class DefaultHttp2HeadersDecoderTest {
         verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("te"), b("compress")));
     }
 
+    @Test
+    public void decodingInvalidHeaderValueMustFailValidation() throws Exception {
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\0")));
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b(" ")));
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\t")));
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b(" a")));
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\ta")));
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("a\0")));
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("a\u007F")));
+    }
+
+    @Test
+    public void headerValuesAllowSpaceAfterFirstCharacter() throws Exception {
+        ByteBuf buf = null;
+        try {
+            buf = encode(b(":method"), b("GET"), b("test_header"), b("a b"));
+            Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
+            assertThat(headers.get("test_header")).isEqualToIgnoringCase("a b");
+        } finally {
+            ReferenceCountUtil.release(buf);
+        }
+    }
+
+    @Test
+    public void headerValuesAllowHorzontalTabAfterFirstCharacter() throws Exception {
+        ByteBuf buf = null;
+        try {
+            buf = encode(b(":method"), b("GET"), b("test_header"), b("a\tb"));
+            Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
+            assertThat(headers.get("test_header")).isEqualToIgnoringCase("a\tb");
+        } finally {
+            ReferenceCountUtil.release(buf);
+        }
+    }
+
     private static void verifyValidationFails(final DefaultHttp2HeadersDecoder decoder, final ByteBuf buf) {
         try {
             Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
