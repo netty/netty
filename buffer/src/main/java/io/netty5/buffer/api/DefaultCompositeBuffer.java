@@ -178,36 +178,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         private int index;
 
         Collector(Iterable<Buffer> externals) {
-            final Map<Buffer, Buffer> dupeCheck;
-            if (externals instanceof Collection) {
-                dupeCheck = new IdentityHashMap<>(((Collection<?>) externals).size());
-            } else {
-                dupeCheck = new IdentityHashMap<>();
-            }
             int size = 0;
             for (Buffer buf : externals) {
-                if (dupeCheck.put(buf, buf) != null) {
-                    // Throw if there are duplicates among the buffers.
-                    // We can do this before we decompose composites, because the components are owned,
-                    // and no two composite buffers can have the same components, unless they violate
-                    // their API contract.
-                    closeAllAndThrowDupeException(externals);
-                }
                 size += buf.countComponents();
             }
             array = new Buffer[size];
-        }
-
-        private static void closeAllAndThrowDupeException(Iterable<Buffer> externals) {
-            IllegalArgumentException iae = new IllegalArgumentException("Cannot compose duplicate buffers.");
-            for (Buffer toClose : externals) {
-                try {
-                    toClose.close();
-                } catch (Exception closeExc) {
-                    iae.addSuppressed(closeExc);
-                }
-            }
-            throw iae;
         }
 
         void add(Buffer buffer) {
@@ -275,48 +250,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 }
             }
             return array.length == index? array : Arrays.copyOf(array, index);
-        }
-    }
-
-    private static final class ConcatIterable<T> implements Iterable<T> {
-        private final Iterable<T> first;
-        private final Iterable<T> second;
-
-        ConcatIterable(Iterable<T> first, Iterable<T> second) {
-            this.first = first;
-            this.second = second;
-        }
-
-        @Override
-        public Iterator<T> iterator() {
-            return new ConcatIterator<>(first.iterator(), second.iterator());
-        }
-    }
-
-    private static final class ConcatIterator<T> implements Iterator<T> {
-        private Iterator<T> current;
-        private Iterator<T> next;
-
-        ConcatIterator(Iterator<T> first, Iterator<T> second) {
-            current = first;
-            next = second;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return current != null && current.hasNext() || next != null && next.hasNext();
-        }
-
-        @Override
-        public T next() {
-            while (current != null) {
-                if (current.hasNext()) {
-                    return current.next();
-                }
-                current = next;
-                next = null;
-            }
-            throw new NoSuchElementException();
         }
     }
 
@@ -912,7 +845,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
         Buffer[] restoreTemp = bufs; // We need this to restore our buffer array, in case offset computations fail.
         try {
-            bufs = filterExternalBufs(new ConcatIterable<>(Arrays.asList(bufs), List.of(buffer)));
+            Buffer[] concatArray = Arrays.copyOf(bufs, bufs.length + 1);
+            concatArray[bufs.length] = buffer;
+            bufs = filterExternalBufs(Arrays.asList(concatArray));
             computeBufferOffsets();
             if (restoreTemp.length == 0) {
                 readOnly = buffer.readOnly();
