@@ -206,5 +206,6 @@ jobs:
           name: build-${{ matrix.setup }}-target
           path: |
             **/target/surefire-reports/
+            **/target/autobahntestsuite-reports/
             **/hs_err*.log
             **/core.*
