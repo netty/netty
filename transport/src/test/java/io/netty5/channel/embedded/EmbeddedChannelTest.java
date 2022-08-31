@@ -26,7 +26,6 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
@@ -50,8 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class EmbeddedChannelTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannelTest.class);
-
     @Test
     public void testParent() {
         EmbeddedChannel parent = new EmbeddedChannel();
@@ -566,14 +563,6 @@ public class EmbeddedChannelTest {
         channel.pipeline().fireChannelExceptionCaught(new IllegalStateException());
 
         assertTrue(inactive.get());
-    }
-
-    private static void release(Object... objs) {
-        for (Object obj : objs) {
-            if (Resource.isAccessible(obj, false)) {
-                SilentDispose.dispose(obj, logger);
-            }
-        }
     }
 
     private static final class EventOutboundHandler implements ChannelHandler {

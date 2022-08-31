@@ -150,7 +150,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     private volatile ReadHandleFactory readHandleFactory = new AdaptiveReadHandleFactory();
 
     private volatile int connectTimeoutMillis = 30000;
-    private volatile int writeSpinCount = 16;
     private volatile int maxMessagesPerWrite = Integer.MAX_VALUE;
 
     @SuppressWarnings("FieldMayBeFinal")
@@ -1068,22 +1067,6 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
      */
     private void setMaxMessagesPerWrite(int maxMessagesPerWrite) {
         this.maxMessagesPerWrite = checkPositive(maxMessagesPerWrite, "maxMessagesPerWrite");
-    }
-
-    private int getWriteSpinCount() {
-        return writeSpinCount;
-    }
-
-    private void setWriteSpinCount(int writeSpinCount) {
-        checkPositive(writeSpinCount, "writeSpinCount");
-        // Integer.MAX_VALUE is used as a special value in the channel implementations to indicate the channel cannot
-        // accept any more data, and results in the writeOp being set on the selector (or execute a runnable which tries
-        // to flush later because the writeSpinCount quantum has been exhausted). This strategy prevents additional
-        // conditional logic in the channel implementations, and shouldn't be noticeable in practice.
-        if (writeSpinCount == Integer.MAX_VALUE) {
-            --writeSpinCount;
-        }
-        this.writeSpinCount = writeSpinCount;
     }
 
     private BufferAllocator getBufferAllocator() {

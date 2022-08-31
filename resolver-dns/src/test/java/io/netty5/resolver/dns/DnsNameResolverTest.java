@@ -752,7 +752,7 @@ public class DnsNameResolverTest {
                     assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
                         "unexpected type: " + observer.question);
                 } else if (o instanceof QueryWrittenEvent) {
-                    QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
+                    assertThat(observer.events.poll(), instanceOf(QueryFailedEvent.class));
                 } else if (!(o instanceof QueryFailedEvent)) {
                     fail("unexpected event type: " + o);
                 }
@@ -1213,13 +1213,13 @@ public class DnsNameResolverTest {
             assertEquals(2, observer.events.size());
             QueryWrittenEvent writtenEvent = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServer1Address, writtenEvent.dnsServerAddress);
-            QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
+            assertThat(observer.events.poll(), instanceOf(QueryFailedEvent.class));
 
             observer = lifecycleObserverFactory.observers.poll();
             assertEquals(2, observer.events.size());
             writtenEvent = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServer2.localAddress(), writtenEvent.dnsServerAddress);
-            QuerySucceededEvent succeededEvent = (QuerySucceededEvent) observer.events.poll();
+            assertThat(observer.events.poll(), instanceOf(QuerySucceededEvent.class));
         } finally {
             if (resolver != null) {
                 resolver.close();
@@ -1261,13 +1261,13 @@ public class DnsNameResolverTest {
             assertEquals(2, observer.events.size());
             QueryWrittenEvent writtenEvent = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServer1.localAddress(), writtenEvent.dnsServerAddress);
-            QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
+            assertThat(observer.events.poll(), instanceOf(QueryFailedEvent.class));
 
             observer = lifecycleObserverFactory.observers.poll();
             assertEquals(2, observer.events.size());
             writtenEvent = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServer2.localAddress(), writtenEvent.dnsServerAddress);
-            QuerySucceededEvent succeededEvent = (QuerySucceededEvent) observer.events.poll();
+            assertThat(observer.events.poll(), instanceOf(QuerySucceededEvent.class));
         } finally {
             if (resolver != null) {
                 resolver.close();
@@ -1394,7 +1394,7 @@ public class DnsNameResolverTest {
             assertEquals(dnsServerAuthority.localAddress(), redirectedEvent.nameServers.get(0));
             QueryWrittenEvent writtenEvent2 = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServerAuthority.localAddress(), writtenEvent2.dnsServerAddress);
-            QuerySucceededEvent succeededEvent = (QuerySucceededEvent) observer.events.poll();
+            assertThat(observer.events.poll(), instanceOf(QuerySucceededEvent.class));
 
             if (cache) {
                 assertNull(nsCache.cache.get("io."));
@@ -1418,7 +1418,7 @@ public class DnsNameResolverTest {
                 writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
                 assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
                 assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
-                succeededEvent = (QuerySucceededEvent) observer.events.poll();
+                assertThat(observer.events.poll(), instanceOf(QuerySucceededEvent.class));
 
                 resolver.resolveAll(hostname2).asStage().sync();
 
@@ -1429,7 +1429,7 @@ public class DnsNameResolverTest {
                 writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
                 assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
                 assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
-                succeededEvent = (QuerySucceededEvent) observer.events.poll();
+                assertThat(observer.events.poll(), instanceOf(QuerySucceededEvent.class));
 
                 // Check that it only queried the cache for record.netty.io.
                 assertNull(nsCache.cacheHits.get("io."));
@@ -2015,7 +2015,7 @@ public class DnsNameResolverTest {
             if (o instanceof QueryCancelledEvent) {
                 assertEquals(cancelledType, observer.question.type());
             } else if (o instanceof QueryWrittenEvent) {
-                QuerySucceededEvent succeededEvent = (QuerySucceededEvent) observer.events.poll();
+                assertThat(observer.events.poll(), instanceOf(QuerySucceededEvent.class));
             } else {
                 fail("unexpected event type: " + o);
             }

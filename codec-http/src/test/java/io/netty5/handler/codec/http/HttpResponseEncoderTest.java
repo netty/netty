@@ -73,11 +73,6 @@ public class HttpResponseEncoderTest {
         }
 
         @Override
-        public long transfered() {
-            return 0;
-        }
-
-        @Override
         public long transferred() {
             return 0;
         }

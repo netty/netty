@@ -35,12 +35,6 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
     @Mock
     private ChannelHandlerContext ctx;
 
-    /**
-     * A {@link Buffer} for mocking purposes, largely because it's difficult to allocate to huge buffers.
-     */
-    @Mock
-    private Buffer buffer;
-
     @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);

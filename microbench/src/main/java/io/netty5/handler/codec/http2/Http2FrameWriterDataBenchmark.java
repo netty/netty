@@ -57,7 +57,6 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     private Buffer payload;
     private ChannelHandlerContext ctx;
     private Http2DataWriter writer;
-    private Http2DataWriter oldWriter;
     private BufferAllocator allocator;
 
     @Setup(Level.Trial)

@@ -53,9 +53,6 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
-    private int compressionLevel;
-    private int windowBits;
-    private int memLevel;
     private final Http2Connection.PropertyKey propertyKey;
 
     private final boolean supportsCompressionOptions;
@@ -71,31 +68,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
         this(delegate, defaultCompressionOptions());
-    }
-
-    /**
-     * Create a new {@link CompressorHttp2ConnectionEncoder} instance
-     */
-    @Deprecated
-    public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
-                                            int memLevel) {
-        super(delegate);
-        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
-        this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
-        this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
-
-        propertyKey = connection().newKey();
-        connection().addListener(new Http2ConnectionAdapter() {
-            @Override
-            public void onStreamRemoved(Http2Stream stream) {
-                final Compressor compressor = stream.getProperty(propertyKey);
-                if (compressor != null) {
-                    cleanup(stream, compressor);
-                }
-            }
-        });
-
-        supportsCompressionOptions = false;
     }
 
     /**
@@ -298,7 +270,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 throw new IllegalArgumentException("Unsupported ZlibWrapper: " + wrapper);
             }
         }
-        return ZlibCompressor.newFactory(wrapper, compressionLevel).get();
+        return ZlibCompressor.newFactory(wrapper).get();
     }
 
     /**

@@ -59,14 +59,6 @@ public interface FileRegion extends ReferenceCounted {
 
     /**
      * Returns the bytes which was transferred already.
-     *
-     * @deprecated Use {@link #transferred()} instead.
-     */
-    @Deprecated
-    long transfered();
-
-    /**
-     * Returns the bytes which was transferred already.
      */
     long transferred();
 

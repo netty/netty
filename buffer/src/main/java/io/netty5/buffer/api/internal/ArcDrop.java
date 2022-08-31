@@ -31,7 +31,7 @@ public final class ArcDrop<T> implements Drop<T> {
     }
 
     private final Drop<T> delegate;
-    @SuppressWarnings("FieldMayBeFinal")
+    @SuppressWarnings({ "FieldMayBeFinal", "unused" })
     private volatile int count;
 
     public ArcDrop(Drop<T> delegate) {

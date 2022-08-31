@@ -395,10 +395,6 @@ public final class Http2TestUtil {
         return frameWriter;
     }
 
-    static Promise<Void> anyChannelPromise() {
-        return any(Promise.class);
-    }
-
     static Http2Settings anyHttp2Settings() {
         return any(Http2Settings.class);
     }

@@ -1731,7 +1731,6 @@ public class DefaultChannelPipelineTest {
         }
 
         private void assertExecutor(ChannelHandlerContext ctx, Promise<Void> promise) {
-            final boolean same;
             try {
                 assertEquals(executor.inEventLoop(), ctx.executor().inEventLoop());
             } catch (Throwable cause) {

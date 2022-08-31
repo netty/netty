@@ -106,7 +106,7 @@ final class ChannelOutboundBuffer {
             throw new IllegalStateException();
         }
         assert executor.inEventLoop();
-        Entry entry = Entry.newInstance(msg, size, total(msg), promise);
+        Entry entry = Entry.newInstance(msg, size, promise);
         if (tailEntry == null) {
             flushedEntry = null;
         } else {
@@ -168,16 +168,6 @@ final class ChannelOutboundBuffer {
             // All flushed so reset unflushedEntry
             unflushedEntry = null;
         }
-    }
-
-    private static long total(Object msg) {
-        if (msg instanceof Buffer) {
-            return ((Buffer) msg).readableBytes();
-        }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).count();
-        }
-        return -1;
     }
 
     /**
@@ -384,21 +374,17 @@ final class ChannelOutboundBuffer {
         Entry next;
         Object msg;
         Promise<Void> promise;
-        long progress;
-        long total;
         int pendingSize;
-        int count = -1;
         boolean cancelled;
 
         private Entry(Handle<Entry> handle) {
             this.handle = handle;
         }
 
-        static Entry newInstance(Object msg, int size, long total, Promise<Void> promise) {
+        static Entry newInstance(Object msg, int size, Promise<Void> promise) {
             Entry entry = RECYCLER.get();
             entry.msg = msg;
             entry.pendingSize = size + CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
-            entry.total = total;
             entry.promise = promise;
             return entry;
         }
@@ -413,8 +399,6 @@ final class ChannelOutboundBuffer {
                 msg = null;
 
                 pendingSize = 0;
-                total = 0;
-                progress = 0;
                 return pSize;
             }
             return 0;
@@ -424,10 +408,7 @@ final class ChannelOutboundBuffer {
             next = null;
             msg = null;
             promise = null;
-            progress = 0;
-            total = 0;
             pendingSize = 0;
-            count = -1;
             cancelled = false;
             handle.recycle(this);
         }

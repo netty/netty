@@ -600,7 +600,7 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testCompressThresholdNotCompress() {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(6, 15, 8, 1024));
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(6, 1024));
         assertTrue(ch.writeInbound(newRequest()));
 
         FullHttpResponse res1023 = new DefaultFullHttpResponse(

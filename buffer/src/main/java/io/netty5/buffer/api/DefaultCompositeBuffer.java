@@ -2033,7 +2033,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         int nextIndex;
         ComponentIterator<T> currentItr;
         T currentComponent;
-        int pastOffset;
         int currentReadSkip;
         int currentWriteSkip;
 
@@ -2119,7 +2118,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         @Override
         public BufferComponent skipReadableBytes(int byteCount) {
             currentComponent.skipReadableBytes(byteCount);
-            compositeBuffer.readerOffset(pastOffset + currentReadSkip + byteCount);
+            compositeBuffer.readerOffset(currentReadSkip + byteCount);
             currentReadSkip += byteCount; // This needs to be after the bounds-checks.
             return this;
         }
@@ -2162,7 +2161,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         @Override
         public BufferComponent skipWritableBytes(int byteCount) {
             currentComponent.skipWritableBytes(byteCount);
-            compositeBuffer.writerOffset(pastOffset + currentWriteSkip + byteCount);
+            compositeBuffer.writerOffset(currentWriteSkip + byteCount);
             currentWriteSkip += byteCount; // This needs to be after the bounds-checks.
             return this;
         }

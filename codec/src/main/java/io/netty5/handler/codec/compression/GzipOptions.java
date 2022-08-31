@@ -16,8 +16,7 @@
 package io.netty5.handler.codec.compression;
 
 /**
- * {@link GzipOptions} holds {@link #compressionLevel()},
- * {@link #memLevel()} and {@link #windowBits()} for Gzip compression.
+ * {@link GzipOptions} holds {@link #compressionLevel()} for Gzip compression.
  * This class is an extension of {@link DeflateOptions}
  */
 public final class GzipOptions extends DeflateOptions {
@@ -25,14 +24,12 @@ public final class GzipOptions extends DeflateOptions {
     /**
      * @see StandardCompressionOptions#gzip()
      */
-    static final GzipOptions DEFAULT = new GzipOptions(
-            6, 15, 8
-    );
+    static final GzipOptions DEFAULT = new GzipOptions(6);
 
     /**
-     * @see StandardCompressionOptions#gzip(int, int, int)
+     * @see StandardCompressionOptions#gzip(int)
      */
-    GzipOptions(int compressionLevel, int windowBits, int memLevel) {
-        super(compressionLevel, windowBits, memLevel);
+    GzipOptions(int compressionLevel) {
+        super(compressionLevel);
     }
 }
