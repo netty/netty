@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
@@ -34,7 +33,11 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  */
@@ -186,11 +189,6 @@ public class HttpRequestEncoderTest {
         private final ByteBuf content;
         private final HttpHeaders trailingHeader;
 
-        /**
-         * Used to cache the value of the hash code and avoid {@link IllegalReferenceCountException}.
-         */
-        private int hash;
-
         CustomFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
             this(httpVersion, method, uri, content, true);
         }
@@ -297,40 +295,6 @@ public class HttpRequestEncoderTest {
                     headers().copy(), trailingHeaders().copy());
             request.setDecoderResult(decoderResult());
             return request;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = this.hash;
-            if (hash == 0) {
-                if (ByteBufUtil.isAccessible(content())) {
-                    try {
-                        hash = 31 + content().hashCode();
-                    } catch (IllegalReferenceCountException ignored) {
-                        // Handle race condition between checking refCnt() == 0 and using the object.
-                        hash = 31;
-                    }
-                } else {
-                    hash = 31;
-                }
-                hash = 31 * hash + trailingHeaders().hashCode();
-                hash = 31 * hash + super.hashCode();
-                this.hash = hash;
-            }
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof DefaultFullHttpRequest)) {
-                return false;
-            }
-
-            DefaultFullHttpRequest other = (DefaultFullHttpRequest) o;
-
-            return super.equals(other) &&
-                    content().equals(other.content()) &&
-                    trailingHeaders().equals(other.trailingHeaders());
         }
     }
 
