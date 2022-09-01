@@ -896,7 +896,7 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
     @Override
     public FutureCompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action, Executor executor) {
         requireNonNull(action, "action");
-        return thenCombineAsync(other, (ignoreOtherValue, ignoreError) -> {
+        return thenCombineAsync(other, (ignoreThisValue, ignoreOtherValue) -> {
             action.run();
             return null;
         }, executor);

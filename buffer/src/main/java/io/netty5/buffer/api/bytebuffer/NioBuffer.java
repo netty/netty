@@ -178,7 +178,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer implicitCapacityLimit(int limit) {
-        checkImplicitCapacity(limit,  capacity());
+        checkImplicitCapacity(limit, capacity());
         implicitCapacityLimit = limit;
         return this;
     }
@@ -1132,25 +1132,25 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     private void checkRead(int index, int size) {
-        if (index < 0 | woff < index + size) {
+        if (index < 0 || woff < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkGet(int index, int size) {
-        if (index < 0 | capacity() < index + size) {
+        if (index < 0 || capacity() < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkWrite(int index, int size, boolean mayExpand) {
-        if (index < roff | wmem.capacity() < index + size) {
+        if (index < roff || wmem.capacity() < index + size) {
             handleWriteAccessBoundsFailure(index, size, mayExpand);
         }
     }
 
     private void checkSet(int index, int size) {
-        if (index < 0 | wmem.capacity() < index + size) {
+        if (index < 0 || wmem.capacity() < index + size) {
             handleWriteAccessBoundsFailure(index, size, false);
         }
     }
@@ -1183,7 +1183,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             throw bufferIsReadOnly(this);
         }
         int capacity = capacity();
-        if (mayExpand && index >= 0 && index <= capacity && woff + size <= implicitCapacityLimit && isOwned()) {
+        if (mayExpand && index >= 0 && index <= capacity && index + size <= implicitCapacityLimit && isOwned()) {
             // Grow into next power-of-two, but not beyond the implicit limit.
             int minimumGrowth = Math.min(
                     Math.max(roundToPowerOfTwo(capacity * 2), size),

@@ -302,14 +302,14 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * or {@code length}.
      *
      * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
-     *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
+     *              this buffer will be copied to the {@code destPos} index in the {@code dest} byte buffer.
      * @param dest The destination byte buffer.
-     * @param destPos The index into the {@code dest} array from where the copying should start.
+     * @param destPos The index into the {@code dest} byte buffer from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
-     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination array.
-     * @throws java.nio.ReadOnlyBufferException if the destination buffer is read-only.
+     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination byte buffer.
+     * @throws java.nio.ReadOnlyBufferException if the destination byte buffer is read-only.
      * @throws BufferClosedException if this buffer is closed.
      */
     void copyInto(int srcPos, ByteBuffer dest, int destPos, int length);
@@ -325,13 +325,13 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * or {@code length}.
      *
      * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
-     *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
+     *              this buffer will be copied to the {@code destPos} index in the {@code dest} buffer.
      * @param dest The destination buffer.
-     * @param destPos The index into the {@code dest} array from where the copying should start.
+     * @param destPos The index into the {@code dest} buffer from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
-     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination array.
+     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination buffer.
      * @throws BufferReadOnlyException if the destination buffer is read-only.
      * @throws BufferClosedException if this or the destination buffer is closed.
      */
