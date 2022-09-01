@@ -191,7 +191,8 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
                 ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
 
             if (upgraded) {
-                out.add(ReferenceCountUtil.retain(msg));
+                // HttpObjectEncoder overrides .write and does not release msg, so we don't need to retain it here
+                out.add(msg);
                 return;
             }
 
