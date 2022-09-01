@@ -37,12 +37,25 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
      * it becomes cleanable.
      */
     public static <T extends Buffer> Drop<T> wrap(Drop<T> drop, MemoryManager manager) {
-        return innerWrap(drop, manager);
+        return innerWrap(drop, manager, true);
     }
 
-    private static <T extends Buffer> CleanerDrop<T> innerWrap(Drop<T> drop, MemoryManager manager) {
+    /**
+     * Wrap the given drop instance, and produce a new drop instance that will also call the delegate drop instance if
+     * it becomes cleanable.
+     * <p>
+     * The produced drop will not report to the {@link LeakDetection}, but {@linkplain #fork() forks} of the drop will.
+     * This is used by the {@linkplain BufferAllocator#constBufferSupplier(byte[]) const-buffer suppliers}, which don't
+     * expose any way for them to be closed.
+     */
+    public static <T extends Buffer> Drop<T> wrapWithoutLeakDetection(Drop<T> drop, MemoryManager manager) {
+        return innerWrap(drop, manager, false);
+    }
+
+    private static <T extends Buffer> CleanerDrop<T> innerWrap(
+            Drop<T> drop, MemoryManager manager, boolean detectLeaks) {
         CleanerDrop<T> cleanerDrop = new CleanerDrop<>();
-        GatedRunner<T> runner = new GatedRunner<>(drop, manager);
+        GatedRunner<T> runner = new GatedRunner<>(drop, manager, detectLeaks);
         cleanerDrop.cleanable = InternalBufferUtils.CLEANER.register(cleanerDrop, runner);
         cleanerDrop.runner = runner;
         return cleanerDrop;
@@ -66,7 +79,7 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
 
     @Override
     public Drop<T> fork() {
-        CleanerDrop<T> drop = innerWrap(runner.drop.fork(), runner.manager);
+        CleanerDrop<T> drop = innerWrap(runner.drop.fork(), runner.manager, true);
         drop.runner.tracerFromSplitParent = true;
         drop.runner.tracer = runner.tracer;
         return drop;
@@ -82,13 +95,15 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
         private static final long serialVersionUID = 2685535951915798850L;
         final Drop<T> drop;
         final MemoryManager manager;
+        final boolean detectLeaks;
         volatile boolean dropping;
         volatile boolean tracerFromSplitParent;
         LifecycleTracer tracer;
 
-        private GatedRunner(Drop<T> drop, MemoryManager manager) {
+        private GatedRunner(Drop<T> drop, MemoryManager manager, boolean detectLeaks) {
             this.drop = drop;
             this.manager = manager;
+            this.detectLeaks = detectLeaks;
         }
 
         @SuppressWarnings("unchecked")
@@ -100,7 +115,9 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
                     drop.drop((T) obj);
                 } else {
                     try (Buffer recoveredBuffer = manager.recoverMemory(ALLOC_CONTROL, obj, (Drop<Buffer>) drop)) {
-                        LeakDetection.reportLeak(tracer, "buffer (" + recoveredBuffer.capacity() + " bytes)");
+                        if (detectLeaks) {
+                            LeakDetection.reportLeak(tracer, "buffer (" + recoveredBuffer.capacity() + " bytes)");
+                        }
                     }
                 }
             }

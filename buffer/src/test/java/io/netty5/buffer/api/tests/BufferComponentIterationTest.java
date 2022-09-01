@@ -71,34 +71,33 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     @Test
     public void compositeBufferComponentCountMustBeTransitiveSum() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            Buffer buf;
             try (Buffer a = allocator.allocate(8);
                  Buffer b = allocator.allocate(8);
                  Buffer c = allocator.allocate(8);
-                 Buffer x = allocator.compose(asList(b.send(), c.send()))) {
-                buf = allocator.compose(asList(a.send(), x.send()));
+                 Buffer x = allocator.compose(asList(b.send(), c.send()));
+                 Buffer buf = allocator.compose(asList(a.send(), x.send()))) {
+                assertThat(buf.countComponents()).isEqualTo(3);
+                assertThat(buf.countReadableComponents()).isZero();
+                assertThat(buf.countWritableComponents()).isEqualTo(3);
+                buf.writeInt(1);
+                assertThat(buf.countReadableComponents()).isOne();
+                assertThat(buf.countWritableComponents()).isEqualTo(3);
+                buf.writeInt(1);
+                assertThat(buf.countReadableComponents()).isOne();
+                assertThat(buf.countWritableComponents()).isEqualTo(2);
+                buf.writeInt(1);
+                assertThat(buf.countReadableComponents()).isEqualTo(2);
+                assertThat(buf.countWritableComponents()).isEqualTo(2);
+                buf.writeInt(1);
+                assertThat(buf.countReadableComponents()).isEqualTo(2);
+                assertThat(buf.countWritableComponents()).isOne();
+                buf.writeInt(1);
+                assertThat(buf.countReadableComponents()).isEqualTo(3);
+                assertThat(buf.countWritableComponents()).isOne();
+                buf.writeInt(1);
+                assertThat(buf.countReadableComponents()).isEqualTo(3);
+                assertThat(buf.countWritableComponents()).isZero();
             }
-            assertThat(buf.countComponents()).isEqualTo(3);
-            assertThat(buf.countReadableComponents()).isZero();
-            assertThat(buf.countWritableComponents()).isEqualTo(3);
-            buf.writeInt(1);
-            assertThat(buf.countReadableComponents()).isOne();
-            assertThat(buf.countWritableComponents()).isEqualTo(3);
-            buf.writeInt(1);
-            assertThat(buf.countReadableComponents()).isOne();
-            assertThat(buf.countWritableComponents()).isEqualTo(2);
-            buf.writeInt(1);
-            assertThat(buf.countReadableComponents()).isEqualTo(2);
-            assertThat(buf.countWritableComponents()).isEqualTo(2);
-            buf.writeInt(1);
-            assertThat(buf.countReadableComponents()).isEqualTo(2);
-            assertThat(buf.countWritableComponents()).isOne();
-            buf.writeInt(1);
-            assertThat(buf.countReadableComponents()).isEqualTo(3);
-            assertThat(buf.countWritableComponents()).isOne();
-            buf.writeInt(1);
-            assertThat(buf.countReadableComponents()).isEqualTo(3);
-            assertThat(buf.countWritableComponents()).isZero();
         }
     }
 
@@ -116,16 +115,11 @@ public class BufferComponentIterationTest extends BufferTestSupport {
 
     @Test
     public void forEachComponentMustVisitAllReadableConstituentBuffersInOrder() {
-        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            Buffer composite;
-            try (Buffer a = allocator.allocate(4);
-                 Buffer b = allocator.allocate(4);
-                 Buffer c = allocator.allocate(4)) {
-                a.writeInt(1);
-                b.writeInt(2);
-                c.writeInt(3);
-                composite = allocator.compose(asList(a.send(), b.send(), c.send()));
-            }
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             Buffer a = allocator.allocate(4).writeInt(1);
+             Buffer b = allocator.allocate(4).writeInt(2);
+             Buffer c = allocator.allocate(4).writeInt(3);
+             Buffer composite = allocator.compose(asList(a.send(), b.send(), c.send()))) {
             var list = new LinkedList<Integer>(List.of(1, 2, 3));
             int index = 0;
             try (var iterator = composite.forEachComponent()) {
@@ -320,23 +314,22 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     @Test
     public void forEachComponentMustVisitAllWritableConstituentBuffersInOrder() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            Buffer buf;
             try (Buffer a = allocator.allocate(8);
                  Buffer b = allocator.allocate(8);
-                 Buffer c = allocator.allocate(8)) {
-                buf = allocator.compose(asList(a.send(), b.send(), c.send()));
-            }
-            try (var iterator = buf.forEachComponent()) {
-                int index = 0;
-                for (var component = iterator.first(); component != null; component = component.next()) {
-                    component.writableBuffer().putLong(0x0102030405060708L + 0x1010101010101010L * index);
-                    index++;
+                 Buffer c = allocator.allocate(8);
+                 Buffer buf = allocator.compose(asList(a.send(), b.send(), c.send()))) {
+                try (var iterator = buf.forEachComponent()) {
+                    int index = 0;
+                    for (var component = iterator.first(); component != null; component = component.next()) {
+                        component.writableBuffer().putLong(0x0102030405060708L + 0x1010101010101010L * index);
+                        index++;
+                    }
                 }
+                buf.writerOffset(3 * 8);
+                assertEquals(0x0102030405060708L, buf.readLong());
+                assertEquals(0x1112131415161718L, buf.readLong());
+                assertEquals(0x2122232425262728L, buf.readLong());
             }
-            buf.writerOffset(3 * 8);
-            assertEquals(0x0102030405060708L, buf.readLong());
-            assertEquals(0x1112131415161718L, buf.readLong());
-            assertEquals(0x2122232425262728L, buf.readLong());
         }
     }
 
@@ -450,8 +443,12 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             assertThat(buf.readerOffset()).isEqualTo(5);
             assertThat(buf.readableBytes()).isEqualTo(3);
             assertThat(target.readableBytes()).isEqualTo(5);
-            assertThat(target).isEqualTo(allocator.copyOf(new byte[] {0x01, 0x02, 0x03, 0x04, 0x05}));
-            assertThat(buf).isEqualTo(allocator.copyOf(new byte[] {0x06, 0x07, 0x08}));
+            try (Buffer expected = allocator.copyOf(new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 })) {
+                assertThat(target).isEqualTo(expected);
+            }
+            try (Buffer expected = allocator.copyOf(new byte[] { 0x06, 0x07, 0x08 })) {
+                assertThat(buf).isEqualTo(expected);
+            }
         }
     }
 

@@ -22,7 +22,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.StandardAllocationTypes;
-import io.netty5.buffer.api.internal.ArcDrop;
+import io.netty5.buffer.api.internal.CleanerDrop;
 import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.util.NettyRuntime;
 import io.netty5.util.concurrent.EventExecutor;
@@ -329,7 +329,8 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             throw allocatorClosedException();
         }
         Buffer constantBuffer = manager.allocateShared(
-                pooledAllocatorControl, bytes.length, ArcDrop::wrap, allocationType);
+                pooledAllocatorControl, bytes.length, drop -> CleanerDrop.wrapWithoutLeakDetection(drop, manager),
+                allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }
@@ -586,7 +587,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
      * Trim thread local cache for the current {@link Thread}, which will give back any cached memory that was not
      * allocated frequently since the last trim operation.
      *
-     * Returns {@code true} if a cache for the current {@link Thread} exists and so was trimmed, false otherwise.
+     * @return {@code true} if a cache for the current {@link Thread} exists and so was trimmed, false otherwise.
      */
     public boolean trimCurrentThreadCache() {
         PoolThreadCache cache = threadCache.getIfExists();

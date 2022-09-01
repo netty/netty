@@ -21,6 +21,7 @@ import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.BufferReadOnlyException;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.Drop;
+import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.buffer.api.internal.InternalBufferUtils;
@@ -177,16 +178,17 @@ public class BufferCompositionTest extends BufferTestSupport {
         }
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             Buffer a = allocator.allocate(1);
-            CompositeBuffer composite = allocator.compose(a.send());
-            assertTrue(isOwned((ResourceSupport<?, ?>) composite));
-            assertThat(composite.capacity()).isOne();
-            assertThat(composite.countComponents()).isOne();
-            try (Buffer b = allocator.compose()) {
-                composite.extendWith(b.send());
+            try (CompositeBuffer composite = allocator.compose(a.send())) {
+                assertTrue(isOwned((ResourceSupport<?, ?>) composite));
+                assertThat(composite.capacity()).isOne();
+                assertThat(composite.countComponents()).isOne();
+                try (Buffer b = allocator.compose()) {
+                    composite.extendWith(b.send());
+                }
+                assertTrue(isOwned((ResourceSupport<?, ?>) composite));
+                assertThat(composite.capacity()).isOne();
+                assertThat(composite.countComponents()).isOne();
             }
-            assertTrue(isOwned((ResourceSupport<?, ?>) composite));
-            assertThat(composite.capacity()).isOne();
-            assertThat(composite.countComponents()).isOne();
         }
     }
 
@@ -708,6 +710,9 @@ public class BufferCompositionTest extends BufferTestSupport {
             assertThat(components[2].writableBytes()).isZero();
             assertThat(components[1].readShort()).isEqualTo((short) 0x0506);
             assertThat(components[2].readShort()).isEqualTo((short) 0x0708);
+            for (Buffer component : components) {
+                component.close();
+            }
         }
     }
 

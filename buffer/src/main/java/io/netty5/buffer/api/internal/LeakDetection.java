@@ -45,19 +45,17 @@ public final class LeakDetection {
     // This field is only accessed when leak are detected, or when callbacks are installed or removed.
     private static final Map<Consumer<LeakInfo>, Integer> CALLBACKS = new IdentityHashMap<>();
     private static final Integer INTEGER_ONE = 1;
-
+    private static final boolean ENABLED_BY_PROPERTY = SystemPropertyUtil.getBoolean(
+            "io.netty5.buffer.leakDetectionEnabled", false);
     private static final VarHandle LEAK_DETECTION_ENABLED_UPDATER;
+
     static {
-        int enabled = SystemPropertyUtil.getBoolean("io.netty5.buffer.leakDetectionEnabled", false) ? 1 : 0;
         try {
             LEAK_DETECTION_ENABLED_UPDATER = getLeakDetectionEnabledUpdater();
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);
         }
-        if (enabled > 0) {
-            CALLBACKS.put(LoggingLeakCallback.getInstance(), 1);
-        }
-        leakDetectionEnabled = enabled;
+        leakDetectionEnabled = ENABLED_BY_PROPERTY ? 1 : 0;
     }
 
     private static VarHandle getLeakDetectionEnabledUpdater() throws NoSuchFieldException, IllegalAccessException {
@@ -108,6 +106,9 @@ public final class LeakDetection {
                 for (Consumer<LeakInfo> callback : CALLBACKS.keySet()) {
                     callback.accept(info);
                 }
+            } else if (ENABLED_BY_PROPERTY) {
+                LeakInfo info = new InternalLeakInfo(tracer, leakedObjectDescription);
+                LoggingLeakCallback.getInstance().accept(info);
             }
         }
     }
