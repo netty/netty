@@ -15,22 +15,14 @@
  */
 package io.netty.incubator.codec.quic;
 
-import org.junit.Assume;
-import org.junit.Rule;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
+@Timeout(10)
 public abstract class AbstractQuicTest {
 
-    private static final int TEST_GLOBAL_TIMEOUT_VALUE = Integer.getInteger(
-            "io.netty.incubator.codec.quic.defaultTestTimeout", 10);
-
-    @Rule
-    public final Timeout globalTimeout = Timeout.seconds(TEST_GLOBAL_TIMEOUT_VALUE);
-
     @BeforeAll
-    public static void assumeTrue() {
+    public static void ensureAvailability() {
         Quic.ensureAvailability();
-       Assume.assumeTrue(Quic.isAvailable());
     }
 }

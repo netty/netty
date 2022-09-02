@@ -74,7 +74,7 @@
     <skipTests>false</skipTests>
     <packaging.type>jar</packaging.type>
     <netty.version>4.1.77.Final</netty.version>
-    <netty.build.version>30</netty.build.version>
+    <netty.build.version>31</netty.build.version>
     <commons.codec.version>1.15</commons.codec.version>
     <junit.version>5.7.0</junit.version>
     <test.argLine>-D_</test.argLine>
