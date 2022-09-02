@@ -342,15 +342,17 @@ public class ByteToMessageDecoderTest {
         });
         try (Buffer buf = newBufferWithRandomBytes(allocator)) {
             assertTrue(channel.writeInbound(buf.copy()));
-            try (Buffer b = channel.readInbound()) {
-                assertContentEquals(b, buf.copy(0, buf.readableBytes() - 1));
+            try (Buffer b = channel.readInbound();
+                 Buffer expected = buf.copy(0, buf.readableBytes() - 1)) {
+                assertContentEquals(b, expected);
             }
 
             assertNull(channel.readInbound());
             assertTrue(channel.finish());
 
-            try (Buffer b1 = channel.readInbound()) {
-                assertContentEquals(b1, buf.copy(buf.readableBytes() - 1, 1));
+            try (Buffer b1 = channel.readInbound();
+                 Buffer expected = buf.copy(buf.readableBytes() - 1, 1)) {
+                assertContentEquals(b1, expected);
             }
 
             assertNull(channel.readInbound());
@@ -431,6 +433,7 @@ public class ByteToMessageDecoderTest {
 
         assertSame(cumulation.writeError(), thrown);
         assertTrue(cumulation.isAccessible());
+        cumulation.close();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
@@ -455,6 +458,7 @@ public class ByteToMessageDecoderTest {
         assertSame(newCumulation.writeError(), thrown);
         assertFalse(oldCumulation.isAccessible());
         assertTrue(newCumulation.isAccessible());
+        newCumulation.close();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
@@ -550,12 +554,13 @@ public class ByteToMessageDecoderTest {
         assertEquals((byte) 2, (Byte) channel.readInbound());
         assertEquals((byte) 3, (Byte) channel.readInbound());
         assertEquals((byte) 4, (Byte) channel.readInbound());
-        Buffer buffer5 = channel.readInbound();
-        assertNotNull(buffer5);
-        assertEquals((byte) 5, buffer5.readByte());
-        assertFalse(buffer5.readableBytes() > 0);
-        assertTrue(buffer5.isAccessible());
-        assertFalse(channel.finish());
+        try (Buffer buffer5 = channel.readInbound()) {
+            assertNotNull(buffer5);
+            assertEquals((byte) 5, buffer5.readByte());
+            assertFalse(buffer5.readableBytes() > 0);
+            assertTrue(buffer5.isAccessible());
+            assertFalse(channel.finish());
+        }
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
