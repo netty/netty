@@ -211,6 +211,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                                                  TRAILERS_WEIGHT_HISTORICAL * trailersEncodedSizeAccumulator;
                 out.add(buf);
             }
+            if (contentLength == 0) {
+                // EmptyLastHttpContent or LastHttpContent with empty payload
+                ((LastHttpContent<?>) msg).close();
+            }
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
             // IllegalStateException will be thrown

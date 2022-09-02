@@ -212,6 +212,40 @@ public class HttpRequestEncoderTest {
         assertTrue(channel.finishAndReleaseAll());
     }
 
+    @Test
+    public void testEmptyLastHttpContentClosed() {
+        doTestLastHttpContent(new EmptyLastHttpContent(preferredAllocator()));
+    }
+
+    @Test
+    public void testLastHttpContentWithEmptyPayloadClosed() {
+        doTestLastHttpContent(new DefaultLastHttpContent(preferredAllocator().allocate(0)));
+    }
+
+    @Test
+    public void testLastHttpContentWithPayloadClosed() {
+        doTestLastHttpContent(new DefaultLastHttpContent(preferredAllocator().copyOf("end", US_ASCII)));
+    }
+
+    private static void doTestLastHttpContent(LastHttpContent<?> lastHttpContent) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder());
+
+        DefaultHttpRequest request =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        request.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+
+        DefaultHttpContent content =
+                new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
+
+        assertTrue(channel.writeOutbound(request, content, lastHttpContent));
+
+        assertTrue(channel.finishAndReleaseAll());
+
+        assertFalse(content.isAccessible());
+
+        assertFalse(lastHttpContent.isAccessible());
+    }
+
     /**
      * This class is required to triggered the desired initialization order of {@link EmptyHttpHeaders}.
      * If {@link DefaultHttpRequest} is used, the {@link HttpHeaders} class will be initialized before {@link HttpUtil}
