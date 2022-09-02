@@ -93,7 +93,13 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
 
     @Override
     public Supplier<Buffer> constBufferSupplier(byte[] bytes) {
-        Buffer origin = copyOf(bytes).makeReadOnly();
+        MemoryManager manager = getManager();
+        Buffer origin = manager.allocateShared(
+                control,
+                bytes.length,
+                drop -> CleanerDrop.wrapWithoutLeakDetection(ArcDrop.wrap(new ZeroingDrop(manager, drop)), manager),
+                getAllocationType());
+        origin.writeBytes(bytes).makeReadOnly();
         return () -> origin.copy(true);
     }
 

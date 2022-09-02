@@ -17,12 +17,14 @@ package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.internal.InternalBufferUtils;
+import io.netty5.buffer.api.internal.LeakDetection;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -53,19 +55,23 @@ public class BufferCleanerTest extends BufferTestSupport {
     public void bufferMustBeClosedByCleaner(Fixture fixture) throws InterruptedException {
         var initial = InternalBufferUtils.MEM_USAGE_NATIVE.sum();
         int allocationSize = 1024;
-        allocateAndForget(fixture, allocationSize);
-        long sum = 0;
-        for (int i = 0; i < 15; i++) {
-            System.gc();
-            System.runFinalization();
-            sum = InternalBufferUtils.MEM_USAGE_NATIVE.sum() - initial;
-            if (sum < allocationSize) {
-                // The memory must have been cleaned.
-                return;
+        CountDownLatch leakLatch = new CountDownLatch(1);
+        try (var ignore = LeakDetection.onLeakDetected(ignore1 -> leakLatch.countDown())) {
+            allocateAndForget(fixture, allocationSize);
+            long sum = 0;
+            for (int i = 0; i < 15; i++) {
+                System.gc();
+                System.runFinalization();
+                sum = InternalBufferUtils.MEM_USAGE_NATIVE.sum() - initial;
+                if (sum < allocationSize) {
+                    // The memory must have been cleaned.
+                    return;
+                }
+                produceGarbage(); // Produce a large amount of garbage to give the GC something to work on.
             }
-            produceGarbage(); // Produce a large amount of garbage to give the GC something to work on.
+            leakLatch.await();
+            assertThat(sum).isLessThan(allocationSize);
         }
-        assertThat(sum).isLessThan(allocationSize);
     }
 
     private static void allocateAndForget(Fixture fixture, int size) {

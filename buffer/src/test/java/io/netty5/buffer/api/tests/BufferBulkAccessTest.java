@@ -17,6 +17,7 @@ package io.netty5.buffer.api.tests;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.ResourceSupport;
 import io.netty5.util.Resource;
@@ -151,7 +152,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
                 }
             });
         }
@@ -167,7 +168,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
                 }
             });
         }
@@ -183,7 +184,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
                 }
             });
         }
@@ -199,7 +200,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size).copy();
+                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
                 }
             });
         }

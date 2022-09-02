@@ -15,6 +15,7 @@
  */
 package io.netty5.buffer.api;
 
+import io.netty5.buffer.api.internal.CleanerDrop;
 import io.netty5.buffer.api.internal.InternalBufferUtils;
 import io.netty5.buffer.api.internal.WrappingAllocation;
 
@@ -59,7 +60,7 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
             throw allocatorClosedException();
         }
         Buffer constantBuffer = manager.allocateShared(
-                this, bytes.length, standardDrop(manager), allocationType);
+                this, bytes.length, drop -> CleanerDrop.wrapWithoutLeakDetection(drop, manager), allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }

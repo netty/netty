@@ -123,21 +123,23 @@ public class BufferSendTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(16)) {
             buf.writeInt(64);
-            var splitA = buf.split();
-            buf.writeInt(42);
-            var send = buf.split().send();
-            buf.writeInt(72);
-            var splitB = buf.split();
-            var fut = executor.submit(() -> {
-                try (Buffer receive = send.receive()) {
-                    assertEquals(42, receive.readInt());
+            try (var splitA = buf.split()) {
+                buf.writeInt(42);
+                var send = buf.split().send();
+                buf.writeInt(72);
+                try (var splitB = buf.split()) {
+                    var fut = executor.submit(() -> {
+                        try (Buffer receive = send.receive()) {
+                            assertEquals(42, receive.readInt());
+                        }
+                    });
+                    fut.get();
+                    buf.writeInt(32);
+                    assertEquals(32, buf.readInt());
+                    assertEquals(64, splitA.readInt());
+                    assertEquals(72, splitB.readInt());
                 }
-            });
-            fut.get();
-            buf.writeInt(32);
-            assertEquals(32, buf.readInt());
-            assertEquals(64, splitA.readInt());
-            assertEquals(72, splitB.readInt());
+            }
         }
     }
 
