@@ -194,17 +194,16 @@ final class HpackStaticTable {
         if (value.length() == 0) {
             HeaderNameIndex entry = getEntry(name);
             return entry == null || !entry.emptyValue ? NOT_FOUND : entry.index;
-        } else {
-            int bucket = headerBucket(value);
-            HeaderIndex header = HEADERS_WITH_NON_EMPTY_VALUES[bucket];
-            if (header == null) {
-                return NOT_FOUND;
-            }
-            if (equalsVariableTime(header.name, name) && equalsVariableTime(header.value, value)) {
-                return header.index;
-            }
+        }
+        int bucket = headerBucket(value);
+        HeaderIndex header = HEADERS_WITH_NON_EMPTY_VALUES[bucket];
+        if (header == null) {
             return NOT_FOUND;
         }
+        if (equalsVariableTime(header.name, name) && equalsVariableTime(header.value, value)) {
+            return header.index;
+        }
+        return NOT_FOUND;
     }
 
     private static HeaderNameIndex getEntry(CharSequence name) {
