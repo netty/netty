@@ -32,6 +32,8 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.util.AsciiString;
 
@@ -48,6 +50,7 @@ import static io.netty5.handler.codec.http2.Http2Exception.streamError;
 import static io.netty5.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseudoHeader;
 import static io.netty5.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty5.util.AsciiString.EMPTY_STRING;
+import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
 final class HpackDecoder {
@@ -371,7 +374,8 @@ final class HpackDecoder {
     }
 
     private static HeaderType validate(int streamId, CharSequence name,
-                                       HeaderType previousHeaderType, Http2Headers headers) throws Http2Exception {
+                                       HeaderType previousHeaderType, Http2Headers headers, CharSequence value)
+            throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                 throw streamError(streamId, PROTOCOL_ERROR,
@@ -395,8 +399,48 @@ final class HpackDecoder {
 
             return currentHeaderType;
         }
+        if (isConnectionHeader(name)) {
+            throw streamError(streamId, PROTOCOL_ERROR, "Illegal connection-specific header '%s' encountered.", name);
+        }
+        if (contentEqualsIgnoreCase(name, HttpHeaderNames.TE) &&
+                !contentEqualsIgnoreCase(value, HttpHeaderValues.TRAILERS)) {
+            throw streamError(streamId, PROTOCOL_ERROR,
+                    "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+        }
 
         return HeaderType.REGULAR_HEADER;
+    }
+
+    @SuppressWarnings("deprecation") // We need to check for deprecated headers as well.
+    private static boolean isConnectionHeader(CharSequence name) {
+        // These are the known standard and non-standard connection related headers:
+        // - upgrade (7 chars)
+        // - connection (10 chars)
+        // - keep-alive (10 chars)
+        // - proxy-connection (16 chars)
+        // - transfer-encoding (17 chars)
+        // - upgrade-insecure-requests (25 chars)
+        //
+        // We scan for these based on the length, then double-check any matching name.
+        int len = name.length();
+        if (len < 7 || len > 25) {
+            return false;
+        }
+        if (len <= 10) {
+            if (len == 7 && contentEqualsIgnoreCase(name, HttpHeaderNames.UPGRADE)) {
+                return true;
+            }
+            return len == 10 && (contentEqualsIgnoreCase(name, HttpHeaderNames.CONNECTION) ||
+                                 contentEqualsIgnoreCase(name, HttpHeaderNames.KEEP_ALIVE));
+        }
+        if (len == 17) {
+            // Transfer-Encoding is more common, so check it first.
+            return contentEqualsIgnoreCase(name, HttpHeaderNames.TRANSFER_ENCODING);
+        }
+        if (len == 16) {
+            return contentEqualsIgnoreCase(name, HttpHeaderNames.PROXY_CONNECTION);
+        }
+        return len == 25 && contentEqualsIgnoreCase(name, HttpHeaderNames.UPGRADE_INSECURE_REQUESTS);
     }
 
     private CharSequence readName(int index) throws Http2Exception {
@@ -555,7 +599,7 @@ final class HpackDecoder {
 
             if (validate) {
                 try {
-                    previousType = validate(streamId, name, previousType, headers);
+                    previousType = validate(streamId, name, previousType, headers, value);
                 } catch (Http2Exception ex) {
                     validationException = ex;
                     return;
