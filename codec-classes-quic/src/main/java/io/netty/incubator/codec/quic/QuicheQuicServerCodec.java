@@ -187,6 +187,11 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             scidLen = localConnIdLength;
             ocidAddr = -1;
             ocidLen = -1;
+
+            QuicheQuicChannel existingChannel = getChannel(key);
+            if (existingChannel != null) {
+                return existingChannel;
+            }
         } else {
             scidAddr = Quiche.memoryAddress(dcid) + dcid.readerIndex();
             scidLen = localConnIdLength;
