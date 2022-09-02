@@ -1132,25 +1132,25 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     private void checkRead(int index, int size) {
-        if (index < 0 || woff < index + size) {
+        if (index < 0 | woff < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkGet(int index, int size) {
-        if (index < 0 || capacity() < index + size) {
+        if (index < 0 | capacity() < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkWrite(int index, int size, boolean mayExpand) {
-        if (index < roff || wmem.capacity() < index + size) {
+        if (index < roff | wmem.capacity() < index + size) {
             handleWriteAccessBoundsFailure(index, size, mayExpand);
         }
     }
 
     private void checkSet(int index, int size) {
-        if (index < 0 || wmem.capacity() < index + size) {
+        if (index < 0 | wmem.capacity() < index + size) {
             handleWriteAccessBoundsFailure(index, size, false);
         }
     }

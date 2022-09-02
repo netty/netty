@@ -1296,25 +1296,25 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     private void checkRead(int index, int size) {
-        if (index < 0 || woff < index + size) {
+        if (index < 0 | woff < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkGet(int index, int size) {
-        if (index < 0 || rsize < index + size) {
+        if (index < 0 | rsize < index + size) {
             throw readAccessCheckException(index, size);
         }
     }
 
     private void checkWrite(int index, int size, boolean mayExpand) {
-        if (index < roff || wsize < index + size) {
+        if (index < roff | wsize < index + size) {
             handleWriteAccessBoundsFailure(index, size, mayExpand);
         }
     }
 
     private void checkSet(int index, int size) {
-        if (index < 0 || wsize < index + size) {
+        if (index < 0 | wsize < index + size) {
             handleWriteAccessBoundsFailure(index, size, false);
         }
     }
