@@ -499,13 +499,13 @@ final class HpackDecoder {
     private static boolean isValidHeaderValueAsciiString(AsciiString value) {
         final byte[] array = value.array();
         final int start = value.arrayOffset();
-        byte b = array[start];
+        int b = array[start] & 0xFF;
         if (b < 0x21 || b == 0x7F) {
             return false;
         }
         int length = value.length();
         for (int i = start + 1; i < length; i++) {
-            b = array[i];
+            b = array[i] & 0xFF;
             if (b < 0x20 && b != 0x09 || b == 0x7F) {
                 return false;
             }

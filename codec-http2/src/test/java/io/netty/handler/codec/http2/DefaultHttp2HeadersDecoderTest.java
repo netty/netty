@@ -174,17 +174,26 @@ public class DefaultHttp2HeadersDecoderTest {
     @Test
     public void decodingInvalidHeaderValueMustFailValidation() throws Exception {
         final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\0")));
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b(" ")));
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\t")));
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b(" a")));
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\ta")));
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("a\0")));
+
+        for (int illegalFirstChar = 0; illegalFirstChar < 0x21; illegalFirstChar++) {
+            verifyValidationFails(decoder, encode(b(":method"), b("GET"),
+                    b("test_header"), new byte[]{ (byte) illegalFirstChar, (byte) 'a' }));
+        }
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\u007Fa")));
+
+        for (int illegalSecondChar = 0; illegalSecondChar < 0x21; illegalSecondChar++) {
+            if (illegalSecondChar == ' ' || illegalSecondChar == '\t') {
+                continue; // Space and horizontal tab are not illegal.
+            }
+            verifyValidationFails(decoder, encode(b(":method"), b("GET"),
+                    b("test_header"), new byte[]{ (byte) 'a', (byte) illegalSecondChar }));
+        }
         verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("a\u007F")));
     }
 
     @Test
     public void headerValuesAllowSpaceAfterFirstCharacter() throws Exception {
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
         ByteBuf buf = null;
         try {
             buf = encode(b(":method"), b("GET"), b("test_header"), b("a b"));
@@ -197,6 +206,7 @@ public class DefaultHttp2HeadersDecoderTest {
 
     @Test
     public void headerValuesAllowHorzontalTabAfterFirstCharacter() throws Exception {
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
         ByteBuf buf = null;
         try {
             buf = encode(b(":method"), b("GET"), b("test_header"), b("a\tb"));
@@ -204,6 +214,33 @@ public class DefaultHttp2HeadersDecoderTest {
             assertThat(headers.get("test_header")).isEqualToIgnoringCase("a\tb");
         } finally {
             ReferenceCountUtil.release(buf);
+        }
+    }
+
+    @Test
+    public void headerValuesAllowObsText() throws Exception {
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+        for (int i = 0x80; i <= 0xFF; i++) {
+            // For first character:
+            ByteBuf buf = null;
+            try {
+                byte[] bytes = {(byte) i, 'a'};
+                buf = encode(b(":method"), b("GET"), b("test_header"), bytes);
+                Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
+                assertThat(headers.get("test_header")).isEqualTo(new AsciiString(bytes));
+            } finally {
+                ReferenceCountUtil.release(buf);
+            }
+
+            // For following characters:
+            try {
+                byte[] bytes = {(byte) 'a', (byte) i};
+                buf = encode(b(":method"), b("GET"), b("test_header"), bytes);
+                Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
+                assertThat(headers.get("test_header")).isEqualTo(new AsciiString(bytes));
+            } finally {
+                ReferenceCountUtil.release(buf);
+            }
         }
     }
 
