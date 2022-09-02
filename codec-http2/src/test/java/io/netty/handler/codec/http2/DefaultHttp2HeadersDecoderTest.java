@@ -12,7 +12,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
@@ -138,7 +137,7 @@ public class DefaultHttp2HeadersDecoderTest {
     }
 
     @Test
-    void decodingTrailersTeHeaderMustNotFailValidation() throws Exception {
+    public void decodingTrailersTeHeaderMustNotFailValidation() throws Exception {
         // The TE header is expressly allowed to have the value "trailers".
         ByteBuf buf = null;
         try {

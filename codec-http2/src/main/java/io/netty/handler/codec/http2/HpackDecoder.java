@@ -432,24 +432,18 @@ final class HpackDecoder {
         // - proxy-connection (16 chars)
         // - transfer-encoding (17 chars)
         //
+        // See https://datatracker.ietf.org/doc/html/rfc9113#section-8.2.2
+        // and https://datatracker.ietf.org/doc/html/rfc9110#section-7.6.1
+        // for the list of connection related headers.
+        //
         // We scan for these based on the length, then double-check any matching name.
         int len = name.length();
-        if (len < 7 || len > 25) {
-            return false;
-        }
-        if (len <= 10) {
-            if (len == 7 && contentEqualsIgnoreCase(name, HttpHeaderNames.UPGRADE)) {
-                return true;
-            }
-            return len == 10 && (contentEqualsIgnoreCase(name, HttpHeaderNames.CONNECTION) ||
-                    contentEqualsIgnoreCase(name, HttpHeaderNames.KEEP_ALIVE));
-        }
-        if (len == 17) {
-            // Transfer-Encoding is more common, so check it first.
-            return contentEqualsIgnoreCase(name, HttpHeaderNames.TRANSFER_ENCODING);
-        }
-        if (len == 16) {
-            return contentEqualsIgnoreCase(name, HttpHeaderNames.PROXY_CONNECTION);
+        switch (len) {
+            case 7: return contentEqualsIgnoreCase(name, HttpHeaderNames.UPGRADE);
+            case 10: return contentEqualsIgnoreCase(name, HttpHeaderNames.CONNECTION) ||
+                    contentEqualsIgnoreCase(name, HttpHeaderNames.KEEP_ALIVE);
+            case 16: return contentEqualsIgnoreCase(name, HttpHeaderNames.PROXY_CONNECTION);
+            case 17: return contentEqualsIgnoreCase(name, HttpHeaderNames.TRANSFER_ENCODING);
         }
         return false;
     }
