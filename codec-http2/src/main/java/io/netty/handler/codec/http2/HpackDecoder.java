@@ -36,7 +36,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
-import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
@@ -497,22 +496,37 @@ final class HpackDecoder {
         if (length == 0) {
             return true;
         }
-        final byte[] array;
-        final int start;
         if (value instanceof AsciiString) {
-            AsciiString ascii = (AsciiString) value;
-            array = ascii.array();
-            start = ascii.arrayOffset();
-        } else {
-            array = value.toString().getBytes(CharsetUtil.US_ASCII);
-            start = 0;
+            return isValidHeaderValueAsciiString((AsciiString) value);
         }
+        return isValidHeaderValueCharSequence(value);
+    }
+
+    private static boolean isValidHeaderValueAsciiString(AsciiString value) {
+        final byte[] array = value.array();
+        final int start = value.arrayOffset();
         byte b = array[start];
         if (b < 0x21 || b == 0x7F) {
             return false;
         }
+        int length = value.length();
         for (int i = start + 1; i < length; i++) {
             b = array[i];
+            if (b < 0x20 && b != 0x09 || b == 0x7F) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isValidHeaderValueCharSequence(CharSequence value) {
+        char b = value.charAt(0);
+        if (b < 0x21 || b == 0x7F) {
+            return false;
+        }
+        int length = value.length();
+        for (int i = 1; i < length; i++) {
+            b = value.charAt(i);
             if (b < 0x20 && b != 0x09 || b == 0x7F) {
                 return false;
             }
