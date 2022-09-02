@@ -129,7 +129,7 @@ public final class MessageFormatter {
      * @param arg            The argument to be substituted in place of the formatting anchor
      * @return The formatted message
      */
-    static FormattingTuple format(String messagePattern, Object arg) {
+    public static FormattingTuple format(String messagePattern, Object arg) {
         return arrayFormat(messagePattern, new Object[]{arg});
     }
 
@@ -152,7 +152,7 @@ public final class MessageFormatter {
      *                       anchor
      * @return The formatted message
      */
-    static FormattingTuple format(final String messagePattern,
+    public static FormattingTuple format(final String messagePattern,
                                   Object argA, Object argB) {
         return arrayFormat(messagePattern, new Object[]{argA, argB});
     }
@@ -167,7 +167,7 @@ public final class MessageFormatter {
      *                       anchors
      * @return The formatted message
      */
-    static FormattingTuple arrayFormat(final String messagePattern,
+    public static FormattingTuple arrayFormat(final String messagePattern,
                                        final Object[] argArray) {
         if (argArray == null || argArray.length == 0) {
             return new FormattingTuple(messagePattern, null);
