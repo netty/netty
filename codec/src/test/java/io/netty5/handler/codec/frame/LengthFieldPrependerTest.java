@@ -20,6 +20,7 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.handler.codec.LengthFieldPrepender;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +38,11 @@ public class LengthFieldPrependerTest {
     @BeforeEach
     public void setUp() throws Exception {
         message = DefaultBufferAllocators.onHeapAllocator().copyOf(new byte[] {50});
+    }
+
+    @AfterEach
+    public void tearDown() {
+        message.close();
     }
 
     @Test

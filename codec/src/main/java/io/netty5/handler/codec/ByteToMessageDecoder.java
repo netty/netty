@@ -299,11 +299,18 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
             if (!ctx.isRemoved()) {
                 // Use Unpooled.EMPTY_BUFFER if cumulation become null after calling callDecode(...).
                 // See https://github.com/netty/netty/issues/10802.
-                Buffer buffer = cumulation == null ? ctx.bufferAllocator().allocate(0) : cumulation;
-                decodeLast(ctx, buffer);
+                if (cumulation == null) {
+                    try (Buffer buffer = ctx.bufferAllocator().allocate(0)) {
+                        decodeLast(ctx, buffer);
+                    }
+                } else {
+                    decodeLast(ctx, cumulation);
+                }
             }
         } else {
-            decodeLast(ctx, ctx.bufferAllocator().allocate(0));
+            try (Buffer buffer = ctx.bufferAllocator().allocate(0)) {
+                decodeLast(ctx, buffer);
+            }
         }
     }
 

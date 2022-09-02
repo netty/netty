@@ -553,9 +553,8 @@ public class JdkZlibTest {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
 
         byte[] bytes = "Foo".getBytes(UTF_8);
-        Buffer data = chDecoderGZip.bufferAllocator().copyOf(bytes);
 
-        try {
+        try (Buffer data = chDecoderGZip.bufferAllocator().copyOf(bytes)) {
             try (Buffer deflatedData = chDecoderGZip.bufferAllocator().copyOf(
                     new byte[]{
                             31, -117, // magic number

@@ -53,8 +53,9 @@ public class ByteToMessageCodecTest {
         assertTrue(ch.finish());
         assertEquals(1, (Integer) ch.readInbound());
 
-        try (Buffer buf = ch.readInbound()) {
-            assertEquals(preferredAllocator().copyOf(new byte[] { '0' }), buf);
+        try (Buffer buf = ch.readInbound();
+             Buffer expected = preferredAllocator().copyOf(new byte[] { '0' })) {
+            assertEquals(expected, buf);
         }
         assertNull(ch.readInbound());
         assertNull(ch.readOutbound());
