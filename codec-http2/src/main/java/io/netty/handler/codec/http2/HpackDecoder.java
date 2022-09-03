@@ -416,9 +416,7 @@ final class HpackDecoder {
             throw streamError(streamId, PROTOCOL_ERROR,
                     "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
         }
-        if (!isValidHeaderValue(value)) {
-            throw streamError(streamId, PROTOCOL_ERROR, "Illegal header value given for header '%s'.", name);
-        }
+        verifyValidHeaderValue(streamId, name, value);
 
         return HeaderType.REGULAR_HEADER;
     }
@@ -476,7 +474,8 @@ final class HpackDecoder {
         return false;
     }
 
-    private static boolean isValidHeaderValue(CharSequence value) {
+    private static void verifyValidHeaderValue(int streamId, CharSequence name, CharSequence value)
+            throws Http2Exception {
         // Validate value to field-content rule.
         //  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
         //  field-vchar    = VCHAR / obs-text
@@ -488,44 +487,51 @@ final class HpackDecoder {
         //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
         int length = value.length();
         if (length == 0) {
-            return true;
+            return;
         }
         if (value instanceof AsciiString) {
-            return isValidHeaderValueAsciiString((AsciiString) value);
+            verifyValidHeaderValueAsciiString(streamId, name, (AsciiString) value);
+        } else {
+            verifyValidHeaderValueCharSequence(streamId, name, value);
         }
-        return isValidHeaderValueCharSequence(value);
     }
 
-    private static boolean isValidHeaderValueAsciiString(AsciiString value) {
+    private static void verifyValidHeaderValueAsciiString(int streamId, CharSequence name, AsciiString value)
+            throws Http2Exception {
         final byte[] array = value.array();
         final int start = value.arrayOffset();
         int b = array[start] & 0xFF;
         if (b < 0x21 || b == 0x7F) {
-            return false;
+            throw illegalHeaderValue(streamId, name, b, 0);
         }
         int length = value.length();
         for (int i = start + 1; i < length; i++) {
             b = array[i] & 0xFF;
             if (b < 0x20 && b != 0x09 || b == 0x7F) {
-                return false;
+                throw illegalHeaderValue(streamId, name, b, i - start);
             }
         }
-        return true;
     }
 
-    private static boolean isValidHeaderValueCharSequence(CharSequence value) {
+    private static void verifyValidHeaderValueCharSequence(int streamId, CharSequence name, CharSequence value)
+            throws Http2Exception {
         char b = value.charAt(0);
         if (b < 0x21 || b == 0x7F) {
-            return false;
+            throw illegalHeaderValue(streamId, name, b, 0);
         }
         int length = value.length();
         for (int i = 1; i < length; i++) {
             b = value.charAt(i);
             if (b < 0x20 && b != 0x09 || b == 0x7F) {
-                return false;
+                throw illegalHeaderValue(streamId, name, b, i);
             }
         }
-        return true;
+    }
+
+    private static Http2Exception illegalHeaderValue(int streamId, CharSequence name, int illegalByte, int index) {
+        return streamError(streamId, PROTOCOL_ERROR,
+                "Illegal header value given for header '%s': illegal byte 0x%X at index %s.",
+                name, illegalByte, index);
     }
 
     private CharSequence readName(int index) throws Http2Exception {
