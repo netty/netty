@@ -78,11 +78,13 @@ public final class ChannelHandlerMetadataUtil {
                 return;
             }
 
-            System.err.println("Native Image reflection metadata is required for handlers in this project. " +
-                    "This metadata was not found under " + existingMetadataPath);
-            System.err.println("Please create this file with the following content: ");
-            System.err.println(getMetadataJsonString(handlerMetadata));
-            Assertions.fail();
+            String message = "Native Image reflection metadata is required for handlers in this project. " +
+                    "This metadata was not found under " +
+                    existingMetadataPath +
+                    "\nPlease create this file with the following content: \n" +
+                    getMetadataJsonString(handlerMetadata) +
+                    "\n";
+            Assertions.fail(message);
         }
 
         String existingMetadataJson = "";
@@ -100,22 +102,26 @@ public final class ChannelHandlerMetadataUtil {
         removedMetadata.removeAll(handlerMetadata);
 
         if (!newMetadata.isEmpty() || !removedMetadata.isEmpty()) {
-            System.err.println("In the native-image handler metadata file at " + existingMetadataPath);
+            StringBuilder builder = new StringBuilder();
+            builder.append("In the native-image handler metadata file at ")
+                    .append(existingMetadataPath)
+                    .append("\n");
 
             if (!newMetadata.isEmpty()) {
-                System.err.println("The following new metadata must be added:\n");
-                System.err.println(getMetadataJsonString(newMetadata));
-                System.err.println();
+                builder.append("The following new metadata must be added:\n\n")
+                        .append(getMetadataJsonString(newMetadata))
+                        .append("\n\n");
             }
             if (!removedMetadata.isEmpty()) {
-                System.err.println("The following metadata must be removed:\n");
-                System.err.println(getMetadataJsonString(removedMetadata));
-                System.err.println();
+                builder.append("The following metadata must be removed:\n\n")
+                        .append(getMetadataJsonString(removedMetadata))
+                        .append("\n\n");
             }
 
-            System.err.println("Expected metadata file contents:\n");
-            System.err.println(getMetadataJsonString(handlerMetadata));
-            Assertions.fail();
+            builder.append("Expected metadata file contents:\n\n")
+                    .append(getMetadataJsonString(handlerMetadata))
+                    .append("\n");
+            Assertions.fail(builder.toString());
         }
     }
 
@@ -125,12 +131,10 @@ public final class ChannelHandlerMetadataUtil {
                         .forPackages(packageNames)
                         .filterInputsBy(s -> !s.contains("Test")));
 
-        Set<Class<? extends ChannelHandler>> classes = reflections.getSubTypesOf(ChannelHandler.class);
-        classes = classes.stream()
+        return reflections.getSubTypesOf(ChannelHandler.class).stream()
                 .filter(ChannelHandlerMetadataUtil::isNotTestClass)
                 .filter(clazz -> Stream.of(packageNames).anyMatch(name -> clazz.getName().startsWith(name)))
                 .collect(Collectors.toSet());
-        return classes;
     }
 
     private static boolean isNotTestClass(Class<? extends ChannelHandler> clazz) {
@@ -150,12 +154,12 @@ public final class ChannelHandlerMetadataUtil {
         return gson.toJson(metadataList, HANDLER_METADATA_LIST_TYPE);
     }
 
-    private static class Condition {
+    private static final class Condition {
         Condition(String typeReachable) {
             this.typeReachable = typeReachable;
         }
 
-        String typeReachable;
+        final String typeReachable;
 
         @Override
         public boolean equals(Object o) {
@@ -176,12 +180,12 @@ public final class ChannelHandlerMetadataUtil {
         }
     }
 
-    private static class HandlerMetadata {
-        String name;
+    private static final class HandlerMetadata {
+        final String name;
 
-        Condition condition;
+        final Condition condition;
 
-        boolean queryAllPublicMethods;
+        final boolean queryAllPublicMethods;
 
         HandlerMetadata(String name, Condition condition, boolean queryAllPublicMethods) {
             this.name = name;
