@@ -246,6 +246,30 @@ public class HttpRequestEncoderTest {
         assertFalse(lastHttpContent.isAccessible());
     }
 
+    @Test
+    public void testFullHttpRequestWithEmptyPayloadClosed() {
+        doTestFullHttpRequest(preferredAllocator().allocate(0));
+    }
+
+    @Test
+    public void testFullHttpRequestWithPayloadClosed() {
+        doTestFullHttpRequest(preferredAllocator().copyOf("test", US_ASCII));
+    }
+
+    private static void doTestFullHttpRequest(Buffer payload) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder());
+
+        DefaultFullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", payload);
+        request.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
+
+        assertTrue(channel.writeOutbound(request));
+
+        assertTrue(channel.finishAndReleaseAll());
+
+        assertFalse(payload.isAccessible());
+    }
+
     /**
      * This class is required to triggered the desired initialization order of {@link EmptyHttpHeaders}.
      * If {@link DefaultHttpRequest} is used, the {@link HttpHeaders} class will be initialized before {@link HttpUtil}
