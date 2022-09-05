@@ -140,6 +140,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                         }
 
                         break;
+                    } else {
+                        Resource.dispose(msg);
+                        // do not break, let's fall-through
                     }
 
                     // fall-through!
@@ -210,6 +213,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 trailersEncodedSizeAccumulator = TRAILERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                                                  TRAILERS_WEIGHT_HISTORICAL * trailersEncodedSizeAccumulator;
                 out.add(buf);
+            }
+            if (contentLength == 0) {
+                // EmptyLastHttpContent or LastHttpContent with empty payload
+                ((LastHttpContent<?>) msg).close();
             }
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
