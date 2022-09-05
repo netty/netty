@@ -134,6 +134,8 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         final Buffer payload = last.payload();
         if (payload.readableBytes() > 0 || needFiller) {
             out.add(new DefaultHttp2DataFrame(payload.send(), last.trailingHeaders().isEmpty()));
+        } else {
+            last.close();
         }
         if (!last.trailingHeaders().isEmpty()) {
             Http2Headers headers = HttpConversionUtil.toHttp2Headers(last.trailingHeaders(), validateHeaders);
@@ -163,6 +165,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                 if (res instanceof FullHttpResponse) {
                     final Http2Headers headers = toHttp2Headers(ctx, res);
                     out.add(new DefaultHttp2HeadersFrame(headers, false));
+                    ((FullHttpResponse) res).close();
                     return;
                 } else {
                     throw new EncoderException(

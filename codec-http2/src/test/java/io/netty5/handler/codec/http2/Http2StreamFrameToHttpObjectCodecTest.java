@@ -67,8 +67,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeEmptyFullResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0))));
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
+        assertTrue(ch.writeOutbound(response));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("200"));
@@ -76,14 +77,15 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(response.isAccessible());
     }
 
     @Test
     public void encode100ContinueAsHttp2HeadersFrameThatIsNotEndStream() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE,
-                preferredAllocator().allocate(0))));
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, preferredAllocator().allocate(0));
+        assertTrue(ch.writeOutbound(response));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("100"));
@@ -91,6 +93,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(response.isAccessible());
     }
 
     @Test
@@ -105,7 +108,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testUpgradeNonEmptyFullResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", UTF_8);
-        assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello)));
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello);
+        assertTrue(ch.writeOutbound(response));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("200"));
@@ -118,6 +123,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(response.isAccessible());
     }
 
     @Test
@@ -139,6 +145,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(response.isAccessible());
     }
 
     @Test
@@ -165,6 +172,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(response.isAccessible());
     }
 
     @Test
@@ -195,6 +203,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(content.isAccessible());
     }
 
     @Test
@@ -210,6 +219,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(end.isAccessible());
     }
 
     @Test
@@ -226,6 +236,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(end.isAccessible());
     }
 
     @Test
@@ -242,6 +253,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(trailers.isAccessible());
     }
 
     @Test
@@ -264,6 +276,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
+        assertFalse(trailers.isAccessible());
     }
 
     @Test
