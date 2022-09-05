@@ -1334,7 +1334,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
             throw bufferIsReadOnly(this);
         }
         int capacity = capacity();
-        if (mayExpand && index >= 0 && index <= capacity && index + size <= implicitCapacityLimit && isOwned()) {
+        if (mayExpand && index >= 0 && index <= capacity && woff + size <= implicitCapacityLimit && isOwned()) {
             // Grow into next power-of-two, but not beyond the implicit limit.
             int minimumGrowth = Math.min(
                     Math.max(roundToPowerOfTwo(capacity * 2), size),
