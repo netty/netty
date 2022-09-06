@@ -23,9 +23,6 @@ import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.SensitiveBufferAllocator;
 import io.netty5.buffer.api.internal.LeakDetection;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -86,20 +83,6 @@ public class CleanerDropTest {
         return managers().flatMap(manager -> allocators().map(allocator -> Arguments.of(manager, allocator)));
     }
 
-    private long startNs;
-
-    @BeforeEach
-    public void announceStart(TestInfo info) {
-        System.out.println("Starting test " + info.getDisplayName());
-        startNs = System.nanoTime();
-    }
-
-    @AfterEach
-    public void announceEnd(TestInfo info) {
-        System.out.println("Finished test " + info.getDisplayName() + " in " +
-                TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startNs) + "µs.");
-    }
-
     @ParameterizedTest
     @MethodSource("parameters")
     public void leakedBufferMustBeDroppedByCleanerWhenLeakDetectionIsEnabled(
@@ -107,7 +90,7 @@ public class CleanerDropTest {
         Semaphore leakDetectorSemaphore = new Semaphore(0);
         try (var ignore = LeakDetection.onLeakDetected(ignore1 -> leakDetectorSemaphore.release())) {
             Semaphore leakSemaphore = new Semaphore(0);
-            int count = MemoryManager.using(new LeakTrappingMemoryManager(leakSemaphore, manager), () -> {
+            MemoryManager.using(new LeakTrappingMemoryManager(leakSemaphore, manager), () -> {
                 int counter = 0;
                 try (BufferAllocator allocator = allocatorSupplier.get()) {
                     leakBuffer(allocator);
@@ -116,7 +99,7 @@ public class CleanerDropTest {
                         counter++;
                         assertThat(counter).isLessThan(5000);
                     } while (!tryAcquireForOneMillisecond(leakSemaphore));
-                    return counter;
+                    return null;
                 }
             });
             // Make sure we capture all the buffers we create in this test.
