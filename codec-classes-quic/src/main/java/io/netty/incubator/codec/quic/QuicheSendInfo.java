@@ -19,6 +19,7 @@ import io.netty.util.concurrent.FastThreadLocal;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Utility class to handle access to {@code quiche_send_info}.
@@ -39,6 +40,8 @@ final class QuicheSendInfo {
         }
     };
 
+    private static final byte[] TIMESPEC_ZEROOUT = new byte[Quiche.SIZEOF_TIMESPEC];
+
     private QuicheSendInfo() { }
 
     /**
@@ -47,12 +50,20 @@ final class QuicheSendInfo {
      * @param memory the memory of {@code quiche_send_info}.
      * @return the address that was read.
      */
-    static InetSocketAddress getAddress(ByteBuffer memory) {
+    static InetSocketAddress getToAddress(ByteBuffer memory) {
+        return getAddress(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, Quiche.QUICHE_SEND_INFO_OFFSETOF_TO);
+    }
+
+    static InetSocketAddress getFromAddress(ByteBuffer memory) {
+       return getAddress(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_FROM_LEN, Quiche.QUICHE_SEND_INFO_OFFSETOF_FROM);
+    }
+
+    private static InetSocketAddress getAddress(ByteBuffer memory, int lenOffset, int addressOffset) {
         int position = memory.position();
         try {
-            long len = getLen(memory, position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN);
+            long len = getLen(memory, position + lenOffset);
 
-            memory.position(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO);
+            memory.position(position + addressOffset);
 
             if (len == Quiche.SIZEOF_SOCKADDR_IN) {
                 return SockaddrIn.getIPv4(memory, IPV4_ARRAYS.get());
@@ -65,18 +76,7 @@ final class QuicheSendInfo {
     }
 
     private static long getLen(ByteBuffer memory, int index) {
-        switch (Quiche.SIZEOF_SOCKLEN_T) {
-            case 1:
-                return memory.get(index);
-            case 2:
-                return memory.getShort(index);
-            case 4:
-                return memory.getInt(index);
-            case 8:
-                return memory.getLong(index);
-            default:
-                throw new IllegalStateException();
-        }
+        return Quiche.getPrimitiveValue(memory, index, Quiche.SIZEOF_SOCKLEN_T);
     }
 
     /**
@@ -84,40 +84,73 @@ final class QuicheSendInfo {
      * <pre>
      *
      * typedef struct {
+     *     // The local address the packet should be sent from.
+     *     struct sockaddr_storage from;
+     *     socklen_t from_len;
+     *
      *     // The address the packet should be sent to.
      *     struct sockaddr_storage to;
      *     socklen_t to_len;
+     *
+     *     // The time to send the packet out.
+     *     struct timespec at;
      * } quiche_send_info;
      * </pre>
      *
      * @param memory the memory of {@code quiche_send_info}.
-     * @param address the {@link InetSocketAddress} to write into {@code quiche_send_info}.
+     * @param from the {@link InetSocketAddress} to write into {@code quiche_send_info}.
+     * @param to the {@link InetSocketAddress} to write into {@code quiche_send_info}.
      */
-    static void setSendInfo(ByteBuffer memory, InetSocketAddress address) {
+    static void setSendInfo(ByteBuffer memory, InetSocketAddress from, InetSocketAddress to) {
         int position = memory.position();
-        int sockaddrPosition = position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
         try {
-            memory.position(sockaddrPosition);
-            int len = SockaddrIn.setAddress(memory, address);
-            switch (Quiche.SIZEOF_SOCKLEN_T) {
-                case 1:
-                    memory.put(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, (byte) len);
-                    break;
-                case 2:
-                    memory.putShort(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, (short) len);
-                    break;
-                case 4:
-                    memory.putInt(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, len);
-                    break;
-                case 8:
-                    memory.putLong(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, len);
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
+            setAddress(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_FROM, Quiche.QUICHE_SEND_INFO_OFFSETOF_FROM_LEN, from);
+            setAddress(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_TO, Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, to);
+            // Zero out the timespec.
+            memory.position(position + Quiche.QUICHE_SEND_INFO_OFFSETOF_AT);
+            memory.put(TIMESPEC_ZEROOUT);
         } finally {
             memory.position(position);
         }
+    }
+
+    private static void setAddress(ByteBuffer memory, int addrOffset, int lenOffset, InetSocketAddress addr) {
+        int position = memory.position();
+        try {
+            memory.position(position + addrOffset);
+            int len = SockaddrIn.setAddress(memory, addr);
+            Quiche.setPrimitiveValue(memory, position + lenOffset, Quiche.SIZEOF_SOCKLEN_T, len);
+        } finally {
+            memory.position(position);
+        }
+    }
+
+    /**
+     * Get the {@code timespec} from the {@code quiche_send_info} struct in nanos.
+     * <pre>
+     *
+     * typedef struct {
+     *     // The local address the packet should be sent from.
+     *     struct sockaddr_storage from;
+     *     socklen_t from_len;
+     *
+     *     // The address the packet should be sent to.
+     *     struct sockaddr_storage to;
+     *     socklen_t to_len;
+     *
+     *     // The time to send the packet out.
+     *     struct timespec at;
+     * } quiche_send_info;
+     * </pre>
+     *
+     * @param memory the memory of {@code quiche_send_info}.
+     */
+    static long getAtNanos(ByteBuffer memory) {
+        long sec = Quiche.getPrimitiveValue(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_AT +
+                Quiche.TIMESPEC_OFFSETOF_TV_SEC, Quiche.SIZEOF_TIME_T);
+        long nsec = Quiche.getPrimitiveValue(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_AT +
+                Quiche.TIMESPEC_OFFSETOF_TV_SEC, Quiche.SIZEOF_LONG);
+        return TimeUnit.SECONDS.toNanos(sec) + nsec;
     }
 
     /**
@@ -129,8 +162,6 @@ final class QuicheSendInfo {
      *                  {@code false} otherwise.
      */
     static boolean isSameAddress(ByteBuffer memory, ByteBuffer memory2) {
-        long address1 = Quiche.memoryAddressWithPosition(memory) + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
-        long address2 = Quiche.memoryAddressWithPosition(memory2) + Quiche.QUICHE_SEND_INFO_OFFSETOF_TO;
-        return SockaddrIn.cmp(address1, address2) == 0;
+        return Quiche.isSameAddress(memory, memory2, Quiche.QUICHE_SEND_INFO_OFFSETOF_TO);
     }
 }

@@ -128,11 +128,11 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
     }
 
     private static void assertStats(QuicConnectionStats stats) {
-        assertThat(stats.congestionWindow(), greaterThan(0L));
-        assertThat(stats.deliveryRate(), greaterThan(0L));
+        assertNotNull(stats);
         assertThat(stats.lost(), greaterThanOrEqualTo(0L));
         assertThat(stats.recv(), greaterThan(0L));
-        assertThat(stats.rttNanos(), greaterThan(0L));
         assertThat(stats.sent(), greaterThan(0L));
+        assertThat(stats.sentBytes(), greaterThan(0L));
+        assertThat(stats.recvBytes(), greaterThan(0L));
     }
 }

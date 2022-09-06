@@ -103,13 +103,14 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             channel = getChannel(connectionIdAddressGenerator.newId(dcidByteBuffer, localConnIdLength));
         }
         if (channel == null) {
-            return handleServer(ctx, sender, type, version, scid, dcid, token);
+            return handleServer(ctx, sender, recipient, type, version, scid, dcid, token);
         }
 
         return channel;
     }
 
     private QuicheQuicChannel handleServer(ChannelHandlerContext ctx, InetSocketAddress sender,
+                                           InetSocketAddress recipient,
                                  @SuppressWarnings("unused") QuicPacketType type, int version,
                                  ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
         if (!Quiche.quiche_version_is_supported(version)) {
@@ -203,7 +204,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             key = ByteBuffer.wrap(bytes);
         }
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
-                ctx.channel(), key, sender, config.isDatagramSupported(),
+                ctx.channel(), key, recipient, sender, config.isDatagramSupported(),
                 streamHandler, streamOptionsArray, streamAttrsArray, this::removeChannel);
 
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
@@ -220,9 +221,13 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
         QuicheQuicSslEngine quicSslEngine = (QuicheQuicSslEngine) engine;
         QuicheQuicConnection connection = quicSslEngine.createConnection(ssl -> {
-            ByteBuffer peerAddrMemory = sockaddrMemory.internalNioBuffer(0, sockaddrMemory.capacity());
+            ByteBuffer localAddrMemory = recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity());
+            int localLen = SockaddrIn.setAddress(localAddrMemory, recipient);
+
+            ByteBuffer peerAddrMemory = senderSockaddrMemory.internalNioBuffer(0, senderSockaddrMemory.capacity());
             int peerLen = SockaddrIn.setAddress(peerAddrMemory, sender);
             return Quiche.quiche_conn_new_with_tls(scidAddr, scidLen, ocidAddr, ocidLen,
+                    Quiche.memoryAddressWithPosition(localAddrMemory), localLen,
                     Quiche.memoryAddressWithPosition(peerAddrMemory), peerLen,
                     config.nativeAddress(), ssl, true);
         });

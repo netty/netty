@@ -23,7 +23,8 @@ import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
 final class QuicheQuicConnection {
-    private static final int TOTAL_RECV_INFO_SIZE = Quiche.SIZEOF_QUICHE_RECV_INFO + Quiche.SIZEOF_SOCKADDR_STORAGE;
+    private static final int TOTAL_RECV_INFO_SIZE = Quiche.SIZEOF_QUICHE_RECV_INFO +
+            Quiche.SIZEOF_SOCKADDR_STORAGE + Quiche.SIZEOF_SOCKADDR_STORAGE;
     private final QuicheQuicSslEngine engine;
     final long ssl;
     private ReferenceCounted refCnt;
@@ -124,18 +125,18 @@ final class QuicheQuicConnection {
         return connection;
     }
 
-    void initInfo(InetSocketAddress address) {
+    void initInfo(InetSocketAddress local, InetSocketAddress remote) {
         assert connection != -1;
         assert recvInfoBuffer.refCnt() != 0;
         assert sendInfoBuffer.refCnt() != 0;
 
         // Fill both quiche_recv_info structs with the same address.
-        QuicheRecvInfo.setRecvInfo(recvInfoBuffer1, address);
-        QuicheRecvInfo.setRecvInfo(recvInfoBuffer2, address);
+        QuicheRecvInfo.setRecvInfo(recvInfoBuffer1, remote, local);
+        QuicheRecvInfo.setRecvInfo(recvInfoBuffer2, remote, local);
 
         // Fill both quiche_send_info structs with the same address.
-        QuicheSendInfo.setSendInfo(sendInfoBuffer1, address);
-        QuicheSendInfo.setSendInfo(sendInfoBuffer2, address);
+        QuicheSendInfo.setSendInfo(sendInfoBuffer1, local, remote);
+        QuicheSendInfo.setSendInfo(sendInfoBuffer2, local, remote);
     }
 
     ByteBuffer nextRecvInfo() {

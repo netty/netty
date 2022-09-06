@@ -59,6 +59,8 @@ class QuicCodecBuilderTest {
             field.setBoolean(builder, true);
         } else if (int.class == clazz) {
             field.setInt(builder, -1);
+        } else if (byte[].class == clazz) {
+            field.set(builder, new byte[16]);
         } else {
             throw new IllegalArgumentException("Unknown field type " + clazz);
         }

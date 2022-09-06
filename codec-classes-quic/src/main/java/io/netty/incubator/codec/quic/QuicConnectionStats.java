@@ -35,17 +35,97 @@ public interface QuicConnectionStats {
     long lost();
 
     /**
-     * @return The estimated round-trip time of the connection in nanoseconds.
+     * @return The number of sent QUIC packets with retransmitted data.
      */
-    long rttNanos();
+    long retrans();
 
     /**
-     * @return The size of the connection's congestion window in bytes.
+     * @return The number of sent bytes.
      */
-    long congestionWindow();
+    long sentBytes();
 
     /**
-     * @return The estimated data delivery rate in bytes/s.
+     * @return The number of received bytes.
      */
-    long deliveryRate();
+    long recvBytes();
+
+    /**
+     * @return  The number of bytes lost.
+     */
+    long lostBytes();
+
+    /**
+     * @return  The number of stream bytes retransmitted.
+     */
+    long streamRetransBytes();
+
+    /**
+     * @return   The number of known paths for the connection.
+     */
+    long pathsCount();
+
+    /**
+     * @return   The maximum idle timeout.
+     */
+    long peerMaxIdleTimeout();
+
+    /**
+     * @return   The maximum UDP payload size.
+     */
+    long peerMaxUdpPayloadSize();
+
+    /**
+     * @return   The initial flow control maximum data for the connection.
+     */
+    long peerInitialMaxData();
+
+    /**
+     * @return   The initial flow control maximum data for local bidirectional streams.
+     */
+    long peerInitialMaxStreamDataBidiLocal();
+
+    /**
+     * @return   The initial flow control maximum data for remote bidirectional streams.
+     */
+    long peerInitialMaxStreamDataBidiRemote();
+
+    /**
+     * @return   The initial flow control maximum data for unidirectional streams.
+     */
+    long peerInitialMaxStreamDataUni();
+
+    /**
+     * @return   The initial maximum bidirectional streams.
+     */
+    long peerInitialMaxStreamsBidi();
+
+    /**
+     * @return   The initial maximum unidirectional streams.
+     */
+    long peerInitialMaxStreamsUni();
+
+    /**
+     * @return   The ACK delay exponent.
+     */
+    long peerAckDelayExponent();
+
+    /**
+     * @return   The max ACK delay.
+     */
+    long peerMaxAckDelay();
+
+    /**
+     * @return    Whether active migration is disabled.
+     */
+    boolean peerDisableActiveMigration();
+
+    /**
+     * @return    The active connection ID limit.
+     */
+    long peerActiveConnIdLimit();
+
+    /**
+     * @return    DATAGRAM frame extension parameter, if any.
+     */
+    long peerMaxDatagramFrameSize();
 }

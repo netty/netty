@@ -52,6 +52,9 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private FlushStrategy flushStrategy = FlushStrategy.DEFAULT;
     private Integer recvQueueLen;
     private Integer sendQueueLen;
+    private Long activeConnectionIdLimit;
+    private byte[] statelessResetToken;
+
     // package-private for testing only
     int version;
 
@@ -85,6 +88,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.flushStrategy = builder.flushStrategy;
         this.recvQueueLen = builder.recvQueueLen;
         this.sendQueueLen = builder.sendQueueLen;
+        this.activeConnectionIdLimit = builder.activeConnectionIdLimit;
+        this.statelessResetToken = builder.statelessResetToken;
         this.version = builder.version;
     }
 
@@ -400,13 +405,42 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         return self();
     }
 
+    /**
+     * Allows to configure the {@code active connect id limit} that should be used.
+     *
+     * @param limit     the limit to use.
+     * @return          the instance itself.
+     */
+    public final B activeConnectionIdLimit(long limit) {
+        checkPositive(limit, "limit");
+
+        this.activeConnectionIdLimit = limit;
+        return self();
+    }
+
+
+    /**
+     * Allows to configure the {@code active connect id limit} that should be used.
+     *
+     * @param token     the token to use.
+     * @return          the instance itself.
+     */
+    public final B statelessResetToken(byte[] token) {
+        if (token.length != 16) {
+            throw new IllegalArgumentException("token must be 16 bytes but was " + token.length);
+        }
+
+        this.statelessResetToken = token.clone();
+        return self();
+    }
+
     private QuicheConfig createConfig() {
         return new QuicheConfig(version, grease,
                 maxIdleTimeout, maxSendUdpPayloadSize, maxRecvUdpPayloadSize, initialMaxData,
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
                 ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart,
-                congestionControlAlgorithm, recvQueueLen, sendQueueLen);
+                congestionControlAlgorithm, recvQueueLen, sendQueueLen, activeConnectionIdLimit, statelessResetToken);
     }
 
     /**

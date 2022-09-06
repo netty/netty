@@ -108,15 +108,40 @@ final class Quiche {
     static final int SIZEOF_SOCKLEN_T = QuicheNativeStaticallyReferencedJniMethods.sizeofSocklenT();
     static final int SIZEOF_SIZE_T = QuicheNativeStaticallyReferencedJniMethods.sizeofSizeT();
 
+    static final int SIZEOF_TIMESPEC = QuicheNativeStaticallyReferencedJniMethods.sizeofTimespec();
+
+    static final int SIZEOF_TIME_T = QuicheNativeStaticallyReferencedJniMethods.sizeofTimeT();
+    static final int SIZEOF_LONG = QuicheNativeStaticallyReferencedJniMethods.sizeofLong();
+
+    static final int TIMESPEC_OFFSETOF_TV_SEC =
+            QuicheNativeStaticallyReferencedJniMethods.timespecOffsetofTvSec();
+
+    static final int TIMESPEC_OFFSETOF_TV_NSEC =
+            QuicheNativeStaticallyReferencedJniMethods.timespecOffsetofTvNsec();
+
     static final int QUICHE_RECV_INFO_OFFSETOF_FROM =
             QuicheNativeStaticallyReferencedJniMethods.quicheRecvInfoOffsetofFrom();
     static final int QUICHE_RECV_INFO_OFFSETOF_FROM_LEN =
             QuicheNativeStaticallyReferencedJniMethods.quicheRecvInfoOffsetofFromLen();
+
+    static final int QUICHE_RECV_INFO_OFFSETOF_TO =
+            QuicheNativeStaticallyReferencedJniMethods.quicheRecvInfoOffsetofTo();
+    static final int QUICHE_RECV_INFO_OFFSETOF_TO_LEN =
+            QuicheNativeStaticallyReferencedJniMethods.quicheRecvInfoOffsetofToLen();
+
     static final int SIZEOF_QUICHE_RECV_INFO = QuicheNativeStaticallyReferencedJniMethods.sizeofQuicheRecvInfo();
     static final int QUICHE_SEND_INFO_OFFSETOF_TO =
             QuicheNativeStaticallyReferencedJniMethods.quicheSendInfoOffsetofTo();
     static final int QUICHE_SEND_INFO_OFFSETOF_TO_LEN =
             QuicheNativeStaticallyReferencedJniMethods.quicheSendInfoOffsetofToLen();
+
+    static final int QUICHE_SEND_INFO_OFFSETOF_FROM =
+            QuicheNativeStaticallyReferencedJniMethods.quicheSendInfoOffsetofFrom();
+    static final int QUICHE_SEND_INFO_OFFSETOF_FROM_LEN =
+            QuicheNativeStaticallyReferencedJniMethods.quicheSendInfoOffsetofFromLen();
+
+    static final int QUICHE_SEND_INFO_OFFSETOF_AT =
+            QuicheNativeStaticallyReferencedJniMethods.quicheSendInfoOffsetofAt();
     static final int SIZEOF_QUICHE_SEND_INFO = QuicheNativeStaticallyReferencedJniMethods.sizeofQuicheSendInfo();
 
     static final int QUICHE_PROTOCOL_VERSION = QuicheNativeStaticallyReferencedJniMethods.quiche_protocol_version();
@@ -279,6 +304,7 @@ final class Quiche {
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L229">quiche_conn_new_with_tls</a>.
      */
     static native long quiche_conn_new_with_tls(long scidAddr, int scidLen, long odcidAddr, int odcidLen,
+                                                long localAddr, int localLen,
                                                 long peerAddr, int peerLen,
                                                 long configAddr, long ssl, boolean isServer);
 
@@ -595,6 +621,12 @@ final class Quiche {
     static native void quiche_config_enable_dgram(long configAddr, boolean enable,
                                                   int recv_queue_len, int send_queue_len);
 
+    // Sets the limit of active connection IDs.
+    static native void quiche_config_set_active_connection_id_limit(long configAddr, long value);
+
+    // Sets the initial stateless reset token.
+    static native void quiche_config_set_stateless_reset_token(long configAddr, byte[] token);
+
     /**
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#192">
@@ -691,6 +723,54 @@ final class Quiche {
             promise.setFailure(Quiche.newException(res));
         } else {
             promise.setSuccess();
+        }
+    }
+
+    /**
+     * Returns {@code true} if both {@link ByteBuffer}s have the same {@code sock_addr} stored.
+     *
+     * @param memory    the first {@link ByteBuffer} which holds a {@code quiche_recv_info}.
+     * @param memory2   the second {@link ByteBuffer} which holds a {@code quiche_recv_info}.
+     * @return          {@code true} if both {@link ByteBuffer}s have the same {@code sock_addr} stored, {@code false}
+     *                  otherwise.
+     */
+    static boolean isSameAddress(ByteBuffer memory, ByteBuffer memory2, int addressOffset) {
+        long address1 = Quiche.memoryAddressWithPosition(memory) + addressOffset;
+        long address2 = Quiche.memoryAddressWithPosition(memory2) + addressOffset;
+        return SockaddrIn.cmp(address1, address2) == 0;
+    }
+
+    static void setPrimitiveValue(ByteBuffer memory, int offset, int valueType, long value) {
+        switch (valueType) {
+            case 1:
+                memory.put(offset, (byte) value);
+                break;
+            case 2:
+                memory.putShort(offset, (short) value);
+                break;
+            case 4:
+                memory.putInt(offset, (int) value);
+                break;
+            case 8:
+                memory.putLong(offset, value);
+                break;
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    static long getPrimitiveValue(ByteBuffer memory, int offset, int valueType) {
+        switch (valueType) {
+            case 1:
+                return memory.get(offset);
+            case 2:
+                return memory.getShort(offset);
+            case 4:
+                return memory.getInt(offset);
+            case 8:
+                return memory.getLong(offset);
+            default:
+                throw new IllegalStateException();
         }
     }
 

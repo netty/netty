@@ -25,7 +25,8 @@ final class QuicheConfig {
                         Long initialMaxStreamDataUni, Long initialMaxStreamsBidi, Long initialMaxStreamsUni,
                         Long ackDelayExponent, Long maxAckDelay, Boolean disableActiveMigration, Boolean enableHystart,
                         QuicCongestionControlAlgorithm congestionControlAlgorithm,
-                 Integer recvQueueLen, Integer sendQueueLen) {
+                 Integer recvQueueLen, Integer sendQueueLen,
+                 Long activeConnectionIdLimit, byte[] statelessResetToken) {
         long config = Quiche.quiche_config_new(version);
         try {
             if (grease != null) {
@@ -88,6 +89,12 @@ final class QuicheConfig {
                 Quiche.quiche_config_enable_dgram(config, true, recvQueueLen, sendQueueLen);
             } else {
                 isDatagramSupported = false;
+            }
+            if (activeConnectionIdLimit != null) {
+                Quiche.quiche_config_set_active_connection_id_limit(config, activeConnectionIdLimit);
+            }
+            if (statelessResetToken != null) {
+                Quiche.quiche_config_set_stateless_reset_token(config, statelessResetToken);
             }
             this.config = config;
         } catch (Throwable cause) {

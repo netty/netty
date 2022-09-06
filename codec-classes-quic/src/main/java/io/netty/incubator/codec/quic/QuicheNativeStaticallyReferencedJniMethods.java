@@ -44,9 +44,17 @@ final class QuicheNativeStaticallyReferencedJniMethods {
 
     static native int quicheRecvInfoOffsetofFrom();
     static native int quicheRecvInfoOffsetofFromLen();
+    static native int quicheRecvInfoOffsetofTo();
+    static native int quicheRecvInfoOffsetofToLen();
+
     static native int sizeofQuicheRecvInfo();
     static native int quicheSendInfoOffsetofTo();
     static native int quicheSendInfoOffsetofToLen();
+    static native int quicheSendInfoOffsetofFrom();
+    static native int quicheSendInfoOffsetofFromLen();
+
+    static native int quicheSendInfoOffsetofAt();
+
     static native int sizeofQuicheSendInfo();
 
     static native int afInet();
@@ -66,6 +74,12 @@ final class QuicheNativeStaticallyReferencedJniMethods {
     static native int sizeofSockaddrStorage();
     static native int sizeofSocklenT();
     static native int sizeofSizeT();
+
+    static native int sizeofTimespec();
+    static native int timespecOffsetofTvSec();
+    static native int timespecOffsetofTvNsec();
+    static native int sizeofTimeT();
+    static native int sizeofLong();
 
     private QuicheNativeStaticallyReferencedJniMethods() { }
 }

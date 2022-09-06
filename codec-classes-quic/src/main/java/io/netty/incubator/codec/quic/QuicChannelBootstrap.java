@@ -46,6 +46,8 @@ public final class QuicChannelBootstrap {
     private final Map<AttributeKey<?>, Object> attrs = new HashMap<>();
     private final Map<ChannelOption<?>, Object> streamOptions = new LinkedHashMap<>();
     private final Map<AttributeKey<?>, Object> streamAttrs = new HashMap<>();
+
+    private SocketAddress local;
     private SocketAddress remote;
     private QuicConnectionAddress connectionAddress = QuicConnectionAddress.EPHEMERAL;
     private ChannelHandler handler;
@@ -147,6 +149,17 @@ public final class QuicChannelBootstrap {
     }
 
     /**
+     * Set the local address.
+     *
+     * @param local    the {@link SocketAddress} of the local peer.
+     * @return          this instance.
+     */
+    public QuicChannelBootstrap localAddress(SocketAddress local) {
+        this.local = ObjectUtil.checkNotNull(local, "local");
+        return this;
+    }
+
+    /**
      * Set the remote address of the host to talk to.
      *
      * @param remote    the {@link SocketAddress} of the remote peer.
@@ -200,6 +213,14 @@ public final class QuicChannelBootstrap {
         if (handler == null && streamHandler == null) {
             throw new IllegalStateException("handler and streamHandler not set");
         }
+        SocketAddress local = this.local;
+        if (local == null) {
+            local = parent.localAddress();
+        }
+        if (local == null) {
+            local = new InetSocketAddress(0);
+        }
+
         SocketAddress remote = this.remote;
         if (remote == null) {
             remote = parent.remoteAddress();
@@ -207,8 +228,10 @@ public final class QuicChannelBootstrap {
         if (remote == null) {
             throw new IllegalStateException("remote not set");
         }
+
         final QuicConnectionAddress address = connectionAddress;
-        QuicChannel channel = QuicheQuicChannel.forClient(parent, (InetSocketAddress) remote,
+        QuicChannel channel = QuicheQuicChannel.forClient(parent, (InetSocketAddress)  local,
+                (InetSocketAddress) remote,
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs),
                 earlyDataSendCallback);
 

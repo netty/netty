@@ -33,41 +33,39 @@ final class QuicheRecvInfo {
      * typedef struct {
      *     struct sockaddr *from;
      *     socklen_t from_len;
+     *     struct sockaddr *to;
+     *     socklen_t to_len;
      * } quiche_recv_info;
      * </pre>
      *
      * @param memory the memory of {@code quiche_recv_info}.
-     * @param address the {@link InetSocketAddress} to write into {@code quiche_recv_info}.
+     * @param from the {@link InetSocketAddress} to write into {@code quiche_recv_info}.
+     * @param to the {@link InetSocketAddress} to write into {@code quiche_recv_info}.
      */
-    static void setRecvInfo(ByteBuffer memory, InetSocketAddress address) {
+    static void setRecvInfo(ByteBuffer memory, InetSocketAddress from, InetSocketAddress to) {
         int position = memory.position();
         try {
-            int sockaddrPosition = position + Quiche.SIZEOF_QUICHE_RECV_INFO;
-            memory.position(sockaddrPosition);
+            setAddress(memory, Quiche.SIZEOF_QUICHE_RECV_INFO, Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM, Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM_LEN, from);
+            setAddress(memory, Quiche.SIZEOF_QUICHE_RECV_INFO + Quiche.SIZEOF_SOCKADDR_STORAGE,
+                    Quiche.QUICHE_RECV_INFO_OFFSETOF_TO, Quiche.QUICHE_RECV_INFO_OFFSETOF_TO_LEN, to);
+        } finally {
+            memory.position(position);
+        }
+    }
 
+    private static void setAddress(ByteBuffer memory, int socketAddressOffset, int addrOffset, int lenOffset, InetSocketAddress address) {
+        int position = memory.position();
+        try {
+            int sockaddrPosition = position +socketAddressOffset;
+            memory.position(sockaddrPosition);
             long sockaddrMemoryAddress = Quiche.memoryAddressWithPosition(memory);
             int len = SockaddrIn.setAddress(memory, address);
             if (Quiche.SIZEOF_SIZE_T == 4) {
-                memory.putInt(position + Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM, (int) sockaddrMemoryAddress);
+                memory.putInt(position + addrOffset, (int) sockaddrMemoryAddress);
             } else {
-                memory.putLong(position + Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM, sockaddrMemoryAddress);
+                memory.putLong(position + addrOffset, sockaddrMemoryAddress);
             }
-            switch (Quiche.SIZEOF_SOCKLEN_T) {
-                case 1:
-                    memory.put(position + Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM_LEN, (byte) len);
-                    break;
-                case 2:
-                    memory.putShort(position + Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM_LEN, (short) len);
-                    break;
-                case 4:
-                    memory.putInt(position + Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM_LEN, len);
-                    break;
-                case 8:
-                    memory.putLong(position + Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM_LEN, len);
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
+            Quiche.setPrimitiveValue(memory, position + lenOffset, Quiche.SIZEOF_SOCKLEN_T, len);
         } finally {
             memory.position(position);
         }
@@ -82,8 +80,6 @@ final class QuicheRecvInfo {
      *                  otherwise.
      */
     static boolean isSameAddress(ByteBuffer memory, ByteBuffer memory2) {
-        long address1 = Quiche.memoryAddressWithPosition(memory) + Quiche.SIZEOF_QUICHE_RECV_INFO;
-        long address2 = Quiche.memoryAddressWithPosition(memory2) + Quiche.SIZEOF_QUICHE_RECV_INFO;
-        return SockaddrIn.cmp(address1, address2) == 0;
+        return Quiche.isSameAddress(memory, memory2, Quiche.SIZEOF_QUICHE_RECV_INFO);
     }
 }
