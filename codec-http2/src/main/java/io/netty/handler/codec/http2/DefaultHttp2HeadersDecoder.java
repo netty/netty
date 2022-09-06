@@ -189,7 +189,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      * {@linkplain #validateHeaders() headers}.
      * @return {@code true} if the header values should be validated as a result of the decode operation.
      */
-    protected final boolean validateHeaderValues() {
+    protected boolean validateHeaderValues() { // Not 'final' due to backwards compatibility.
         return validateHeaderValues;
     }
 
