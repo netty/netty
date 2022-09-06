@@ -151,7 +151,7 @@ public class DefaultHttp2HeadersDecoderTest {
 
     @Test
     public void decodingConnectionRelatedHeadersMustFailValidation() throws Exception {
-        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true, true);
         // Standard connection related headers
         verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("keep-alive"), b("timeout=5")));
         verifyValidationFails(decoder, encode(b(":method"), b("GET"),
@@ -173,7 +173,7 @@ public class DefaultHttp2HeadersDecoderTest {
 
     @Test
     public void decodingInvalidHeaderValueMustFailValidation() throws Exception {
-        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true, true);
 
         for (int illegalFirstChar = 0; illegalFirstChar < 0x21; illegalFirstChar++) {
             verifyValidationFails(decoder, encode(b(":method"), b("GET"),

@@ -127,7 +127,13 @@ final class HpackDecoder {
      * This method assumes the entire header block is contained in {@code in}.
      */
     public void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
-        Http2HeadersSink sink = new Http2HeadersSink(streamId, headers, maxHeaderListSize, validateHeaders);
+        decode(streamId, in, headers, validateHeaders, false);
+    }
+
+    public void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders,
+                       boolean validateHeaderValues) throws Http2Exception {
+        Http2HeadersSink sink = new Http2HeadersSink(
+                streamId, headers, maxHeaderListSize, validateHeaders, validateHeaderValues);
         decode(in, sink);
 
         // Now that we've read all of our headers we can perform the validation steps. We must
@@ -382,8 +388,9 @@ final class HpackDecoder {
         hpackDynamicTable.setCapacity(dynamicTableSize);
     }
 
-    private static HeaderType validate(int streamId, CharSequence name,
-                                       HeaderType previousHeaderType, Http2Headers headers, CharSequence value)
+    private static HeaderType validate(
+            int streamId, CharSequence name, HeaderType previousHeaderType, Http2Headers headers,
+            CharSequence value, boolean validateHeaderValues)
             throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
@@ -411,12 +418,14 @@ final class HpackDecoder {
         if (isConnectionHeader(name)) {
             throw streamError(streamId, PROTOCOL_ERROR, "Illegal connection-specific header '%s' encountered.", name);
         }
-        if (contentEqualsIgnoreCase(name, HttpHeaderNames.TE) &&
-                !contentEqualsIgnoreCase(value, HttpHeaderValues.TRAILERS)) {
-            throw streamError(streamId, PROTOCOL_ERROR,
-                    "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+        if (validateHeaderValues) {
+            if (contentEqualsIgnoreCase(name, HttpHeaderNames.TE) &&
+                    !contentEqualsIgnoreCase(value, HttpHeaderValues.TRAILERS)) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+            }
+            verifyValidHeaderValue(streamId, name, value);
         }
-        verifyValidHeaderValue(streamId, name, value);
 
         return HeaderType.REGULAR_HEADER;
     }
@@ -656,17 +665,20 @@ final class HpackDecoder {
         private final Http2Headers headers;
         private final long maxHeaderListSize;
         private final int streamId;
-        private final boolean validate;
+        private final boolean validateHeaders;
+        private final boolean validateHeaderValues;
         private long headersLength;
         private boolean exceededMaxLength;
         private HeaderType previousType;
         private Http2Exception validationException;
 
-        Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validate) {
+        Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validateHeaders,
+                         boolean validateHeaderValues) {
             this.headers = headers;
             this.maxHeaderListSize = maxHeaderListSize;
             this.streamId = streamId;
-            this.validate = validate;
+            this.validateHeaders = validateHeaders;
+            this.validateHeaderValues = validateHeaderValues;
         }
 
         @Override
@@ -688,15 +700,14 @@ final class HpackDecoder {
                 return;
             }
 
-            if (validate) {
-                try {
-                    previousType = validate(streamId, name, previousType, headers, value);
-                } catch (Http2Exception ex) {
-                    validationException = ex;
-                    return;
+            try {
+                if (validateHeaders) {
+                    previousType = validate(streamId, name, previousType, headers, value, validateHeaderValues);
                 }
+                headers.add(name, value);
+            } catch (Http2Exception ex) {
+                validationException = ex;
             }
-            headers.add(name, value);
         }
     }
 }
