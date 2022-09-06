@@ -335,7 +335,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     @Override
     public long bytesBeforeUnwritable() {
-        return capacity;
+        // Capacity might be negative if the stream was closed.
+        return Math.max(capacity, 0);
     }
 
     @Override
