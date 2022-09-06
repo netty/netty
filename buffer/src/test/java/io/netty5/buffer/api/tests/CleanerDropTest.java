@@ -23,6 +23,10 @@ import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.SensitiveBufferAllocator;
 import io.netty5.buffer.api.internal.LeakDetection;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -41,6 +45,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Timeout(value = 10, unit = TimeUnit.MINUTES)
 @Isolated
 public class CleanerDropTest {
     static Stream<MemoryManager> managers() {
@@ -79,6 +84,20 @@ public class CleanerDropTest {
 
     static Stream<Arguments> parameters() {
         return managers().flatMap(manager -> allocators().map(allocator -> Arguments.of(manager, allocator)));
+    }
+
+    private long startNs;
+
+    @BeforeEach
+    public void announceStart(TestInfo info) {
+        System.out.println("Starting test " + info.getDisplayName());
+        startNs = System.nanoTime();
+    }
+
+    @AfterEach
+    public void announceEnd(TestInfo info) {
+        System.out.println("Finished test " + info.getDisplayName() + " in " +
+                TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startNs) + "µs.");
     }
 
     @ParameterizedTest
@@ -154,7 +173,7 @@ public class CleanerDropTest {
 
     private static void leakConstBufferSupplier(BufferAllocator allocator) {
         // The allocation of the supplier itself will likely require an internal buffer to be allocated,
-        // to capture a snapshot of the input array, and for use in structural sharign.
+        // to capture a snapshot of the input array, and for use in structural sharing.
         // This buffer cannot be closed, so we cannot reasonably consider it to be leaked.
         // Buffers allocated from the supplier, however, could leak. Hence, we only allocate the supplier.
         allocator.constBufferSupplier(new byte[128]);
