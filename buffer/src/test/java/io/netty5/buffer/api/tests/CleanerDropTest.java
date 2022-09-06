@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Isolated
 public class CleanerDropTest {
@@ -100,7 +101,8 @@ public class CleanerDropTest {
                 }
             });
             // Make sure we capture all the buffers we create in this test.
-            leakDetectorSemaphore.acquire(count);
+            assertTrue(leakDetectorSemaphore.tryAcquire(count, 5, TimeUnit.MINUTES),
+                    "Not all leaked objects were captured by the leak detector.");
         }
     }
 
