@@ -120,7 +120,7 @@ public class CleanerDropTest {
                 }
             });
             // Make sure we capture all the buffers we create in this test.
-            assertTrue(leakDetectorSemaphore.tryAcquire(count, 5, TimeUnit.MINUTES),
+            assertTrue(leakDetectorSemaphore.tryAcquire(1, 5, TimeUnit.MINUTES),
                     "Not all leaked objects were captured by the leak detector.");
         }
     }
