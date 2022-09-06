@@ -196,6 +196,7 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     buf.writeByte((byte) (byteData ^ mask[counter++ % 4]));
                 }
                 out.add(buf);
+                data.close();
             } else {
                 if (buf.writableBytes() >= data.readableBytes()) {
                     // merge buffers as this is cheaper then a gathering write if the payload is small enough
@@ -210,6 +211,9 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         } catch (Throwable t) {
             if (buf != null) {
                 buf.close();
+            }
+            if (data.isAccessible()) {
+                data.close();
             }
             throw t;
         }

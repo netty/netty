@@ -343,7 +343,8 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(client.writeInbound((Buffer) server.readOutbound()));
 
         // When client channel closed with explicit close-frame
-        assertTrue(client.writeOutbound(new CloseWebSocketFrame(client.bufferAllocator(), closeStatus)));
+        CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(client.bufferAllocator(), closeStatus);
+        assertTrue(client.writeOutbound(closeFrame));
         client.close();
 
         // Then client receives provided close-frame
@@ -357,6 +358,7 @@ public class WebSocketServerProtocolHandlerTest {
 
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());
+        assertFalse(closeFrame.isAccessible());
     }
 
     @Test
