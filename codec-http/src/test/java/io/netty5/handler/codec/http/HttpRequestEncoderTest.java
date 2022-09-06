@@ -262,7 +262,7 @@ public class HttpRequestEncoderTest {
 
         DefaultFullHttpRequest request =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", payload);
-        request.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
+        request.headers().set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(payload.readableBytes()));
 
         assertTrue(channel.writeOutbound(request));
 
