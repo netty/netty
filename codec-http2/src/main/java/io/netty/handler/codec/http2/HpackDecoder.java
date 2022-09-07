@@ -147,7 +147,7 @@ final class HpackDecoder {
         int valueLength = 0;
         byte state = READ_HEADER_REPRESENTATION;
         boolean huffmanEncoded = false;
-        CharSequence name = null;
+        AsciiString name = null;
         IndexType indexType = IndexType.NONE;
         while (in.isReadable()) {
             switch (state) {
@@ -168,7 +168,9 @@ final class HpackDecoder {
                                 break;
                             default:
                                 HpackHeaderField indexedHeader = getIndexedHeader(index);
-                                sink.appendToHeaderList(indexedHeader.name, indexedHeader.value);
+                                sink.appendToHeaderList(
+                                        (AsciiString) indexedHeader.name,
+                                        (AsciiString) indexedHeader.value);
                         }
                     } else if ((b & 0x40) == 0x40) {
                         // Literal Header Field with Incremental Indexing
@@ -223,7 +225,9 @@ final class HpackDecoder {
 
                 case READ_INDEXED_HEADER:
                     HpackHeaderField indexedHeader = getIndexedHeader(decodeULE128(in, index));
-                    sink.appendToHeaderList(indexedHeader.name, indexedHeader.value);
+                    sink.appendToHeaderList(
+                            (AsciiString) indexedHeader.name,
+                            (AsciiString) indexedHeader.value);
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
@@ -296,7 +300,7 @@ final class HpackDecoder {
                         throw notEnoughDataException(in);
                     }
 
-                    CharSequence value = readStringLiteral(in, valueLength, huffmanEncoded);
+                    AsciiString value = readStringLiteral(in, valueLength, huffmanEncoded);
                     insertHeader(sink, name, value, indexType);
                     state = READ_HEADER_REPRESENTATION;
                     break;
@@ -380,7 +384,7 @@ final class HpackDecoder {
     }
 
     private static HeaderType validateHeader(
-            int streamId, CharSequence name, HeaderType previousHeaderType, Http2Headers headers, CharSequence value)
+            int streamId, AsciiString name, HeaderType previousHeaderType, Http2Headers headers, AsciiString value)
             throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
@@ -418,7 +422,7 @@ final class HpackDecoder {
     }
 
     @SuppressWarnings("deprecation") // We need to check for deprecated headers as well.
-    private static boolean isConnectionHeader(CharSequence name) {
+    private static boolean isConnectionHeader(AsciiString name) {
         // These are the known standard connection related headers:
         // - upgrade (7 chars)
         // - connection (10 chars)
@@ -442,7 +446,7 @@ final class HpackDecoder {
         return false;
     }
 
-    private static boolean contains(Http2Headers headers, CharSequence name) {
+    private static boolean contains(Http2Headers headers, AsciiString name) {
         if (headers == EmptyHttp2Headers.INSTANCE) {
             return false;
         }
@@ -470,7 +474,7 @@ final class HpackDecoder {
         return false;
     }
 
-    private static void validateValidHeaderValue(int streamId, CharSequence name, CharSequence value)
+    private static void validateValidHeaderValue(int streamId, AsciiString name, AsciiString value)
             throws Http2Exception {
         // Validate value to field-content rule.
         //  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
@@ -485,14 +489,10 @@ final class HpackDecoder {
         if (length == 0) {
             return;
         }
-        if (value instanceof AsciiString) {
-            verifyValidHeaderValueAsciiString(streamId, name, (AsciiString) value);
-        } else {
-            verifyValidHeaderValueCharSequence(streamId, name, value);
-        }
+        verifyValidHeaderValueAsciiString(streamId, name, value);
     }
 
-    private static void verifyValidHeaderValueAsciiString(int streamId, CharSequence name, AsciiString value)
+    private static void verifyValidHeaderValueAsciiString(int streamId, AsciiString name, AsciiString value)
             throws Http2Exception {
         final byte[] array = value.array();
         final int start = value.arrayOffset();
@@ -509,35 +509,20 @@ final class HpackDecoder {
         }
     }
 
-    private static void verifyValidHeaderValueCharSequence(int streamId, CharSequence name, CharSequence value)
-            throws Http2Exception {
-        char b = value.charAt(0);
-        if (b < 0x21 || b == 0x7F) {
-            throw illegalHeaderValue(streamId, name, b, 0);
-        }
-        int length = value.length();
-        for (int i = 1; i < length; i++) {
-            b = value.charAt(i);
-            if (b < 0x20 && b != 0x09 || b == 0x7F) {
-                throw illegalHeaderValue(streamId, name, b, i);
-            }
-        }
-    }
-
-    private static Http2Exception illegalHeaderValue(int streamId, CharSequence name, int illegalByte, int index) {
+    private static Http2Exception illegalHeaderValue(int streamId, AsciiString name, int illegalByte, int index) {
         return streamError(streamId, PROTOCOL_ERROR,
                 "Illegal header value given for header '%s': illegal byte 0x%X at index %s.",
                 name, illegalByte, index);
     }
 
-    private CharSequence readName(int index) throws Http2Exception {
+    private AsciiString readName(int index) throws Http2Exception {
         if (index <= HpackStaticTable.length) {
             HpackHeaderField hpackHeaderField = HpackStaticTable.getEntry(index);
-            return hpackHeaderField.name;
+            return (AsciiString) hpackHeaderField.name;
         }
         if (index - HpackStaticTable.length <= hpackDynamicTable.length()) {
             HpackHeaderField hpackHeaderField = hpackDynamicTable.getEntry(index - HpackStaticTable.length);
-            return hpackHeaderField.name;
+            return (AsciiString) hpackHeaderField.name;
         }
         throw READ_NAME_ILLEGAL_INDEX_VALUE;
     }
@@ -552,7 +537,7 @@ final class HpackDecoder {
         throw INDEX_HEADER_ILLEGAL_INDEX_VALUE;
     }
 
-    private void insertHeader(Http2HeadersSink sink, CharSequence name, CharSequence value, IndexType indexType) {
+    private void insertHeader(Http2HeadersSink sink, AsciiString name, AsciiString value, IndexType indexType) {
         sink.appendToHeaderList(name, value);
 
         switch (indexType) {
@@ -569,7 +554,7 @@ final class HpackDecoder {
         }
     }
 
-    private CharSequence readStringLiteral(ByteBuf in, int length, boolean huffmanEncoded) throws Http2Exception {
+    private AsciiString readStringLiteral(ByteBuf in, int length, boolean huffmanEncoded) throws Http2Exception {
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
         }
@@ -671,7 +656,7 @@ final class HpackDecoder {
             }
         }
 
-        void appendToHeaderList(CharSequence name, CharSequence value) {
+        void appendToHeaderList(AsciiString name, AsciiString value) {
             headersLength += HpackHeaderField.sizeOf(name, value);
             exceededMaxLength |= headersLength > maxHeaderListSize;
 
