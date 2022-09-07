@@ -55,9 +55,10 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     /**
      * Create a new instance.
      *
-     * @param validateHeaders      {@code true} to validate headers are valid according to the RFC.
-     * @param validateHeaderValues {@code true} to additionally validate that header values are valid according to the
-     *                             RFC. This has no effect if {@code validateHeaders} is {@code false}.
+     * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
+     * This validates everything except header values.
+     * @param validateHeaderValues {@code true} to validate that header <em>values</em> are valid according to the RFC.
+     * Since this is potentially expensive, it can be enabled separately from {@code validateHeaders}.
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, boolean validateHeaderValues) {
         this(validateHeaders, validateHeaderValues, DEFAULT_HEADER_LIST_SIZE);
@@ -78,8 +79,9 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     /**
      * Create a new instance.
      * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
-     * @param validateHeaderValues {@code true} to additionally validate that header values are valid according to the
-     *                                        RFC. This has no effect if {@code validateHeaders} is {@code false}.
+     * This validates everything except header values.
+     * @param validateHeaderValues {@code true} to validate that header <em>values</em> are valid according to the RFC.
+     * Since this is potentially expensive, it can be enabled separately from {@code validateHeaders}.
      * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
      *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
@@ -92,6 +94,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     /**
      * Create a new instance.
      * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
+     * This validates everything except header values.
      * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
      *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
@@ -178,6 +181,10 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
 
     /**
      * Determines if the headers should be validated as a result of the decode operation.
+     * <p>
+     * <strong>Note:</strong> This does not include validation of header <em>values</em>, since that is potentially
+     * expensive to do. Value validation is instead {@linkplain #validateHeaderValues() enabled separately}.
+     *
      * @return {@code true} if the headers should be validated as a result of the decode operation.
      */
     protected final boolean validateHeaders() {
@@ -185,8 +192,11 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     }
 
     /**
-     * Determines if the header values should be validated as a result of the decode operation, in addition to the
-     * {@linkplain #validateHeaders() headers}.
+     * Determines if the header values should be validated as a result of the decode operation.
+     * <p>
+     * <strong>Note:</strong> This <em>only</em> validates the values of headers. All other header validations are
+     * instead {@linkplain #validateHeaders() enabled separately}.
+     *
      * @return {@code true} if the header values should be validated as a result of the decode operation.
      */
     protected boolean validateHeaderValues() { // Not 'final' due to backwards compatibility.
