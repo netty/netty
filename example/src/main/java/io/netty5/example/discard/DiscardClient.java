@@ -24,29 +24,21 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.example.util.ServerUtil;
 import io.netty5.handler.ssl.SslContext;
-import io.netty5.handler.ssl.SslContextBuilder;
-import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
  * Keeps sending random data to the specified address.
  */
 public final class DiscardClient {
 
-    static final boolean SSL = System.getProperty("ssl") != null;
     static final String HOST = System.getProperty("host", "127.0.0.1");
     static final int PORT = Integer.parseInt(System.getProperty("port", "8009"));
     static final int SIZE = Integer.parseInt(System.getProperty("size", "256"));
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
-        final SslContext sslCtx;
-        if (SSL) {
-            sslCtx = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-        } else {
-            sslCtx = null;
-        }
+        final SslContext sslCtx = ServerUtil.buildSslContext();
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {

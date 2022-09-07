@@ -21,9 +21,8 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.example.util.ServerUtil;
 import io.netty5.handler.ssl.SslContext;
-import io.netty5.handler.ssl.SslContextBuilder;
-import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.util.concurrent.Future;
 
 import java.io.BufferedReader;
@@ -40,13 +39,7 @@ public final class TelnetClient {
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
-        final SslContext sslCtx;
-        if (SSL) {
-            sslCtx = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-        } else {
-            sslCtx = null;
-        }
+        final SslContext sslCtx = ServerUtil.buildSslContext();
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
