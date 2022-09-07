@@ -156,8 +156,9 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
-     * {@link FullHttpRequest} which is passed in.
+     * Performs the opening handshake. Note that the ownership of the {@link FullHttpRequest} which is passed in
+     * belongs to the caller (ownership is not transferred to this method, and caller is responsible
+     * to close the request parameter).
      *
      * @param channel Channel
      * @param req     HTTP Request
@@ -171,7 +172,9 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Performs the opening handshake
      * <p>
-     * When call this method you <strong>MUST NOT</strong> retain the {@link FullHttpRequest} which is passed in.
+     * Note that the ownership of the {@link FullHttpRequest} which is passed in
+     * belongs to the caller (ownership is not transferred to this method, and caller is responsible
+     * to close the request parameter).
      *
      * @param channel         Channel
      * @param req             HTTP Request
@@ -220,8 +223,9 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
-     * {@link FullHttpRequest} which is passed in.
+     * Performs the opening handshake. Note that the ownership of the {@link FullHttpRequest} which is passed in
+     * belongs to the caller (ownership is not transferred to this method, and caller is responsible
+     * to close the request parameter).
      *
      * @param channel Channel
      * @param req     HTTP Request
@@ -235,7 +239,9 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Performs the opening handshake
      * <p>
-     * When call this method you <strong>MUST NOT</strong> retain the {@link HttpRequest} which is passed in.
+     * Note that the ownership of the {@link FullHttpRequest} which is passed in
+     * belongs to the caller (ownership is not transferred to this method, and caller is responsible
+     * to close the request parameter).
      *
      * @param channel         Channel
      * @param req             HTTP Request
