@@ -302,7 +302,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * or {@code length}.
      *
      * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
-     *              this buffer will be copied to the {@code destPos} index in the {@code dest} byte buffer.
+     *              this buffer will be copied to the {@code destPos} index in the {@code dest} {@link ByteBuffer}.
      * @param dest The destination byte buffer.
      * @param destPos The index into the {@code dest} {@link ByteBuffer} from where the copying should start.
      * @param length The number of bytes to copy.
