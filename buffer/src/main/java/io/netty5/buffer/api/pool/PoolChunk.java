@@ -460,12 +460,12 @@ final class PoolChunk implements PoolChunkMetric {
 
             int sIdx = runOffset(handle);
             PoolSubpage subpage = subpages[sIdx];
-            assert subpage != null && subpage.doNotDestroy;
 
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
             // This is need as we may add it back and so alter the linked-list structure.
             head.lock();
             try {
+                assert subpage != null && subpage.doNotDestroy;
                 if (subpage.free(head, bitmapIdx(handle))) {
                     //the subpage is still used, do not free it
                     return;
