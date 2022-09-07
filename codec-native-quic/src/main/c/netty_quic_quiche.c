@@ -353,6 +353,14 @@ static jbyteArray to_byte_array(JNIEnv* env, const uint8_t* bytes, size_t len) {
      return array;
 }
 
+
+// Returns the size of the send quantum, in bytes.
+size_t quiche_conn_send_quantum(quiche_conn *conn);
+
+static jint netty_quiche_conn_send_quantum(JNIEnv* env, jclass clazz, jlong conn) {
+    return quiche_conn_send_quantum((quiche_conn *) conn);
+}
+
 static jbyteArray netty_quiche_conn_trace_id(JNIEnv* env, jclass clazz, jlong conn) {
     const uint8_t *trace_id = NULL;
     size_t trace_id_len = 0;
@@ -766,6 +774,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_negotiate_version", "(JIJIJI)I", (void *) netty_quiche_negotiate_version },
   { "quiche_retry", "(JIJIJIJIIJI)I", (void *) netty_quiche_retry },
   { "quiche_conn_set_qlog_path", "(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z", (void *) netty_quiche_conn_set_qlog_path },
+  { "quiche_conn_send_quantum", "(J)I", (void *) netty_quiche_conn_send_quantum },
   { "quiche_conn_trace_id", "(J)[B", (void *) netty_quiche_conn_trace_id },
   { "quiche_conn_source_id", "(J)[B", (void *) netty_quiche_conn_source_id },
   { "quiche_conn_destination_id", "(J)[B", (void *) netty_quiche_conn_destination_id },

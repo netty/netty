@@ -348,6 +348,8 @@ final class Quiche {
     static native int quiche_conn_stream_priority(
             long connAddr, long streamId, byte urgency, boolean incremental);
 
+    static native int quiche_conn_send_quantum(long connAddr);
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L309">quiche_conn_trace_id</a>.
      */
