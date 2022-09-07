@@ -304,7 +304,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
      *              this buffer will be copied to the {@code destPos} index in the {@code dest} byte buffer.
      * @param dest The destination byte buffer.
-     * @param destPos The index into the {@code dest} byte buffer from where the copying should start.
+     * @param destPos The index into the {@code dest} {@link ByteBuffer} from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
