@@ -23,6 +23,7 @@ import io.netty5.buffer.api.Drop;
 import io.netty5.buffer.api.MemoryManager;
 import io.netty5.buffer.api.SensitiveBufferAllocator;
 import io.netty5.buffer.api.internal.LeakDetection;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -39,7 +40,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Timeout(value = 10, unit = TimeUnit.MINUTES)
 @Isolated
 public class CleanerDropTest {
     static Stream<MemoryManager> managers() {
@@ -87,7 +90,7 @@ public class CleanerDropTest {
         Semaphore leakDetectorSemaphore = new Semaphore(0);
         try (var ignore = LeakDetection.onLeakDetected(ignore1 -> leakDetectorSemaphore.release())) {
             Semaphore leakSemaphore = new Semaphore(0);
-            int count = MemoryManager.using(new LeakTrappingMemoryManager(leakSemaphore, manager), () -> {
+            MemoryManager.using(new LeakTrappingMemoryManager(leakSemaphore, manager), () -> {
                 int counter = 0;
                 try (BufferAllocator allocator = allocatorSupplier.get()) {
                     leakBuffer(allocator);
@@ -96,11 +99,12 @@ public class CleanerDropTest {
                         counter++;
                         assertThat(counter).isLessThan(5000);
                     } while (!tryAcquireForOneMillisecond(leakSemaphore));
-                    return counter;
+                    return null;
                 }
             });
             // Make sure we capture all the buffers we create in this test.
-            leakDetectorSemaphore.acquire(count);
+            assertTrue(leakDetectorSemaphore.tryAcquire(1, 5, TimeUnit.MINUTES),
+                    "Not all leaked objects were captured by the leak detector.");
         }
     }
 
@@ -152,7 +156,7 @@ public class CleanerDropTest {
 
     private static void leakConstBufferSupplier(BufferAllocator allocator) {
         // The allocation of the supplier itself will likely require an internal buffer to be allocated,
-        // to capture a snapshot of the input array, and for use in structural sharign.
+        // to capture a snapshot of the input array, and for use in structural sharing.
         // This buffer cannot be closed, so we cannot reasonably consider it to be leaked.
         // Buffers allocated from the supplier, however, could leak. Hence, we only allocate the supplier.
         allocator.constBufferSupplier(new byte[128]);
