@@ -157,7 +157,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
          * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
          * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
          */
-        final PoolSubpage<T> head = smallSubpagePools[sizeIdx];
+        final PoolSubpage<T> head = findSubpagePoolHead(sizeIdx);
         final boolean needsNormalAllocation;
         head.lock();
         try {
