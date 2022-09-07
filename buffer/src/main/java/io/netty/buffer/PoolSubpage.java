@@ -90,6 +90,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         }
 
         final int bitmapIdx = getNextAvail();
+        if (bitmapIdx < 0) {
+            removeFromPool(); // Subpage appear to be in an invalid state. Remove to prevent repeated errors.
+            throw new AssertionError("No next available bitmap index found (bitmapIdx = " + bitmapIdx + "), " +
+                    "even though there are supposed to be (numAvail = " + numAvail + ") " +
+                    "out of (maxNumElems = " + maxNumElems + ") available indexes.");
+        }
         int q = bitmapIdx >>> 6;
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) == 0;
