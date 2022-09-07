@@ -21,10 +21,11 @@ import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.AsciiString;
 import io.netty5.util.internal.StringUtil;
 
 import java.net.URI;
@@ -243,19 +244,19 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             throw new WebSocketClientHandshakeException("Invalid handshake response upgrade: " + upgrade, response);
         }
 
-        if (!headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+        if (!headers.containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)) {
             throw new WebSocketClientHandshakeException("Invalid handshake response connection: "
                     + headers.get(HttpHeaderNames.CONNECTION), response);
         }
 
-        String accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
+        CharSequence accept = headers.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
         if (accept == null) {
             throw new WebSocketClientHandshakeException("Invalid handshake response sec-websocket-accept: null",
                                                         response);
         }
 
         String expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce);
-        if (!expectedAccept.equals(accept.trim())) {
+        if (!AsciiString.contentEquals(expectedAccept, AsciiString.trim(accept))) {
             throw new WebSocketClientHandshakeException("Invalid handshake response sec-websocket-accept: " + accept +
                                                         ", expected: " + expectedAccept, response);
         }

@@ -22,6 +22,7 @@ import io.netty5.handler.codec.compression.BrotliDecompressor;
 import io.netty5.handler.codec.compression.Decompressor;
 import io.netty5.handler.codec.compression.ZlibDecompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
@@ -131,7 +132,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                    boolean endStream) throws Http2Exception {
+                              boolean endStream) throws Http2Exception {
         initDecompressor(ctx, streamId, headers, endStream);
         listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
     }

@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty5.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.UnstableApi;
 

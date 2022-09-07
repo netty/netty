@@ -22,14 +22,13 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
-import io.netty5.handler.codec.http2.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty5.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty5.handler.codec.http2.Http2ConnectionHandler;
 import io.netty5.handler.codec.http2.Http2Flags;
 import io.netty5.handler.codec.http2.Http2FrameListener;
-import io.netty5.handler.codec.http2.Http2Headers;
 import io.netty5.handler.codec.http2.Http2Settings;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -49,7 +48,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
 
     private static Http2Headers http1HeadersToHttp2Headers(FullHttpRequest request) {
         CharSequence host = request.headers().get(HttpHeaderNames.HOST);
-        Http2Headers http2Headers = new DefaultHttp2Headers()
+        Http2Headers http2Headers = Http2Headers.newHeaders()
                 .method(HttpMethod.GET.asciiName())
                 .path(request.uri())
                 .scheme(HttpScheme.HTTP.name());
@@ -85,7 +84,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
      */
     private void sendResponse(ChannelHandlerContext ctx, int streamId, Buffer payload) {
         // Send a frame for the response status
-        Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
+        Http2Headers headers = Http2Headers.newHeaders().status(OK.codeAsText());
         encoder().writeHeaders(ctx, streamId, headers, 0, false);
         encoder().writeData(ctx, streamId, payload, 0, true);
 

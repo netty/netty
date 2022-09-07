@@ -15,14 +15,11 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
-import static io.netty5.handler.codec.http.HttpHeadersTestUtils.of;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,47 +39,45 @@ public class HttpHeadersTest {
     // Test for https://github.com/netty/netty/issues/1690
     @Test
     public void testGetOperations() {
-        HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(of("Foo"), of("1"));
-        headers.add(of("Foo"), of("2"));
+        HttpHeaders headers = HttpHeaders.newHeaders();
+        headers.add("Foo", "1");
+        headers.add("Foo", "2");
 
-        assertEquals("1", headers.get(of("Foo")));
+        assertEquals("1", headers.get("Foo"));
 
-        List<String> values = headers.getAll(of("Foo"));
-        assertEquals(2, values.size());
-        assertEquals("1", values.get(0));
-        assertEquals("2", values.get(1));
+        Iterable<CharSequence> values = headers.values("Foo");
+        assertThat(values).containsExactly("1", "2");
     }
 
     @Test
     public void testEqualsIgnoreCase() {
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(null, null));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(null, "foo"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("bar", null));
+        assertTrue(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"));
     }
 
     @Test
     public void testSetNullHeaderValueValidate() {
-        HttpHeaders headers = new DefaultHttpHeaders(true);
-        assertThrows(NullPointerException.class, () -> headers.set(of("test"), (CharSequence) null));
+        HttpHeaders headers = HttpHeaders.newHeaders(true);
+        assertThrows(NullPointerException.class, () -> headers.set("test", (CharSequence) null));
     }
 
     @Test
     public void testSetNullHeaderValueNotValidate() {
-        HttpHeaders headers = new DefaultHttpHeaders(false);
-        assertThrows(NullPointerException.class, () -> headers.set(of("test"), (CharSequence) null));
+        HttpHeaders headers = HttpHeaders.newHeaders(false);
+        assertThrows(NullPointerException.class, () -> headers.set("test", (CharSequence) null));
     }
 
     @Test
     public void testAddSelf() {
-        HttpHeaders headers = new DefaultHttpHeaders(false);
+        HttpHeaders headers = HttpHeaders.newHeaders(false);
         assertThrows(IllegalArgumentException.class, () -> headers.add(headers));
     }
 
     @Test
     public void testSetSelfIsNoOp() {
-        HttpHeaders headers = new DefaultHttpHeaders(false);
+        HttpHeaders headers = HttpHeaders.newHeaders(false);
         headers.add("name", "value");
         headers.set(headers);
         assertEquals(1, headers.size());

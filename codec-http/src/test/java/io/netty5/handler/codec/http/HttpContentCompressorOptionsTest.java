@@ -22,11 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -108,16 +104,16 @@ class HttpContentCompressorOptionsTest {
 
     private static void assertEncodedResponse(EmbeddedChannel ch) {
         Object o = ch.readOutbound();
-        assertThat(o, is(instanceOf(HttpResponse.class)));
+        assertThat(o).isInstanceOf(HttpResponse.class);
 
         assertEncodedResponse((HttpResponse) o);
     }
 
     private static void assertEncodedResponse(HttpResponse res) {
-        assertThat(res, is(not(instanceOf(HttpContent.class))));
-        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("br"));
+        assertThat(res).isNotInstanceOf(HttpContent.class);
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING)).isEqualToIgnoringCase("chunked");
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualToIgnoringCase("br");
     }
 
     private static FullHttpRequest newRequest() {

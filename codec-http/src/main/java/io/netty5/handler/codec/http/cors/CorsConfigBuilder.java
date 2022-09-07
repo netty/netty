@@ -15,15 +15,18 @@
  */
 package io.netty5.handler.codec.http.cors;
 
+import io.netty5.handler.codec.DateFormatter;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -74,7 +77,7 @@ public final class CorsConfigBuilder {
     long maxAge;
     final Set<HttpMethod> requestMethods = new HashSet<>();
     final Set<String> requestHeaders = new HashSet<>();
-    final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<>();
+    final Map<CharSequence, List<Callable<CharSequence>>> preflightHeaders = new HashMap<>();
     private boolean noPreflightHeaders;
     boolean shortCircuit;
     boolean allowPrivateNetwork;
@@ -283,11 +286,10 @@ public final class CorsConfigBuilder {
      * @param values the values for the HTTP header.
      * @return {@link CorsConfigBuilder} to support method chaining.
      */
-    public CorsConfigBuilder preflightResponseHeader(final CharSequence name, final Object... values) {
-        if (values.length == 1) {
-            preflightHeaders.put(name, new ConstantValueGenerator(values[0]));
-        } else {
-            preflightResponseHeader(name, Arrays.asList(values));
+    public CorsConfigBuilder preflightResponseHeader(final CharSequence name, final CharSequence... values) {
+        List<Callable<CharSequence>> callables = preflightHeader(name);
+        for (CharSequence value : values) {
+            callables.add(new ConstantValueGenerator(value));
         }
         return this;
     }
@@ -299,12 +301,15 @@ public final class CorsConfigBuilder {
      * have certain headers set. This enables such headers to be added.
      *
      * @param name the name of the HTTP header.
-     * @param value the values for the HTTP header.
+     * @param values the values for the HTTP header.
      * @param <T> the type of values that the Iterable contains.
      * @return {@link CorsConfigBuilder} to support method chaining.
      */
-    public <T> CorsConfigBuilder preflightResponseHeader(final CharSequence name, final Iterable<T> value) {
-        preflightHeaders.put(name, new ConstantValueGenerator(value));
+    public <T> CorsConfigBuilder preflightResponseHeader(final CharSequence name, final Iterable<CharSequence> values) {
+        List<Callable<CharSequence>> callables = preflightHeader(name);
+        for (CharSequence value : values) {
+            callables.add(new ConstantValueGenerator(value));
+        }
         return this;
     }
 
@@ -323,8 +328,9 @@ public final class CorsConfigBuilder {
      * @param <T> the type of the value that the Callable can return.
      * @return {@link CorsConfigBuilder} to support method chaining.
      */
-    public <T> CorsConfigBuilder preflightResponseHeader(final CharSequence name, final Callable<T> valueGenerator) {
-        preflightHeaders.put(name, valueGenerator);
+    public <T> CorsConfigBuilder preflightResponseHeader(final CharSequence name,
+                                                         final Callable<CharSequence> valueGenerator) {
+        preflightHeader(name).add(valueGenerator);
         return this;
     }
 
@@ -373,10 +379,14 @@ public final class CorsConfigBuilder {
      */
     public CorsConfig build() {
         if (preflightHeaders.isEmpty() && !noPreflightHeaders) {
-            preflightHeaders.put(HttpHeaderNames.DATE, DateValueGenerator.INSTANCE);
-            preflightHeaders.put(HttpHeaderNames.CONTENT_LENGTH, new ConstantValueGenerator("0"));
+            preflightHeader(HttpHeaderNames.DATE).add(DateValueGenerator.INSTANCE);
+            preflightHeader(HttpHeaderNames.CONTENT_LENGTH).add(new ConstantValueGenerator("0"));
         }
         return new CorsConfig(this);
+    }
+
+    private List<Callable<CharSequence>> preflightHeader(CharSequence name) {
+        return preflightHeaders.computeIfAbsent(name, k -> new ArrayList<>());
     }
 
     /**
@@ -384,21 +394,21 @@ public final class CorsConfigBuilder {
      * generated, but instead the value is "static" in that the same value will be returned
      * for each call.
      */
-    private static final class ConstantValueGenerator implements Callable<Object> {
+    private static final class ConstantValueGenerator implements Callable<CharSequence> {
 
-        private final Object value;
+        private final CharSequence value;
 
         /**
          * Sole constructor.
          *
          * @param value the value that will be returned when the call method is invoked.
          */
-        private ConstantValueGenerator(final Object value) {
+        private ConstantValueGenerator(final CharSequence value) {
             this.value = checkNotNullWithIAE(value, "value");
         }
 
         @Override
-        public Object call() {
+        public CharSequence call() {
             return value;
         }
     }
@@ -408,13 +418,13 @@ public final class CorsConfigBuilder {
      * It's value must be generated when the response is generated, hence will be
      * different for every call.
      */
-    private static final class DateValueGenerator implements Callable<Date> {
+    private static final class DateValueGenerator implements Callable<CharSequence> {
 
         static final DateValueGenerator INSTANCE = new DateValueGenerator();
 
         @Override
-        public Date call() throws Exception {
-            return new Date();
+        public CharSequence call() throws Exception {
+            return DateFormatter.format(new Date());
         }
     }
 }

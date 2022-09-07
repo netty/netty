@@ -1227,7 +1227,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                     start + " would go out of bounds.");
         }
         final int startWithOffset = start + offset;
-        return (char) ((b2c(value[startWithOffset]) << 8) | b2c(value[startWithOffset + 1]));
+        return (char) (b2c(value[startWithOffset]) << 8 | b2c(value[startWithOffset + 1]));
     }
 
     public short parseShort() {
@@ -1466,6 +1466,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return a == b;
         }
 
+        if (a.length() != b.length()) {
+            return false;
+        }
+
         if (a instanceof AsciiString) {
             return ((AsciiString) a).contentEqualsIgnoreCase(b);
         }
@@ -1473,15 +1477,8 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return ((AsciiString) b).contentEqualsIgnoreCase(a);
         }
 
-        if (a.length() != b.length()) {
-            return false;
-        }
-        for (int i = 0; i < a.length(); ++i) {
-            if (!equalsIgnoreCase(a.charAt(i),  b.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
+        // It's fairly safe to assume they're both Strings. The JDK method is better in that case.
+        return a.toString().equalsIgnoreCase(b.toString());
     }
 
     /**
@@ -1545,6 +1542,22 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             }
         }
         return true;
+    }
+
+    /**
+     * Create a subsequence of the given sequence.
+     * Equivalent to {@link #subSequence(int, int)} and {@link String#substring(int, int)}.
+     *
+     * @param sequence The sequence to extract from.
+     * @param start The start index, inclusive.
+     * @param end The end index, exclusive.
+     * @return The subsequence.
+     */
+    public static CharSequence substring(CharSequence sequence, int start, int end) {
+        if (sequence.getClass() == AsciiString.class) {
+            return ((AsciiString) sequence).subSequence(start, end);
+        }
+        return sequence.toString().substring(start, end);
     }
 
     private static AsciiString[] toAsciiStringArray(String[] jdkResult) {

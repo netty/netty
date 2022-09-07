@@ -33,11 +33,12 @@ import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http2.Http2TestUtil.FrameCountDown;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
@@ -132,14 +133,14 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "http://my-user_name@www.example.org:5555/example", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         httpHeaders.add(of("foo"), of("goo"));
         httpHeaders.add(of("foo"), of("goo2"));
         httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                Http2Headers.newHeaders().method(new AsciiString("GET")).path(new AsciiString("/example"))
                 .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
                 .add(new AsciiString("foo"), new AsciiString("goo"))
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
@@ -154,13 +155,13 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "http://my-user_name@www.example.org:5555/example", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
         httpHeaders.add(of("foo"), of("goo"));
         httpHeaders.add(of("foo"), of("goo2"));
         httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                Http2Headers.newHeaders().method(new AsciiString("GET")).path(new AsciiString("/example"))
                         .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
                         .scheme(new AsciiString("http"))
                         .add(new AsciiString("foo"), new AsciiString("goo"))
@@ -176,12 +177,12 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "http://my-user_name@www.example.org:5555/example", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         httpHeaders.set(HttpHeaderNames.COOKIE, "a=b; c=d; e=f");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                Http2Headers.newHeaders().method(new AsciiString("GET")).path(new AsciiString("/example"))
                 .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
                 .add(HttpHeaderNames.COOKIE, "a=b")
                 .add(HttpHeaderNames.COOKIE, "c=d")
@@ -196,10 +197,10 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/where?q=now&f=then#section1", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                Http2Headers.newHeaders().method(new AsciiString("GET"))
                 .path(new AsciiString("/where?q=now&f=then#section1"))
                 .scheme(new AsciiString("http"));
 
@@ -213,10 +214,10 @@ public class HttpToHttp2ConnectionHandlerTest {
                 HTTP_1_1, GET, "/where%2B0?q=now%2B0&f=then%2B0#section1%2B0",
                 preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                Http2Headers.newHeaders().method(new AsciiString("GET"))
                                          .path(new AsciiString("/where%2B0?q=now%2B0&f=then%2B0#section1%2B0"))
                                          .scheme(new AsciiString("http"));
 
@@ -229,12 +230,12 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/pub/WWW/TheProject.html", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "foouser@www.example.org:5555");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.PATH.text(), "ignored_path");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                Http2Headers.newHeaders().method(new AsciiString("GET"))
                 .path(new AsciiString("/pub/WWW/TheProject.html"))
                 .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("https"));
 
@@ -248,9 +249,9 @@ public class HttpToHttp2ConnectionHandlerTest {
                 HTTP_1_1, GET, "http://foouser@www.example.org:5555/pub/WWW/TheProject.html",
                 preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET"))
+                Http2Headers.newHeaders().method(new AsciiString("GET"))
                 .path(new AsciiString("/pub/WWW/TheProject.html"))
                 .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"));
 
@@ -263,9 +264,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, CONNECT, "http://www.example.com:80", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("CONNECT")).path(new AsciiString("/"))
+                Http2Headers.newHeaders().method(new AsciiString("CONNECT")).path(new AsciiString("/"))
                 .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
 
         verifyHeadersOnly(http2Headers, clientChannel.writeAndFlush(request));
@@ -277,11 +278,11 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, OPTIONS, "*", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "www.example.com:80");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("OPTIONS")).path(new AsciiString("*"))
+                Http2Headers.newHeaders().method(new AsciiString("OPTIONS")).path(new AsciiString("*"))
                 .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
 
         verifyHeadersOnly(http2Headers, clientChannel.writeAndFlush(request));
@@ -295,11 +296,11 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "[::1]:80");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/"))
+                Http2Headers.newHeaders().method(new AsciiString("GET")).path(new AsciiString("/"))
                 .scheme(new AsciiString("http")).authority(new AsciiString("[::1]:80"));
 
         verifyHeadersOnly(http2Headers, clientChannel.writeAndFlush(request));
@@ -311,11 +312,11 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "localhost:80");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/"))
+                Http2Headers.newHeaders().method(new AsciiString("GET")).path(new AsciiString("/"))
                 .scheme(new AsciiString("http")).authority(new AsciiString("localhost:80"));
 
         verifyHeadersOnly(http2Headers, clientChannel.writeAndFlush(request));
@@ -327,11 +328,11 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "1.2.3.4:80");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/"))
+                Http2Headers.newHeaders().method(new AsciiString("GET")).path(new AsciiString("/"))
                 .scheme(new AsciiString("http")).authority(new AsciiString("1.2.3.4:80"));
 
         verifyHeadersOnly(http2Headers, clientChannel.writeAndFlush(request));
@@ -343,7 +344,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, GET, "/", preferredAllocator().allocate(0));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "5");
         httpHeaders.set(HttpHeaderNames.HOST, "localhost");
 
         Future<Void> writeFuture = clientChannel.writeAndFlush(request);
@@ -359,7 +360,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         final FullHttpRequest request = new DefaultFullHttpRequest(
                 HTTP_1_1, POST, "/foo", preferredAllocator().copyOf("foobar", UTF_8));
         final HttpHeaders httpHeaders = request.headers();
-        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), -1);
+        httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "-1");
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         httpHeaders.set(HttpHeaderNames.HOST, "localhost");
 
@@ -391,7 +392,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add(of("foo"), of("goo2"));
         httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
+                Http2Headers.newHeaders().method(new AsciiString("POST")).path(new AsciiString("/example"))
                 .authority(new AsciiString("www.example-origin.org:5555")).scheme(new AsciiString("http"))
                 .add(new AsciiString("foo"), new AsciiString("goo"))
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
@@ -429,7 +430,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add(of("foo"), of("goo2"));
         httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
+                Http2Headers.newHeaders().method(new AsciiString("POST")).path(new AsciiString("/example"))
                         .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
                         .add(new AsciiString("foo"), new AsciiString("goo"))
                         .add(new AsciiString("foo"), new AsciiString("goo2"))
@@ -437,7 +438,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
         request.trailingHeaders().add(of("trailing"), of("bar"));
 
-        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers()
+        final Http2Headers http2TrailingHeaders = Http2Headers.newHeaders()
                 .add(new AsciiString("trailing"), new AsciiString("bar"));
 
         Future<Void> writeFuture = clientChannel.writeAndFlush(request);
@@ -475,7 +476,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add(of("foo"), of("goo2"));
         httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
+                Http2Headers.newHeaders().method(new AsciiString("POST")).path(new AsciiString("/example"))
                         .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
                         .add(new AsciiString("foo"), new AsciiString("goo"))
                         .add(new AsciiString("foo"), new AsciiString("goo2"))
@@ -488,7 +489,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
         lastHttpContent.trailingHeaders().add(of("trailing"), of("bar"));
 
-        final Http2Headers http2TrailingHeaders = new DefaultHttp2Headers()
+        final Http2Headers http2TrailingHeaders = Http2Headers.newHeaders()
                 .add(new AsciiString("trailing"), new AsciiString("bar"));
 
         Future<Void> writeFuture = clientChannel.write(request);

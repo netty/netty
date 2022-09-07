@@ -597,10 +597,10 @@ public final class StringUtil {
     }
 
     /**
-     * Determine if a string is {@code null} or {@link String#isEmpty()} returns {@code true}.
+     * Determine if a {@link CharSequence} is {@code null} or empty (has zero length).
      */
-    public static boolean isNullOrEmpty(String s) {
-        return s == null || s.isEmpty();
+    public static boolean isNullOrEmpty(CharSequence s) {
+        return s == null || s.length() == 0;
     }
 
     /**

@@ -32,6 +32,7 @@ package io.netty5.handler.codec.http.headers;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
+import io.netty5.util.ByteProcessor;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -103,47 +104,6 @@ public final class HeaderUtils {
             }
             return sb.append(']').toString();
         }
-    }
-
-    static boolean equals(final HttpHeaders lhs, final HttpHeaders rhs) {
-        if (lhs.size() != rhs.size()) {
-            return false;
-        }
-
-        if (lhs == rhs) {
-            return true;
-        }
-
-        // The regular iterator is unsuitable for equality comparisons because the overall ordering is not
-        // in any specific order relative to the content of this MultiMap.
-        for (final CharSequence name : lhs.names()) {
-            final Iterator<? extends CharSequence> valueItr = lhs.valuesIterator(name);
-            final Iterator<? extends CharSequence> h2ValueItr = rhs.valuesIterator(name);
-            while (valueItr.hasNext() && h2ValueItr.hasNext()) {
-                if (!contentEquals(valueItr.next(), h2ValueItr.next())) {
-                    return false;
-                }
-            }
-            if (valueItr.hasNext() != h2ValueItr.hasNext()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    static int hashCode(final HttpHeaders headers) {
-        if (headers.isEmpty()) {
-            return 0;
-        }
-        int result = HASH_CODE_SEED;
-        for (final CharSequence key : headers.names()) {
-            result = 31 * result + AsciiString.hashCode(key);
-            final Iterator<? extends CharSequence> valueItr = headers.valuesIterator(key);
-            while (valueItr.hasNext()) {
-                result = 31 * result + AsciiString.hashCode(valueItr.next());
-            }
-        }
-        return result;
     }
 
     /**
@@ -302,7 +262,7 @@ public final class HeaderUtils {
     public static boolean isSetCookieNameMatches(final CharSequence setCookieString,
                                                  final CharSequence setCookieName) {
         int equalsIndex = indexOf(setCookieString, '=', 0);
-        return equalsIndex > 0 && setCookieString.length() - 1 > equalsIndex &&
+        return equalsIndex > 0 &&
                 equalsIndex == setCookieName.length() &&
                 regionMatches(setCookieName, true, 0, setCookieString, 0, equalsIndex);
     }
@@ -446,10 +406,14 @@ public final class HeaderUtils {
      * An {@link Iterator} of {@link HttpCookiePair} designed to iterate across multiple values of
      * {@link HttpHeaderNames#COOKIE}.
      */
-    public abstract static class CookiesIterator implements Iterator<HttpCookiePair> {
+    public abstract static class AbstractCookiesIterator implements Iterator<HttpCookiePair>, ByteProcessor {
         @Nullable
         private HttpCookiePair next;
         private int nextNextStart;
+        /**
+         * Used for more accurate error reporting in the delimiter search.
+         */
+        private boolean inQuotes;
 
         @Override
         public final boolean hasNext() {
@@ -496,7 +460,8 @@ public final class HeaderUtils {
          * @return the next {@link HttpCookiePair} value for {@link #next()}, or {@code null} if all have been parsed.
          */
         private HttpCookiePair findNext(CharSequence cookieHeaderValue) {
-            int semiIndex = indexOf(cookieHeaderValue, ';', nextNextStart);
+            int semiIndex = cookieHeaderValue instanceof AsciiString?
+                    nextDelimiterAscii((AsciiString) cookieHeaderValue) : nextDelimiter(cookieHeaderValue);
             HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(cookieHeaderValue, nextNextStart, semiIndex);
             if (semiIndex > 0) {
                 if (cookieHeaderValue.length() - 2 <= semiIndex) {
@@ -512,13 +477,45 @@ public final class HeaderUtils {
             }
             return next;
         }
+
+        private int nextDelimiter(CharSequence cookieHeaderValue) {
+            inQuotes = false;
+            int len = cookieHeaderValue.length();
+            for (int i = nextNextStart; i < len; i++) {
+                char value = cookieHeaderValue.charAt(i);
+                if (process((byte) value)) {
+                    return i;
+                }
+            }
+            return AsciiString.INDEX_NOT_FOUND;
+        }
+
+        private int nextDelimiterAscii(AsciiString cookieHeaderValue) {
+            inQuotes = false;
+            int len = cookieHeaderValue.length();
+            return cookieHeaderValue.forEachByte(nextNextStart, len - nextNextStart, this);
+        }
+
+        @Override
+        public boolean process(byte value) {
+            if (value == ';') {
+                if (inQuotes) {
+                    throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
+                }
+                return true;
+            }
+            if (value == '"') {
+                inQuotes = !inQuotes;
+            }
+            return false;
+        }
     }
 
     /**
      * An {@link Iterator} of {@link HttpCookiePair} designed to iterate across multiple values of
      * {@link HttpHeaderNames#COOKIE} for a specific {@link HttpCookiePair#name() cookie-name}.
      */
-    public abstract static class CookiesByNameIterator implements Iterator<HttpCookiePair> {
+    public abstract static class AbstractCookiesByNameIterator implements Iterator<HttpCookiePair> {
         private final CharSequence cookiePairName;
         private int nextNextStart;
         @Nullable
@@ -530,7 +527,7 @@ public final class HeaderUtils {
          * @param cookiePairName Each return value of {@link #next()} will have {@link HttpCookiePair#name()} equivalent
          * to this value.
          */
-        protected CookiesByNameIterator(final CharSequence cookiePairName) {
+        protected AbstractCookiesByNameIterator(final CharSequence cookiePairName) {
             this.cookiePairName = cookiePairName;
         }
 
@@ -657,7 +654,7 @@ public final class HeaderUtils {
         //
         // field-name's token is equivalent to cookie-name's token, we can reuse the tchar mask for both:
         if (!TOKEN_CHARS.contains(value)) {
-            throw new IllegalCharacterException(
+            throw new HeaderValidationException(
                     value, "! / # / $ / % / & / ' / * / + / - / . / ^ / _ / ` / | / ~ / DIGIT / ALPHA");
         }
         return true;
@@ -683,8 +680,7 @@ public final class HeaderUtils {
         // Note: we do not support obs-fold.
         // Illegal chars are control chars (0-31) except HT (9), and DEL (127):
         if ((value & CONTROL_CHARS_MASK) == 0 && value != HT || value == DEL) {
-            throw new IllegalCharacterException(value,
-                    "(VCHAR / obs-text) [ 1*(SP / HTAB) (VCHAR / obs-text) ]");
+            throw new HeaderValidationException(value, "(VCHAR / obs-text) [ 1*(SP / HTAB) (VCHAR / obs-text) ]");
         }
         return true;
     }

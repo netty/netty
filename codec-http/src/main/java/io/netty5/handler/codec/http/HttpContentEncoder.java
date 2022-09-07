@@ -21,12 +21,14 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.MessageToMessageCodec;
 import io.netty5.handler.codec.compression.Compressor;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
-import io.netty5.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
+import java.util.StringJoiner;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
 import static java.util.Objects.requireNonNull;
@@ -82,18 +84,20 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     @Override
     protected void decodeAndClose(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
         CharSequence acceptEncoding;
-        List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
-        switch (acceptEncodingHeaders.size()) {
-        case 0:
+        Iterator<CharSequence> acceptEncodingHeaders = msg.headers().valuesIterator(ACCEPT_ENCODING);
+        if (!acceptEncodingHeaders.hasNext()) {
             acceptEncoding = HttpContentDecoder.IDENTITY;
-            break;
-        case 1:
-            acceptEncoding = acceptEncodingHeaders.get(0);
-            break;
-        default:
-            // Multiple message-header fields https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-            acceptEncoding = StringUtil.join(",", acceptEncodingHeaders);
-            break;
+        } else {
+            acceptEncoding = acceptEncodingHeaders.next();
+            if (acceptEncodingHeaders.hasNext()) {
+                // Multiple message-header fields https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+                StringJoiner joiner = new StringJoiner(",");
+                joiner.add(acceptEncoding);
+                do {
+                    joiner.add(acceptEncodingHeaders.next());
+                } while (acceptEncodingHeaders.hasNext());
+                acceptEncoding = joiner.toString();
+            }
         }
 
         HttpMethod method = msg.method();

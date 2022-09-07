@@ -16,14 +16,14 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.FullHttpMessage;
 import io.netty5.handler.codec.http.HttpContent;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -78,8 +78,11 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
      */
     private int getStreamId(HttpHeaders httpHeaders) throws Exception {
-        return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
-                                  connection().local().incrementAndGetNextStreamId());
+        CharSequence streamId = httpHeaders.get(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+        if (streamId == null) {
+            return connection().local().incrementAndGetNextStreamId();
+        }
+        return Integer.parseInt(streamId.toString());
     }
 
     /**
@@ -119,8 +122,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
             if (!endStream && msg instanceof HttpContent) {
                 boolean isLastContent = false;
-                HttpHeaders trailers = EmptyHttpHeaders.INSTANCE;
-                Http2Headers http2Trailers = EmptyHttp2Headers.INSTANCE;
+                HttpHeaders trailers = HttpHeaders.emptyHeaders();
+                Http2Headers http2Trailers = Http2Headers.emptyHeaders();
                 if (msg instanceof LastHttpContent) {
                     isLastContent = true;
 
@@ -157,11 +160,12 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     private static Future<Void> writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,
                                      HttpHeaders headers, Http2Headers http2Headers, boolean endStream) {
-        int dependencyId = headers.getInt(
-                HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 0);
-        short weight = headers.getShort(
-                HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
-        return encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false,
-                0, endStream);
+        CharSequence dependencyIdValue = headers.get(
+                HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text());
+        int dependencyId = dependencyIdValue == null? 0 : Integer.parseInt(dependencyIdValue.toString());
+        CharSequence weightValue = headers.get(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text());
+        short weight = weightValue == null? Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT :
+                Short.parseShort(weightValue.toString());
+        return encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false, 0, endStream);
     }
 }

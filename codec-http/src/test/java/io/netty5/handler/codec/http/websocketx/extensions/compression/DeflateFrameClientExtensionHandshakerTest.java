@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
+import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import org.junit.jupiter.api.Test;
 
@@ -63,7 +64,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
                 new WebSocketExtensionData(DEFLATE_FRAME_EXTENSION, Collections.emptyMap()));
 
         assertNotNull(extension);
-        assertEquals(WebSocketClientExtension.RSV1, extension.rsv());
+        assertEquals(WebSocketExtension.RSV1, extension.rsv());
         assertTrue(extension.newExtensionDecoder() instanceof PerFrameDeflateDecoder);
         assertTrue(extension.newExtensionEncoder() instanceof PerFrameDeflateEncoder);
     }

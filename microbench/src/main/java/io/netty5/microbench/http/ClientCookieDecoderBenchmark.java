@@ -15,22 +15,22 @@
  */
 package io.netty5.microbench.http;
 
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.DefaultHttpSetCookie;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
 
 import java.util.concurrent.TimeUnit;
 
-@OutputTimeUnit(TimeUnit.SECONDS)
+@OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class ClientCookieDecoderBenchmark {
-
     private static final String COOKIE_STRING =
             "__Host-user_session_same_site=fgfMsM59vJTpZg88nxqKkIhgOt0ADF8LX8wjMMbtcb4IJMufWCnCcXORhbo9QMuyiybdtx; " +
-                    "path=/; expires=Mon, 28 Nov 2016 13:56:01 GMT; secure; HttpOnly";
+            "path=/; expires=Mon, 28 Nov 2016 13:56:01 GMT; secure; HttpOnly";
 
     @Benchmark
-    public Cookie decodeCookieWithRfc1123ExpiresField() {
-        return ClientCookieDecoder.STRICT.decode(COOKIE_STRING);
+    public Object decodeCookieWithRfc1123ExpiresField() {
+        return DefaultHttpSetCookie.parseSetCookie(COOKIE_STRING, false);
     }
 }

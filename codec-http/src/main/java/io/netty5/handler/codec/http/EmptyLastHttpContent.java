@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Send;
 import io.netty5.handler.codec.DecoderResult;
 
@@ -63,7 +64,7 @@ public final class EmptyLastHttpContent implements LastHttpContent<EmptyLastHttp
 
     @Override
     public HttpHeaders trailingHeaders() {
-        return EmptyHttpHeaders.INSTANCE;
+        return HttpHeaders.emptyHeaders();
     }
 
     @Override

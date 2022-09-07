@@ -29,6 +29,7 @@ import io.netty5.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
 import io.netty5.handler.codec.http2.Http2Stream.State;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.AsciiString;
@@ -93,10 +94,10 @@ public class Http2FrameCodecTest {
 
     private LastInboundHandler inboundHandler;
 
-    private final Http2Headers request = new DefaultHttp2Headers()
+    private final Http2Headers request = Http2Headers.newHeaders()
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
             .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
-    private final Http2Headers response = new DefaultHttp2Headers()
+    private final Http2Headers response = Http2Headers.newHeaders()
             .status(HttpResponseStatus.OK.codeAsText());
 
     @BeforeEach
@@ -610,7 +611,7 @@ public class Http2FrameCodecTest {
 
         final Promise<Void> listenerExecuted = GlobalEventExecutor.INSTANCE.newPromise();
 
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders(), false).stream(stream))
                .addListener(future -> {
                    assertTrue(future.isSuccess());
                    assertTrue(isStreamIdValid(stream.id()));
@@ -633,9 +634,9 @@ public class Http2FrameCodecTest {
         Http2FrameStream stream2 = frameCodec.newStream();
 
         Future<Void> future1 = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream1));
         Future<Void> future2 = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream2));
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
@@ -663,11 +664,11 @@ public class Http2FrameCodecTest {
         Http2FrameStream stream3 = frameCodec.newStream();
 
         Future<Void> future1 = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream1));
         Future<Void> future2 = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream2));
         Future<Void> future3 = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream3));
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
@@ -700,13 +701,13 @@ public class Http2FrameCodecTest {
         Http2FrameStream stream1 = frameCodec.newStream();
         Http2FrameStream stream2 = frameCodec.newStream();
         Future<Void> stream1HeaderFuture = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream1));
         channel.runPendingTasks();
 
         frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, onHeapAllocator().allocate(0));
 
         Future<Void> stream2HeaderFuture = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream2));
         channel.runPendingTasks();
 
         assertTrue(stream1HeaderFuture.asStage().sync().isSuccess());
@@ -729,7 +730,7 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
 
         Future<Void> writeFuture = channel.writeAndFlush(
-                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream));
+                new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream));
 
         Http2GoAwayFrame goAwayFrame = inboundHandler.readInbound();
         assertNotNull(goAwayFrame);
@@ -789,10 +790,10 @@ public class Http2FrameCodecTest {
         Http2FrameStream activeInbond = headersFrame.stream();
 
         Http2FrameStream activeOutbound = frameCodec.newStream();
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(activeOutbound));
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(activeOutbound));
 
         Http2FrameStream bufferedOutbound = frameCodec.newStream();
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(bufferedOutbound));
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(bufferedOutbound));
 
         @SuppressWarnings("unused")
         Http2FrameStream idleStream = frameCodec.newStream();
@@ -852,7 +853,7 @@ public class Http2FrameCodecTest {
         assertEquals(State.IDLE, stream2.state());
 
         final AtomicBoolean listenerExecuted = new AtomicBoolean();
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2))
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders()).stream(stream2))
                 .addListener(future -> {
                     assertTrue(future.isSuccess());
                     assertEquals(State.OPEN, stream2.state());

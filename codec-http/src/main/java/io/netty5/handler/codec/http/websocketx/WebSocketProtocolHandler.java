@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.MessageToMessageDecoder;

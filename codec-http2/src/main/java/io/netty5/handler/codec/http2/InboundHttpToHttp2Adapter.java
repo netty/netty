@@ -19,8 +19,9 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.FullHttpMessage;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpScheme;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -37,8 +38,11 @@ public class InboundHttpToHttp2Adapter implements ChannelHandler {
     }
 
     private static int getStreamId(Http2Connection connection, HttpHeaders httpHeaders) {
-        return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
-                                  connection.remote().incrementAndGetNextStreamId());
+        CharSequence streamId = httpHeaders.get(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+        if (streamId != null) {
+            return Integer.parseInt(streamId.toString());
+        }
+        return connection.remote().incrementAndGetNextStreamId();
     }
 
     @Override

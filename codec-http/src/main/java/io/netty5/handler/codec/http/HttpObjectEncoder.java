@@ -20,6 +20,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.FileRegion;
 import io.netty5.handler.codec.MessageToMessageEncoder;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.StringUtil;
 
@@ -183,9 +184,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
      * Encode the {@link HttpHeaders} into a {@link Buffer}.
      */
     protected void encodeHeaders(HttpHeaders headers, Buffer buf) {
-        Iterator<Entry<CharSequence, CharSequence>> iter = headers.iteratorCharSequence();
-        while (iter.hasNext()) {
-            Entry<CharSequence, CharSequence> header = iter.next();
+        for (Entry<CharSequence, CharSequence> header : headers) {
             HttpHeadersEncoder.encoderHeader(header.getKey(), header.getValue(), buf);
         }
     }

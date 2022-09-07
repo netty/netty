@@ -31,11 +31,6 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
     AtomicInteger maxReads;
 
     @Override
-    public boolean isSharable() {
-        return true;
-    }
-
-    @Override
     public void initChannel(Channel channel) {
         if (handler != null) {
             channel.pipeline().addLast(handler);
@@ -68,7 +63,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 @Override
                 public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
                     if (numMessagesRead > 0) {
-                        this.totalNumMessagesRead += numMessagesRead;
+                        totalNumMessagesRead += numMessagesRead;
                     }
                     return totalNumMessagesRead < numReads.get();
                 }

@@ -18,6 +18,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogLevel;

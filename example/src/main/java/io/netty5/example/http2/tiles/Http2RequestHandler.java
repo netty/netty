@@ -54,7 +54,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         QueryStringDecoder queryString = new QueryStringDecoder(request.uri());
-        String streamId = streamId(request);
+        CharSequence streamId = streamId(request);
         int latency = toInt(firstValue(queryString, LATENCY_FIELD_NAME), 0);
         if (latency < MIN_LATENCY || latency > MAX_LATENCY) {
             sendBadRequest(ctx, streamId);
@@ -69,14 +69,14 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
         }
     }
 
-    private static void sendBadRequest(ChannelHandlerContext ctx, String streamId) {
+    private static void sendBadRequest(ChannelHandlerContext ctx, CharSequence streamId) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
                 ctx.bufferAllocator().allocate(0));
         streamId(response, streamId);
         ctx.writeAndFlush(response);
     }
 
-    private void handleImage(String x, String y, ChannelHandlerContext ctx, String streamId, int latency,
+    private void handleImage(String x, String y, ChannelHandlerContext ctx, CharSequence streamId, int latency,
             FullHttpRequest request) {
         Buffer image = ImageCache.INSTANCE.image(parseInt(x), parseInt(y));
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, image);
@@ -84,7 +84,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
         sendResponse(ctx, streamId, latency, response, request);
     }
 
-    private void handlePage(ChannelHandlerContext ctx, String streamId, int latency, FullHttpRequest request) {
+    private void handlePage(ChannelHandlerContext ctx, CharSequence streamId, int latency, FullHttpRequest request) {
         byte[] body = Html.body(latency);
         Buffer content = ctx.bufferAllocator().allocate(Html.HEADER.length + body.length + Html.FOOTER.length);
         content.writeBytes(Html.HEADER);
@@ -95,7 +95,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
         sendResponse(ctx, streamId, latency, response, request);
     }
 
-    protected void sendResponse(final ChannelHandlerContext ctx, String streamId, int latency,
+    protected void sendResponse(final ChannelHandlerContext ctx, CharSequence streamId, int latency,
             final FullHttpResponse response, final FullHttpRequest request) {
         setContentLength(response, response.payload().readableBytes());
         streamId(response, streamId);
@@ -104,11 +104,11 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
         }, latency, TimeUnit.MILLISECONDS);
     }
 
-    private static String streamId(FullHttpRequest request) {
+    private static CharSequence streamId(FullHttpRequest request) {
         return request.headers().get(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
     }
 
-    private static void streamId(FullHttpResponse response, String streamId) {
+    private static void streamId(FullHttpResponse response, CharSequence streamId) {
         response.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
     }
 

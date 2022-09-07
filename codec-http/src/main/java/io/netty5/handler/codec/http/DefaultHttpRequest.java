@@ -15,6 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -45,7 +47,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        super(httpVersion, validateHeaders, false);
+        super(httpVersion, validateHeaders);
         this.method = requireNonNull(method, "method");
         this.uri = requireNonNull(uri, "uri");
     }

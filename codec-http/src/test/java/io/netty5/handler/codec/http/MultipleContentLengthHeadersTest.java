@@ -22,7 +22,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_INITIAL_BUFFER_SIZE;
 import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
@@ -73,7 +72,7 @@ public class MultipleContentLengthHeadersTest {
         if (allowDuplicateContentLengths) {
             if (sameValue) {
                 assertValid(request);
-                List<String> contentLengths = request.headers().getAll(HttpHeaderNames.CONTENT_LENGTH);
+                Iterable<CharSequence> contentLengths = request.headers().values(HttpHeaderNames.CONTENT_LENGTH);
                 assertThat(contentLengths, contains("1"));
                 LastHttpContent<?> body = channel.readInbound();
                 assertThat(body.payload().readableBytes(), is(1));

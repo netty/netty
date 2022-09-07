@@ -30,6 +30,7 @@ import io.netty5.handler.codec.compression.ZlibCompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.compression.ZstdCompressor;
 import io.netty5.handler.codec.compression.ZstdOptions;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.PromiseCombiner;
@@ -175,7 +176,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
 
     @Override
     public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-            boolean endStream) {
+                                     boolean endStream) {
         try {
             // Determine if compression is required and sanitize the headers.
             Compressor compressor = newCompressor(ctx, headers, endStream);

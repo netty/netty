@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -71,9 +72,9 @@ public class HpackEncoderTest {
             String bigHeaderName = "x-big-header";
             int bigHeaderSize = 1024 * 1024 * 16;
             String bigHeaderVal = new String(new char[bigHeaderSize]).replace('\0', 'X');
-            Http2Headers headersIn = new DefaultHttp2Headers().add(
+            Http2Headers headersIn = Http2Headers.newHeaders().add(
                     "x-big-header", bigHeaderVal);
-            Http2Headers headersOut = new DefaultHttp2Headers();
+            Http2Headers headersOut = Http2Headers.newHeaders();
 
             hpackEncoder.encodeHeaders(0, buf, headersIn, Http2HeadersEncoder.NEVER_SENSITIVE);
             hpackDecoder.setMaxHeaderListSize(bigHeaderSize + 1024);
@@ -85,7 +86,7 @@ public class HpackEncoderTest {
     @Test
     public void testSetMaxHeaderListSizeEnforcedAfterSet() throws Http2Exception {
         try (Buffer buf = onHeapAllocator().allocate(256)) {
-            final Http2Headers headers = new DefaultHttp2Headers().add(
+            final Http2Headers headers = Http2Headers.newHeaders().add(
                     "x-big-header",
                     new String(new char[1024 * 16]).replace('\0', 'X')
             );

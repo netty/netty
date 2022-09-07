@@ -19,9 +19,9 @@ import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -114,7 +114,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
     void testWebSocketClientInvalidExpectedAccept() {
         var handshaker = newHandshaker(URI.create("ws://localhost:9999/ws"), null,
                                        null, false);
-        final String sentNonce;
+        final CharSequence sentNonce;
         try (var request = handshaker.newHandshakeRequest(preferredAllocator())) {
             sentNonce = request.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         }
@@ -129,7 +129,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
                                      () -> handshaker.finishHandshake(null, response));
         }
 
-        String expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce);
+        String expectedAccept = WebSocketUtil.calculateV13Accept(sentNonce.toString());
         assertEquals("Invalid handshake response sec-websocket-accept: " + fakeAccept + ", expected: "
                      + expectedAccept, exception.getMessage());
         assertNotNull(exception.response());

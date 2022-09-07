@@ -38,6 +38,8 @@ import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HeaderValidationException;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
@@ -195,14 +197,18 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         }
     }
 
-    private Http2Headers toHttp2Headers(final ChannelHandlerContext ctx, final HttpMessage msg) {
-        if (msg instanceof HttpRequest) {
-            msg.headers().set(
-                    HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(),
-                    connectionScheme(ctx));
-        }
+    private Http2Headers toHttp2Headers(final ChannelHandlerContext ctx, final HttpMessage msg) throws Exception {
+        try {
+            if (msg instanceof HttpRequest) {
+                msg.headers().set(
+                        HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(),
+                        connectionScheme(ctx).name());
+            }
 
-        return HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+            return HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+        } catch (HeaderValidationException e) {
+            throw new Http2Exception(Http2Error.PROTOCOL_ERROR, e.getMessage(), e);
+        }
     }
 
     private HttpMessage newMessage(final int id,

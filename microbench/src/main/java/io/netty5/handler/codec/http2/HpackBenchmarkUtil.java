@@ -31,6 +31,8 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.handler.codec.http2.headers.Http2Headers;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,7 +108,7 @@ public final class HpackBenchmarkUtil {
 
     static Http2Headers http2Headers(HpackHeadersSize size, boolean limitToAscii) {
         List<HpackHeader> hpackHeaders = headersMap.get(new HeadersKey(size, limitToAscii));
-        Http2Headers http2Headers = new DefaultHttp2Headers(false);
+        Http2Headers http2Headers = Http2Headers.newHeaders(false);
         for (int i = 0; i < hpackHeaders.size(); ++i) {
             HpackHeader hpackHeader = hpackHeaders.get(i);
             http2Headers.add(hpackHeader.name, hpackHeader.value);

@@ -30,7 +30,6 @@ import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
@@ -39,6 +38,8 @@ import io.netty5.handler.codec.http.HttpScheme;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
@@ -282,7 +283,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDowngradeHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.path("/");
         headers.method("GET");
 
@@ -302,10 +303,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDowngradeHeadersWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.path("/");
         headers.method("GET");
-        headers.setInt("content-length", 0);
+        headers.set("content-length", "0");
 
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
 
@@ -323,7 +324,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDowngradeFullHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.path("/");
         headers.method("GET");
 
@@ -345,7 +346,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDowngradeTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, true)));
 
@@ -654,7 +655,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void decode100ContinueHttp2HeadersAsFullHttpResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.scheme(HttpScheme.HTTP.name());
         headers.status(HttpResponseStatus.CONTINUE.codeAsText());
 
@@ -672,7 +673,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDecodeResponseHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.scheme(HttpScheme.HTTP.name());
         headers.status(HttpResponseStatus.OK.codeAsText());
 
@@ -691,10 +692,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDecodeResponseHeadersWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.scheme(HttpScheme.HTTP.name());
         headers.status(HttpResponseStatus.OK.codeAsText());
-        headers.setInt("content-length", 0);
+        headers.set("content-length", "0");
 
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
 
@@ -720,7 +721,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     private void testDecodeFullResponseHeaders(boolean withStreamId) {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.scheme(HttpScheme.HTTP.name());
         headers.status(HttpResponseStatus.OK.codeAsText());
 
@@ -748,8 +749,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             assertTrue(response.trailingHeaders().isEmpty());
             assertFalse(HttpUtil.isTransferEncodingChunked(response));
             if (withStreamId) {
-                assertEquals(1,
-                        (int) response.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text()));
+                assertEquals("1",
+                        response.headers().get(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text()));
             }
         }
 
@@ -760,7 +761,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testDecodeResponseTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        Http2Headers headers = new DefaultHttp2Headers();
+        Http2Headers headers = Http2Headers.newHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, true)));
 

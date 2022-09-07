@@ -15,10 +15,9 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions;
 
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -34,7 +33,7 @@ public class WebSocketExtensionUtilTest {
 
     @Test
     public void testIsWebsocketUpgrade() {
-        HttpHeaders headers = new DefaultHttpHeaders();
+        HttpHeaders headers = HttpHeaders.newHeaders();
         assertFalse(isWebsocketUpgrade(headers));
 
         headers.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);

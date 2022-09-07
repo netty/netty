@@ -32,10 +32,17 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.DefaultHttp2Headers;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.HpackDecoder.decodeULE128;
@@ -475,7 +482,7 @@ public class HpackDecoderTest {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             // encode headers that are slightly larger than maxHeaderListSize
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders();
             toEncode.add("test_1", "1");
             toEncode.add("test_2", "2");
             toEncode.add("long", String.format("%0100d", 0).replace('0', 'A'));
@@ -483,7 +490,7 @@ public class HpackDecoderTest {
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
             // decode the headers, we should get an exception
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = Http2Headers.newHeaders();
             assertThrows(Http2Exception.HeaderListSizeException.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
@@ -497,10 +504,10 @@ public class HpackDecoderTest {
             // 0x80, "indexed header field representation"
             // index 62, the first (most recent) dynamic table entry
             in.writeByte((byte) (0x80 | 62));
-            Http2Headers decoded2 = new DefaultHttp2Headers();
+            Http2Headers decoded2 = Http2Headers.newHeaders();
             hpackDecoder.decode(1, in, decoded2, true);
 
-            Http2Headers golden = new DefaultHttp2Headers();
+            Http2Headers golden = Http2Headers.newHeaders();
             golden.add("test_3", "3");
             assertEquals(golden, decoded2);
         }
@@ -513,12 +520,12 @@ public class HpackDecoderTest {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             // encode headers that are slightly larger than maxHeaderListSize
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders();
             toEncode.add(String.format("%03000d", 0).replace('0', 'f'), "value");
             toEncode.add("accept", "value");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            Http2Headers decoded = new DefaultHttp2Headers();
+            Http2Headers decoded = Http2Headers.newHeaders();
             hpackDecoder.decode(1, in, decoded, true);
             assertEquals(2, decoded.size());
         }
@@ -533,11 +540,11 @@ public class HpackDecoderTest {
             hpackDecoder.setMaxHeaderListSize(headerSize);
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders();
             toEncode.add(headerName, headerValue);
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = Http2Headers.newHeaders();
 
             // SETTINGS_MAX_HEADER_LIST_SIZE is big enough for the header to fit...
             assertThat(hpackDecoder.getMaxHeaderListSize(), is(greaterThanOrEqualTo(headerSize)));
@@ -571,11 +578,11 @@ public class HpackDecoderTest {
         try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders(false);
             toEncode.add(":test", "1");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = Http2Headers.newHeaders();
 
             assertThrows(Http2Exception.StreamException.class, new Executable() {
                 @Override
@@ -591,17 +598,17 @@ public class HpackDecoderTest {
         try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders(false);
             toEncode.add(":test", "1");
             toEncode.add(":status", "200");
             toEncode.add(":method", "GET");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            Http2Headers decoded = new DefaultHttp2Headers();
+            Http2Headers decoded = Http2Headers.newHeaders(false);
 
             hpackDecoder.decode(1, in, decoded, false);
 
-            assertThat(decoded.valueIterator(":test").next().toString(), is("1"));
+            assertThat(decoded.valuesIterator(":test").next().toString(), is("1"));
             assertThat(decoded.status().toString(), is("200"));
             assertThat(decoded.method().toString(), is("GET"));
         }
@@ -612,12 +619,12 @@ public class HpackDecoderTest {
         try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders();
             toEncode.add(":status", "200");
             toEncode.add(":method", "GET");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = Http2Headers.newHeaders();
 
             assertThrows(Http2Exception.StreamException.class, new Executable() {
                 @Override
@@ -633,12 +640,12 @@ public class HpackDecoderTest {
         try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders();
             toEncode.add(":method", "GET");
             toEncode.add(":status", "200");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = Http2Headers.newHeaders();
 
             assertThrows(Http2Exception.StreamException.class, new Executable() {
                 @Override
@@ -654,12 +661,17 @@ public class HpackDecoderTest {
         try (Buffer in = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new InOrderHttp2Headers();
-            toEncode.add("test", "1");
-            toEncode.add(":method", "GET");
+            Http2Headers toEncode = new DefaultHttp2Headers(2, false, false, false) {
+                @Override
+                public Iterator<Entry<CharSequence, CharSequence>> iterator() {
+                    Entry<CharSequence, CharSequence> regular = Map.entry("test", "1");
+                    Entry<CharSequence, CharSequence> pseudo = Map.entry(":method", "GET");
+                    return List.of(regular, pseudo).iterator();
+                }
+            };
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = Http2Headers.newHeaders();
 
             assertThrows(Http2Exception.StreamException.class, new Executable() {
                 @Override
@@ -676,13 +688,13 @@ public class HpackDecoderTest {
              Buffer in2 = onHeapAllocator().allocate(200)) {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = Http2Headers.newHeaders();
             toEncode.add(":method", "GET");
             toEncode.add(":status", "200");
             toEncode.add("foo", "bar");
             hpackEncoder.encodeHeaders(1, in1, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = Http2Headers.newHeaders();
 
             Http2Exception.StreamException expected =
                     assertThrows(Http2Exception.StreamException.class, new Executable() {

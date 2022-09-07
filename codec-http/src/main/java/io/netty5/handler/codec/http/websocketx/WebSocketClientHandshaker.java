@@ -27,12 +27,13 @@ import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpRequestEncoder;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseDecoder;
 import io.netty5.handler.codec.http.HttpScheme;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.AsciiString;
 import io.netty5.util.NetUtil;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
@@ -287,8 +288,8 @@ public abstract class WebSocketClientHandshaker {
 
         // Verify the subprotocol that we received from the server.
         // This must be one of our expected subprotocols - or null/empty if we didn't want to speak a subprotocol
-        String receivedProtocol = response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
-        receivedProtocol = receivedProtocol != null ? receivedProtocol.trim() : null;
+        CharSequence receivedProtocol = response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+        receivedProtocol = receivedProtocol != null ? AsciiString.trim(receivedProtocol) : null;
         String expectedProtocol = expectedSubprotocol != null ? expectedSubprotocol : "";
         boolean protocolValid = false;
 
@@ -296,12 +297,12 @@ public abstract class WebSocketClientHandshaker {
             // No subprotocol required and none received
             protocolValid = true;
             setActualSubprotocol(expectedSubprotocol); // null or "" - we echo what the user requested
-        } else if (!expectedProtocol.isEmpty() && receivedProtocol != null && !receivedProtocol.isEmpty()) {
+        } else if (!expectedProtocol.isEmpty() && receivedProtocol != null && receivedProtocol.length() > 0) {
             // We require a subprotocol and received one -> verify it
             for (String protocol : expectedProtocol.split(",")) {
-                if (protocol.trim().equals(receivedProtocol)) {
+                if (AsciiString.contentEquals(protocol.trim(), receivedProtocol)) {
                     protocolValid = true;
-                    setActualSubprotocol(receivedProtocol);
+                    setActualSubprotocol(receivedProtocol.toString());
                     break;
                 }
             }

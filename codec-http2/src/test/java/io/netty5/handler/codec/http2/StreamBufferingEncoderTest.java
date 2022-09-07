@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.DefaultMessageSizeEstimator;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -519,7 +520,7 @@ public class StreamBufferingEncoderTest {
 
     private Future<Void> encoderWriteHeaders(int streamId) {
         Future<Void> future =
-                encoder.writeHeaders(ctx, streamId, new DefaultHttp2Headers(), 0, DEFAULT_PRIORITY_WEIGHT,
+                encoder.writeHeaders(ctx, streamId, Http2Headers.newHeaders(), 0, DEFAULT_PRIORITY_WEIGHT,
                              false, 0, false);
         try {
             encoder.flowController().writePendingBytes();

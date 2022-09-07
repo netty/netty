@@ -42,9 +42,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -97,7 +95,7 @@ public class HttpContentDecoderTest {
                 .writeBytes(GZ_HELLO_WORLD)));
 
         FullHttpRequest req = channel.readInbound();
-        assertEquals(HELLO_WORLD.length(), req.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue());
+        assertEquals(String.valueOf(HELLO_WORLD.length()), req.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertEquals(HELLO_WORLD, req.payload().toString(US_ASCII));
         req.close();
 
@@ -133,16 +131,16 @@ public class HttpContentDecoderTest {
                 .writeCharSequence("My-Trailer: 42\r\n\r\n\r\n", US_ASCII)));
 
         Object ob1 = channel.readInbound();
-        assertThat(ob1, is(instanceOf(DefaultHttpResponse.class)));
+        assertThat(ob1).isInstanceOf(DefaultHttpResponse.class);
 
         Object ob2 = channel.readInbound();
-        assertThat(ob2, is(instanceOf(HttpContent.class)));
+        assertThat(ob2).isInstanceOf(HttpContent.class);
         HttpContent<?> content = (HttpContent<?>) ob2;
         assertEquals(HELLO_WORLD, content.payload().toString(US_ASCII));
         content.close();
 
         Object ob3 = channel.readInbound();
-        assertThat(ob3, is(instanceOf(LastHttpContent.class)));
+        assertThat(ob3).isInstanceOf(LastHttpContent.class);
         LastHttpContent<?> lastContent = (LastHttpContent<?>) ob3;
         assertNotNull(lastContent.decoderResult());
         assertTrue(lastContent.decoderResult().isSuccess());
@@ -171,9 +169,9 @@ public class HttpContentDecoderTest {
                 .writeBytes(GZ_HELLO_WORLD)));
 
         Object o = channel.readInbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse resp = (FullHttpResponse) o;
-        assertEquals(HELLO_WORLD.length(), resp.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue());
+        assertEquals(String.valueOf(HELLO_WORLD.length()), resp.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertEquals(HELLO_WORLD, resp.payload().toString(US_ASCII));
         resp.close();
 
@@ -199,16 +197,16 @@ public class HttpContentDecoderTest {
         assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf("0\r\n\r\n", US_ASCII)));
 
         Object o = channel.readInbound();
-        assertThat(o, is(instanceOf(HttpResponse.class)));
+        assertThat(o).isInstanceOf(HttpResponse.class);
 
         o = channel.readInbound();
-        assertThat(o, is(instanceOf(HttpContent.class)));
+        assertThat(o).isInstanceOf(HttpContent.class);
         try (HttpContent<?> resp = (HttpContent<?>) o) {
             assertEquals(HELLO_WORLD, resp.payload().toString(US_ASCII));
         }
 
         o = channel.readInbound();
-        assertThat(o, is(instanceOf(LastHttpContent.class)));
+        assertThat(o).isInstanceOf(LastHttpContent.class);
         ((LastHttpContent<?>) o).close();
 
         assertHasInboundMessages(channel, false);
@@ -236,7 +234,7 @@ public class HttpContentDecoderTest {
                 .writeBytes(SAMPLE_BZ_BYTES)));
 
         Object o = channel.readInbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse resp = (FullHttpResponse) o;
         assertNull(resp.headers().get(HttpHeaderNames.CONTENT_ENCODING), "Content-Encoding header should be removed");
         assertEquals(SAMPLE_STRING, resp.payload().toString(UTF_8),
@@ -280,7 +278,7 @@ public class HttpContentDecoderTest {
         }
 
         Object o = channel.readInbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse resp = (FullHttpResponse) o;
         assertEquals(SAMPLE_STRING, resp.payload().toString(UTF_8),
           "Response body should match uncompressed string");
@@ -308,7 +306,7 @@ public class HttpContentDecoderTest {
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req.length).writeBytes(req)));
 
         Object o = channel.readOutbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
         assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
@@ -335,7 +333,7 @@ public class HttpContentDecoderTest {
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req.length).writeBytes(req)));
 
         Object o = channel.readOutbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
         r.close();
@@ -363,7 +361,7 @@ public class HttpContentDecoderTest {
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req.length).writeBytes(req)));
 
         Object o = channel.readOutbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
         r.close();
@@ -391,7 +389,7 @@ public class HttpContentDecoderTest {
         assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(req.length).writeBytes(req)));
 
         Object o = channel.readOutbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
         r.close();
@@ -478,10 +476,10 @@ public class HttpContentDecoderTest {
         Queue<Object> req = channel.inboundMessages();
         assertTrue(req.size() >= 1);
         Object o = req.peek();
-        assertThat(o, is(instanceOf(HttpRequest.class)));
+        assertThat(o).isInstanceOf(HttpRequest.class);
         HttpRequest r = (HttpRequest) o;
-        String v = r.headers().get(HttpHeaderNames.CONTENT_LENGTH);
-        Long value = v == null ? null : Long.parseLong(v);
+        CharSequence v = r.headers().get(HttpHeaderNames.CONTENT_LENGTH);
+        Long value = v == null ? null : Long.parseLong(v.toString());
         assertTrue(value == null || value.longValue() == HELLO_WORLD.length());
 
         assertHasInboundMessages(channel, true);
@@ -508,10 +506,10 @@ public class HttpContentDecoderTest {
                 .writeBytes(GZ_HELLO_WORLD)));
 
         Object o = channel.readInbound();
-        assertThat(o, is(instanceOf(FullHttpRequest.class)));
+        assertThat(o).isInstanceOf(FullHttpRequest.class);
         FullHttpRequest r = (FullHttpRequest) o;
-        String v = r.headers().get(HttpHeaderNames.CONTENT_LENGTH);
-        Long value = v == null ? null : Long.parseLong(v);
+        CharSequence v = r.headers().get(HttpHeaderNames.CONTENT_LENGTH);
+        Long value = v == null ? null : Long.parseLong(v.toString());
 
         r.close();
         assertNotNull(value);
@@ -543,14 +541,14 @@ public class HttpContentDecoderTest {
         Queue<Object> resp = channel.inboundMessages();
         assertTrue(resp.size() >= 1);
         Object o = resp.peek();
-        assertThat(o, is(instanceOf(HttpResponse.class)));
+        assertThat(o).isInstanceOf(HttpResponse.class);
         HttpResponse r = (HttpResponse) o;
 
         assertFalse(r.headers().contains(HttpHeaderNames.CONTENT_LENGTH), "Content-Length header not removed.");
 
-        String transferEncoding = r.headers().get(HttpHeaderNames.TRANSFER_ENCODING);
+        CharSequence transferEncoding = r.headers().get(HttpHeaderNames.TRANSFER_ENCODING);
         assertNotNull(transferEncoding, "Content-length as well as transfer-encoding not set.");
-        assertEquals(HttpHeaderValues.CHUNKED.toString(), transferEncoding, "Unexpected transfer-encoding value.");
+        assertThat(transferEncoding).isEqualToIgnoringCase(HttpHeaderValues.CHUNKED);
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -576,10 +574,10 @@ public class HttpContentDecoderTest {
                 .writeBytes(GZ_HELLO_WORLD)));
 
         Object o = channel.readInbound();
-        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse r = (FullHttpResponse) o;
-        String v = r.headers().get(HttpHeaderNames.CONTENT_LENGTH);
-        Long value = v == null ? null : Long.parseLong(v);
+        CharSequence v = r.headers().get(HttpHeaderNames.CONTENT_LENGTH);
+        Long value = v == null ? null : Long.parseLong(v.toString());
         assertNotNull(value);
         assertEquals(HELLO_WORLD.length(), value.longValue());
         r.close();
@@ -684,7 +682,7 @@ public class HttpContentDecoderTest {
     public void testCleanupThrows() {
         HttpContentDecoder decoder = new HttpContentDecoder() {
             @Override
-            protected Decompressor newContentDecoder(String contentEncoding) {
+            protected Decompressor newContentDecoder(CharSequence contentEncoding) {
                 return new Decompressor() {
                     @Override
                     public Buffer decompress(Buffer input, BufferAllocator allocator) {
@@ -794,7 +792,8 @@ public class HttpContentDecoderTest {
 
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isSuccess());
-        assertTrue(request.headers().containsValue(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED, true));
+        System.out.println("request.headers() = " + request.headers());
+        assertTrue(request.headers().containsIgnoreCase(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED));
         assertFalse(request.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
 
         HttpContent<?> chunk1 = channel.readInbound();

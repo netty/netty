@@ -15,12 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
-
 /**
  * An HTTP request.
  *
@@ -28,15 +22,10 @@ import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
  * <p>
  * Unlike the Servlet API, a query string is constructed and decomposed by
  * {@link QueryStringEncoder} and {@link QueryStringDecoder}.
- *
- * {@link Cookie} support is also provided separately via {@link ServerCookieDecoder}, {@link ClientCookieDecoder},
- * {@link ServerCookieEncoder}, and {@link ClientCookieEncoder}.
+ * <p>
+ * Cookies are accessed via the {@link #headers()} API.
  *
  * @see HttpResponse
- * @see ServerCookieDecoder
- * @see ClientCookieDecoder
- * @see ServerCookieEncoder
- * @see ClientCookieEncoder
  */
 public interface HttpRequest extends HttpMessage {
 

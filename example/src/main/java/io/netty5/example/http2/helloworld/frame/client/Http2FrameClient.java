@@ -21,12 +21,12 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.codec.http2.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
 import io.netty5.handler.codec.http2.Http2SecurityUtil;
 import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.handler.codec.http2.Http2StreamChannelBootstrap;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.ssl.ApplicationProtocolConfig;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -100,7 +100,7 @@ public final class Http2FrameClient {
             streamChannel.pipeline().addLast(streamFrameResponseHandler);
 
             // Send request (a HTTP/2 HEADERS frame - with ':method = GET' in this case)
-            final DefaultHttp2Headers headers = new DefaultHttp2Headers();
+            final Http2Headers headers = Http2Headers.newHeaders();
             headers.method("GET");
             headers.path(PATH);
             headers.scheme(SSL? "https" : "http");

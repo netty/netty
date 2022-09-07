@@ -23,6 +23,7 @@ import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
@@ -63,7 +64,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
 
-    private static final Http2Headers HEADERS_TOO_LARGE_HEADERS = ReadOnlyHttp2Headers.serverHeaders(false,
+    private static final Http2Headers HEADERS_TOO_LARGE_HEADERS = Http2Headers.newHeaders(false).status(
             HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText());
     private static final Buffer HTTP_1_X_BUF =
             BufferAllocator.offHeapUnpooled().copyOf(new byte[] {'H', 'T', 'T', 'P', '/', '1', '.'}).makeReadOnly();

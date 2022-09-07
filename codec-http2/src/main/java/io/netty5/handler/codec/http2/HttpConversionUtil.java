@@ -25,7 +25,6 @@ import io.netty5.handler.codec.http.FullHttpMessage;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -33,6 +32,8 @@ import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -417,7 +418,7 @@ public final class HttpConversionUtil {
         outputHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
         outputHeaders.remove(HttpHeaderNames.TRAILER);
         if (!isTrailer) {
-            outputHeaders.setInt(ExtensionHeaderNames.STREAM_ID.text(), streamId);
+            outputHeaders.set(ExtensionHeaderNames.STREAM_ID.text(), String.valueOf(streamId));
             HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
         }
     }
@@ -433,10 +434,11 @@ public final class HttpConversionUtil {
      */
     public static Http2Headers toHttp2Headers(HttpMessage in, boolean validateHeaders) {
         HttpHeaders inHeaders = in.headers();
-        final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
+        final Http2Headers out = Http2Headers.newHeaders(
+                inHeaders.size(), validateHeaders, validateHeaders, validateHeaders);
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+            CharSequence host = inHeaders.get(HttpHeaderNames.HOST);
             if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
                 out.path(new AsciiString(request.uri()));
                 setHttp2Scheme(inHeaders, out);
@@ -461,10 +463,11 @@ public final class HttpConversionUtil {
 
     public static Http2Headers toHttp2Headers(HttpHeaders inHeaders, boolean validateHeaders) {
         if (inHeaders.isEmpty()) {
-            return EmptyHttp2Headers.INSTANCE;
+            return Http2Headers.emptyHeaders();
         }
 
-        final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
+        final Http2Headers out = Http2Headers.newHeaders(
+                inHeaders.size(), validateHeaders, validateHeaders, validateHeaders);
         toHttp2Headers(inHeaders, out);
         return out;
     }
@@ -516,11 +519,11 @@ public final class HttpConversionUtil {
     }
 
     public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) {
-        Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
+        Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iterator();
         // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values, but
         // still allowing for "enough" space in the map to reduce the chance of hash code collision.
         CharSequenceMap<AsciiString> connectionBlacklist =
-            toLowercaseMap(inHeaders.valueCharSequenceIterator(CONNECTION), 8);
+            toLowercaseMap(inHeaders.valuesIterator(CONNECTION), 8);
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
@@ -578,13 +581,13 @@ public final class HttpConversionUtil {
     }
 
     // package-private for testing only
-    static void setHttp2Authority(String authority, Http2Headers out) {
+    static void setHttp2Authority(CharSequence authority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
-            if (authority.isEmpty()) {
+            if (authority.length() == 0) {
                 out.authority(EMPTY_STRING);
             } else {
-                int start = authority.indexOf('@') + 1;
+                int start = indexOf(authority, '@', 0) + 1;
                 int length = authority.length() - start;
                 if (length == 0) {
                     throw new IllegalArgumentException("authority: " + authority);

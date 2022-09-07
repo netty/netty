@@ -193,7 +193,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             }
         }
 
-        String contentEncoding = httpResponse.headers().get(HttpHeaderNames.CONTENT_ENCODING);
+        CharSequence contentEncoding = httpResponse.headers().get(HttpHeaderNames.CONTENT_ENCODING);
         if (contentEncoding != null) {
             // Content-Encoding was set, either as something specific or as the IDENTITY encoding
             // Therefore, we should NOT encode here

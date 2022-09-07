@@ -23,6 +23,7 @@ import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
 
 import java.util.Objects;
@@ -129,7 +130,7 @@ public class WebSocketServerHandshakerFactory {
     public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
         CharSequence version = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
-        if (version != null && version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
+        if (version != null && AsciiString.contentEqualsIgnoreCase(version, WebSocketVersion.V13.toAsciiString())) {
             // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
             return new WebSocketServerHandshaker13(webSocketURL, subprotocols, decoderConfig);
         }

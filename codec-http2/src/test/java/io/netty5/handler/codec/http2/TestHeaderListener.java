@@ -31,6 +31,8 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.handler.codec.http2.headers.DefaultHttp2Headers;
+
 import java.util.List;
 
 final class TestHeaderListener extends DefaultHttp2Headers {
@@ -38,6 +40,7 @@ final class TestHeaderListener extends DefaultHttp2Headers {
     private final List<HpackHeaderField> headers;
 
     TestHeaderListener(List<HpackHeaderField> headers) {
+        super(16, true, true, true);
         this.headers = headers;
     }
 

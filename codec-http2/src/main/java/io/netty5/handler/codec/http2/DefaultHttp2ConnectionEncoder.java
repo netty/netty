@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.CoalescingBufferQueue;
 import io.netty5.handler.codec.http.HttpStatusClass;
 import io.netty5.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;

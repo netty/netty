@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http.websocketx.extensions;
 
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,12 +40,12 @@ public final class WebSocketExtensionUtil {
         //this contains check does not allocate an iterator, and most requests are not upgrades
         //so we do the contains check first before checking for specific values
         return headers.contains(HttpHeaderNames.UPGRADE) &&
-                headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
-                headers.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
+                headers.containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE) &&
+                headers.containsIgnoreCase(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
     }
 
-    public static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {
-        String[] rawExtensions = extensionHeader.split(EXTENSION_SEPARATOR);
+    public static List<WebSocketExtensionData> extractExtensions(CharSequence extensionHeader) {
+        String[] rawExtensions = extensionHeader.toString().split(EXTENSION_SEPARATOR);
         if (rawExtensions.length > 0) {
             List<WebSocketExtensionData> extensions = new ArrayList<>(rawExtensions.length);
             for (String rawExtension : rawExtensions) {
@@ -72,7 +72,7 @@ public final class WebSocketExtensionUtil {
         }
     }
 
-    static String computeMergeExtensionsHeaderValue(String userDefinedHeaderValue,
+    static String computeMergeExtensionsHeaderValue(CharSequence userDefinedHeaderValue,
                                                     List<WebSocketExtensionData> extraExtensions) {
         List<WebSocketExtensionData> userDefinedExtensions =
           userDefinedHeaderValue != null ?

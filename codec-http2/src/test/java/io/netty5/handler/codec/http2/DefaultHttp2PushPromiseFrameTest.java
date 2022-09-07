@@ -27,6 +27,7 @@ import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -111,7 +112,7 @@ public class DefaultHttp2PushPromiseFrameTest {
             if (msg instanceof Http2HeadersFrame) {
                 final Http2HeadersFrame receivedFrame = (Http2HeadersFrame) msg;
 
-                Http2Headers pushRequestHeaders = new DefaultHttp2Headers();
+                Http2Headers pushRequestHeaders = Http2Headers.newHeaders();
                 pushRequestHeaders.path("/meow")
                         .method("GET")
                         .scheme("https")
@@ -126,7 +127,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     contentMap.put(newPushFrameStream.id(), "Meow, I am Pushed via HTTP/2");
 
                     // Write headers for actual request
-                    Http2Headers http2Headers = new DefaultHttp2Headers();
+                    Http2Headers http2Headers = Http2Headers.newHeaders();
                     http2Headers.status("200");
                     http2Headers.add("push", "false");
                     Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
@@ -149,7 +150,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                 }
 
                 // Write headers for Priority request
-                Http2Headers http2Headers = new DefaultHttp2Headers();
+                Http2Headers http2Headers = Http2Headers.newHeaders();
                 http2Headers.status("200");
                 http2Headers.add("push", "true");
                 Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
@@ -177,7 +178,7 @@ public class DefaultHttp2PushPromiseFrameTest {
 
         void write() throws InterruptedException {
             latch.await();
-            Http2Headers http2Headers = new DefaultHttp2Headers();
+            Http2Headers http2Headers = Http2Headers.newHeaders();
             http2Headers.path("/")
                     .authority("localhost")
                     .method("GET")

@@ -30,6 +30,7 @@
 package io.netty5.handler.codec.http.headers;
 
 import io.netty5.util.AsciiString;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static io.netty5.handler.codec.http.headers.HeaderUtils.validateCookieNameAndValue;
@@ -51,20 +52,33 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     private static final String ENCODED_LABEL_SAMESITE = "; samesite=";
 
     private static ParseState parseStateOf(CharSequence fieldName) {
-        if (contentEqualsIgnoreCase("path", fieldName)) {
-            return ParseState.ParsingPath;
-        }
-        if (contentEqualsIgnoreCase("domain", fieldName)) {
-            return ParseState.ParsingDomain;
-        }
-        if (contentEqualsIgnoreCase("expires", fieldName)) {
-            return ParseState.ParsingExpires;
-        }
-        if (contentEqualsIgnoreCase("max-age", fieldName)) {
-            return ParseState.ParsingMaxAge;
-        }
-        if (contentEqualsIgnoreCase("samesite", fieldName)) {
-            return ParseState.ParsingSameSite;
+        // Try a binary search based on length. We can read length without bounds checks.
+        int len = fieldName.length();
+        if (len >= 4 && len <= 8) {
+            if (len < 7) {
+                if (len == 4) {
+                    if (contentEqualsIgnoreCase("path", fieldName)) {
+                        return ParseState.ParsingPath;
+                    }
+                } else if (len == 6) {
+                    if (contentEqualsIgnoreCase("domain", fieldName)) {
+                        return ParseState.ParsingDomain;
+                    }
+                }
+            } else {
+                if (len == 7) {
+                    if (contentEqualsIgnoreCase("expires", fieldName)) {
+                        return ParseState.ParsingExpires;
+                    }
+                    if (contentEqualsIgnoreCase("max-age", fieldName)) {
+                        return ParseState.ParsingMaxAge;
+                    }
+                } else {
+                    if (contentEqualsIgnoreCase("samesite", fieldName)) {
+                        return ParseState.ParsingSameSite;
+                    }
+                }
+            }
         }
         return ParseState.Unknown;
     }
@@ -169,7 +183,8 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
             begin = 0;
         }
 
-        while (i < setCookieString.length()) {
+        int length = setCookieString.length();
+        while (i < length) {
             final char c = setCookieString.charAt(i);
             switch (c) {
                 case '=':
@@ -185,6 +200,10 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                     } else if (parseState == ParseState.Unknown) {
                         final CharSequence avName = setCookieString.subSequence(begin, i);
                         parseState = parseStateOf(avName);
+                    } else if (parseState == ParseState.ParsingValue) {
+                        // Cookie values can contain '='.
+                        ++i;
+                        break;
                     } else {
                         throw new IllegalArgumentException("unexpected = at index: " + i);
                     }
@@ -196,28 +215,30 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                         if (isWrapped) {
                             parseState = ParseState.Unknown;
                             value = setCookieString.subSequence(begin, i);
-                            // Increment by 3 because we are skipping DQUOTE SEMI SP
-                            i += 3;
+                            if (validateContent) {
+                                // Increment by 3 because we are skipping DQUOTE SEMI SP
+                                // See https://www.rfc-editor.org/rfc/rfc6265#section-4.1.1
+                                // Specifically, how set-cookie-string interacts with quoted cookie-value.
+                                i += 3;
+                            } else {
+                                // When validation is disabled, we need to check if there's an SP to skip
+                                i += i + 2 < length && setCookieString.charAt(i + 2) == ' '? 3 : 2;
+                            }
                         } else {
                             isWrapped = true;
                             ++i;
                         }
                         begin = i;
-                    } else if (value == null) {
+                        break;
+                    }
+                    if (value == null) {
                         throw new IllegalArgumentException("unexpected quote at index: " + i);
                     }
                     ++i;
                     break;
-                case '%':
-                    if (validateContent) {
-                        extractAndValidateCookieHexValue(setCookieString, i);
-                    }
-                    // Increment by 4 because we are skipping %0x##
-                    i += 4;
-                    break;
                 case ';':
                     // end of value, or end of av-value
-                    if (i + 1 == setCookieString.length()) {
+                    if (i + 1 == length && validateContent) {
                         throw new IllegalArgumentException("unexpected trailing ';'");
                     }
                     switch (parseState) {
@@ -252,12 +273,30 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                             break;
                     }
                     parseState = ParseState.Unknown;
-                    i += 2;
+                    if (validateContent) {
+                        if (i + 1 >= length || ' ' != setCookieString.charAt(i + 1)) {
+                            throw new IllegalArgumentException(
+                                    "a space is required after ; in cookie attribute-value lists");
+                        }
+                        i += 2;
+                    } else {
+                        i++;
+                        if (i < length && ' ' == setCookieString.charAt(i)) {
+                            i++;
+                        }
+                    }
                     begin = i;
                     break;
                 default:
-                    if (validateContent && parseState != ParseState.ParsingExpires) {
-                        validateCookieOctetHexValue(c);
+                    if (validateContent) {
+                        if (parseState == ParseState.ParsingValue) {
+                            // Cookie values need to conform to the cookie-octet rule of
+                            // https://www.rfc-editor.org/rfc/rfc6265#section-4.1.1
+                            validateCookieOctetHexValue(c, i);
+                        } else {
+                            // Cookie attribute-value rules are "any CHAR except CTLs or ';'"
+                            validateCookieAttributeValue(c, i);
+                        }
                     }
                     ++i;
                     break;
@@ -297,6 +336,25 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                         isHttpOnly = true;
                     }
                     break;
+            }
+        } else if (begin == i) {
+            switch (parseState) {
+            case ParsingValue:
+                if (!isWrapped) {
+                    // Values can be the empty string, if we had a cookie name and an equals sign, and no quotes.
+                    value = "";
+                }
+                break;
+            case ParsingPath:
+                path = "";
+                break;
+            case ParsingDomain:
+                domain = "";
+                break;
+            case Unknown:
+                break;
+            default:
+                throw new Error("Unhandled parse state: " + parseState);
             }
         }
 
@@ -505,45 +563,39 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     }
 
     /**
-     * Extract a hex value and validate according to the
-     * <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-octet</a> format.
-     *
-     * @param cookieHeaderValue The cookie's value.
-     * @param i The index where we detected a '%' character indicating a hex value is to follow.
-     */
-    private static void extractAndValidateCookieHexValue(final CharSequence cookieHeaderValue, final int i) {
-        if (cookieHeaderValue.length() - 3 <= i) {
-            throw new IllegalArgumentException("invalid hex encoded value");
-        }
-        char c2 = cookieHeaderValue.charAt(i + 1);
-        if (c2 != 'X' && c2 != 'x') {
-            throw new IllegalArgumentException("unexpected hex indicator " + c2);
-        }
-        c2 = cookieHeaderValue.charAt(i + 2);
-        final char c3 = cookieHeaderValue.charAt(i + 3);
-        // The MSB can only be 0,1,2 so we do a cheaper conversion of hex -> decimal.
-        final int hexValue = (c2 - '0') * 16 + hexToDecimal(c3);
-        validateCookieOctetHexValue(hexValue);
-    }
-
-    /**
      * <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">
      * cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E</a>
      *
      * @param hexValue The decimal representation of the hexadecimal value.
+     * @param index The index of the character in the inputs, for error reporting.
      */
-    private static void validateCookieOctetHexValue(final int hexValue) {
+    private static void validateCookieOctetHexValue(final int hexValue, int index) {
         if (hexValue != 33 &&
                 (hexValue < 35 || hexValue > 43) &&
                 (hexValue < 45 || hexValue > 58) &&
                 (hexValue < 60 || hexValue > 91) &&
                 (hexValue < 93 || hexValue > 126)) {
-            throw new IllegalArgumentException("unexpected hex value " + hexValue);
+            throw unexpectedHexValue(hexValue, index);
         }
     }
 
-    private static int hexToDecimal(final char c) {
-        return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? (c - 'a') + 10 : c >= 'A' && c < 'F' ?
-                (c - 'A') + 10 : -1;
+    /**
+     * Attribute values are <a href="https://www.rfc-editor.org/rfc/rfc6265#section-4.1.1">
+     *     any CHAR except CTLs or ";"</a>,
+     * and CTLs are <a href="https://www.rfc-editor.org/rfc/rfc5234#appendix-B.1">%x00 to %x1F, and %x7F</a>.
+     *
+     * @param hexValue The decimal representation of the hexadecimal value.
+     * @param index The index of the character in the inputs, for error reporting.
+     */
+    private static void validateCookieAttributeValue(final int hexValue, int index) {
+        if (hexValue == ';' || hexValue == 0x7F || hexValue <= 0x1F) {
+            throw unexpectedHexValue(hexValue, index);
+        }
+    }
+
+    @NotNull
+    private static IllegalArgumentException unexpectedHexValue(int hexValue, int index) {
+        return new IllegalArgumentException(
+                "Unexpected hex value at index " + index + ": " + Integer.toHexString(hexValue));
     }
 }

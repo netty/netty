@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
@@ -171,7 +172,7 @@ public class DefaultHttp2HeadersDecoderTest {
     private static Buffer encode(byte[]... entries) throws Exception {
         HpackEncoder hpackEncoder = newTestEncoder();
         Buffer out = onHeapAllocator().allocate(256);
-        Http2Headers http2Headers = new DefaultHttp2Headers(false);
+        Http2Headers http2Headers = Http2Headers.newHeaders(false);
         for (int ix = 0; ix < entries.length;) {
             http2Headers.add(new AsciiString(entries[ix++], false), new AsciiString(entries[ix++], false));
         }

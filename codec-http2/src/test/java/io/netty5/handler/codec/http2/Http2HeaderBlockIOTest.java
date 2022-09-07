@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,18 +54,18 @@ public class Http2HeaderBlockIOTest {
 
     @Test
     public void successiveCallsShouldSucceed() throws Http2Exception {
-        Http2Headers in = new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        Http2Headers in = Http2Headers.newHeaders().method(new AsciiString("GET")).scheme(new AsciiString("https"))
                         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path"))
                         .add(new AsciiString("accept"), new AsciiString("*/*"));
         assertRoundtripSuccessful(in);
 
-        in = new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        in = Http2Headers.newHeaders().method(new AsciiString("GET")).scheme(new AsciiString("https"))
                         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource1"))
                         .add(new AsciiString("accept"), new AsciiString("image/jpeg"))
                         .add(new AsciiString("cache-control"), new AsciiString("no-cache"));
         assertRoundtripSuccessful(in);
 
-        in = new DefaultHttp2Headers().method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        in = Http2Headers.newHeaders().method(new AsciiString("GET")).scheme(new AsciiString("https"))
                         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
                         .add(new AsciiString("accept"), new AsciiString("image/png"))
                         .add(new AsciiString("cache-control"), new AsciiString("no-cache"));
@@ -87,7 +88,7 @@ public class Http2HeaderBlockIOTest {
     }
 
     private static Http2Headers headers() {
-        return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        return Http2Headers.newHeaders(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
                 .add(new AsciiString("accept"), new AsciiString("image/png"))
                 .add(new AsciiString("cache-control"), new AsciiString("no-cache"))

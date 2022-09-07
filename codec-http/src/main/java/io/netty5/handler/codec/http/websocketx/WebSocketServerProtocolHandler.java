@@ -33,16 +33,16 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolCon
 
 /**
  * This handler does all the heavy lifting for you to run a websocket server.
- *
+ * <p>
  * It takes care of websocket handshaking as well as processing of control frames (Close, Ping, Pong). Text and Binary
  * data frames are passed to the next handler in the pipeline (implemented by you) for processing.
- *
+ * <p>
  * See <tt>io.netty5.example.http.websocketx.html5.WebSocketServer</tt> for usage.
- *
+ * <p>
  * The implementation of this handler assumes that you just want to run  a websocket server and not process other types
  * HTTP requests (like GET and POST). If you wish to support both HTTP requests and websockets in the one server, refer
  * to the <tt>io.netty5.example.http.websocketx.server.WebSocketServer</tt> example.
- *
+ * <p>
  * To know once a handshake was done you can intercept the
  * {@link ChannelHandler#channelInboundEvent(ChannelHandlerContext, Object)} and check if the event was instance
  * of {@link WebSocketServerHandshakeCompletionEvent}, the event will contain extra information about the handshake

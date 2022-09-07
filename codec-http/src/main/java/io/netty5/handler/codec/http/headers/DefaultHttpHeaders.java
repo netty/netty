@@ -29,6 +29,8 @@
  */
 package io.netty5.handler.codec.http.headers;
 
+import io.netty5.handler.codec.http.headers.HeaderUtils.AbstractCookiesByNameIterator;
+import io.netty5.handler.codec.http.headers.HeaderUtils.AbstractCookiesIterator;
 import io.netty5.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.COOKIE;
 import static io.netty5.handler.codec.http.HttpHeaderNames.SET_COOKIE;
@@ -51,6 +54,7 @@ import static io.netty5.handler.codec.http.headers.HeaderUtils.pathMatches;
 import static io.netty5.handler.codec.http.headers.HeaderUtils.validateToken;
 import static io.netty5.util.AsciiString.contentEquals;
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
+import static io.netty5.util.AsciiString.trim;
 import static java.util.Collections.emptyIterator;
 
 /**
@@ -82,8 +86,41 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     }
 
     @Override
+    public boolean contains(CharSequence key, CharSequence value) {
+        return contains(key, value, DefaultHttpHeaders::containsCommaSeparatedTrimmedCaseSensitive);
+    }
+
+    @Override
     public boolean containsIgnoreCase(final CharSequence name, final CharSequence value) {
-        return contains(name, value, AsciiString::contentEqualsIgnoreCase);
+        return contains(name, value, DefaultHttpHeaders::containsCommaSeparatedTrimmedCaseInsensitive);
+    }
+
+    private static boolean containsCommaSeparatedTrimmedCaseSensitive(CharSequence expected, CharSequence rawNext) {
+        return containsCommaSeparatedTrimmed(expected, rawNext, AsciiString::contentEquals);
+    }
+
+    private static boolean containsCommaSeparatedTrimmedCaseInsensitive(CharSequence expected, CharSequence rawNext) {
+        return containsCommaSeparatedTrimmed(expected, rawNext, AsciiString::contentEqualsIgnoreCase);
+    }
+
+    private static boolean containsCommaSeparatedTrimmed(CharSequence expected, CharSequence rawNext,
+                                                         BiPredicate<CharSequence, CharSequence> equality) {
+        int begin = 0;
+        int end;
+        if ((end = AsciiString.indexOf(rawNext, ',', begin)) == -1) {
+            return equality.test(trim(rawNext), expected);
+        }
+        do {
+            if (equality.test(trim(rawNext.subSequence(begin, end)), expected)) {
+                return true;
+            }
+            begin = end + 1;
+        } while ((end = AsciiString.indexOf(rawNext, ',', begin)) != -1);
+
+        if (begin < rawNext.length()) {
+            return equality.test(trim(rawNext.subSequence(begin, rawNext.length())), expected);
+        }
+        return false;
     }
 
     @Nullable
@@ -345,7 +382,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         return sizeBefore != size();
     }
 
-    private static final class CookiesIterator extends HeaderUtils.CookiesIterator {
+    private static final class CookiesIterator extends AbstractCookiesIterator {
         private final int cookieHeaderNameHash;
         @Nullable
         private MultiMapEntry<CharSequence, CharSequence> current;
@@ -369,7 +406,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         }
     }
 
-    private static final class CookiesByNameIterator extends HeaderUtils.CookiesByNameIterator {
+    private static final class CookiesByNameIterator extends AbstractCookiesByNameIterator {
         private final int cookieHeaderNameHash;
         @Nullable
         private MultiMapEntry<CharSequence, CharSequence> current;
@@ -573,7 +610,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     @Override
     protected CharSequence validateKey(@Nullable final CharSequence name) {
         if (name == null || name.length() == 0) {
-            throw new IllegalArgumentException("Empty header names are not allowed");
+            throw new HeaderValidationException("Empty header names are not allowed");
         }
         if (validateNames) {
             validateHeaderName(name);
@@ -605,6 +642,14 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
      */
     private static void validateHeaderValue(final CharSequence value) {
         HeaderUtils.validateHeaderValue(value);
+    }
+
+    @Override
+    public HttpHeaders copy() {
+        DefaultHttpHeaders copy = new DefaultHttpHeaders(
+                entries.length, validateNames, validateCookies, validateValues);
+        copy.putAll(this);
+        return copy;
     }
 
     @Nullable
@@ -662,7 +707,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     @Override
     public HttpHeaders add(final HttpHeaders headers) {
         if (headers == this) {
-            return this;
+            throw new IllegalArgumentException("HttpHeaders object cannot be added to itself.");
         }
         if (headers instanceof MultiMap) {
             putAll((MultiMap<? extends CharSequence, ? extends CharSequence>) headers);

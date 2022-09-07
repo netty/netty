@@ -20,6 +20,7 @@ import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferClosedException;
 import io.netty5.buffer.api.MemoryManager;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -591,7 +592,7 @@ public class Http2ConnectionRoundtripTest {
 
         Promise<Void> promise = ImmediateEventExecutor.INSTANCE.newPromise();
         runInChannel(clientChannel, () -> {
-            http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false);
+            http2Client.encoder().writeHeaders(ctx(), 3, Http2Headers.emptyHeaders(), 0, (short) 16, false, 0, false);
             Buffer emptyBuf = onHeapAllocator().allocate(0);
             emptyBuf.close();
             final Future<Void> future;
@@ -605,13 +606,13 @@ public class Http2ConnectionRoundtripTest {
                 break;
             case SINGLE_WITH_TRAILERS:
                 future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
-                http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
+                http2Client.encoder().writeHeaders(ctx(), 3, Http2Headers.emptyHeaders(), 0,
                                                    (short) 16, false, 0, true);
                 break;
             case SECOND_WITH_TRAILERS:
                 future = http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false);
                 http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false);
-                http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
+                http2Client.encoder().writeHeaders(ctx(), 3, Http2Headers.emptyHeaders(), 0,
                                                    (short) 16, false, 0, true);
                 break;
             default:
@@ -640,7 +641,7 @@ public class Http2ConnectionRoundtripTest {
         final Promise<Void> assertPromise = newPromise();
 
         runInChannel(clientChannel, () -> {
-            http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false);
+            http2Client.encoder().writeHeaders(ctx(), 3, Http2Headers.emptyHeaders(), 0, (short) 16, false, 0, false);
             clientChannel.pipeline().addFirst(new ChannelHandler() {
                 @Override
                 public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
@@ -1112,7 +1113,7 @@ public class Http2ConnectionRoundtripTest {
     }
 
     private static Http2Headers dummyHeaders() {
-        return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
+        return Http2Headers.newHeaders(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
         .add(randomString(), randomString());
     }

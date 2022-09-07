@@ -19,19 +19,18 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
-import io.netty5.handler.codec.http.EmptyHttpHeaders;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpRequestEncoder;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -72,13 +71,13 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
         content = allocator.allocate(bytes.length);
         content.writeBytes(bytes);
         Buffer testContent = content.copy().makeReadOnly();
-        HttpHeaders headersWithChunked = new DefaultHttpHeaders(false);
+        HttpHeaders headersWithChunked = Http2Headers.newHeaders(false);
         headersWithChunked.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-        HttpHeaders headersWithContentLength = new DefaultHttpHeaders(false);
-        headersWithContentLength.add(HttpHeaderNames.CONTENT_LENGTH, testContent.readableBytes());
+        HttpHeaders headersWithContentLength = Http2Headers.newHeaders(false);
+        headersWithContentLength.add(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(testContent.readableBytes()));
 
         fullRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index", testContent,
-                headersWithContentLength, EmptyHttpHeaders.INSTANCE);
+                headersWithContentLength, HttpHeaders.emptyHeaders());
         contentLengthRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index",
                 headersWithContentLength);
         chunkedRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index", headersWithChunked);

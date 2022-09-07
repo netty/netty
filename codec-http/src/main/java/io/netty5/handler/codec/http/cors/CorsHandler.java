@@ -21,16 +21,22 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpUtil;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.StringJoiner;
 
 import static io.netty5.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty5.handler.codec.http.HttpResponseStatus.FORBIDDEN;
@@ -79,7 +85,7 @@ public class CorsHandler implements ChannelHandler {
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             request = (HttpRequest) msg;
-            final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
+            final CharSequence origin = request.headers().get(HttpHeaderNames.ORIGIN);
             config = getForOrigin(origin);
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
@@ -95,7 +101,7 @@ public class CorsHandler implements ChannelHandler {
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
         final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK,
-                ctx.bufferAllocator().allocate(0), true, true);
+                ctx.bufferAllocator().allocate(0), true);
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);
@@ -120,10 +126,14 @@ public class CorsHandler implements ChannelHandler {
      * @param response the HttpResponse to which the preflight response headers should be added.
      */
     private void setPreflightHeaders(final HttpResponse response) {
-        response.headers().add(config.preflightResponseHeaders());
+        HttpHeaders headers = response.headers();
+        HttpHeaders preflight = config.preflightResponseHeaders();
+        for (CharSequence name : preflight.names()) {
+            headers.add(name, toCsv(preflight.values(name)));
+        }
     }
 
-    private CorsConfig getForOrigin(String requestOrigin) {
+    private CorsConfig getForOrigin(CharSequence requestOrigin) {
         for (CorsConfig corsConfig : configList) {
             if (corsConfig.isAnyOriginSupported()) {
                 return corsConfig;
@@ -131,7 +141,7 @@ public class CorsHandler implements ChannelHandler {
             if (corsConfig.origins().contains(requestOrigin)) {
                 return corsConfig;
             }
-            if (corsConfig.isNullOriginAllowed() || NULL_ORIGIN.equals(requestOrigin)) {
+            if (corsConfig.isNullOriginAllowed() || AsciiString.contentEquals(NULL_ORIGIN, requestOrigin)) {
                 return corsConfig;
             }
         }
@@ -139,9 +149,9 @@ public class CorsHandler implements ChannelHandler {
     }
 
     private boolean setOrigin(final HttpResponse response) {
-        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        final CharSequence origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null && config != null) {
-            if (NULL_ORIGIN.equals(origin) && config.isNullOriginAllowed()) {
+            if (AsciiString.contentEquals(NULL_ORIGIN, origin) && config.isNullOriginAllowed()) {
                 setNullOrigin(response);
                 return true;
             }
@@ -180,13 +190,13 @@ public class CorsHandler implements ChannelHandler {
         setOrigin(response, NULL_ORIGIN);
     }
 
-    private static void setOrigin(final HttpResponse response, final String origin) {
+    private static void setOrigin(final HttpResponse response, final CharSequence origin) {
         response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
     }
 
     private void setAllowCredentials(final HttpResponse response) {
         if (config.isCredentialsAllowed()
-                && !response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(ANY_ORIGIN)) {
+                && !response.headers().contains(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, ANY_ORIGIN)) {
             response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         }
     }
@@ -200,20 +210,20 @@ public class CorsHandler implements ChannelHandler {
 
     private void setExposeHeaders(final HttpResponse response) {
         if (!config.exposedHeaders().isEmpty()) {
-            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, config.exposedHeaders());
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, toCsv(config.exposedHeaders()));
         }
     }
 
     private void setAllowMethods(final HttpResponse response) {
-        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, config.allowedRequestMethods());
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, toCsv(config.allowedRequestMethods()));
     }
 
     private void setAllowHeaders(final HttpResponse response) {
-        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, config.allowedRequestHeaders());
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, toCsv(config.allowedRequestHeaders()));
     }
 
     private void setMaxAge(final HttpResponse response) {
-        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, config.maxAge());
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, String.valueOf(config.maxAge()));
     }
 
     private void setAllowPrivateNetwork(final HttpResponse response) {
@@ -224,6 +234,18 @@ public class CorsHandler implements ChannelHandler {
                 response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK, "false");
             }
         }
+    }
+
+    private static CharSequence toCsv(Iterable<?> headerValues) {
+        Iterator<?> itr = headerValues.iterator();
+        if (!itr.hasNext()) {
+            return AsciiString.EMPTY_STRING;
+        }
+        StringJoiner joiner = new StringJoiner(",");
+        do {
+            joiner.add(StringUtil.escapeCsv(String.valueOf(itr.next()), true));
+        } while (itr.hasNext());
+        return joiner.toString();
     }
 
     @Override

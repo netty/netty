@@ -47,27 +47,53 @@ import java.util.function.BiFunction;
  */
 public interface HttpHeaders extends Iterable<Entry<CharSequence, CharSequence>> {
     /**
-     * Create a header instance with default size hint, and all validation checks turned on.
+     * Create a headers instance that is expected to remain empty.
      *
-     * @return A new empty header instance.
+     * @return A new headers instance that use up as few resources as possible.
      */
-    static HttpHeaders newHeaders() {
-        return newHeaders(16, true, true, true);
+    static HttpHeaders emptyHeaders() {
+        return newHeaders(2, false, false, false);
     }
 
     /**
-     * Create a header instance with the given size hint, and the given validation checks turned on.
+     * Create a headers instance with default size hint, and all validation checks turned on.
+     *
+     * @return A new empty headers instance.
+     */
+    static HttpHeaders newHeaders() {
+        return newHeaders(true);
+    }
+
+    /**
+     * Create a headers instance with default size hint, and all validation checks turned on.
+     *
+     * @param validate {@code true} to validate header names, values, and cookies.
+     * @return A new empty headers instance.
+     */
+    static HttpHeaders newHeaders(boolean validate) {
+        return newHeaders(16, validate, validate, validate);
+    }
+
+    /**
+     * Create a headers instance with the given size hint, and the given validation checks turned on.
      *
      * @param sizeHint A hint as to how large the hash data structure should be.
      *                 The next positive power of two will be used. An upper bound may be enforced.
      * @param checkNames {@code true} to validate header names.
      * @param checkCookies {@code true} to validate cookie contents when parsing.
      * @param checkValues {@code true} to validate header values.
-     * @return A new empty header instance with the given configuration.
+     * @return A new empty headers instance with the given configuration.
      */
     static HttpHeaders newHeaders(int sizeHint, boolean checkNames, boolean checkCookies, boolean checkValues) {
         return new DefaultHttpHeaders(sizeHint, checkNames, checkCookies, checkValues);
     }
+
+    /**
+     * Create an independent copy of these HTTP headers.
+     *
+     * @return A new headers instance, with the same contents as this one.
+     */
+    HttpHeaders copy();
 
     /**
      * Returns the value of a header with the specified name. If there is more than one value for the specified name,

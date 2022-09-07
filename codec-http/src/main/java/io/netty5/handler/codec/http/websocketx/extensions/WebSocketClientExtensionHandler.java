@@ -59,14 +59,14 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
     public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest && WebSocketExtensionUtil.isWebsocketUpgrade(((HttpRequest) msg).headers())) {
             HttpRequest request = (HttpRequest) msg;
-            String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+            CharSequence headerValue = request.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
             List<WebSocketExtensionData> extraExtensions =
                     new ArrayList<>(extensionHandshakers.size());
             for (WebSocketClientExtensionHandshaker extensionHandshaker : extensionHandshakers) {
                 extraExtensions.add(extensionHandshaker.newRequestData());
             }
-            String newHeaderValue = WebSocketExtensionUtil
-              .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
+            String newHeaderValue = WebSocketExtensionUtil.computeMergeExtensionsHeaderValue(
+                    headerValue, extraExtensions);
 
             request.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
         }
@@ -81,7 +81,7 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
             HttpResponse response = (HttpResponse) msg;
 
             if (WebSocketExtensionUtil.isWebsocketUpgrade(response.headers())) {
-                String extensionsHeader = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+                CharSequence extensionsHeader = response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
                 if (extensionsHeader != null) {
                     List<WebSocketExtensionData> extensions =
@@ -101,8 +101,8 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
                             validExtension = extensionHandshaker.handshakeExtension(extensionData);
                         }
 
-                        if (validExtension != null && ((validExtension.rsv() & rsv) == 0)) {
-                            rsv = rsv | validExtension.rsv();
+                        if (validExtension != null && (validExtension.rsv() & rsv) == 0) {
+                            rsv |= validExtension.rsv();
                             validExtensions.add(validExtension);
                         } else {
                             throw new CodecException(

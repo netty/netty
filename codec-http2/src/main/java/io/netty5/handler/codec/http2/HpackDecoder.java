@@ -34,7 +34,9 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
@@ -47,8 +49,8 @@ import static io.netty5.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty5.handler.codec.http2.Http2Exception.streamError;
-import static io.netty5.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseudoHeader;
-import static io.netty5.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
+import static io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName.getPseudoHeader;
+import static io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty5.util.AsciiString.EMPTY_STRING;
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
@@ -597,15 +599,16 @@ final class HpackDecoder {
                 return;
             }
 
-            if (validate) {
-                try {
+            try {
+                if (validate) {
                     previousType = validate(streamId, name, previousType, headers, value);
-                } catch (Http2Exception ex) {
-                    validationException = ex;
-                    return;
                 }
+                headers.add(name, value);
+            } catch (HeaderValidationException ex) {
+                validationException = new Http2Exception(PROTOCOL_ERROR, ex.getMessage(), ex);
+            } catch (Http2Exception ex) {
+                validationException = ex;
             }
-            headers.add(name, value);
         }
     }
 }

@@ -19,13 +19,12 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.DefaultHttp2DataFrame;
-import io.netty5.handler.codec.http2.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty5.handler.codec.http2.DefaultHttp2WindowUpdateFrame;
 import io.netty5.handler.codec.http2.Http2DataFrame;
 import io.netty5.handler.codec.http2.Http2FrameStream;
-import io.netty5.handler.codec.http2.Http2Headers;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 
 import java.nio.charset.StandardCharsets;
 
@@ -102,7 +101,7 @@ public class HelloWorldHttp2Handler implements ChannelHandler {
      */
     private static void sendResponse(ChannelHandlerContext ctx, Http2FrameStream stream, Buffer payload) {
         // Send a frame for the response status
-        Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
+        Http2Headers headers = Http2Headers.newHeaders().status(OK.codeAsText());
         ctx.write(new DefaultHttp2HeadersFrame(headers).stream(stream));
         ctx.write(new DefaultHttp2DataFrame(payload.send(), true).stream(stream));
     }

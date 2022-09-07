@@ -21,8 +21,8 @@ import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 
@@ -135,17 +135,17 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                                                     HttpHeaders headers) {
         HttpHeaders reqHeaders = req.headers();
         if (!reqHeaders.contains(HttpHeaderNames.CONNECTION) ||
-            !reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+            !reqHeaders.containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)) {
             throw new WebSocketServerHandshakeException(
                     "not a WebSocket request: a |Connection| header must includes a token 'Upgrade'", req);
         }
 
-        if (!reqHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true)) {
+        if (!reqHeaders.containsIgnoreCase(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)) {
             throw new WebSocketServerHandshakeException(
                     "not a WebSocket request: a |Upgrade| header must containing the value 'websocket'", req);
         }
 
-        String key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
+        CharSequence key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
@@ -156,14 +156,14 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        String accept = WebSocketUtil.calculateV13Accept(key);
+        String accept = WebSocketUtil.calculateV13Accept(key.toString());
         res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                      .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                      .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
-        String subprotocols = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+        CharSequence subprotocols = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
-            String selectedSubprotocol = selectSubprotocol(subprotocols);
+            String selectedSubprotocol = selectSubprotocol(subprotocols.toString());
             if (selectedSubprotocol == null) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);

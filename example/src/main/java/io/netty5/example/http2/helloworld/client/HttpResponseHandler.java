@@ -88,12 +88,13 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-        Integer streamId = msg.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
-        if (streamId == null) {
+        CharSequence streamIdVal = msg.headers().get(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+        if (streamIdVal == null) {
             System.err.println("HttpResponseHandler unexpected message received: " + msg);
             return;
         }
 
+        int streamId = Integer.parseInt(streamIdVal.toString());
         Entry<Future<Void>, Promise<Void>> entry = streamidPromiseMap.get(streamId);
         if (entry == null) {
             System.err.println("Message received for unknown stream id " + streamId);

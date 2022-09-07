@@ -369,7 +369,7 @@ public class HttpResponseEncoderTest {
 
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.RESET_CONTENT);
         if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName)) {
-            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(content.readableBytes()));
         } else {
             response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         }

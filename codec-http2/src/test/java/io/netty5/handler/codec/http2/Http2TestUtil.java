@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -171,7 +172,7 @@ public final class Http2TestUtil {
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                boolean endStream) throws Http2Exception {
+                                  boolean endStream) throws Http2Exception {
             listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
             messageLatch.countDown();
             if (trailersLatch != null && endStream) {

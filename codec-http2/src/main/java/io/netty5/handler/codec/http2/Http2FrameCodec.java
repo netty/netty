@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -263,8 +264,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                     // https://github.com/netty/netty/issues/4942
                     onStreamActive0(stream);
                 }
-                upgrade.upgradeRequest().headers().setInt(
-                        HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), HTTP_UPGRADE_STREAM_ID);
+                upgrade.upgradeRequest().headers().set(
+                        HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
+                        String.valueOf(HTTP_UPGRADE_STREAM_ID));
                 stream.setProperty(upgradeKey, true);
                 InboundHttpToHttp2Adapter.handle(
                         ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest());

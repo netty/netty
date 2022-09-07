@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -105,7 +106,7 @@ public class Http2EmptyDataFrameListenerTest {
     public void testEmptyDataFramesWithHeaderFrameInBetween() throws Http2Exception {
         final Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
         listener.onDataRead(ctx, 1, empty(), 0, false);
-        listener.onHeadersRead(ctx, 1, EmptyHttp2Headers.INSTANCE, 0, true);
+        listener.onHeadersRead(ctx, 1, Http2Headers.emptyHeaders(), 0, true);
 
         listener.onDataRead(ctx, 1, empty(), 0, false);
         listener.onDataRead(ctx, 1, empty(), 0, false);
@@ -117,7 +118,7 @@ public class Http2EmptyDataFrameListenerTest {
             }
         });
 
-        verify(frameListener, times(1)).onHeadersRead(eq(ctx), eq(1), eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(true));
+        verify(frameListener, times(1)).onHeadersRead(eq(ctx), eq(1), eq(Http2Headers.emptyHeaders()), eq(0), eq(true));
         verify(frameListener, times(3)).onDataRead(eq(ctx), eq(1), any(Buffer.class), eq(0), eq(false));
     }
 
@@ -125,7 +126,7 @@ public class Http2EmptyDataFrameListenerTest {
     public void testEmptyDataFramesWithHeaderFrameInBetween2() throws Http2Exception {
         final Http2EmptyDataFrameListener listener = new Http2EmptyDataFrameListener(frameListener, 2);
         listener.onDataRead(ctx, 1, empty(), 0, false);
-        listener.onHeadersRead(ctx, 1, EmptyHttp2Headers.INSTANCE, 0, (short) 0, false, 0, true);
+        listener.onHeadersRead(ctx, 1, Http2Headers.emptyHeaders(), 0, (short) 0, false, 0, true);
 
         listener.onDataRead(ctx, 1, empty(), 0, false);
         listener.onDataRead(ctx, 1, empty(), 0, false);
@@ -138,7 +139,7 @@ public class Http2EmptyDataFrameListenerTest {
         });
 
         verify(frameListener, times(1)).onHeadersRead(eq(ctx), eq(1),
-                eq(EmptyHttp2Headers.INSTANCE), eq(0), eq((short) 0), eq(false), eq(0), eq(true));
+                eq(Http2Headers.emptyHeaders()), eq(0), eq((short) 0), eq(false), eq(0), eq(true));
         verify(frameListener, times(3)).onDataRead(eq(ctx), eq(1), any(Buffer.class), eq(0), eq(false));
     }
 }

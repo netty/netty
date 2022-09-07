@@ -15,6 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+
 /**
  * The last {@link HttpContent} which has trailing headers.
  */

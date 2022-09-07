@@ -63,9 +63,9 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
             return false;
         }
 
-        return ((wsFrame instanceof TextWebSocketFrame || wsFrame instanceof BinaryWebSocketFrame) &&
-                (wsFrame.rsv() & WebSocketExtension.RSV1) > 0) ||
-               (wsFrame instanceof ContinuationWebSocketFrame && compressing);
+        return (wsFrame instanceof TextWebSocketFrame || wsFrame instanceof BinaryWebSocketFrame) &&
+                (wsFrame.rsv() & WebSocketExtension.RSV1) > 0 ||
+               wsFrame instanceof ContinuationWebSocketFrame && compressing;
     }
 
     @Override

@@ -59,7 +59,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
             response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         }
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.headers().setInt(CONTENT_LENGTH, response.payload().readableBytes());
+        response.headers().set(CONTENT_LENGTH, String.valueOf(response.payload().readableBytes()));
 
         if (!keepAlive) {
             ctx.write(response).addListener(ctx, ChannelFutureListeners.CLOSE);

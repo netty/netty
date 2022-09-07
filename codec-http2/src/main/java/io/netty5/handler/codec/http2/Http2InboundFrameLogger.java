@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
 import static io.netty5.handler.codec.http2.Http2FrameLogger.Direction.INBOUND;
@@ -51,7 +52,7 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
 
             @Override
             public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-                    Http2Headers headers, int padding, boolean endStream)
+                                      Http2Headers headers, int padding, boolean endStream)
                     throws Http2Exception {
                 logger.logHeaders(INBOUND, ctx, streamId, headers, padding, endStream);
                 listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
