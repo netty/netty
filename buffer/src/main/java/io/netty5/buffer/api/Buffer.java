@@ -308,7 +308,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
-     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination byte buffer.
+     * or if the resulting end positions reach beyond the end of either this buffer or the destination {@link ByteBuffer}.
      * @throws java.nio.ReadOnlyBufferException if the destination byte buffer is read-only.
      * @throws BufferClosedException if this buffer is closed.
      */
