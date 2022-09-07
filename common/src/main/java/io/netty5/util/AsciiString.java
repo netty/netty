@@ -1557,13 +1557,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (sequence.getClass() == AsciiString.class) {
             return ((AsciiString) sequence).subSequence(start, end);
         }
-        final String str;
-        if (sequence.getClass() == String.class) {
-            str = (String) sequence;
-        } else {
-            str = sequence.toString();
-        }
-        return str.substring(start, end);
+        return sequence.toString().substring(start, end);
     }
 
     private static AsciiString[] toAsciiStringArray(String[] jdkResult) {
