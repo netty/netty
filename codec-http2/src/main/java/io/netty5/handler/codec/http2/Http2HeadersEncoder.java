@@ -22,7 +22,17 @@ import io.netty5.util.internal.UnstableApi;
  * Encodes {@link Http2Headers} into HPACK-encoded headers blocks.
  */
 @UnstableApi
-public interface Http2HeadersEncoder {
+public interface Http2HeadersEncoder extends AutoCloseable {
+    /**
+     * Close the encoder and release all its associated data. By default, this default method does nothing,
+     * but if needed, concrete encoders may override this method in order to clean up any resources when closed.
+     *
+     * @throws IllegalStateException If this {@code Resource} has already been closed.
+     */
+    @Override
+    default void close() {
+    }
+
     /**
      * Configuration related elements for the {@link Http2HeadersEncoder} interface
      */

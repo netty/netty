@@ -104,4 +104,9 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     public Configuration configuration() {
         return this;
     }
+
+    @Override
+    public void close() {
+        tableSizeChangeOutput.close();
+    }
 }
