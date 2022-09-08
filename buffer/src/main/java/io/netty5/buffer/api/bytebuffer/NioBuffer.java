@@ -178,7 +178,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public Buffer implicitCapacityLimit(int limit) {
-        checkImplicitCapacity(limit,  capacity());
+        checkImplicitCapacity(limit, capacity());
         implicitCapacityLimit = limit;
         return this;
     }

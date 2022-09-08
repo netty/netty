@@ -302,14 +302,15 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * or {@code length}.
      *
      * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
-     *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
+     *              this buffer will be copied to the {@code destPos} index in the {@code dest} {@link ByteBuffer}.
      * @param dest The destination byte buffer.
-     * @param destPos The index into the {@code dest} array from where the copying should start.
+     * @param destPos The index into the {@code dest} {@link ByteBuffer} from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
-     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination array.
-     * @throws java.nio.ReadOnlyBufferException if the destination buffer is read-only.
+     * or if the resulting end positions reach beyond the end of either this buffer or the destination
+     * {@link ByteBuffer}.
+     * @throws java.nio.ReadOnlyBufferException if the destination byte buffer is read-only.
      * @throws BufferClosedException if this buffer is closed.
      */
     void copyInto(int srcPos, ByteBuffer dest, int destPos, int length);
@@ -325,13 +326,13 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * or {@code length}.
      *
      * @param srcPos The byte offset into this buffer from where the copying should start; the byte at this offset in
-     *              this buffer will be copied to the {@code destPos} index in the {@code dest} array.
+     *              this buffer will be copied to the {@code destPos} index in the {@code dest} buffer.
      * @param dest The destination buffer.
-     * @param destPos The index into the {@code dest} array from where the copying should start.
+     * @param destPos The index into the {@code dest} buffer from where the copying should start.
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
-     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination array.
+     * or if the resulting end positions reaches beyond the end of either this buffer, or the destination buffer.
      * @throws BufferReadOnlyException if the destination buffer is read-only.
      * @throws BufferClosedException if this or the destination buffer is closed.
      */
@@ -409,7 +410,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
     /**
      * Reads a {@link CharSequence} of the passed {@code length} using the passed {@link Charset}.
-     * This updates the {@linkplain #readerOffset()} reader offset} of this buffer.
+     * This updates the {@linkplain #readerOffset() reader offset} of this buffer.
      *
      * @param length of {@link CharSequence} to read.
      * @param charset of the bytes to be read.
@@ -821,7 +822,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
     /**
      * Splits the buffer into two, at {@code length} number of bytes from the current
-     * {@linkplain #readerOffset()} reader offset} position.
+     * {@linkplain #readerOffset() reader offset} position.
      * <p>
      * The region of this buffer that contain the previously read and readable bytes till the
      * {@code readerOffset() + length} position, will be captured and returned in a new buffer,
@@ -873,7 +874,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
     /**
      * Splits the buffer into two, at {@code length} number of bytes from the current
-     * {@linkplain #writerOffset()} writer offset} position.
+     * {@linkplain #writerOffset() writer offset} position.
      * <p>
      * The region of this buffer that contain the previously read and readable bytes till the
      * {@code writerOffset() + length} position, will be captured and returned in a new buffer,
