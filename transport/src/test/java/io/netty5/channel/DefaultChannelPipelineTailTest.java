@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-
 import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,23 +30,24 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultChannelPipelineTailTest {
+    private static final long TIMEOUT_SEC = 10L;
 
-    private static EventLoopGroup GROUP;
+    private static EventLoopGroup group;
 
     @BeforeAll
     public static void init() {
-        GROUP = new MultithreadEventLoopGroup(1, () -> new IoHandler() {
+        group = new MultithreadEventLoopGroup(1, () -> new IoHandler() {
             private final Object lock = new Object();
             @Override
             public int run(IoExecutionContext context) {
-                if (context.canBlock()) {
-                    synchronized (lock) {
-                        try {
+                try {
+                    while (context.canBlock()) {
+                        synchronized (lock) {
                             lock.wait();
-                        } catch (InterruptedException e) {
-                            Thread.interrupted();
                         }
                     }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
                 return 0;
             }
@@ -90,13 +90,13 @@ public class DefaultChannelPipelineTailTest {
 
     @AfterAll
     public static void destroy() {
-        GROUP.shutdownGracefully();
+        group.shutdownGracefully();
     }
 
     @Test
     public void testOnUnhandledInboundChannelActive() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        EventLoop loop = GROUP.next();
+        EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
             protected void onUnhandledInboundChannelActive() {
@@ -116,7 +116,7 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundChannelInactive() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        EventLoop loop = GROUP.next();
+        EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
             protected void onUnhandledInboundChannelInactive() {
@@ -127,14 +127,14 @@ public class DefaultChannelPipelineTailTest {
         myChannel.pipeline().fireChannelInactive();
         myChannel.close().asStage().sync();
 
-        assertTrue(latch.await(1L, TimeUnit.SECONDS));
+        assertTrue(latch.await(TIMEOUT_SEC, TimeUnit.SECONDS));
     }
 
     @Test
     public void testOnUnhandledInboundException() throws Exception {
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
-        EventLoop loop = GROUP.next();
+        EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
             protected void onUnhandledInboundException(Throwable cause) {
@@ -146,7 +146,7 @@ public class DefaultChannelPipelineTailTest {
         try {
             IOException ex = new IOException("testOnUnhandledInboundException");
             myChannel.pipeline().fireChannelExceptionCaught(ex);
-            assertTrue(latch.await(1L, TimeUnit.SECONDS));
+            assertTrue(latch.await(TIMEOUT_SEC, TimeUnit.SECONDS));
             assertSame(ex, causeRef.get());
         } finally {
             myChannel.close();
@@ -156,7 +156,7 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundMessage() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        EventLoop loop = GROUP.next();
+        EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
             protected void onUnhandledInboundMessage(Object msg) {
@@ -166,7 +166,7 @@ public class DefaultChannelPipelineTailTest {
 
         try {
             myChannel.pipeline().fireChannelRead("testOnUnhandledInboundMessage");
-            assertTrue(latch.await(1L, TimeUnit.SECONDS));
+            assertTrue(latch.await(TIMEOUT_SEC, TimeUnit.SECONDS));
         } finally {
             myChannel.close();
         }
@@ -175,7 +175,7 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundReadComplete() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        EventLoop loop = GROUP.next();
+        EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
             protected void onUnhandledInboundReadComplete() {
@@ -185,7 +185,7 @@ public class DefaultChannelPipelineTailTest {
 
         try {
             myChannel.pipeline().fireChannelReadComplete();
-            assertTrue(latch.await(1L, TimeUnit.SECONDS));
+            assertTrue(latch.await(TIMEOUT_SEC, TimeUnit.SECONDS));
         } finally {
             myChannel.close();
         }
@@ -194,7 +194,7 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundUserEventTriggered() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        EventLoop loop = GROUP.next();
+        EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
             protected void onUnhandledChannelInboundEvent(Object evt) {
@@ -204,7 +204,7 @@ public class DefaultChannelPipelineTailTest {
 
         try {
             myChannel.pipeline().fireChannelInboundEvent("testOnUnhandledInboundUserEventTriggered");
-            assertTrue(latch.await(1L, TimeUnit.SECONDS));
+            assertTrue(latch.await(TIMEOUT_SEC, TimeUnit.SECONDS));
         } finally {
             myChannel.close();
         }
@@ -213,7 +213,7 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundWritabilityChanged() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        EventLoop loop = GROUP.next();
+        EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
             protected void onUnhandledInboundWritabilityChanged() {
@@ -223,7 +223,7 @@ public class DefaultChannelPipelineTailTest {
 
         try {
             myChannel.pipeline().fireChannelWritabilityChanged();
-            assertTrue(latch.await(1L, TimeUnit.SECONDS));
+            assertTrue(latch.await(TIMEOUT_SEC, TimeUnit.SECONDS));
         } finally {
             myChannel.close();
         }
