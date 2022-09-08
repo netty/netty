@@ -32,6 +32,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
@@ -45,10 +46,13 @@ import static io.netty5.handler.codec.http2.Http2TestUtil.randomString;
 import static java.lang.Math.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
@@ -101,16 +105,35 @@ public class Http2FrameRoundtripTest {
     public void emptyDataShouldMatch() throws Exception {
         Buffer data = empty();
         writer.writeData(ctx, STREAM_ID, data, 0, false);
+        doAnswer(invocation -> {
+            assertEquals(ctx, invocation.getArgument(0));
+            assertEquals(STREAM_ID, (int) invocation.getArgument(1));
+            assertEquals(data, (Buffer) invocation.getArgument(2));
+            assertEquals(0, (int) invocation.getArgument(3));
+            assertFalse((boolean) invocation.getArgument(4));
+            return 0;
+        }).when(listener)
+                .onDataRead(any(ChannelHandlerContext.class), anyInt(), any(Buffer.class), anyInt(), anyBoolean());
+
         readFrames();
-        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0), eq(false));
     }
 
     @Test
     public void dataShouldMatch() throws Exception {
         try (Buffer data = data(10)) {
             writer.writeData(ctx, STREAM_ID, data.copy(), 1, false);
+
+            doAnswer(invocation -> {
+                assertEquals(ctx, invocation.getArgument(0));
+                assertEquals(STREAM_ID, (int) invocation.getArgument(1));
+                assertEquals(data, (Buffer) invocation.getArgument(2));
+                assertEquals(1, (int) invocation.getArgument(3));
+                assertFalse((boolean) invocation.getArgument(4));
+                return 0;
+            }).when(listener)
+                    .onDataRead(any(ChannelHandlerContext.class), anyInt(), any(Buffer.class), anyInt(), anyBoolean());
+
             readFrames();
-            verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(1), eq(false));
         }
     }
 
@@ -118,8 +141,18 @@ public class Http2FrameRoundtripTest {
     public void dataWithPaddingShouldMatch() throws Exception {
         try (Buffer data = data(10)) {
             writer.writeData(ctx, STREAM_ID, data.copy(), MAX_PADDING, true);
+
+            doAnswer(invocation -> {
+                assertEquals(ctx, invocation.getArgument(0));
+                assertEquals(STREAM_ID, (int) invocation.getArgument(1));
+                assertEquals(data, (Buffer) invocation.getArgument(2));
+                assertEquals(MAX_PADDING, (int) invocation.getArgument(3));
+                assertTrue((boolean) invocation.getArgument(4));
+                return 0;
+            }).when(listener)
+                    .onDataRead(any(ChannelHandlerContext.class), anyInt(), any(Buffer.class), anyInt(), anyBoolean());
+
             readFrames();
-            verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(MAX_PADDING), eq(true));
         }
     }
 
@@ -132,6 +165,14 @@ public class Http2FrameRoundtripTest {
 
             writer.writeData(ctx, STREAM_ID, originalData.copy(), originalPadding,
                              endOfStream);
+
+            List<Buffer> datas = new ArrayList<>();
+            doAnswer(invocation -> {
+                datas.add(((Buffer) invocation.getArgument(2)).copy());
+                return 0;
+            }).when(listener)
+                    .onDataRead(any(ChannelHandlerContext.class), anyInt(), any(Buffer.class), anyInt(), anyBoolean());
+
             readFrames();
 
             // Verify that at least one frame was sent with eos=false and exactly one with eos=true.
@@ -141,13 +182,12 @@ public class Http2FrameRoundtripTest {
                                         anyInt(), eq(true));
 
             // Capture the read data and padding.
-            ArgumentCaptor<Buffer> dataCaptor = ArgumentCaptor.forClass(Buffer.class);
             ArgumentCaptor<Integer> paddingCaptor = ArgumentCaptor.forClass(Integer.class);
-            verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), dataCaptor.capture(),
+            verify(listener, atLeastOnce()).onDataRead(eq(ctx), eq(STREAM_ID), any(Buffer.class),
                                                        paddingCaptor.capture(), anyBoolean());
 
             // Make sure the data matches the original.
-            for (Buffer chunk : dataCaptor.getAllValues()) {
+            for (Buffer chunk : datas) {
                 try (Buffer originalChunk = originalData.readSplit(chunk.readableBytes())) {
                     assertEquals(originalChunk, chunk);
                 }
@@ -301,13 +341,17 @@ public class Http2FrameRoundtripTest {
     public void goAwayFrameShouldMatch() throws Exception {
         final String text = "test";
         try (Buffer data = bb(text.getBytes())) {
+            doAnswer(invocation -> {
+                assertEquals(ctx, invocation.getArgument(0));
+                assertEquals(STREAM_ID, (int) invocation.getArgument(1));
+                assertEquals(ERROR_CODE, (long) invocation.getArgument(2));
+                assertEquals(data, (Buffer) invocation.getArgument(3));
+                return null;
+            }).when(listener)
+                    .onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(Buffer.class));
 
             writer.writeGoAway(ctx, STREAM_ID, ERROR_CODE, data.copy());
             readFrames();
-
-            ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
-            verify(listener).onGoAwayRead(eq(ctx), eq(STREAM_ID), eq(ERROR_CODE), captor.capture());
-            assertEquals(data, captor.getValue());
         }
     }
 
