@@ -128,7 +128,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     @Override
-    public void close() { }
+    public void close() {
+        headersEncoder.close();
+    }
 
     @Override
     public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, Buffer data,
