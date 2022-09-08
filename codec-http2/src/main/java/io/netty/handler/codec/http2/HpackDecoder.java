@@ -442,8 +442,9 @@ final class HpackDecoder {
                     contentEqualsIgnoreCase(name, HttpHeaderNames.KEEP_ALIVE);
             case 16: return contentEqualsIgnoreCase(name, HttpHeaderNames.PROXY_CONNECTION);
             case 17: return contentEqualsIgnoreCase(name, HttpHeaderNames.TRANSFER_ENCODING);
+            default:
+                return false;
         }
-        return false;
     }
 
     private static boolean contains(Http2Headers headers, AsciiString name) {
@@ -666,11 +667,11 @@ final class HpackDecoder {
             }
 
             try {
-                if (validateHeaders) {
-                    previousType = validateHeader(streamId, name, previousType, headers, value);
-                }
                 if (validateHeaderValues) {
                     validateValidHeaderValue(streamId, name, value);
+                }
+                if (validateHeaders) {
+                    previousType = validateHeader(streamId, name, previousType, headers, value);
                 }
                 headers.add(name, value);
             } catch (Http2Exception ex) {

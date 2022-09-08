@@ -24,10 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HpackDynamicTableTest {
-    AsciiString foo = AsciiString.cached("foo");
-    AsciiString bar = AsciiString.cached("bar");
-    AsciiString hello = AsciiString.cached("hello");
-    AsciiString world = AsciiString.cached("world");
+    private final AsciiString foo = AsciiString.cached("foo");
+    private final AsciiString bar = AsciiString.cached("bar");
+    private final AsciiString hello = AsciiString.cached("hello");
+    private final AsciiString world = AsciiString.cached("world");
 
     @Test
     public void testLength() {
