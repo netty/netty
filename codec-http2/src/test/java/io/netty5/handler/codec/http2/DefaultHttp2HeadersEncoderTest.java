@@ -61,7 +61,9 @@ public class DefaultHttp2HeadersEncoderTest {
         assertThrows(StreamException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                encoder.encodeHeaders(3 /* randomly chosen */, headers, onHeapAllocator().allocate(256));
+                try (Buffer encoded = onHeapAllocator().allocate(256)) {
+                    encoder.encodeHeaders(3 /* randomly chosen */, headers, encoded);
+                }
             }
         });
     }
