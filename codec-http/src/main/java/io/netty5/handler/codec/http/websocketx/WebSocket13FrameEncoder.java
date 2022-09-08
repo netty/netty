@@ -98,7 +98,7 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     }
 
     @Override
-    protected void encodeAndClose(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final Buffer data = msg.binaryData();
         byte[] mask;
 
@@ -196,24 +196,19 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     buf.writeByte((byte) (byteData ^ mask[counter++ % 4]));
                 }
                 out.add(buf);
-                data.close();
             } else {
                 if (buf.writableBytes() >= data.readableBytes()) {
                     // merge buffers as this is cheaper then a gathering write if the payload is small enough
                     buf.writeBytes(data);
-                    data.close();
                     out.add(buf);
                 } else {
                     out.add(buf);
-                    out.add(data);
+                    out.add(data.split());
                 }
             }
         } catch (Throwable t) {
             if (buf != null) {
                 buf.close();
-            }
-            if (data.isAccessible()) {
-                data.close();
             }
             throw t;
         }
