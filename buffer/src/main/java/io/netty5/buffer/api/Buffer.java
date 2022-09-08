@@ -308,7 +308,8 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @param length The number of bytes to copy.
      * @throws NullPointerException if the destination buffer is null.
      * @throws IndexOutOfBoundsException if the source or destination positions, or the length, are negative,
-     * or if the resulting end positions reach beyond the end of either this buffer or the destination {@link ByteBuffer}.
+     * or if the resulting end positions reach beyond the end of either this buffer or the destination
+     * {@link ByteBuffer}.
      * @throws java.nio.ReadOnlyBufferException if the destination byte buffer is read-only.
      * @throws BufferClosedException if this buffer is closed.
      */
@@ -409,7 +410,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
     /**
      * Reads a {@link CharSequence} of the passed {@code length} using the passed {@link Charset}.
-     * This updates the {@linkplain #readerOffset()} reader offset} of this buffer.
+     * This updates the {@linkplain #readerOffset() reader offset} of this buffer.
      *
      * @param length of {@link CharSequence} to read.
      * @param charset of the bytes to be read.
@@ -821,7 +822,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
     /**
      * Splits the buffer into two, at {@code length} number of bytes from the current
-     * {@linkplain #readerOffset()} reader offset} position.
+     * {@linkplain #readerOffset() reader offset} position.
      * <p>
      * The region of this buffer that contain the previously read and readable bytes till the
      * {@code readerOffset() + length} position, will be captured and returned in a new buffer,
@@ -873,7 +874,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
 
     /**
      * Splits the buffer into two, at {@code length} number of bytes from the current
-     * {@linkplain #writerOffset()} writer offset} position.
+     * {@linkplain #writerOffset() writer offset} position.
      * <p>
      * The region of this buffer that contain the previously read and readable bytes till the
      * {@code writerOffset() + length} position, will be captured and returned in a new buffer,
