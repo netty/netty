@@ -1,0 +1,79 @@
+[
+  {
+    "name": "io.netty5.bootstrap.ServerBootstrap$1",
+    "condition": {
+      "typeReachable": "io.netty5.bootstrap.ServerBootstrap$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.bootstrap.ServerBootstrap$ServerBootstrapAcceptor",
+    "condition": {
+      "typeReachable": "io.netty5.bootstrap.ServerBootstrap$ServerBootstrapAcceptor"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.ChannelHandler",
+    "condition": {
+      "typeReachable": "io.netty5.channel.ChannelHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.ChannelHandlerAdapter",
+    "condition": {
+      "typeReachable": "io.netty5.channel.ChannelHandlerAdapter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.ChannelInitializer",
+    "condition": {
+      "typeReachable": "io.netty5.channel.ChannelInitializer"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.CombinedChannelDuplexHandler",
+    "condition": {
+      "typeReachable": "io.netty5.channel.CombinedChannelDuplexHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.DefaultChannelPipeline$HeadHandler",
+    "condition": {
+      "typeReachable": "io.netty5.channel.DefaultChannelPipeline$HeadHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.DefaultChannelPipeline$TailHandler",
+    "condition": {
+      "typeReachable": "io.netty5.channel.DefaultChannelPipeline$TailHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.embedded.EmbeddedChannel$1",
+    "condition": {
+      "typeReachable": "io.netty5.channel.embedded.EmbeddedChannel$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.SimpleChannelInboundHandler",
+    "condition": {
+      "typeReachable": "io.netty5.channel.SimpleChannelInboundHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.channel.SimpleUserEventChannelHandler",
+    "condition": {
+      "typeReachable": "io.netty5.channel.SimpleUserEventChannelHandler"
+    },
+    "queryAllPublicMethods": true
+  }
+]

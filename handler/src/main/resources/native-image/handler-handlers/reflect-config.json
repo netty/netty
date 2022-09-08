@@ -1,0 +1,373 @@
+[
+  {
+    "name": "io.netty5.handler.address.DynamicAddressConnectHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.address.DynamicAddressConnectHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.address.ResolveAddressHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.address.ResolveAddressHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.base64.Base64Decoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.base64.Base64Decoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.base64.Base64Encoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.base64.Base64Encoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.bytes.ByteArrayDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.bytes.ByteArrayDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.bytes.ByteArrayEncoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.bytes.ByteArrayEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.ByteToMessageCodec",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.ByteToMessageCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.ByteToMessageCodec$1",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.ByteToMessageCodec$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.ByteToMessageCodec$Encoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.ByteToMessageCodec$Encoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.ByteToMessageDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.ByteToMessageDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.compression.CompressionHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.compression.CompressionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.compression.DecompressionHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.compression.DecompressionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.DatagramPacketDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.DatagramPacketDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.DatagramPacketEncoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.DatagramPacketEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.DelimiterBasedFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.DelimiterBasedFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.FixedLengthFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.FixedLengthFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.LengthFieldBasedFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.LengthFieldBasedFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.LengthFieldPrepender",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.LengthFieldPrepender"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.LineBasedFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.LineBasedFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.MessageAggregator",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.MessageAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.MessageToByteEncoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.MessageToByteEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.MessageToMessageCodec",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.MessageToMessageCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.MessageToMessageCodec$1",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.MessageToMessageCodec$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.MessageToMessageCodec$2",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.MessageToMessageCodec$2"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.MessageToMessageDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.MessageToMessageDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.MessageToMessageEncoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.MessageToMessageEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.string.LineEncoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.string.LineEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.string.StringDecoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.string.StringDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.codec.string.StringEncoder",
+    "condition": {
+      "typeReachable": "io.netty5.handler.codec.string.StringEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.flow.FlowControlHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.flow.FlowControlHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.flush.FlushConsolidationHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.flush.FlushConsolidationHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ipfilter.AbstractRemoteAddressFilter",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ipfilter.AbstractRemoteAddressFilter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ipfilter.IpSubnetFilter",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ipfilter.IpSubnetFilter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ipfilter.RuleBasedIpFilter",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ipfilter.RuleBasedIpFilter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ipfilter.UniqueIpFilter",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ipfilter.UniqueIpFilter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.logging.LoggingHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.logging.LoggingHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.AbstractSniHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.AbstractSniHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.ApplicationProtocolNegotiationHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.ApplicationProtocolNegotiationHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.ocsp.OcspClientHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.ocsp.OcspClientHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.OptionalSslHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.OptionalSslHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.SniHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.SniHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.SslClientHelloHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.SslClientHelloHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.SslHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.SslHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.SslMasterKeyHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.SslMasterKeyHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.ssl.SslMasterKeyHandler$WiresharkSslMasterKeyHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.ssl.SslMasterKeyHandler$WiresharkSslMasterKeyHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.stream.ChunkedWriteHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.stream.ChunkedWriteHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.timeout.IdleStateHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.timeout.IdleStateHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.timeout.ReadTimeoutHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.timeout.ReadTimeoutHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.timeout.WriteTimeoutHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.timeout.WriteTimeoutHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.traffic.AbstractTrafficShapingHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.traffic.AbstractTrafficShapingHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.traffic.ChannelTrafficShapingHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.traffic.ChannelTrafficShapingHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.traffic.GlobalChannelTrafficShapingHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.traffic.GlobalChannelTrafficShapingHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty5.handler.traffic.GlobalTrafficShapingHandler",
+    "condition": {
+      "typeReachable": "io.netty5.handler.traffic.GlobalTrafficShapingHandler"
+    },
+    "queryAllPublicMethods": true
+  }
+]
