@@ -81,7 +81,7 @@ import static org.mockito.Mockito.verify;
  * Testing the {@link HttpToHttp2ConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
 public class HttpToHttp2ConnectionHandlerTest {
-    private static final int WAIT_TIME_SECONDS = 5;
+    private static final int WAIT_TIME_SECONDS = 10;
 
     @Mock
     private Http2FrameListener clientListener;
