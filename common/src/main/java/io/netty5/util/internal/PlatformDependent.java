@@ -20,11 +20,11 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
-import org.jctools.queues.SpscLinkedQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
+import org.jctools.queues.unpadded.SpscLinkedUnpaddedQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
@@ -946,9 +946,6 @@ public final class PlatformDependent {
     private static final class Mpsc {
         private static final boolean USE_MPSC_CHUNKED_ARRAY_QUEUE;
 
-        private Mpsc() {
-        }
-
         static {
             Object unsafe = null;
             if (hasUnsafe()) {
@@ -1020,7 +1017,7 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newSpscQueue() {
-        return hasUnsafe() ? new SpscLinkedQueue<>() : new SpscLinkedAtomicQueue<>();
+        return hasUnsafe() ? new SpscLinkedUnpaddedQueue<>() : new SpscLinkedAtomicQueue<>();
     }
 
     /**
