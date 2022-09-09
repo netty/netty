@@ -23,7 +23,7 @@ public class NativeImageHandlerMetadataTest {
     @Test
     public void collectAndCompareMetadata() {
         ChannelHandlerMetadataUtil.generateMetadata(
-                "src/main/resources/native-image/resolver-dns-handlers/reflect-config.json",
+                "resolver-dns-handlers/reflect-config.json",
                 "io.netty5.resolver.dns");
     }
 

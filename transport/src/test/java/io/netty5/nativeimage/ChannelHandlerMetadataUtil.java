@@ -60,7 +60,7 @@ public final class ChannelHandlerMetadataUtil {
     private ChannelHandlerMetadataUtil() {
     }
 
-    public static void generateMetadata(String projectRelativeResourcePath, String... packageNames) {
+    public static void generateMetadata(String resourcePath, String... packageNames) {
         Set<Class<? extends ChannelHandler>> subtypes = findChannelHandlerSubclasses(packageNames);
 
         if (Arrays.asList(packageNames).contains("io.netty5.channel")) {
@@ -72,6 +72,7 @@ public final class ChannelHandlerMetadataUtil {
                 .map(type -> new HandlerMetadata(type.getName(), new Condition(type.getName()), true))
                 .collect(Collectors.toSet());
 
+        String projectRelativeResourcePath = "src/main/resources/META-INF/native-image/" + resourcePath;
         Path existingMetadataPath = new File(projectRelativeResourcePath).toPath().toAbsolutePath();
         if (!Files.exists(existingMetadataPath)) {
             if (handlerMetadata.size() == 0) {
