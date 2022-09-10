@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteHandleFactory;

@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.util.ByteProcessor;
 
 import static io.netty5.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_1;

@@ -16,14 +16,14 @@
 package io.netty5.handler.ssl;
 
 import io.netty.internal.tcnative.SSL;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.X509KeyManager;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslContext.toBIO;
 
 /**

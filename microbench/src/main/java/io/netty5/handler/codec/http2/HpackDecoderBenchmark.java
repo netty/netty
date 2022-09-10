@@ -31,7 +31,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http2.headers.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
@@ -44,7 +44,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.HpackBenchmarkUtil.http2Headers;
 
 public class HpackDecoderBenchmark extends AbstractMicrobenchmark {

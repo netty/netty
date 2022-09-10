@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.embedded;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.internal.ResourceSupport;
-import io.netty5.buffer.api.internal.InternalBufferUtils;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.internal.ResourceSupport;
+import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;

@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferClosedException;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferClosedException;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

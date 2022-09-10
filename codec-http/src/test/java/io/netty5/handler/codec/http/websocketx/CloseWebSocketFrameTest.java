@@ -15,7 +15,7 @@ package io.netty5.handler.codec.http.websocketx;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 

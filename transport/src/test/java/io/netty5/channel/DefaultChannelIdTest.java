@@ -18,8 +18,8 @@ package io.netty5.channel;
 
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.BufferOutputStream;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.io.ObjectInputStream;

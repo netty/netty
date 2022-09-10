@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResult;
 import org.junit.jupiter.api.Test;

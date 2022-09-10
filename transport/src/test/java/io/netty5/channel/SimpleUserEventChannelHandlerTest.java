@@ -15,8 +15,8 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferHolder;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferHolder;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 

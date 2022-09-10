@@ -15,11 +15,10 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.ConstantTimeUtils;
-import io.netty5.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
@@ -30,7 +29,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 

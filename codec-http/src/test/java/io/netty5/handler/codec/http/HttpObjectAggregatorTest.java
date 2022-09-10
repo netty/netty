@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResultProvider;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
 
-import static io.netty5.buffer.api.CompositeBuffer.isComposite;
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.CompositeBuffer.isComposite;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;

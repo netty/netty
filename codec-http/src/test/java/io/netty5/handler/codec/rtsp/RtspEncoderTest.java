@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.rtsp;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -27,7 +27,7 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

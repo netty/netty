@@ -15,13 +15,13 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferHolder;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferHolder;
 import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**

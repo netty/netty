@@ -15,8 +15,8 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 
 /**
  * Implementations of this interface can influence how {@link Buffer}s are allocated that are used when reading from

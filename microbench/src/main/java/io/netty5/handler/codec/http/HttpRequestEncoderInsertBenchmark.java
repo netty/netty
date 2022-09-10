@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.AsciiString;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -26,7 +26,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.nio.charset.StandardCharsets;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpConstants.CR;
 import static io.netty5.handler.codec.http.HttpConstants.LF;
 import static io.netty5.handler.codec.http.HttpConstants.SP;

@@ -18,8 +18,8 @@ package io.netty5.handler.codec.compression;
 import com.aayushatharva.brotli4j.decoder.Decoder;
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeAll;
 

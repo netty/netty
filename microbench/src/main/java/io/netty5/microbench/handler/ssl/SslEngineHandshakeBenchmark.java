@@ -15,9 +15,9 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.pool.PooledBufferAllocator;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.MemoryManager;
+import io.netty5.buffer.pool.PooledBufferAllocator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;

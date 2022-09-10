@@ -31,7 +31,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http2.headers.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.StringUtil;
@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.HpackDecoder.decodeULE128;
 import static io.netty5.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty5.util.AsciiString.EMPTY_STRING;

@@ -16,8 +16,8 @@
 
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.handler.codec.EncoderException;
 import io.netty5.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;

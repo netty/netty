@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.util.concurrent.EventExecutor;
@@ -26,7 +26,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;

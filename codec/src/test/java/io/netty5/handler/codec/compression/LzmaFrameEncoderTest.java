@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.BufferInputStream;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;

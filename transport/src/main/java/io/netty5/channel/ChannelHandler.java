@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerMask.Skip;
 import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;

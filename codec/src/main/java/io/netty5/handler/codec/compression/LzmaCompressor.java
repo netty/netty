@@ -17,8 +17,8 @@ package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.BufferOutputStream;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import lzma.sdk.lzma.Base;

@@ -15,10 +15,10 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.BufferRef;
+import io.netty5.buffer.BufferRef;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class Http2DefaultFramesTest {

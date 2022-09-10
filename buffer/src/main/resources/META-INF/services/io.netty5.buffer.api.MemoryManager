@@ -1,2 +1,0 @@
-io.netty5.buffer.api.bytebuffer.ByteBufferMemoryManager
-io.netty5.buffer.api.unsafe.UnsafeMemoryManager

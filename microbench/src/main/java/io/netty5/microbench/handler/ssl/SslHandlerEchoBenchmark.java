@@ -15,7 +15,7 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 

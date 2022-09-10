@@ -15,8 +15,6 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.io.EOFException;

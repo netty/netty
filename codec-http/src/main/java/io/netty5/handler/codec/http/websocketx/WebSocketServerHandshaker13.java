@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;

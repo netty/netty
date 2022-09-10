@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.util.NetUtil.family;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

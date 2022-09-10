@@ -20,8 +20,8 @@ import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.util.ChunkEncoderFactory;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 
 import java.util.function.Supplier;
 

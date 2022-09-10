@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.BufferUtil;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 
 import java.util.function.Supplier;
 

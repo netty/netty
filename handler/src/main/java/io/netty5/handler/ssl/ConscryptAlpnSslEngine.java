@@ -15,9 +15,9 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.StandardAllocationTypes;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.DefaultBufferAllocators;
+import io.netty5.buffer.StandardAllocationTypes;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty5.util.internal.EmptyArrays;
@@ -46,17 +46,17 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine implements VectoredUn
     private static final boolean USE_BUFFER_ALLOCATOR = SystemPropertyUtil.getBoolean(
             "io.netty5.handler.ssl.conscrypt.useBufferAllocator", true);
 
-    static ConscryptAlpnSslEngine newClientEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
+    static ConscryptAlpnSslEngine newClientEngine(SSLEngine engine, io.netty5.buffer.BufferAllocator alloc,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
         return new ClientEngine(engine, alloc, applicationNegotiator);
     }
 
-    static ConscryptAlpnSslEngine newServerEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
+    static ConscryptAlpnSslEngine newServerEngine(SSLEngine engine, io.netty5.buffer.BufferAllocator alloc,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
         return new ServerEngine(engine, alloc, applicationNegotiator);
     }
 
-    private ConscryptAlpnSslEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
+    private ConscryptAlpnSslEngine(SSLEngine engine, io.netty5.buffer.BufferAllocator alloc,
                                    List<String> protocols) {
         super(engine);
 
@@ -100,7 +100,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine implements VectoredUn
     private static final class ClientEngine extends ConscryptAlpnSslEngine {
         private final ProtocolSelectionListener protocolListener;
 
-        ClientEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
+        ClientEngine(SSLEngine engine, io.netty5.buffer.BufferAllocator alloc,
                      JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine, alloc, applicationNegotiator.protocols());
             // Register for completion of the handshake.
@@ -129,7 +129,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine implements VectoredUn
     private static final class ServerEngine extends ConscryptAlpnSslEngine {
         private final ProtocolSelector protocolSelector;
 
-        ServerEngine(SSLEngine engine, io.netty5.buffer.api.BufferAllocator alloc,
+        ServerEngine(SSLEngine engine, io.netty5.buffer.BufferAllocator alloc,
                      JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine, alloc, applicationNegotiator.protocols());
 
@@ -159,9 +159,9 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine implements VectoredUn
     }
 
     private static final class BufferAllocatorAdapter extends BufferAllocator {
-        private final io.netty5.buffer.api.BufferAllocator alloc;
+        private final io.netty5.buffer.BufferAllocator alloc;
 
-        BufferAllocatorAdapter(io.netty5.buffer.api.BufferAllocator alloc) {
+        BufferAllocatorAdapter(io.netty5.buffer.BufferAllocator alloc) {
             if (alloc.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
                 alloc = DefaultBufferAllocators.offHeapAllocator();
             }
@@ -178,7 +178,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine implements VectoredUn
         private final Buffer nettyBuffer;
         private final ByteBuffer buffer;
 
-        BufferAdapter(io.netty5.buffer.api.BufferAllocator allocator, int capacity) {
+        BufferAdapter(io.netty5.buffer.BufferAllocator allocator, int capacity) {
             nettyBuffer = allocator.allocate(capacity);
 
             // Capture internal writable ByteBuffer.

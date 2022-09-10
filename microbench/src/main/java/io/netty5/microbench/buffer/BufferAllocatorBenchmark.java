@@ -15,10 +15,10 @@
  */
 package io.netty5.microbench.buffer;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.pool.PooledBufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.MemoryManager;
+import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
@@ -27,7 +27,7 @@ import org.openjdk.jmh.annotations.State;
 
 import java.util.Random;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 
 /**
  * This class benchmarks different allocators with different allocation sizes.

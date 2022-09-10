@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.frame;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.DelimiterBasedFrameDecoder;

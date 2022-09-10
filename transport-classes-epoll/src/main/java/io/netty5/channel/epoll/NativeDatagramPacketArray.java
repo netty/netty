@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.epoll;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Limits;

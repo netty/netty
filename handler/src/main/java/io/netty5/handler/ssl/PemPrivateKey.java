@@ -15,15 +15,15 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.BufferHolder;
-import io.netty5.buffer.api.SensitiveBufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.BufferHolder;
+import io.netty5.buffer.SensitiveBufferAllocator;
 
 import javax.security.auth.Destroyable;
 import java.security.PrivateKey;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**

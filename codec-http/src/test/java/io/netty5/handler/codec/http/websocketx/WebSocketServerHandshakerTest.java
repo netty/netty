@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
@@ -32,11 +32,10 @@ import io.netty5.handler.codec.http.HttpResponseDecoder;
 import io.netty5.handler.codec.http.HttpResponseEncoder;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

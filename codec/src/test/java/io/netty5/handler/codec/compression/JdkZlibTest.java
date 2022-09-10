@@ -16,9 +16,9 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.BufferInputStream;
-import io.netty5.buffer.api.AllocationType;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.AllocationType;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.embedded.EmbeddedChannel;

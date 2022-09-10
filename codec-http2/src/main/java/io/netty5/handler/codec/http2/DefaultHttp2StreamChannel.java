@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutputShutdownException;

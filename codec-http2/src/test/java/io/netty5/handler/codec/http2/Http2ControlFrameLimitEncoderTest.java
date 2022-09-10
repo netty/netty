@@ -15,7 +15,7 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.util.Resource;
@@ -36,7 +36,7 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty5.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty5.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;

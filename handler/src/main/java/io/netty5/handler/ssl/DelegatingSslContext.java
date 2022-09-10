@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;

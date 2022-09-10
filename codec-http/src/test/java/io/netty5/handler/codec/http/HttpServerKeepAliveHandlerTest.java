@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.MULTIPART_MIXED;

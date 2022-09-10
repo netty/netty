@@ -16,7 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.BufferOutputStream;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.DefaultChannelId;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Http2StreamChannelIdTest {

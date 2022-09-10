@@ -16,7 +16,7 @@
 
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 
 import static io.netty5.handler.codec.http.HttpConstants.COLON;
 import static io.netty5.handler.codec.http.HttpConstants.SP;

@@ -16,7 +16,7 @@
 package io.netty5.handler.codec;
 
 import io.netty5.buffer.BufferUtil;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 
 import java.nio.ByteOrder;

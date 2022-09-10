@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class DelegatingSslContextTest {

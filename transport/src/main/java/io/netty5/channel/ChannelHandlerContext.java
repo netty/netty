@@ -15,8 +15,8 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}

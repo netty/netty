@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.util.ResourceLeakDetector;
 import io.netty5.util.concurrent.EventExecutor;

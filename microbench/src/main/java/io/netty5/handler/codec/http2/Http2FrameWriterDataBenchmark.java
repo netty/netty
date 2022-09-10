@@ -14,8 +14,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
@@ -36,8 +36,8 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.api.BufferAllocator.onHeapPooled;
-import static io.netty5.buffer.api.BufferAllocator.onHeapUnpooled;
+import static io.netty5.buffer.BufferAllocator.onHeapPooled;
+import static io.netty5.buffer.BufferAllocator.onHeapUnpooled;
 
 @Fork(1)
 @Warmup(iterations = 5)

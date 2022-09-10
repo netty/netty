@@ -15,11 +15,11 @@
  */
 package io.netty5.microbench.buffer;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.MemoryManager;
-import io.netty5.buffer.api.bytebuffer.ByteBufferMemoryManager;
-import io.netty5.buffer.api.unsafe.UnsafeMemoryManager;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.MemoryManager;
+import io.netty5.buffer.bytebuffer.ByteBufferMemoryManager;
+import io.netty5.buffer.unsafe.UnsafeMemoryManager;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;

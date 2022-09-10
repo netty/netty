@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;

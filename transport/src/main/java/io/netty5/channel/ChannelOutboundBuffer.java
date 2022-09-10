@@ -15,7 +15,6 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.Buffer;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;

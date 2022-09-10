@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.MessageAggregator;
 import io.netty5.handler.codec.TooLongFrameException;
