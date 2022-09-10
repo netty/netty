@@ -54,7 +54,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
-    // To further optimize this we could write our own SPSC queue.
     final Queue<Object> inboundBuffer = PlatformDependent.newSpscQueue();
     private final Runnable readNowTask = () -> {
         // Ensure the inboundBuffer is not empty as readInbound() will always call fireChannelReadComplete()
