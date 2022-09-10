@@ -17,7 +17,7 @@ package io.netty5.handler.ssl;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -63,7 +63,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static org.hamcrest.MatcherAssert.assertThat;

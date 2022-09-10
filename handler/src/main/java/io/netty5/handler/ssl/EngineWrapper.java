@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.internal.InternalBufferUtils;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;

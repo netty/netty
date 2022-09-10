@@ -17,10 +17,10 @@ package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.MemoryManager;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.CompositeBuffer;
+import io.netty5.buffer.MemoryManager;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
@@ -41,7 +41,7 @@ import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

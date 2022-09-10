@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;

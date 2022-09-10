@@ -33,7 +33,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;

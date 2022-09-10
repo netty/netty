@@ -27,7 +27,7 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

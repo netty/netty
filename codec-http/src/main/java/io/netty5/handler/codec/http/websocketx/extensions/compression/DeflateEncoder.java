@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.FRAME_TAIL_LENGTH;
 
 /**

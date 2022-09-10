@@ -19,7 +19,7 @@ import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 

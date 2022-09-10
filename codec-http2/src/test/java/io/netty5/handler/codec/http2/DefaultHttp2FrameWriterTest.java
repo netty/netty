@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
@@ -32,7 +32,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

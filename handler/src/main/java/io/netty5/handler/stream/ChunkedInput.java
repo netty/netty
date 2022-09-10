@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 
 /**
  * A data stream of indefinite length which is consumed by {@link ChunkedWriteHandler}.

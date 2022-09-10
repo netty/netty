@@ -16,7 +16,7 @@
 package io.netty5.testsuite.transport.socket;
 
 import io.netty5.bootstrap.Bootstrap;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -41,7 +41,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;

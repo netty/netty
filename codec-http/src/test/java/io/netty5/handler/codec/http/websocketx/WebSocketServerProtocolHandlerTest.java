@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -42,7 +42,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty5.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;

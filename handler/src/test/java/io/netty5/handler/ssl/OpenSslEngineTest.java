@@ -58,7 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
 import static java.lang.Integer.MAX_VALUE;

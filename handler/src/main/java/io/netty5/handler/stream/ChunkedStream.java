@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;

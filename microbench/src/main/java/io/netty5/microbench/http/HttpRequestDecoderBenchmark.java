@@ -15,8 +15,8 @@
  */
 package io.netty5.microbench.http;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.MemoryManager;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.MemoryManager;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpRequestDecoder;
 import io.netty5.microbench.util.AbstractMicrobenchmark;

@@ -14,8 +14,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2FrameReader.Configuration;
 import io.netty5.handler.codec.http2.headers.Http2Headers;

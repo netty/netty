@@ -15,7 +15,7 @@
  */
 package io.netty5.microbench.handler.ssl;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;

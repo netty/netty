@@ -15,8 +15,6 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.buffer.api.Buffer;
-
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;

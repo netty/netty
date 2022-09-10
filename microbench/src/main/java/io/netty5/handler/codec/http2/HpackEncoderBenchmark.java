@@ -31,7 +31,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;

@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
@@ -42,7 +42,7 @@ import org.mockito.verification.VerificationMode;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;

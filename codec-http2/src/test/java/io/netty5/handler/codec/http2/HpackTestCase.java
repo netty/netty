@@ -39,7 +39,7 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.StringUtil;
 
@@ -52,7 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2TestUtil.newTestEncoder;

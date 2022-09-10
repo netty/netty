@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;

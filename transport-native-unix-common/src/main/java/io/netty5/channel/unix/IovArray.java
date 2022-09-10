@@ -15,8 +15,8 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferComponent;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferComponent;
 import io.netty5.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;

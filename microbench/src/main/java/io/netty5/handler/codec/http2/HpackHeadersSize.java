@@ -31,11 +31,11 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 
 /**
  * Enum that indicates the size of the headers to be used for the benchmark.

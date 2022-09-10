@@ -17,10 +17,10 @@ package io.netty5.handler.ssl;
 
 import io.netty.internal.tcnative.AsyncTask;
 import io.netty.internal.tcnative.SSL;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.StandardAllocationTypes;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.DefaultBufferAllocators;
+import io.netty5.buffer.StandardAllocationTypes;
 import io.netty5.handler.ssl.util.LazyJavaxX509Certificate;
 import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty5.util.AbstractReferenceCounted;

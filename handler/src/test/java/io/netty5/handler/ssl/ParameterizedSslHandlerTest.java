@@ -17,8 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -56,7 +56,6 @@ import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;

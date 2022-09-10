@@ -15,9 +15,9 @@
  */
 package io.netty5.channel.unix;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 

@@ -15,12 +15,12 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;

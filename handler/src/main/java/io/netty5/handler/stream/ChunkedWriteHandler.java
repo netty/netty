@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;

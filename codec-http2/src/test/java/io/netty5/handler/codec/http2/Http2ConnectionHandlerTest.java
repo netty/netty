@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
@@ -43,7 +43,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuffer;
 import static io.netty5.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;

@@ -16,7 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -54,7 +54,7 @@ import org.mockito.MockitoAnnotations;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpMethod.GET;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;

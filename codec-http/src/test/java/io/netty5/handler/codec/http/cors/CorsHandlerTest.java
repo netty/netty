@@ -32,7 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS;
 import static io.netty5.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS;

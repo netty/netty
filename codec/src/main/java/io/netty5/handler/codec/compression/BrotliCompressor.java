@@ -16,8 +16,8 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 
 import java.io.IOException;
 import java.util.Objects;

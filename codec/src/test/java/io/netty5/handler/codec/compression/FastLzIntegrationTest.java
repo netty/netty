@@ -15,16 +15,16 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Send;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;

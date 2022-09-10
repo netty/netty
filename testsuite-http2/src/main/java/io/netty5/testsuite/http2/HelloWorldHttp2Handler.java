@@ -15,7 +15,7 @@
 
 package io.netty5.testsuite.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -32,7 +32,7 @@ import io.netty5.handler.codec.http2.headers.Http2Headers;
 
 import java.util.function.Supplier;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;

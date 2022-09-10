@@ -15,10 +15,9 @@
  */
 package io.netty5.channel.local;
 
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.AbstractServerChannel;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;

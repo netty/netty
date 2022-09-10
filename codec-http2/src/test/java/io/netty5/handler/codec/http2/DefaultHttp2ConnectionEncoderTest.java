@@ -14,8 +14,8 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
@@ -36,7 +36,7 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;

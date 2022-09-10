@@ -24,7 +24,7 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class WebSocketRequestBuilder {

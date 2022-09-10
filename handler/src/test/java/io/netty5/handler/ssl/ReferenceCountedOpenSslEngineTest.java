@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.Resource;

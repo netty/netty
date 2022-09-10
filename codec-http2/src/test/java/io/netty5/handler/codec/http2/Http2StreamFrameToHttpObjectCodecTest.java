@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -49,8 +49,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static java.nio.charset.StandardCharsets.UTF_8;

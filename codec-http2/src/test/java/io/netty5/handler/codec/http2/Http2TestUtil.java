@@ -14,14 +14,13 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
-import io.netty5.util.concurrent.Promise;
 
 import org.mockito.Mockito;
 
@@ -30,7 +29,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty5.util.internal.SilentDispose.autoClosing;

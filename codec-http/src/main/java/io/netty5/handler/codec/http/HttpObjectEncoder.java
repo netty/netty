@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.FileRegion;
 import io.netty5.handler.codec.MessageToMessageEncoder;
@@ -25,7 +25,6 @@ import io.netty5.util.Resource;
 import io.netty5.util.internal.StringUtil;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Supplier;

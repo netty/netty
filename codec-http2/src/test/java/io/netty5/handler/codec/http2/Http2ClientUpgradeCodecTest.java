@@ -23,7 +23,7 @@ import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

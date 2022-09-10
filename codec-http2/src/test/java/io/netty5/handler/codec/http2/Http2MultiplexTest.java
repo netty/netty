@@ -14,7 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.Channel;
@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty5.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty5.handler.codec.http2.Http2TestUtil.bb;

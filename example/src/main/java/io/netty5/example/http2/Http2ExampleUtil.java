@@ -14,14 +14,14 @@
  */
 package io.netty5.example.http2;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.QueryStringDecoder;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Objects.requireNonNull;
 
 /**

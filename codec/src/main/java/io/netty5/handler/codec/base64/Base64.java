@@ -19,12 +19,12 @@
  */
 package io.netty5.handler.codec.base64;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.ByteProcessor;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static java.util.Objects.requireNonNull;
 
 /**

@@ -15,7 +15,7 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

@@ -18,7 +18,7 @@ package io.netty5.handler.ssl;
 import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.NativeLibraryLoader;
 import io.netty5.util.internal.PlatformDependent;

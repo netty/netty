@@ -16,7 +16,7 @@
 package io.netty5.testsuite.transport;
 
 import io.netty5.bootstrap.AbstractBootstrap;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.testsuite.transport.TestsuitePermutation.AllocatorConfig;
 import io.netty5.testsuite.util.TestUtils;
 import io.netty5.util.internal.StringUtil;

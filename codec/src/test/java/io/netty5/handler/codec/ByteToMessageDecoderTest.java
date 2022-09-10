@@ -14,10 +14,10 @@
  */
 package io.netty5.handler.codec;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.BufferStub;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.BufferStub;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
@@ -39,10 +39,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static io.netty5.buffer.api.BufferAllocator.offHeapPooled;
-import static io.netty5.buffer.api.BufferAllocator.offHeapUnpooled;
-import static io.netty5.buffer.api.BufferAllocator.onHeapPooled;
-import static io.netty5.buffer.api.BufferAllocator.onHeapUnpooled;
+import static io.netty5.buffer.BufferAllocator.offHeapPooled;
+import static io.netty5.buffer.BufferAllocator.offHeapUnpooled;
+import static io.netty5.buffer.BufferAllocator.onHeapPooled;
+import static io.netty5.buffer.BufferAllocator.onHeapUnpooled;
 import static io.netty5.handler.codec.ByteToMessageDecoder.COMPOSITE_CUMULATOR;
 import static io.netty5.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
 import static org.assertj.core.api.Assertions.assertThat;

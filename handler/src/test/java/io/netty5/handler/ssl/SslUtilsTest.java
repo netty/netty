@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
@@ -24,7 +24,7 @@ import javax.net.ssl.SSLException;
 import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

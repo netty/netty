@@ -15,10 +15,10 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.internal.InternalBufferUtils;
-import io.netty5.buffer.api.internal.ResourceSupport;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.internal.InternalBufferUtils;
+import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 
@@ -31,7 +31,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;

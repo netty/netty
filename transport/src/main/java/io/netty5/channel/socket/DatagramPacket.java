@@ -15,7 +15,7 @@
  */
 package io.netty5.channel.socket;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.BufferAddressedEnvelope;
 
 import java.net.SocketAddress;

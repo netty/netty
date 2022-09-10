@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 
 /**
  * Core of FastLZ compression algorithm.

@@ -15,8 +15,8 @@
  */
 package io.netty5.handler.codec.dns;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.util.internal.StringUtil;

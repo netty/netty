@@ -23,7 +23,7 @@ import io.netty5.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.junit.jupiter.api.Test;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

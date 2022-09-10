@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.junit.jupiter.api.Test;

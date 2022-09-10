@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.stream;
 
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.BufferAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;

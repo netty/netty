@@ -15,10 +15,7 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.DefaultBufferAllocators;
-import io.netty5.buffer.api.internal.InternalBufferUtils;
+import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;

@@ -15,7 +15,7 @@
  */
 package io.netty5.handler.codec.bytes;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
