@@ -32,7 +32,6 @@ package io.netty5.handler.codec.http.headers;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
-import io.netty5.util.ByteProcessor;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -314,7 +313,7 @@ public final class HeaderUtils {
                 break;
             }
             int nameLen = equalsIndex - start;
-            int semiIndex = indexOf(cookieString, ';', equalsIndex + 1);
+            int semiIndex = nextCookieDelimiter(cookieString, equalsIndex + 1);
             if (nameLen == cookiePairName.length() &&
                     regionMatches(cookiePairName, true, 0, cookieString, start, nameLen)) {
                 return DefaultHttpCookiePair.parseCookiePair(cookieString, start, nameLen, semiIndex);
@@ -360,7 +359,7 @@ public final class HeaderUtils {
                 break;
             }
             int nameLen = equalsIndex - start;
-            int semiIndex = indexOf(cookieString, ';', equalsIndex + 1);
+            int semiIndex = nextCookieDelimiter(cookieString, equalsIndex + 1);
             if (nameLen == cookiePairName.length() &&
                     regionMatches(cookiePairName, true, 0, cookieString, start, nameLen)) {
                 if (beginCopyIndex != start) {
@@ -406,14 +405,10 @@ public final class HeaderUtils {
      * An {@link Iterator} of {@link HttpCookiePair} designed to iterate across multiple values of
      * {@link HttpHeaderNames#COOKIE}.
      */
-    public abstract static class AbstractCookiesIterator implements Iterator<HttpCookiePair>, ByteProcessor {
+    public abstract static class AbstractCookiesIterator implements Iterator<HttpCookiePair> {
         @Nullable
         private HttpCookiePair next;
         private int nextNextStart;
-        /**
-         * Used for more accurate error reporting in the delimiter search.
-         */
-        private boolean inQuotes;
 
         @Override
         public final boolean hasNext() {
@@ -460,8 +455,7 @@ public final class HeaderUtils {
          * @return the next {@link HttpCookiePair} value for {@link #next()}, or {@code null} if all have been parsed.
          */
         private HttpCookiePair findNext(CharSequence cookieHeaderValue) {
-            int semiIndex = cookieHeaderValue instanceof AsciiString?
-                    nextDelimiterAscii((AsciiString) cookieHeaderValue) : nextDelimiter(cookieHeaderValue);
+            int semiIndex = nextCookieDelimiter(cookieHeaderValue, nextNextStart);
             HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(cookieHeaderValue, nextNextStart, semiIndex);
             if (semiIndex > 0) {
                 if (cookieHeaderValue.length() - 2 <= semiIndex) {
@@ -476,38 +470,6 @@ public final class HeaderUtils {
                 nextNextStart = 0;
             }
             return next;
-        }
-
-        private int nextDelimiter(CharSequence cookieHeaderValue) {
-            inQuotes = false;
-            int len = cookieHeaderValue.length();
-            for (int i = nextNextStart; i < len; i++) {
-                char value = cookieHeaderValue.charAt(i);
-                if (process((byte) value)) {
-                    return i;
-                }
-            }
-            return AsciiString.INDEX_NOT_FOUND;
-        }
-
-        private int nextDelimiterAscii(AsciiString cookieHeaderValue) {
-            inQuotes = false;
-            int len = cookieHeaderValue.length();
-            return cookieHeaderValue.forEachByte(nextNextStart, len - nextNextStart, this);
-        }
-
-        @Override
-        public boolean process(byte value) {
-            if (value == ';') {
-                if (inQuotes) {
-                    throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
-                }
-                return true;
-            }
-            if (value == '"') {
-                inQuotes = !inQuotes;
-            }
-            return false;
         }
     }
 
@@ -583,7 +545,7 @@ public final class HeaderUtils {
                     break;
                 }
                 int nameLen = equalsIndex - nextNextStart;
-                int semiIndex = indexOf(cookieHeaderValue, ';', equalsIndex + 1);
+                int semiIndex = nextCookieDelimiter(cookieHeaderValue, equalsIndex + 1);
                 if (nameLen == cookiePairName.length() &&
                         regionMatches(cookiePairName, true, 0, cookieHeaderValue, nextNextStart, nameLen)) {
                     HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(cookieHeaderValue, nextNextStart,
@@ -618,6 +580,44 @@ public final class HeaderUtils {
             }
             return null;
         }
+    }
+
+    private static int nextCookieDelimiter(CharSequence cookieHeaderValue, int startIndex) {
+        if (cookieHeaderValue instanceof AsciiString) {
+            return nextCookieDelimiter((AsciiString) cookieHeaderValue, startIndex);
+        }
+        boolean inQuotes = false;
+        int len = cookieHeaderValue.length();
+        for (int i = startIndex; i < len; i++) {
+            char value = cookieHeaderValue.charAt(i);
+            if (value == ';') {
+                if (inQuotes) {
+                    throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
+                }
+                return i;
+            } else if (value == '"') {
+                inQuotes = !inQuotes;
+            }
+        }
+        return -1;
+    }
+
+    private static int nextCookieDelimiter(AsciiString cookieHeaderValue, int startIndex) {
+        boolean inQuotes = false;
+        int len = cookieHeaderValue.length();
+        byte[] array = cookieHeaderValue.array();
+        for (int i = cookieHeaderValue.arrayOffset() + startIndex; i < len; i++) {
+            char value = AsciiString.b2c(array[i]);
+            if (value == ';') {
+                if (inQuotes) {
+                    throw new IllegalArgumentException("The ; character cannot appear in quoted cookie values");
+                }
+                return i;
+            } else if (value == '"') {
+                inQuotes = !inQuotes;
+            }
+        }
+        return -1;
     }
 
     /**

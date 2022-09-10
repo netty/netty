@@ -596,6 +596,6 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     @NotNull
     private static IllegalArgumentException unexpectedHexValue(int hexValue, int index) {
         return new IllegalArgumentException(
-                "Unexpected hex value at index " + index + ": " + Integer.toHexString(hexValue));
+                "Unexpected hex value at index " + index + ": 0x" + Integer.toHexString(hexValue));
     }
 }
