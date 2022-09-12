@@ -22,6 +22,8 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.Map.Entry;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * The default {@link LastHttpContent} implementation.
  */
@@ -41,6 +43,12 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
         super(content);
         trailingHeaders = new TrailingHttpHeaders(validateHeaders);
         this.validateHeaders = validateHeaders;
+    }
+
+    public DefaultLastHttpContent(ByteBuf content, HttpHeaders trailingHeaders) {
+        super(content);
+        this.trailingHeaders = checkNotNull(trailingHeaders, "trailingHeaders");
+        this.validateHeaders = false;
     }
 
     @Override
