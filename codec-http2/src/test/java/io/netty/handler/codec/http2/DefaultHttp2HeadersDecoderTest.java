@@ -23,6 +23,11 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
@@ -171,24 +176,41 @@ public class DefaultHttp2HeadersDecoderTest {
         verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("te"), b("compress")));
     }
 
-    @Test
-    public void decodingInvalidHeaderValueMustFailValidation() throws Exception {
+    public static List<Integer> illegalFirstChar() {
+        ArrayList<Integer> list = new ArrayList<Integer>();
+        for (int i = 0; i < 0x21; i++) {
+            list.add(i);
+        }
+        list.add(0x7F);
+        return list;
+    }
+
+    @ParameterizedTest
+    @MethodSource("illegalFirstChar")
+    void decodingInvalidHeaderValueMustFailValidationIfFirstCharIsIllegal(int illegalFirstChar)throws Exception {
         final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true, true);
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"),
+                b("test_header"), new byte[]{ (byte) illegalFirstChar, (byte) 'a' }));
+    }
 
-        for (int illegalFirstChar = 0; illegalFirstChar < 0x21; illegalFirstChar++) {
-            verifyValidationFails(decoder, encode(b(":method"), b("GET"),
-                    b("test_header"), new byte[]{ (byte) illegalFirstChar, (byte) 'a' }));
-        }
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("\u007Fa")));
-
-        for (int illegalSecondChar = 0; illegalSecondChar < 0x21; illegalSecondChar++) {
-            if (illegalSecondChar == ' ' || illegalSecondChar == '\t') {
-                continue; // Space and horizontal tab are not illegal.
+    public static List<Integer> illegalNotFirstChar() {
+        ArrayList<Integer> list = new ArrayList<Integer>();
+        for (int i = 0; i < 0x21; i++) {
+            if (i == ' ' || i == '\t') {
+                continue; // Space and horizontal tab are only illegal as first chars.
             }
-            verifyValidationFails(decoder, encode(b(":method"), b("GET"),
-                    b("test_header"), new byte[]{ (byte) 'a', (byte) illegalSecondChar }));
+            list.add(i);
         }
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("test_header"), b("a\u007F")));
+        list.add(0x7F);
+        return list;
+    }
+
+    @ParameterizedTest
+    @MethodSource("illegalNotFirstChar")
+    void decodingInvalidHeaderValueMustFailValidationIfANotFirstCharIsIllegal(int illegalSecondChar) throws Exception {
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true, true);
+        verifyValidationFails(decoder, encode(b(":method"), b("GET"),
+                b("test_header"), new byte[]{ (byte) 'a', (byte) illegalSecondChar }));
     }
 
     @Test
@@ -217,30 +239,41 @@ public class DefaultHttp2HeadersDecoderTest {
         }
     }
 
-    @Test
-    public void headerValuesAllowObsText() throws Exception {
-        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+    public static List<Integer> validObsText() {
+        ArrayList<Integer> list = new ArrayList<Integer>();
         for (int i = 0x80; i <= 0xFF; i++) {
-            // For first character:
-            ByteBuf buf = null;
-            try {
-                byte[] bytes = {(byte) i, 'a'};
-                buf = encode(b(":method"), b("GET"), b("test_header"), bytes);
-                Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
-                assertThat(headers.get("test_header")).isEqualTo(new AsciiString(bytes));
-            } finally {
-                ReferenceCountUtil.release(buf);
-            }
+            list.add(i);
+        }
+        return list;
+    }
 
-            // For following characters:
-            try {
-                byte[] bytes = {(byte) 'a', (byte) i};
-                buf = encode(b(":method"), b("GET"), b("test_header"), bytes);
-                Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
-                assertThat(headers.get("test_header")).isEqualTo(new AsciiString(bytes));
-            } finally {
-                ReferenceCountUtil.release(buf);
-            }
+    @ParameterizedTest
+    @MethodSource("validObsText")
+    void headerValuesAllowObsTextInFirstChar(int i) throws Exception {
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+        ByteBuf buf = null;
+        try {
+            byte[] bytes = {(byte) i, 'a'};
+            buf = encode(b(":method"), b("GET"), b("test_header"), bytes);
+            Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
+            assertThat(headers.get("test_header")).isEqualTo(new AsciiString(bytes));
+        } finally {
+            ReferenceCountUtil.release(buf);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("validObsText")
+    void headerValuesAllowObsTextInNonFirstChar(int i) throws Exception {
+        final DefaultHttp2HeadersDecoder decoder = new DefaultHttp2HeadersDecoder(true);
+        ByteBuf buf = null;
+        try {
+            byte[] bytes = {(byte) 'a', (byte) i};
+            buf = encode(b(":method"), b("GET"), b("test_header"), bytes);
+            Http2Headers headers = decoder.decodeHeaders(1, buf); // This must not throw.
+            assertThat(headers.get("test_header")).isEqualTo(new AsciiString(bytes));
+        } finally {
+            ReferenceCountUtil.release(buf);
         }
     }
 
