@@ -15,8 +15,8 @@
  */
 package io.netty5.microbench.websocket;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocket13FrameEncoder;
@@ -39,8 +39,8 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
-import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 
 @State(Scope.Benchmark)
 @Fork(value = 2)
