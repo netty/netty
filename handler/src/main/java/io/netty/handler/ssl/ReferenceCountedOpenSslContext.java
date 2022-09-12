@@ -50,9 +50,11 @@ import java.security.cert.CertificateRevokedException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -118,6 +120,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     // https://mail.openjdk.java.net/pipermail/security-dev/2021-March/024758.html
     static final boolean CLIENT_ENABLE_SESSION_CACHE =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.sessionCacheClient", false);
+
+    private static final String[] CLIENT_DEFAULT_PROTOCOLS;
+
+    private static final String[] SERVER_DEFAULT_PROTOCOLS;
 
     /**
      * The OpenSSL SSL_CTX object.
@@ -201,9 +207,31 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             // ignore
         }
         DH_KEY_LENGTH = dhLen;
+
+        CLIENT_DEFAULT_PROTOCOLS = protocols("jdk.tls.client.protocols");
+        SERVER_DEFAULT_PROTOCOLS = protocols("jdk.tls.server.protocols");
+    }
+
+    private static String[] protocols(String property) {
+        String protocolsString = SystemPropertyUtil.get(property, null);
+        if (protocolsString != null) {
+            Set<String> protocols = new HashSet<>();
+            for (String proto : protocolsString.split(",")) {
+                String p = proto.trim();
+                if (OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(p)) {
+                    protocols.add(p);
+                }
+            }
+            return protocols.toArray(new String[0]);
+        }
+        return null;
     }
 
     final boolean tlsFalseStart;
+
+    private static String[] defaultProtocols(boolean isClient) {
+        return isClient ? CLIENT_DEFAULT_PROTOCOLS : SERVER_DEFAULT_PROTOCOLS;
+    }
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
@@ -259,7 +287,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
-        this.protocols = protocols;
+        this.protocols = protocols == null ? defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
         this.enableOcsp = enableOcsp;
 
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
