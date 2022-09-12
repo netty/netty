@@ -215,7 +215,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static String[] protocols(String property) {
         String protocolsString = SystemPropertyUtil.get(property, null);
         if (protocolsString != null) {
-            Set<String> protocols = new HashSet<>();
+            Set<String> protocols = new HashSet<String>();
             for (String proto : protocolsString.split(",")) {
                 String p = proto.trim();
                 if (OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(p)) {
