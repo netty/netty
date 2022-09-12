@@ -39,6 +39,7 @@ import org.openjdk.jmh.profile.GCProfiler;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
@@ -54,12 +55,12 @@ public class WebSocketFrame13DecoderBenchmark extends AbstractMicrobenchmark {
 
     private ChannelHandlerContext context;
 
-    private Buffer websocketFrame;
+    private Supplier<Buffer> websocketFrameSupplier;
     @Param({ "0", "2", "4", "8", "32", "100", "1000", "3000" })
     public int contentLength;
 
     @Param({ "true", "false" })
-    public boolean pooledAllocator;
+    public boolean offHeapAllocator;
 
     @Param({ "true", "false" })
     public boolean masking;
@@ -68,12 +69,17 @@ public class WebSocketFrame13DecoderBenchmark extends AbstractMicrobenchmark {
     public void setUp() throws Exception {
         byte[] bytes = new byte[contentLength];
         ThreadLocalRandom.current().nextBytes(bytes);
-        BufferAllocator allocator = pooledAllocator? offHeapAllocator() : onHeapAllocator();
+        BufferAllocator allocator = offHeapAllocator? offHeapAllocator() : onHeapAllocator();
         Buffer testContent = allocator.allocate(contentLength).writeBytes(bytes);
 
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocket13FrameEncoder(masking));
         channel.writeOutbound(new BinaryWebSocketFrame(testContent));
-        websocketFrame = ((Buffer) channel.readOutbound()).makeReadOnly();
+        try (Buffer encodedBuffer = channel.readOutbound()) {
+            byte[] encodedBytes = new byte[encodedBuffer.readableBytes()];
+            encodedBuffer.copyInto(encodedBuffer.readerOffset(), encodedBytes, 0, encodedBuffer.readableBytes());
+            websocketFrameSupplier = allocator.constBufferSupplier(encodedBytes);
+        }
+
         channel.pipeline().remove(WebSocket13FrameEncoder.class);
 
         websocketDecoder = new WebSocket13FrameDecoder(masking, false, 65536);
@@ -88,14 +94,13 @@ public class WebSocketFrame13DecoderBenchmark extends AbstractMicrobenchmark {
 
     @TearDown(Level.Trial)
     public void teardown() {
-        websocketFrame.close();
-        websocketFrame = null;
+        websocketFrameSupplier = null;
         context.close();
     }
 
     @Benchmark
     public void readWebSocketFrame() throws Exception {
-        websocketDecoder.channelRead(context, websocketFrame.split());
+        websocketDecoder.channelRead(context, websocketFrameSupplier.get());
     }
 
     @Override

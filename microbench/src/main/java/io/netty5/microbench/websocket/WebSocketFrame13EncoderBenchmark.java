@@ -22,7 +22,6 @@ import io.netty5.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocket13FrameEncoder;
 import io.netty5.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
-import io.netty5.util.concurrent.Future;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -38,6 +37,7 @@ import org.openjdk.jmh.profile.GCProfiler;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 import static io.netty5.buffer.api.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.buffer.api.DefaultBufferAllocators.onHeapAllocator;
@@ -53,13 +53,13 @@ public class WebSocketFrame13EncoderBenchmark extends AbstractMicrobenchmark {
 
     private ChannelHandlerContext context;
 
-    private Buffer content;
+    private Supplier<Buffer> contentSupplier;
 
     @Param({ "0", "2", "4", "8", "32", "100", "1000", "3000" })
     public int contentLength;
 
     @Param({ "true", "false" })
-    public boolean pooledAllocator;
+    public boolean offHeapAllocator;
 
     @Param({ "true", "false" })
     public boolean masking;
@@ -68,8 +68,8 @@ public class WebSocketFrame13EncoderBenchmark extends AbstractMicrobenchmark {
     public void setUp() {
         byte[] bytes = new byte[contentLength];
         ThreadLocalRandom.current().nextBytes(bytes);
-        BufferAllocator allocator = pooledAllocator? offHeapAllocator() : onHeapAllocator();
-        content = allocator.allocate(contentLength).writeBytes(bytes).makeReadOnly();
+        BufferAllocator allocator = offHeapAllocator? offHeapAllocator() : onHeapAllocator();
+        contentSupplier = allocator.constBufferSupplier(bytes);
 
         websocketEncoder = new WebSocket13FrameEncoder(masking);
         context = new EmbeddedChannelWriteReleaseHandlerContext(allocator, websocketEncoder) {
@@ -82,14 +82,15 @@ public class WebSocketFrame13EncoderBenchmark extends AbstractMicrobenchmark {
 
     @TearDown(Level.Trial)
     public void teardown() {
-        content.close();
-        content = null;
+        contentSupplier = null;
         context.close();
     }
 
     @Benchmark
-    public Future<Void> writeWebSocketFrame() {
-        return websocketEncoder.write(context, new BinaryWebSocketFrame(content.split()));
+    public void writeWebSocketFrame() {
+        context.executor()
+                .execute(() -> websocketEncoder.write(context, new BinaryWebSocketFrame(contentSupplier.get()))
+                        .addListener(future -> handleUnexpectedException(future.cause())));
     }
 
     @Override
