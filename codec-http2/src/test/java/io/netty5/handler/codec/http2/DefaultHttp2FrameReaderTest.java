@@ -21,7 +21,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -42,8 +41,8 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyByte;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * Tests for {@link DefaultHttp2FrameReader}.
@@ -122,13 +121,19 @@ public class DefaultHttp2FrameReaderTest {
 
             writeFrameHeader(input, payload.readableBytes(), (byte) 0xff, new Http2Flags(), 0);
             input.writeBytes(payload);
-            frameReader.readFrame(ctx, input, listener);
 
-            ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
-            verify(listener).onUnknownFrame(
-                    eq(ctx), eq((byte) 0xff), eq(0), eq(new Http2Flags()), captor.capture());
-            assertEquals(payload.readerOffset(0), captor.getValue());
-            captor.getValue().close();
+            doAnswer(invocation -> {
+                assertEquals(ctx, invocation.getArgument(0));
+                assertEquals((byte) 0xff, (byte) invocation.getArgument(1));
+                assertEquals(0, (int) invocation.getArgument(2));
+                assertEquals(new Http2Flags(), (Http2Flags) invocation.getArgument(3));
+                assertEquals(payload.readerOffset(0), (Buffer) invocation.getArgument(4));
+                return 0;
+            }).when(listener)
+                    .onUnknownFrame(any(ChannelHandlerContext.class), anyByte(), anyInt(), any(Http2Flags.class),
+                            any(Buffer.class));
+
+            frameReader.readFrame(ctx, input, listener);
         }
     }
 

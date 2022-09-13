@@ -620,7 +620,9 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void readUnknownFrame(ChannelHandlerContext ctx, Buffer payload, Http2FrameListener listener)
             throws Http2Exception {
+        try (payload) {
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+        }
     }
 
     /**
