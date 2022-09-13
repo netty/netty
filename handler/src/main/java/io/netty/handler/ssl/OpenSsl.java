@@ -743,7 +743,7 @@ public final class OpenSsl {
         if (defaultProtocols == null) {
             return null;
         }
-        List<String> protocols = new ArrayList<>(defaultProtocols.size());
+        List<String> protocols = new ArrayList<String>(defaultProtocols.size());
         for (String proto : defaultProtocols) {
             if (SUPPORTED_PROTOCOLS_SET.contains(proto)) {
                 protocols.add(proto);
