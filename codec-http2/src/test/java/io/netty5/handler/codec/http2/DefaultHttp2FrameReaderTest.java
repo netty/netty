@@ -34,9 +34,15 @@ import static io.netty5.handler.codec.http2.Http2FrameTypes.PRIORITY;
 import static io.netty5.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty5.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyByte;
+import static org.mockito.ArgumentMatchers.anyInt;
 
 /**
  * Tests for {@link DefaultHttp2FrameReader}.
@@ -115,10 +121,19 @@ public class DefaultHttp2FrameReaderTest {
 
             writeFrameHeader(input, payload.readableBytes(), (byte) 0xff, new Http2Flags(), 0);
             input.writeBytes(payload);
-            frameReader.readFrame(ctx, input, listener);
 
-            verify(listener).onUnknownFrame(
-                    ctx, (byte) 0xff, 0, new Http2Flags(), payload.readerOffset(0));
+            doAnswer(invocation -> {
+                assertEquals(ctx, invocation.getArgument(0));
+                assertEquals((byte) 0xff, (byte) invocation.getArgument(1));
+                assertEquals(0, (int) invocation.getArgument(2));
+                assertEquals(new Http2Flags(), (Http2Flags) invocation.getArgument(3));
+                assertEquals(payload.readerOffset(0), (Buffer) invocation.getArgument(4));
+                return 0;
+            }).when(listener)
+                    .onUnknownFrame(any(ChannelHandlerContext.class), anyByte(), anyInt(), any(Http2Flags.class),
+                            any(Buffer.class));
+
+            frameReader.readFrame(ctx, input, listener);
         }
     }
 
@@ -214,10 +229,19 @@ public class DefaultHttp2FrameReaderTest {
             dataPayload.writeByte((byte) 1);
             writeHeaderFrameWithData(input, 1, headers, dataPayload);
 
+            doAnswer(invocation -> {
+                assertEquals(ctx, invocation.getArgument(0));
+                assertEquals(1, (int) invocation.getArgument(1));
+                assertEquals(dataPayload.readerOffset(0), (Buffer) invocation.getArgument(2));
+                assertEquals(0, (int) invocation.getArgument(3));
+                assertTrue((boolean) invocation.getArgument(4));
+                return 0;
+            }).when(listener)
+                    .onDataRead(any(ChannelHandlerContext.class), anyInt(), any(Buffer.class), anyInt(), anyBoolean());
+
             frameReader.readFrame(ctx, input, listener);
 
             verify(listener).onHeadersRead(ctx, 1, headers, 0, false);
-            verify(listener).onDataRead(ctx, 1, dataPayload.readerOffset(0), 0, true);
         }
     }
 
