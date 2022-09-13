@@ -150,9 +150,6 @@ public class DefaultHttp2HeadersDecoderTest {
 
         // Non-standard connection related headers:
         verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("proxy-connection"), b("keep-alive")));
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("upgrade-insecure-requests"), b("1")));
-        verifyValidationFails(decoder, encode(b(":method"), b("GET"),
-                b("content-security-policy"), b("upgrade-insecure-requests"), b("upgrade-insecure-requests"), b("1")));
 
         // Only "trailers" is allowed for the TE header:
         verifyValidationFails(decoder, encode(b(":method"), b("GET"), b("te"), b("compress")));
