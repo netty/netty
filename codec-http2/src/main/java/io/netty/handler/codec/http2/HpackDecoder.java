@@ -422,13 +422,12 @@ final class HpackDecoder {
 
     @SuppressWarnings("deprecation") // We need to check for deprecated headers as well.
     private static boolean isConnectionHeader(CharSequence name) {
-        // These are the known standard and non-standard connection related headers:
+        // These are the known standard connection related headers:
         // - upgrade (7 chars)
         // - connection (10 chars)
         // - keep-alive (10 chars)
         // - proxy-connection (16 chars)
         // - transfer-encoding (17 chars)
-        // - upgrade-insecure-requests (25 chars)
         //
         // We scan for these based on the length, then double-check any matching name.
         int len = name.length();
@@ -449,7 +448,7 @@ final class HpackDecoder {
         if (len == 16) {
             return contentEqualsIgnoreCase(name, HttpHeaderNames.PROXY_CONNECTION);
         }
-        return len == 25 && contentEqualsIgnoreCase(name, HttpHeaderNames.UPGRADE_INSECURE_REQUESTS);
+        return false;
     }
 
     private static boolean contains(Http2Headers headers, CharSequence name) {
