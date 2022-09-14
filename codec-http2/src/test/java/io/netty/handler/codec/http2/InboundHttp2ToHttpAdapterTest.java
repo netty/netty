@@ -746,7 +746,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress("InboundHttp2ToHttpAdapterTest")).sync().channel();
+        serverChannel = sb.bind(new LocalAddress(getClass())).sync().channel();
 
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());

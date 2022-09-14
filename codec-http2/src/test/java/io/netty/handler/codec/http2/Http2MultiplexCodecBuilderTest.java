@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.codec.http2;
 
 import io.netty.bootstrap.Bootstrap;
@@ -44,8 +43,8 @@ import java.util.concurrent.CountDownLatch;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -69,7 +68,7 @@ public class Http2MultiplexCodecBuilderTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        LocalAddress serverAddress = new LocalAddress(getClass().getName());
+        LocalAddress serverAddress = new LocalAddress(getClass());
         serverLastInboundHandler = new SharableLastInboundHandler();
         ServerBootstrap sb = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
