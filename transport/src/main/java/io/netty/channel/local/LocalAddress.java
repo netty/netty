@@ -20,6 +20,7 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import io.netty.channel.Channel;
 
 import java.net.SocketAddress;
+import java.util.UUID;
 
 /**
  * An endpoint in the local transport.  Each endpoint is identified by a unique
@@ -53,7 +54,14 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
      */
     public LocalAddress(String id) {
         this.id = checkNonEmptyAfterTrim(id, "id").toLowerCase();
-        this.strVal = "local:" + this.id;
+        strVal = "local:" + this.id;
+    }
+
+    /**
+     * Creates a new instance with a random ID based on the given class.
+     */
+    public LocalAddress(Class<?> cls) {
+        this(cls.getSimpleName() + '/' + UUID.randomUUID());
     }
 
     /**
