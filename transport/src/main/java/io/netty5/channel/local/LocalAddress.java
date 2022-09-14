@@ -54,7 +54,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
      */
     public LocalAddress(String id) {
         this.id = checkNonEmptyAfterTrim(id, "id").toLowerCase();
-        this.strVal = "local:" + this.id;
+        strVal = "local:" + this.id;
     }
 
     /**
