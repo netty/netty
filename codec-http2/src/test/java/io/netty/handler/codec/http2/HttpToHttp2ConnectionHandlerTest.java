@@ -164,7 +164,6 @@ public class HttpToHttp2ConnectionHandlerTest {
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
                         .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
-                        .scheme(new AsciiString("http"))
                         .add(new AsciiString("foo"), new AsciiString("goo"))
                         .add(new AsciiString("foo"), new AsciiString("goo2"))
                         .add(new AsciiString("foo2"), new AsciiString("goo2"));

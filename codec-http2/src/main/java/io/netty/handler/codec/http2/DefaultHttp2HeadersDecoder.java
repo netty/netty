@@ -157,7 +157,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     public Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception {
         try {
             final Http2Headers headers = newHeaders();
-            hpackDecoder.decode(streamId, headerBlock, headers, validateHeaders, validateHeaderValues);
+            hpackDecoder.decode(streamId, headerBlock, headers, validateHeaders);
             headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
                                          HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
             return headers;
@@ -208,6 +208,6 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      * @return a new {@link Http2Headers} object which will store the results of the decode operation.
      */
     protected Http2Headers newHeaders() {
-        return new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
+        return new DefaultHttp2Headers(validateHeaders, validateHeaderValues, (int) headerArraySizeAccumulator);
     }
 }

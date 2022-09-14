@@ -32,8 +32,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
 
@@ -50,7 +48,6 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseudoHeader;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty.util.AsciiString.EMPTY_STRING;
-import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 final class HpackDecoder {
@@ -127,13 +124,8 @@ final class HpackDecoder {
      * This method assumes the entire header block is contained in {@code in}.
      */
     void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
-        decode(streamId, in, headers, validateHeaders, false);
-    }
-
-    void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders,
-                       boolean validateHeaderValues) throws Http2Exception {
         Http2HeadersSink sink = new Http2HeadersSink(
-                streamId, headers, maxHeaderListSize, validateHeaders, validateHeaderValues);
+                streamId, headers, maxHeaderListSize, validateHeaders);
         decode(in, sink);
 
         // Now that we've read all of our headers we can perform the validation steps. We must
@@ -383,68 +375,23 @@ final class HpackDecoder {
         hpackDynamicTable.setCapacity(dynamicTableSize);
     }
 
-    private static HeaderType validateHeader(
-            int streamId, AsciiString name, HeaderType previousHeaderType, Http2Headers headers, AsciiString value)
+    private static HeaderType validateHeader(int streamId, AsciiString name, HeaderType previousHeaderType)
             throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                 throw streamError(streamId, PROTOCOL_ERROR,
                         "Pseudo-header field '%s' found after regular header.", name);
             }
-
             final Http2Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
-            if (pseudoHeader == null) {
-                throw streamError(streamId, PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name);
-            }
-
             final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
                     HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
             if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
                 throw streamError(streamId, PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
             }
-
-            if (contains(headers, name)) {
-                throw streamError(streamId, PROTOCOL_ERROR, "Duplicate HTTP/2 pseudo-header '%s' encountered.", name);
-            }
-
             return currentHeaderType;
-        }
-        if (isConnectionHeader(name)) {
-            throw streamError(streamId, PROTOCOL_ERROR, "Illegal connection-specific header '%s' encountered.", name);
-        }
-        if (contentEqualsIgnoreCase(name, HttpHeaderNames.TE) &&
-                !contentEqualsIgnoreCase(value, HttpHeaderValues.TRAILERS)) {
-            throw streamError(streamId, PROTOCOL_ERROR,
-                    "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
         }
 
         return HeaderType.REGULAR_HEADER;
-    }
-
-    @SuppressWarnings("deprecation") // We need to check for deprecated headers as well.
-    private static boolean isConnectionHeader(AsciiString name) {
-        // These are the known standard connection related headers:
-        // - upgrade (7 chars)
-        // - connection (10 chars)
-        // - keep-alive (10 chars)
-        // - proxy-connection (16 chars)
-        // - transfer-encoding (17 chars)
-        //
-        // See https://datatracker.ietf.org/doc/html/rfc9113#section-8.2.2
-        // and https://datatracker.ietf.org/doc/html/rfc9110#section-7.6.1
-        // for the list of connection related headers.
-        //
-        // We scan for these based on the length, then double-check any matching name.
-        int len = name.length();
-        switch (len) {
-            case 7: return contentEqualsIgnoreCase(name, HttpHeaderNames.UPGRADE);
-            case 10: return contentEqualsIgnoreCase(name, HttpHeaderNames.CONNECTION) ||
-                    contentEqualsIgnoreCase(name, HttpHeaderNames.KEEP_ALIVE);
-            case 16: return contentEqualsIgnoreCase(name, HttpHeaderNames.PROXY_CONNECTION);
-            case 17: return contentEqualsIgnoreCase(name, HttpHeaderNames.TRANSFER_ENCODING);
-            default:
-                return false;
-        }
     }
 
     private static boolean contains(Http2Headers headers, AsciiString name) {
@@ -473,41 +420,6 @@ final class HpackDecoder {
         }
         // Note: We don't check PROTOCOL because the API presents no alternative way to access it.
         return false;
-    }
-
-    private static void validateValidHeaderValue(int streamId, AsciiString name, AsciiString value)
-            throws Http2Exception {
-        // Validate value to field-content rule.
-        //  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-        //  field-vchar    = VCHAR / obs-text
-        //  VCHAR          = %x21-7E ; visible (printing) characters
-        //  obs-text       = %x80-FF
-        //  SP             = %x20
-        //  HTAB           = %x09 ; horizontal tab
-        //  See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
-        //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
-        int length = value.length();
-        if (length == 0) {
-            return;
-        }
-        verifyValidHeaderValueAsciiString(streamId, name, value);
-    }
-
-    private static void verifyValidHeaderValueAsciiString(int streamId, AsciiString name, AsciiString value)
-            throws Http2Exception {
-        final byte[] array = value.array();
-        final int start = value.arrayOffset();
-        int b = array[start] & 0xFF;
-        if (b < 0x21 || b == 0x7F) {
-            throw illegalHeaderValue(streamId, name, b, 0);
-        }
-        int length = value.length();
-        for (int i = start + 1; i < length; i++) {
-            b = array[i] & 0xFF;
-            if (b < 0x20 && b != 0x09 || b == 0x7F) {
-                throw illegalHeaderValue(streamId, name, b, i - start);
-            }
-        }
     }
 
     private static Http2Exception illegalHeaderValue(int streamId, AsciiString name, int illegalByte, int index) {
@@ -634,19 +546,16 @@ final class HpackDecoder {
         private final long maxHeaderListSize;
         private final int streamId;
         private final boolean validateHeaders;
-        private final boolean validateHeaderValues;
         private long headersLength;
         private boolean exceededMaxLength;
         private HeaderType previousType;
         private Http2Exception validationException;
 
-        Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validateHeaders,
-                         boolean validateHeaderValues) {
+        Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validateHeaders) {
             this.headers = headers;
             this.maxHeaderListSize = maxHeaderListSize;
             this.streamId = streamId;
             this.validateHeaders = validateHeaders;
-            this.validateHeaderValues = validateHeaderValues;
         }
 
         void finish() throws Http2Exception {
@@ -667,15 +576,15 @@ final class HpackDecoder {
             }
 
             try {
-                if (validateHeaderValues) {
-                    validateValidHeaderValue(streamId, name, value);
-                }
-                if (validateHeaders) {
-                    previousType = validateHeader(streamId, name, previousType, headers, value);
-                }
                 headers.add(name, value);
+                if (validateHeaders) {
+                    previousType = validateHeader(streamId, name, previousType);
+                }
+            } catch (IllegalArgumentException ex) {
+                validationException = streamError(streamId, PROTOCOL_ERROR, ex,
+                        "Validation failed for header '%s': %s", name, ex.getMessage());
             } catch (Http2Exception ex) {
-                validationException = ex;
+                validationException = streamError(streamId, PROTOCOL_ERROR, ex, ex.getMessage());
             }
         }
     }
