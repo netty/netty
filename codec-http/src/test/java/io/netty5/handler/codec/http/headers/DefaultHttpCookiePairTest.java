@@ -33,6 +33,7 @@ import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DefaultHttpCookiePairTest {
 
@@ -102,5 +103,22 @@ class DefaultHttpCookiePairTest {
                 new DefaultHttpCookiePair("foo", "bar", false)
         ).isNotEqualTo(
                 new DefaultHttpCookiePair("foo", "barr", false).hashCode());
+    }
+
+    @Test
+    public void testAddOneInvalidCookie() {
+        HttpHeaders headers = HttpHeaders.newHeaders();
+        assertThrows(HeaderValidationException.class, () -> {
+            headers.addCookie(new DefaultHttpCookiePair("foo", "value-with-ctrl-char\u0000"));
+        });
+    }
+
+    @Test
+    public void testAddTwoCookiesWithLastInvalid() {
+        HttpHeaders headers = HttpHeaders.newHeaders();
+        assertThrows(HeaderValidationException.class, () -> {
+            headers.addCookie(new DefaultHttpCookiePair("valid", "foo"));
+            headers.addCookie(new DefaultHttpCookiePair("invalid", "value-with-ctrl-char\u0000"));
+        });
     }
 }
