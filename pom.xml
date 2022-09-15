@@ -72,7 +72,7 @@
     <netty.build.version>30</netty.build.version>
     <netty.quic.version>0.0.30.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
-    <junit.version>5.8.2</junit.version>
+    <junit.version>5.9.0</junit.version>
     <release.gpg.keyname />
     <release.gpg.passphrase />
     <test.argLine>-D_</test.argLine>
