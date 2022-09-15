@@ -59,7 +59,7 @@ public class BufferCleanerTest extends BufferTestSupport {
         try (var ignore = LeakDetection.onLeakDetected(ignore1 -> leakLatch.countDown())) {
             allocateAndForget(fixture, allocationSize);
             long sum = 0;
-            for (int i = 0; i < 15; i++) {
+            for (int i = 0; i < 30; i++) {
                 System.gc();
                 System.runFinalization();
                 sum = InternalBufferUtils.MEM_USAGE_NATIVE.sum() - initial;
