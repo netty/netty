@@ -76,7 +76,7 @@
     <netty.version>4.1.82.Final</netty.version>
     <netty.build.version>31</netty.build.version>
     <commons.codec.version>1.15</commons.codec.version>
-    <junit.version>5.7.0</junit.version>
+    <junit.version>5.9.0</junit.version>
     <test.argLine>-D_</test.argLine>
     <bundleNativeCode />
     <crossCompile />
