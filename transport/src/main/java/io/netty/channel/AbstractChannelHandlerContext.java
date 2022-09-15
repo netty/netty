@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.socket.DuplexChannel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
@@ -162,10 +163,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeChannelRegistered() {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).channelRegistered(this);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).channelRegistered(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).channelRegistered(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireChannelRegistered();
@@ -194,10 +204,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeChannelUnregistered() {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).channelUnregistered(this);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).channelUnregistered(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).channelUnregistered(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireChannelUnregistered();
@@ -226,10 +245,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeChannelActive() {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).channelActive(this);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).channelActive(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).channelActive(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireChannelActive();
@@ -258,10 +286,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeChannelInactive() {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).channelInactive(this);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).channelInactive(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).channelInactive(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireChannelInactive();
@@ -342,10 +379,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeUserEventTriggered(Object event) {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).userEventTriggered(this, event);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).userEventTriggered(this, event);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireUserEventTriggered(event);
@@ -375,10 +421,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeChannelRead(Object msg) {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).channelRead(this, msg);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).channelRead(this, msg);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).channelRead(this, msg);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireChannelRead(msg);
@@ -406,10 +461,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeChannelReadComplete() {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).channelReadComplete(this);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).channelReadComplete(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).channelReadComplete(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireChannelReadComplete();
@@ -437,10 +501,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeChannelWritabilityChanged() {
         if (invokeHandler()) {
-            try {
-                ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).channelWritabilityChanged(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelInboundHandler) handler).channelWritabilityChanged(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             fireChannelWritabilityChanged();
@@ -502,10 +575,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
         if (invokeHandler()) {
-            try {
-                ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).bind(this, localAddress, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
+            } else {
+                try {
+                    ((ChannelOutboundHandler) handler).bind(this, localAddress, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
             }
         } else {
             bind(localAddress, promise);
@@ -544,10 +626,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         if (invokeHandler()) {
-            try {
-                ((ChannelOutboundHandler) handler()).connect(this, remoteAddress, localAddress, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).connect(this, remoteAddress, localAddress, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
+            } else {
+                try {
+                    ((ChannelOutboundHandler) handler).connect(this, remoteAddress, localAddress, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
             }
         } else {
             connect(remoteAddress, localAddress, promise);
@@ -583,10 +674,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeDisconnect(ChannelPromise promise) {
         if (invokeHandler()) {
-            try {
-                ((ChannelOutboundHandler) handler()).disconnect(this, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).disconnect(this, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
+            } else {
+                try {
+                    ((ChannelOutboundHandler) handler).disconnect(this, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
             }
         } else {
             disconnect(promise);
@@ -618,10 +718,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeClose(ChannelPromise promise) {
         if (invokeHandler()) {
-            try {
-                ((ChannelOutboundHandler) handler()).close(this, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).close(this, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
+            } else {
+                try {
+                    ((ChannelOutboundHandler) handler).close(this, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
             }
         } else {
             close(promise);
@@ -653,10 +762,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeDeregister(ChannelPromise promise) {
         if (invokeHandler()) {
-            try {
-                ((ChannelOutboundHandler) handler()).deregister(this, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).deregister(this, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
+            } else {
+                try {
+                    ((ChannelOutboundHandler) handler).deregister(this, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                }
             }
         } else {
             deregister(promise);
@@ -682,10 +800,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeRead() {
         if (invokeHandler()) {
-            try {
-                ((ChannelOutboundHandler) handler()).read(this);
-            } catch (Throwable t) {
-                invokeExceptionCaught(t);
+            final ChannelHandler handler = handler();
+            if (handler instanceof ChannelDuplexHandler) {
+                try {
+                    ((ChannelDuplexHandler) handler).read(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
+            } else {
+                try {
+                    ((ChannelOutboundHandler) handler).read(this);
+                } catch (Throwable t) {
+                    invokeExceptionCaught(t);
+                }
             }
         } else {
             read();
@@ -713,10 +840,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeWrite0(Object msg, ChannelPromise promise) {
-        try {
-            ((ChannelOutboundHandler) handler()).write(this, msg, promise);
-        } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+        final ChannelHandler handler = handler();
+        if (handler instanceof ChannelDuplexHandler) {
+            try {
+                ((ChannelDuplexHandler) handler).write(this, msg, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            try {
+                ((ChannelOutboundHandler) handler).write(this, msg, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
         }
     }
 
@@ -746,10 +882,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeFlush0() {
-        try {
-            ((ChannelOutboundHandler) handler()).flush(this);
-        } catch (Throwable t) {
-            invokeExceptionCaught(t);
+        final ChannelHandler handler = handler();
+        if (handler instanceof ChannelDuplexHandler) {
+            try {
+                ((ChannelDuplexHandler) handler).flush(this);
+            } catch (Throwable t) {
+                invokeExceptionCaught(t);
+            }
+        } else {
+            try {
+                ((ChannelOutboundHandler) handler).flush(this);
+            } catch (Throwable t) {
+                invokeExceptionCaught(t);
+            }
         }
     }
 
