@@ -36,11 +36,11 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
             return false;
         }
 
-        keys[size++] = o;
         if (size == keys.length) {
             increaseCapacity();
         }
 
+        keys[size++] = o;
         return true;
     }
 
