@@ -271,7 +271,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
             do {
                 if (e.keyHash == keyHash && contentEqualsIgnoreCase(COOKIE, e.getKey())) {
-                    e.value = e.value + "; " + encoded;
+                    e.value = e.value + "; " + validateValue(encoded);
                     return this;
                 }
                 e = e.bucketNext;
