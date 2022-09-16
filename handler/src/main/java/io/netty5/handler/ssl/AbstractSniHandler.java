@@ -16,6 +16,7 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.buffer.Buffer;
+import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 
@@ -102,7 +103,8 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
                                 break;
                             }
 
-                            String hostname = in.copy(offset, serverNameLength).toString(StandardCharsets.US_ASCII);
+                            String hostname = InternalBufferUtils.copyToCharSequence(in, offset, serverNameLength,
+                                            StandardCharsets.US_ASCII).toString();
                             return hostname.toLowerCase(Locale.US);
                         } else {
                             // invalid enum value
