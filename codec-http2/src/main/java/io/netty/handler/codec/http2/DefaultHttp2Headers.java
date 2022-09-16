@@ -129,6 +129,7 @@ public class DefaultHttp2Headers
      * <a href="https://tools.ietf.org/html/rfc7540">rfc7540</a>. {@code false} to not validate header names.
      * @param arraySizeHint A hint as to how large the hash data structure should be.
      * The next positive power of two will be used. An upper bound may be enforced.
+     * @see DefaultHttp2Headers#DefaultHttp2Headers(boolean, boolean, int)
      */
     @SuppressWarnings("unchecked")
     public DefaultHttp2Headers(boolean validate, int arraySizeHint) {
@@ -144,6 +145,10 @@ public class DefaultHttp2Headers
      * Create a new instance.
      * @param validate {@code true} to validate header names according to
      * <a href="https://tools.ietf.org/html/rfc7540">rfc7540</a>. {@code false} to not validate header names.
+     * @param validateValues {@code true} to validate header values according to
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7230#section-3.2">rfc7230</a> and
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1">rfc5234</a>. Otherwise, {@code false}
+     * (the default) to not validate values.
      * @param arraySizeHint A hint as to how large the hash data structure should be.
      * The next positive power of two will be used. An upper bound may be enforced.
      */
