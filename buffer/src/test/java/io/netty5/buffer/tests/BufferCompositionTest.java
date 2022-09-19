@@ -214,6 +214,37 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
+    public void extendingCompositeBufferWithUnwrittenSpanMadeReadOnlyMustIncreaseCapacityByGivenBuffer() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
+             CompositeBuffer composite = allocator.compose().ensureWritable(255);
+             Buffer buffer = BufferAllocator.onHeapUnpooled().allocate(8).implicitCapacityLimit(8)) {
+
+            composite.writeLong(0x0102030405060708L);
+            composite.makeReadOnly();
+            assertEquals(255, composite.capacity());
+
+            buffer.writeLong(0x0807060504030201L);
+            buffer.makeReadOnly();
+            assertEquals(8, buffer.capacity());
+
+            composite.extendWith(buffer.send());
+
+            assertThat(composite.writerOffset()).isEqualTo(16);
+            assertThat(composite.readerOffset()).isZero();
+            assertThat(composite.readableBytes()).isEqualTo(16);
+
+            final byte[] copyOfComposite = new byte[16];
+
+            composite.readBytes(copyOfComposite, 0, copyOfComposite.length);
+
+            try (Buffer copiedBuffer = BufferAllocator.offHeapUnpooled().copyOf(copyOfComposite)) {
+                assertThat(copiedBuffer.readLong()).isEqualTo(0x0102030405060708L);
+                assertThat(copiedBuffer.readLong()).isEqualTo(0x0807060504030201L);
+            }
+        }
+    }
+
+    @Test
     public void emptyCompositeBufferMustAllowSettingOffsetsToZero() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
             try (CompositeBuffer composite = allocator.compose()) {
