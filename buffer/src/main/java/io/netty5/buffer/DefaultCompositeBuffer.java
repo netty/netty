@@ -239,7 +239,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 // Remove writable-bytes from front and middle buffers.
                 for (int i = 0; i < lastReadable; i++) {
                     Buffer buf = array[i];
-                    if (buf.writableBytes() > 0) {
+                    if (buf.writerOffset() > 0 && buf.writerOffset() < buf.capacity()) {
                         array[i] = buf.split();
                         buf.close();
                     }
