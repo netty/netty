@@ -34,7 +34,7 @@ import io.netty.handler.stream.ChunkedInput;
  *     response.headers().set(TRANSFER_ENCODING, CHUNKED);
  *     ctx.write(response);
  *
- *     HttpContentChunkedInput httpChunkWriter = new HttpChunkedInput(
+ *     HttpChunkedInput httpChunkWriter = new HttpChunkedInput(
  *         new ChunkedFile(&quot;/tmp/myfile.txt&quot;));
  *     ChannelFuture sendFileFuture = ctx.write(httpChunkWriter);
  * }
