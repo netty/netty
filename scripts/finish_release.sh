@@ -39,7 +39,7 @@ fi
 
 CROSS_COMPILE_PROFILE="mac-m1-cross-compile"
 if [ "$ARCH" == "arm" ]; then
-    PROFILE="mac-intel-cross-compile"
+    CROSS_COMPILE_PROFILE="mac-intel-cross-compile"
 fi
 
 git fetch
