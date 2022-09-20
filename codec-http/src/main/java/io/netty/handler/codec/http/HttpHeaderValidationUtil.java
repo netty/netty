@@ -104,6 +104,17 @@ public final class HttpHeaderValidationUtil {
      * valid.
      */
     public static int validateValidHeaderValue(CharSequence value) {
+        int length = value.length();
+        if (length == 0) {
+            return -1;
+        }
+        if (value instanceof AsciiString) {
+            return verifyValidHeaderValueAsciiString((AsciiString) value);
+        }
+        return verifyValidHeaderValueCharSequence(value);
+    }
+
+    private static int verifyValidHeaderValueAsciiString(AsciiString value) {
         // Validate value to field-content rule.
         //  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
         //  field-vchar    = VCHAR / obs-text
@@ -113,18 +124,6 @@ public final class HttpHeaderValidationUtil {
         //  HTAB           = %x09 ; horizontal tab
         //  See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
         //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
-        int length = value.length();
-        if (length == 0) {
-            return -1;
-        }
-        if (value instanceof AsciiString) {
-            return verifyValidHeaderValueAsciiString((AsciiString) value);
-        } else {
-            return verifyValidHeaderValueCharSequence(value);
-        }
-    }
-
-    private static int verifyValidHeaderValueAsciiString(AsciiString value) {
         final byte[] array = value.array();
         final int start = value.arrayOffset();
         int b = array[start] & 0xFF;
@@ -142,6 +141,15 @@ public final class HttpHeaderValidationUtil {
     }
 
     private static int verifyValidHeaderValueCharSequence(CharSequence value) {
+        // Validate value to field-content rule.
+        //  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+        //  field-vchar    = VCHAR / obs-text
+        //  VCHAR          = %x21-7E ; visible (printing) characters
+        //  obs-text       = %x80-FF
+        //  SP             = %x20
+        //  HTAB           = %x09 ; horizontal tab
+        //  See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
+        //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
         int b = value.charAt(0);
         if (b < 0x21 || b == 0x7F) {
             return 0;

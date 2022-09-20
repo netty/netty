@@ -49,7 +49,8 @@ public class DefaultHttpHeaders extends HttpHeaders {
             int index = HttpHeaderValidationUtil.validateToken(name);
             if (index != -1) {
                 throw new IllegalArgumentException("a header name can only contain \"token\" characters, " +
-                        "but found invalid character '" + name.charAt(index) + "' at index " + index + '.');
+                        "but found invalid character 0x" + Integer.toHexString(name.charAt(index)) +
+                        " at index " + index + " of header '" + name + "'.");
             }
         }
     };

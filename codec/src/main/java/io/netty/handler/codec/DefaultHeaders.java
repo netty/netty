@@ -144,7 +144,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         entries = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (entries.length - 1);
         head = new HeaderEntry<K, V>();
-        this.valueValidator = valueValidator;
+        this.valueValidator = checkNotNull(valueValidator, "valueValidator");
     }
 
     @Override
