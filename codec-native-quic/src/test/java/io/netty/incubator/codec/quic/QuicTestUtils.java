@@ -29,6 +29,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 final class QuicTestUtils {
@@ -60,8 +61,8 @@ final class QuicTestUtils {
         });
     }
 
-    static Channel newClient() throws Exception {
-        return newClient(newQuicClientBuilder());
+    static Channel newClient(Executor sslTaskExecutor) throws Exception {
+        return newClient(newQuicClientBuilder(sslTaskExecutor));
     }
 
     static Channel newClient(QuicClientCodecBuilder builder) throws Exception {
@@ -72,12 +73,12 @@ final class QuicTestUtils {
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
     }
 
-    static QuicClientCodecBuilder newQuicClientBuilder() {
-        return newQuicClientBuilder(QuicSslContextBuilder.forClient()
+    static QuicClientCodecBuilder newQuicClientBuilder(Executor sslTaskExecutor) {
+        return newQuicClientBuilder(sslTaskExecutor, QuicSslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols(PROTOS).build());
     }
 
-    static QuicClientCodecBuilder newQuicClientBuilder(QuicSslContext sslContext) {
+    static QuicClientCodecBuilder newQuicClientBuilder(Executor sslTaskExecutor, QuicSslContext sslContext) {
         return new QuicClientCodecBuilder()
                 .sslEngineProvider(q -> sslContext.newEngine(q.alloc()))
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
@@ -87,16 +88,16 @@ final class QuicTestUtils {
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
                 .initialMaxStreamDataUnidirectional(1000000)
-                .activeMigration(false);
+                .activeMigration(false).sslTaskExecutor(sslTaskExecutor);
     }
 
-    static QuicServerCodecBuilder newQuicServerBuilder() {
-        return newQuicServerBuilder(QuicSslContextBuilder.forServer(
+    static QuicServerCodecBuilder newQuicServerBuilder(Executor sslTaskExecutor) {
+        return newQuicServerBuilder(sslTaskExecutor, QuicSslContextBuilder.forServer(
                 SELF_SIGNED_CERTIFICATE.privateKey(), null, SELF_SIGNED_CERTIFICATE.certificate())
                 .applicationProtocols(PROTOS).build());
     }
 
-    static QuicServerCodecBuilder newQuicServerBuilder(QuicSslContext context) {
+    static QuicServerCodecBuilder newQuicServerBuilder(Executor sslTaskExecutor, QuicSslContext context) {
         QuicServerCodecBuilder builder = new QuicServerCodecBuilder()
                 .sslEngineProvider(q -> context.newEngine(q.alloc()))
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
@@ -106,7 +107,8 @@ final class QuicTestUtils {
                 .initialMaxStreamDataUnidirectional(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
-                .activeMigration(false);
+                .activeMigration(false)
+                .sslTaskExecutor(sslTaskExecutor);
         if (GROUP instanceof EpollEventLoopGroup) {
             builder.option(QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR,
                     EpollQuicUtils.newSegmentedAllocator(10));
@@ -138,13 +140,15 @@ final class QuicTestUtils {
                 .bind().sync().channel();
     }
 
-    static Channel newServer(QuicTokenHandler tokenHandler, ChannelHandler handler, ChannelHandler streamHandler)
+    static Channel newServer(Executor sslTaskExecutor, QuicTokenHandler tokenHandler,
+                             ChannelHandler handler, ChannelHandler streamHandler)
             throws Exception {
-        return newServer(newQuicServerBuilder(), tokenHandler, handler, streamHandler);
+        return newServer(newQuicServerBuilder(sslTaskExecutor), tokenHandler, handler, streamHandler);
     }
 
-    static Channel newServer(ChannelHandler handler, ChannelHandler streamHandler) throws Exception {
-        return newServer(InsecureQuicTokenHandler.INSTANCE, handler, streamHandler);
+    static Channel newServer(Executor sslTaskExecutor, ChannelHandler handler,
+                             ChannelHandler streamHandler) throws Exception {
+        return newServer(sslTaskExecutor, InsecureQuicTokenHandler.INSTANCE, handler, streamHandler);
     }
 
     static void closeIfNotNull(Channel channel) throws Exception {

@@ -15,14 +15,40 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.util.concurrent.ImmediateExecutor;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 @Timeout(10)
 public abstract class AbstractQuicTest {
+    private static final Executor[] executors = new Executor[] {
+            ImmediateExecutor.INSTANCE,
+            Executors.newCachedThreadPool()
+    };
 
     @BeforeAll
     public static void ensureAvailability() {
         Quic.ensureAvailability();
+    }
+
+    @AfterAll
+    public static void shutdownExecutor() {
+        for (Executor executor: executors) {
+            if (executor instanceof ExecutorService) {
+                ((ExecutorService) executor).shutdown();
+            }
+        }
+    }
+
+    static Executor[] sslTaskExecutors() {
+        return new Executor[] {
+                ImmediateExecutor.INSTANCE,
+                Executors.newCachedThreadPool()
+        };
     }
 }

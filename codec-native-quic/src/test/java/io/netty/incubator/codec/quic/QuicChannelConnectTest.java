@@ -34,8 +34,9 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -56,6 +57,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -63,7 +65,6 @@ import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -71,12 +72,13 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class QuicChannelConnectTest extends AbstractQuicTest {
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testConnectAndQLog() throws Throwable {
+    public void testConnectAndQLog(Executor executor) throws Throwable {
         Path path = Files.createTempFile("qlog", ".quic");
         assertTrue(path.toFile().delete());
-        testQLog(path, p -> {
+        testQLog(executor, path, p -> {
             try {
                 // Some log should have been written at some point.
                 while (Files.readAllLines(p).isEmpty()) {
@@ -88,11 +90,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         });
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testConnectAndQLogDir() throws Throwable {
+    public void testConnectAndQLogDir(Executor executor) throws Throwable {
         Path path = Files.createTempDirectory("qlogdir-");
-        testQLog(path, p -> {
+        testQLog(executor, path, p -> {
             try {
                 for (;;) {
                     File[] files = path.toFile().listFiles();
@@ -109,13 +112,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         });
     }
 
-    private void testQLog(Path path, Consumer<Path> consumer) throws Throwable {
+    private void testQLog(Executor executor, Path path, Consumer<Path> consumer) throws Throwable {
         QuicChannelValidationHandler serverValidationHandler = new QuicChannelValidationHandler();
         QuicChannelValidationHandler clientValidationHandler = new QuicChannelValidationHandler();
-        Channel server = QuicTestUtils.newServer(serverValidationHandler,
+        Channel server = QuicTestUtils.newServer(executor, serverValidationHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(clientValidationHandler)
@@ -143,24 +146,26 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testKeylogEnabled() throws Throwable {
-        testKeylog(true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testKeylogEnabled(Executor executor) throws Throwable {
+        testKeylog(executor, true);
     }
 
-    @Test
-    public void testKeylogDisabled() throws Throwable {
-        testKeylog(false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testKeylogDisabled(Executor executor) throws Throwable {
+        testKeylog(executor, false);
     }
 
-    private static void testKeylog(boolean enable) throws Throwable {
+    private static void testKeylog(Executor sslTaskExecutor, boolean enable) throws Throwable {
         TestLogBackAppender.clearLogs();
         QuicChannelValidationHandler serverValidationHandler = new QuicChannelValidationHandler();
         QuicChannelValidationHandler clientValidationHandler = new QuicChannelValidationHandler();
-        Channel server = QuicTestUtils.newServer(serverValidationHandler,
+        Channel server = QuicTestUtils.newServer(sslTaskExecutor, serverValidationHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(sslTaskExecutor,
                 QuicSslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                         .applicationProtocols(QuicTestUtils.PROTOS).keylog(enable).build()));
 
@@ -184,11 +189,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testAddressValidation() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testAddressValidation(Executor executor) throws Throwable {
         // Bind to something so we can use the port to connect too and so can ensure we really timeout.
         DatagramSocket socket = new DatagramSocket();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder().localConnectionIdLength(10));
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                .localConnectionIdLength(10));
         try {
             ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
             Future<QuicChannel> future = QuicChannel.newBootstrap(channel)
@@ -207,24 +214,26 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testConnectWithCustomIdLength() throws Throwable {
-        testConnectWithCustomIdLength(10);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectWithCustomIdLength(Executor executor) throws Throwable {
+        testConnectWithCustomIdLength(executor, 10);
     }
 
-    @Test
-    public void testConnectWithCustomIdLengthOfZero() throws Throwable {
-        testConnectWithCustomIdLength(0);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectWithCustomIdLengthOfZero(Executor executor) throws Throwable {
+        testConnectWithCustomIdLength(executor, 0);
     }
 
-    private static void testConnectWithCustomIdLength(int idLength) throws Throwable {
+    private static void testConnectWithCustomIdLength(Executor executor, int idLength) throws Throwable {
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
         ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
                         .localConnectionIdLength(idLength),
                 InsecureQuicTokenHandler.INSTANCE, serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .localConnectionIdLength(idLength));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
@@ -248,9 +257,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    private void testConnectWithDroppedPackets(int numDroppedPackets,
+    private void testConnectWithDroppedPackets(Executor executor, int numDroppedPackets,
                                                QuicConnectionIdGenerator connectionIdGenerator) throws Throwable {
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
                         .connectionIdAddressGenerator(connectionIdGenerator),
                 NoValidationQuicTokenHandler.INSTANCE,
                 new ChannelInboundHandlerAdapter() {
@@ -291,7 +300,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 });
 
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder());
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor));
         ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -318,35 +327,40 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(3)
-    public void testConnectWithNoDroppedPacketsAndRandomConnectionIdGenerator() throws Throwable {
-        testConnectWithDroppedPackets(0, QuicConnectionIdGenerator.randomGenerator());
+    public void testConnectWithNoDroppedPacketsAndRandomConnectionIdGenerator(Executor executor) throws Throwable {
+        testConnectWithDroppedPackets(executor, 0, QuicConnectionIdGenerator.randomGenerator());
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(5)
-    public void testConnectWithDroppedPacketsAndRandomConnectionIdGenerator() throws Throwable {
-        testConnectWithDroppedPackets(2, QuicConnectionIdGenerator.randomGenerator());
+    public void testConnectWithDroppedPacketsAndRandomConnectionIdGenerator(Executor executor) throws Throwable {
+        testConnectWithDroppedPackets(executor, 2, QuicConnectionIdGenerator.randomGenerator());
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(3)
-    public void testConnectWithNoDroppedPacketsAndSignConnectionIdGenerator() throws Throwable {
-        testConnectWithDroppedPackets(0, QuicConnectionIdGenerator.signGenerator());
+    public void testConnectWithNoDroppedPacketsAndSignConnectionIdGenerator(Executor executor) throws Throwable {
+        testConnectWithDroppedPackets(executor, 0, QuicConnectionIdGenerator.signGenerator());
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(5)
-    public void testConnectWithDroppedPacketsAndSignConnectionIdGenerator() throws Throwable {
-        testConnectWithDroppedPackets(2, QuicConnectionIdGenerator.signGenerator());
+    public void testConnectWithDroppedPacketsAndSignConnectionIdGenerator(Executor executor) throws Throwable {
+        testConnectWithDroppedPackets(executor, 2, QuicConnectionIdGenerator.signGenerator());
     }
 
-    @Test
-    public void testConnectTimeout() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectTimeout(Executor executor) throws Throwable {
         // Bind to something so we can use the port to connect too and so can ensure we really timeout.
         DatagramSocket socket = new DatagramSocket();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
             Future<QuicChannel> future = QuicChannel.newBootstrap(channel)
@@ -365,14 +379,15 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testConnectAlreadyConnected() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectAlreadyConnected(Executor executor) throws Throwable {
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
         ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
 
-        Channel server = QuicTestUtils.newServer(serverQuicChannelHandler, serverQuicStreamHandler);
+        Channel server = QuicTestUtils.newServer(executor, serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -399,18 +414,19 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testConnectWithoutTokenValidation() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectWithoutTokenValidation(Executor executor) throws Throwable {
         int numBytes = 8;
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
         CountDownLatch serverLatch = new CountDownLatch(1);
         CountDownLatch clientLatch = new CountDownLatch(1);
 
         // Disable token validation
-        Channel server = QuicTestUtils.newServer(NoValidationQuicTokenHandler.INSTANCE,
+        Channel server = QuicTestUtils.newServer(executor, NoValidationQuicTokenHandler.INSTANCE,
                 serverQuicChannelHandler, new BytesCountingHandler(serverLatch, numBytes));
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -456,12 +472,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testConnectAndGetAddressesAfterClose() throws Throwable {
+    public void testConnectAndGetAddressesAfterClose(Executor executor) throws Throwable {
         AtomicReference<QuicChannel> acceptedRef = new AtomicReference<>();
         AtomicReference<QuicConnectionEvent> serverEventRef = new AtomicReference<>();
-        Channel server = QuicTestUtils.newServer(
+        Channel server = QuicTestUtils.newServer(executor,
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -479,7 +496,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 },
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
@@ -512,17 +529,18 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testConnectAndStreamPriority() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectAndStreamPriority(Executor executor) throws Throwable {
         int numBytes = 8;
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
         CountDownLatch serverLatch = new CountDownLatch(1);
         CountDownLatch clientLatch = new CountDownLatch(1);
 
-        Channel server = QuicTestUtils.newServer(serverQuicChannelHandler,
+        Channel server = QuicTestUtils.newServer(executor, serverQuicChannelHandler,
                 new BytesCountingHandler(serverLatch, numBytes));
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -556,17 +574,19 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testExtendedTrustManagerFailureOnTheClient() throws Throwable {
-        testTrustManagerFailureOnTheClient(true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testExtendedTrustManagerFailureOnTheClient(Executor executor) throws Throwable {
+        testTrustManagerFailureOnTheClient(executor, true);
     }
 
-    @Test
-    public void testTrustManagerFailureOnTheClient() throws Throwable {
-        testTrustManagerFailureOnTheClient(false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testTrustManagerFailureOnTheClient(Executor executor) throws Throwable {
+        testTrustManagerFailureOnTheClient(executor, false);
     }
 
-    private void testTrustManagerFailureOnTheClient(boolean extended) throws Throwable {
+    private void testTrustManagerFailureOnTheClient(Executor executor, boolean extended) throws Throwable {
         final X509TrustManager trustManager;
         if (extended) {
             trustManager = new TestX509ExtendedTrustManager() {
@@ -587,12 +607,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 }
             };
         }
-        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter(),
+        Channel server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
-                .trustManager(new TrustManagerFactoryWrapper(trustManager))
-                .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
+                QuicSslContextBuilder.forClient()
+                        .trustManager(new TrustManagerFactoryWrapper(trustManager))
+                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             Throwable cause = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
@@ -608,15 +629,17 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testALPNProtocolMissmatch() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testALPNProtocolMissmatch(Executor executor) throws Throwable {
         CountDownLatch latch = new CountDownLatch(1);
         CountDownLatch eventLatch = new CountDownLatch(1);
 
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
-                        .applicationProtocols("my-protocol").build()),
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(
+                                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                                .applicationProtocols("my-protocol").build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
 
                     @Override
@@ -641,8 +664,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 },
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("protocol").build()));
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
+                QuicSslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("protocol").build()));
         try {
             Throwable cause = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
@@ -660,19 +684,22 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testConnectSuccessWhenTrustManagerBuildFromSameCert() throws Throwable {
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
-                        .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectSuccessWhenTrustManagerBuildFromSameCert(Executor executor) throws Throwable {
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(
+                                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                                .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
-                .trustManager(QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
-                .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
+                QuicSslContextBuilder.forClient()
+                        .trustManager(QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -692,22 +719,25 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testConnectMutualAuthSuccess() throws Throwable {
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate()).trustManager(
-                InsecureTrustManagerFactory.INSTANCE)
-                        .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectMutualAuthSuccess(Executor executor) throws Throwable {
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(
+                                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate()).trustManager(
+                                                InsecureTrustManagerFactory.INSTANCE)
+                                .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).keyManager(
-                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
-                .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
+                QuicSslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE).keyManager(
+                                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -727,19 +757,22 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testConnectMutualAuthFailsIfClientNotSendCertificate() throws Throwable {
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(QuicSslContextBuilder.forServer(
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
-                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectMutualAuthFailsIfClientNotSendCertificate(Executor executor) throws Throwable {
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(
+                                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
+                QuicSslContextBuilder.forClient()
                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
-                new ChannelInboundHandlerAdapter());
-        InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(QuicSslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .applicationProtocols(QuicTestUtils.PROTOS).build()));
+                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             Throwable cause = QuicChannel.newBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
@@ -755,8 +788,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testSniMatch() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testSniMatch(Executor executor) throws Throwable {
         QuicSslContext defaultServerSslContext = QuicSslContextBuilder.forServer(
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
@@ -774,7 +808,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         new DomainWildcardMappingBuilder<>(defaultServerSslContext)
                                 .add(hostname, sniServerSslContext).build());
 
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(serverSslContext),
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverSslContext),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -797,7 +831,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("sni-protocol").build();
 
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .sslEngineProvider(c -> clientSslContext.newEngine(c.alloc(), hostname, 8080)));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
@@ -821,17 +855,19 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testSniFallbackToDefault() throws Throwable {
-        testSniFallbackToDefault(true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testSniFallbackToDefault(Executor executor) throws Throwable {
+        testSniFallbackToDefault(executor, true);
     }
 
-    @Test
-    public void testNoSniFallbackToDefault() throws Throwable {
-        testSniFallbackToDefault(false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testNoSniFallbackToDefault(Executor executor) throws Throwable {
+        testSniFallbackToDefault(executor, false);
     }
 
-    private void testSniFallbackToDefault(boolean sendSni) throws Throwable {
+    private void testSniFallbackToDefault(Executor executor, boolean sendSni) throws Throwable {
         QuicSslContext defaultServerSslContext = QuicSslContextBuilder.forServer(
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
@@ -846,7 +882,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 new DomainWildcardMappingBuilder<>(defaultServerSslContext)
                         .add("quic.netty.io", sniServerSslContext).build());
 
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(serverSslContext),
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverSslContext),
                 InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
 
@@ -855,7 +891,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("default-protocol").build();
 
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .sslEngineProvider(c -> {
                     if (sendSni) {
                         return clientSslContext.newEngine(c.alloc(), "netty.io", 8080);
@@ -883,11 +919,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(5)
-    public void testSessionReusedOnClientSide() throws Exception {
+    public void testSessionReusedOnClientSide(Executor executor) throws Exception {
         CountDownLatch serverSslCompletionEventLatch = new CountDownLatch(2);
-        Channel server = QuicTestUtils.newServer(
+        Channel server = QuicTestUtils.newServer(executor,
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {
@@ -919,7 +956,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols(QuicTestUtils.PROTOS).build();
 
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder().sslEngineProvider(c ->
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor).sslEngineProvider(c ->
                 clientSslContext.newEngine(c.alloc(), "localhost", 9999)));
         try {
             CountDownLatch clientSslCompletionEventLatch = new CountDownLatch(2);

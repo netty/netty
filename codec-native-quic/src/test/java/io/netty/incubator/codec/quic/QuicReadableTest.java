@@ -20,18 +20,21 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class QuicReadableTest extends AbstractQuicTest {
 
-    @Test
-    public void testCorrectlyHandleReadableStreams() throws Throwable  {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCorrectlyHandleReadableStreams(Executor executor) throws Throwable  {
         int numOfStreams = 1024;
         int readStreams = numOfStreams / 2;
         // We do write longs.
@@ -43,7 +46,7 @@ public class QuicReadableTest extends AbstractQuicTest {
 
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
-                QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
+                QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
                 serverHandler, new ChannelInboundHandlerAdapter() {
                     private int counter;
@@ -80,7 +83,7 @@ public class QuicReadableTest extends AbstractQuicTest {
                         return true;
                     }
                 });
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         ByteBuf data = Unpooled.directBuffer().writeLong(8);
         try {

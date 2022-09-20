@@ -25,42 +25,48 @@ import io.netty.util.ReferenceCountUtil;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
-    @Test
-    public void testCloseFromServerWhileInActiveUnidirectional() throws Throwable {
-        testCloseFromServerWhileInActive(QuicStreamType.UNIDIRECTIONAL, false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCloseFromServerWhileInActiveUnidirectional(Executor executor) throws Throwable {
+        testCloseFromServerWhileInActive(executor, QuicStreamType.UNIDIRECTIONAL, false);
     }
 
-    @Test
-    public void testCloseFromServerWhileInActiveBidirectional() throws Throwable {
-        testCloseFromServerWhileInActive(QuicStreamType.BIDIRECTIONAL, false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCloseFromServerWhileInActiveBidirectional(Executor executor) throws Throwable {
+        testCloseFromServerWhileInActive(executor, QuicStreamType.BIDIRECTIONAL, false);
     }
 
-    @Test
-    public void testHalfCloseFromServerWhileInActiveUnidirectional() throws Throwable {
-        testCloseFromServerWhileInActive(QuicStreamType.UNIDIRECTIONAL, true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testHalfCloseFromServerWhileInActiveUnidirectional(Executor executor) throws Throwable {
+        testCloseFromServerWhileInActive(executor, QuicStreamType.UNIDIRECTIONAL, true);
     }
 
-    @Test
-    public void testHalfCloseFromServerWhileInActiveBidirectional() throws Throwable {
-        testCloseFromServerWhileInActive(QuicStreamType.BIDIRECTIONAL, true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testHalfCloseFromServerWhileInActiveBidirectional(Executor executor) throws Throwable {
+        testCloseFromServerWhileInActive(executor, QuicStreamType.BIDIRECTIONAL, true);
     }
 
-    private static void testCloseFromServerWhileInActive(QuicStreamType type,
+    private static void testCloseFromServerWhileInActive(Executor executor, QuicStreamType type,
                                                          boolean halfClose) throws Throwable {
         Channel server = null;
         Channel channel = null;
         try {
             final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             QuicChannelValidationHandler serverHandler = new StreamCreationHandler(type, halfClose, streamPromise);
-            server = QuicTestUtils.newServer(serverHandler,
+            server = QuicTestUtils.newServer(executor, serverHandler,
                     new ChannelInboundHandlerAdapter());
-            channel = QuicTestUtils.newClient();
+            channel = QuicTestUtils.newClient(executor);
 
             QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
 
@@ -89,35 +95,39 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testCloseFromClientWhileInActiveUnidirectional() throws Throwable {
-        testCloseFromClientWhileInActive(QuicStreamType.UNIDIRECTIONAL, false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCloseFromClientWhileInActiveUnidirectional(Executor executor) throws Throwable {
+        testCloseFromClientWhileInActive(executor, QuicStreamType.UNIDIRECTIONAL, false);
     }
 
-    @Test
-    public void testCloseFromClientWhileInActiveBidirectional() throws Throwable {
-        testCloseFromClientWhileInActive(QuicStreamType.BIDIRECTIONAL, false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCloseFromClientWhileInActiveBidirectional(Executor executor) throws Throwable {
+        testCloseFromClientWhileInActive(executor, QuicStreamType.BIDIRECTIONAL, false);
     }
 
-    @Test
-    public void testHalfCloseFromClientWhileInActiveUnidirectional() throws Throwable {
-        testCloseFromClientWhileInActive(QuicStreamType.UNIDIRECTIONAL, true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testHalfCloseFromClientWhileInActiveUnidirectional(Executor executor) throws Throwable {
+        testCloseFromClientWhileInActive(executor, QuicStreamType.UNIDIRECTIONAL, true);
     }
 
-    @Test
-    public void testHalfCloseFromClientWhileInActiveBidirectional() throws Throwable {
-        testCloseFromClientWhileInActive(QuicStreamType.BIDIRECTIONAL, true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testHalfCloseFromClientWhileInActiveBidirectional(Executor executor) throws Throwable {
+        testCloseFromClientWhileInActive(executor, QuicStreamType.BIDIRECTIONAL, true);
     }
 
-    private static void testCloseFromClientWhileInActive(QuicStreamType type,
+    private static void testCloseFromClientWhileInActive(Executor executor, QuicStreamType type,
                                                          boolean halfClose) throws Throwable {
         Channel server = null;
         Channel channel = null;
         try {
             final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
-            server = QuicTestUtils.newServer(serverHandler, new StreamHandler());
-            channel = QuicTestUtils.newClient();
+            server = QuicTestUtils.newServer(executor, serverHandler, new StreamHandler());
+            channel = QuicTestUtils.newClient(executor);
 
             StreamCreationHandler creationHandler = new StreamCreationHandler(type, halfClose, streamPromise);
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)

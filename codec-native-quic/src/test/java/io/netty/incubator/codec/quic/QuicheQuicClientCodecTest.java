@@ -15,9 +15,11 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.util.concurrent.ImmediateExecutor;
+
 public class QuicheQuicClientCodecTest extends QuicheQuicCodecTest<QuicClientCodecBuilder> {
     @Override
     protected QuicClientCodecBuilder newCodecBuilder() {
-        return QuicTestUtils.newQuicClientBuilder();
+        return QuicTestUtils.newQuicClientBuilder(ImmediateExecutor.INSTANCE);
     }
 }

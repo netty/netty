@@ -25,9 +25,12 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,24 +41,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicWritableTest extends AbstractQuicTest {
 
-    @Test
-    public void testCorrectlyHandleWritabilityReadRequestedInReadComplete() throws Throwable {
-        testCorrectlyHandleWritability(true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCorrectlyHandleWritabilityReadRequestedInReadComplete(Executor executor) throws Throwable {
+        testCorrectlyHandleWritability(executor, true);
     }
 
-    @Test
-    public void testCorrectlyHandleWritabilityReadRequestedInRead() throws Throwable {
-        testCorrectlyHandleWritability(false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCorrectlyHandleWritabilityReadRequestedInRead(Executor executor) throws Throwable {
+        testCorrectlyHandleWritability(executor, false);
     }
 
-    private static void testCorrectlyHandleWritability(boolean readInComplete) throws Throwable  {
+    private static void testCorrectlyHandleWritability(Executor executor, boolean readInComplete) throws Throwable  {
         int bufferSize = 64 * 1024;
         Promise<Void> writePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
         final AtomicReference<Throwable> clientErrorRef = new AtomicReference<>();
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
-                QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
+                QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
                 serverHandler, new ChannelInboundHandlerAdapter() {
 
@@ -78,7 +83,7 @@ public class QuicWritableTest extends AbstractQuicTest {
                     }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .initialMaxStreamDataBidirectionalLocal(bufferSize / 4));
 
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
@@ -156,9 +161,10 @@ public class QuicWritableTest extends AbstractQuicTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testBytesUntilUnwritable() throws Throwable  {
+    public void testBytesUntilUnwritable(Executor executor) throws Throwable  {
         Promise<Void> writePromise = ImmediateEventExecutor.INSTANCE.newPromise();
         final AtomicReference<Throwable> serverErrorRef = new AtomicReference<>();
         final AtomicReference<Throwable> clientErrorRef = new AtomicReference<>();
@@ -168,7 +174,7 @@ public class QuicWritableTest extends AbstractQuicTest {
         final AtomicLong beforeWritableRef = new AtomicLong();
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
-                QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(5000),
+                QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
                 serverHandler, new ChannelInboundHandlerAdapter() {
 
@@ -215,7 +221,7 @@ public class QuicWritableTest extends AbstractQuicTest {
                     }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .initialMaxStreamDataBidirectionalLocal(maxData));
 
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();

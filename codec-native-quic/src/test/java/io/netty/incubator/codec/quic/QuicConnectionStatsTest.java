@@ -23,8 +23,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,8 +37,9 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 public class QuicConnectionStatsTest extends AbstractQuicTest {
 
-    @Test
-    public void testStatsAreCollected() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testStatsAreCollected(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;
         AtomicInteger counter = new AtomicInteger();
@@ -63,7 +66,7 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
         };
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            server = QuicTestUtils.newServer(serverHandler, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter() {
 
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
@@ -81,7 +84,7 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
                     return true;
                 }
             });
-            channel = QuicTestUtils.newClient();
+            channel = QuicTestUtils.newClient(executor);
 
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(clientHandler)

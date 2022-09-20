@@ -23,31 +23,35 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class QuicStreamLimitTest extends AbstractQuicTest {
 
-    @Test
-    public void testStreamLimitEnforcedWhenCreatingViaClientBidirectional() throws Throwable {
-        testStreamLimitEnforcedWhenCreatingViaClient(QuicStreamType.BIDIRECTIONAL);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testStreamLimitEnforcedWhenCreatingViaClientBidirectional(Executor executor) throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaClient(executor, QuicStreamType.BIDIRECTIONAL);
     }
 
-    @Test
-    public void testStreamLimitEnforcedWhenCreatingViaClientUnidirectional() throws Throwable {
-        testStreamLimitEnforcedWhenCreatingViaClient(QuicStreamType.UNIDIRECTIONAL);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testStreamLimitEnforcedWhenCreatingViaClientUnidirectional(Executor executor) throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaClient(executor, QuicStreamType.UNIDIRECTIONAL);
     }
 
-    private static void testStreamLimitEnforcedWhenCreatingViaClient(QuicStreamType type) throws Throwable {
+    private static void testStreamLimitEnforcedWhenCreatingViaClient(Executor executor, QuicStreamType type) throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
-                QuicTestUtils.newQuicServerBuilder().initialMaxStreamsBidirectional(1)
+                QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(1)
                         .initialMaxStreamsUnidirectional(1),
                 InsecureQuicTokenHandler.INSTANCE,
                 serverHandler, new ChannelInboundHandlerAdapter() {
@@ -64,7 +68,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                     }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
 
         CountDownLatch latch = new CountDownLatch(1);
         CountDownLatch latch2 = new CountDownLatch(1);
@@ -114,17 +118,19 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testStreamLimitEnforcedWhenCreatingViaServerBidirectional() throws Throwable {
-        testStreamLimitEnforcedWhenCreatingViaServer(QuicStreamType.BIDIRECTIONAL);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testStreamLimitEnforcedWhenCreatingViaServerBidirectional(Executor executor) throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaServer(executor, QuicStreamType.BIDIRECTIONAL);
     }
 
-    @Test
-    public void testStreamLimitEnforcedWhenCreatingViaServerUnidirectional() throws Throwable {
-        testStreamLimitEnforcedWhenCreatingViaServer(QuicStreamType.UNIDIRECTIONAL);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testStreamLimitEnforcedWhenCreatingViaServerUnidirectional(Executor executor) throws Throwable {
+        testStreamLimitEnforcedWhenCreatingViaServer(executor, QuicStreamType.UNIDIRECTIONAL);
     }
 
-    private static void testStreamLimitEnforcedWhenCreatingViaServer(QuicStreamType type) throws Throwable {
+    private static void testStreamLimitEnforcedWhenCreatingViaServer(Executor executor, QuicStreamType type) throws Throwable {
         Promise<Void> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
         Promise<Throwable> stream2Promise = ImmediateEventExecutor.INSTANCE.newPromise();
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
@@ -148,7 +154,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             }
         };
         Channel server = QuicTestUtils.newServer(
-                QuicTestUtils.newQuicServerBuilder(),
+                QuicTestUtils.newQuicServerBuilder(executor),
                 InsecureQuicTokenHandler.INSTANCE,
                 serverHandler, new ChannelInboundHandlerAdapter() {
                     @Override
@@ -157,7 +163,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                     }
                 });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .initialMaxStreamsBidirectional(1).initialMaxStreamsUnidirectional(1));
 
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();

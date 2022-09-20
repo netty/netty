@@ -34,11 +34,17 @@
 
 #define ERR_LEN 256
 
-static jclass verifyCallbackClass = NULL;
-static jmethodID verifyCallbackMethod = NULL;
+static jclass sslTaskClass = NULL;
+static jfieldID sslTaskReturnValue;
+static jfieldID sslTaskComplete;
 
-static jclass certificateCallbackClass = NULL;
-static jmethodID certificateCallbackMethod = NULL;
+static jclass verifyTaskClass = NULL;
+static jmethodID verifyTaskClassInitMethod = NULL;
+
+static jclass certificateTaskClass = NULL;
+static jmethodID certificateTaskClassInitMethod = NULL;
+static jfieldID certificateTaskClassChainField;
+static jfieldID certificateTaskClassKeyField;
 
 static jclass handshakeCompleteCallbackClass = NULL;
 static jmethodID handshakeCompleteCallbackMethod = NULL;
@@ -61,6 +67,7 @@ static int certificateCallbackIdx = -1;
 static int servernameCallbackIdx = -1;
 static int keylogCallbackIdx = -1;
 static int sessionCallbackIdx = -1;
+static int sslTaskIdx = -1;
 static int alpn_data_idx = -1;
 static int crypto_buffer_pool_idx = -1;
 
@@ -170,6 +177,48 @@ static jbyteArray to_byte_array(JNIEnv* env, uint8_t* bytes, size_t len) {
      return array;
 }
 
+// Store the callback to run and also if it was consumed via SSL.getTask(...).
+typedef struct netty_boringssl_ssl_task_t netty_boringssl_ssl_task_t;
+struct netty_boringssl_ssl_task_t {
+    jboolean consumed;
+    jobject task;
+};
+
+
+static netty_boringssl_ssl_task_t* netty_boringssl_ssl_task_new(JNIEnv* e, jobject task) {
+    if (task == NULL) {
+        // task was NULL which most likely means we did run out of memory when calling NewObject(...). Signal a failure back by returning NULL.
+        return NULL;
+    }
+    netty_boringssl_ssl_task_t* sslTask = (netty_boringssl_ssl_task_t*) OPENSSL_malloc(sizeof(netty_boringssl_ssl_task_t));
+    if (sslTask == NULL) {
+        return NULL;
+    }
+
+    if ((sslTask->task = (*e)->NewGlobalRef(e, task)) == NULL) {
+        // NewGlobalRef failed because we ran out of memory, free what we malloc'ed and fail the handshake.
+        OPENSSL_free(sslTask);
+        return NULL;
+    }
+    sslTask->consumed = JNI_FALSE;
+    return sslTask;
+}
+
+static void netty_boringssl_ssl_task_free(JNIEnv* e, netty_boringssl_ssl_task_t* sslTask) {
+    if (sslTask == NULL) {
+        return;
+    }
+
+    if (sslTask->task != NULL) {
+        // As we created a Global reference before we need to delete the reference as otherwise we will leak memory.
+        (*e)->DeleteGlobalRef(e, sslTask->task);
+        sslTask->task = NULL;
+    }
+
+    // The task was malloc'ed before, free it and clear it from the SSL storage.
+    OPENSSL_free(sslTask);
+}
+
 enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_alert) {
     enum ssl_verify_result_t ret = ssl_verify_invalid;
     jint result = X509_V_ERR_UNSPECIFIED;
@@ -189,6 +238,23 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
         goto complete;
     }
 
+    netty_boringssl_ssl_task_t* ssl_task = (netty_boringssl_ssl_task_t*) SSL_get_ex_data(ssl, sslTaskIdx);
+    // Let's check if we retried the operation and so have stored a sslTask that runs the certificiate callback.
+    if (ssl_task != NULL) {
+        // Check if the task complete yet. If not the complete field will be still false.
+        if ((*e)->GetBooleanField(e, ssl_task->task, sslTaskComplete) == JNI_FALSE) {
+            // Not done yet, try again later.
+            ret = ssl_verify_retry;
+            goto complete;
+        }
+
+        // The task is complete, retrieve the return value that should be signaled back.
+        result = (*e)->GetIntField(e, ssl_task->task, sslTaskReturnValue);
+
+        SSL_set_ex_data(ssl, sslTaskIdx, NULL);
+        netty_boringssl_ssl_task_free(e, ssl_task);
+        goto complete;
+    }
     const STACK_OF(CRYPTO_BUFFER) *chain = SSL_get0_peer_certificates(ssl);
     if (chain == NULL) {
         goto complete;
@@ -203,13 +269,13 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
     const char* authentication_method = NULL;
     STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
     if (ciphers == NULL || sk_SSL_CIPHER_num(ciphers) <= 0) {
-         // No cipher available so return UNKNOWN.
-         authentication_method = "UNKNOWN";
+        // No cipher available so return UNKNOWN.
+        authentication_method = "UNKNOWN";
     } else {
-         authentication_method = SSL_CIPHER_get_kx_name(sk_SSL_CIPHER_value(ciphers, 0));
-         if (authentication_method == NULL) {
-              authentication_method = "UNKNOWN";
-         }
+        authentication_method = SSL_CIPHER_get_kx_name(sk_SSL_CIPHER_value(ciphers, 0));
+        if (authentication_method == NULL) {
+            authentication_method = "UNKNOWN";
+        }
     }
 
     jstring authMethodString = (*e)->NewStringUTF(e, authentication_method);
@@ -217,27 +283,26 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
         goto complete;
     }
 
-    // Execute the java callback
-    result = (*e)->CallIntMethod(e, verifyCallback, verifyCallbackMethod, (jlong)ssl, array, authMethodString);
+    jobject task = (*e)->NewObject(e, verifyTaskClass, verifyTaskClassInitMethod, (jlong) ssl, array, authMethodString, verifyCallback);
 
-    if ((*e)->ExceptionCheck(e) == JNI_TRUE) {
-        (*e)->ExceptionClear(e);
-        result = X509_V_ERR_UNSPECIFIED;
+    ssl_task = netty_boringssl_ssl_task_new(e, task);
+    if (ssl_task == NULL) {
         goto complete;
     }
 
-    int len = (*e)->GetArrayLength(e, array);
-    // If we failed to verify for an unknown reason (currently this happens if we can't find a common root) then we should
-    // fail with the same status as recommended in the OpenSSL docs https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_verify.html
-    if (result == X509_V_ERR_UNSPECIFIED && len < sk_CRYPTO_BUFFER_num(chain)) {
-        result = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY;
-    }
+    SSL_set_ex_data(ssl, sslTaskIdx, ssl_task);
+
+    // Signal back that we want to suspend the handshake.
+    ret = ssl_verify_retry;
+    goto complete;
 complete:
-    if (result == X509_V_OK) {
-        ret = ssl_verify_ok;
-    } else {
-        ret = ssl_verify_invalid;
-        *out_alert = SSL_alert_from_verify_result(result);
+    if (ret != ssl_verify_retry) {
+        if (result == X509_V_OK) {
+            ret = ssl_verify_ok;
+        } else {
+            ret = ssl_verify_invalid;
+            *out_alert = SSL_alert_from_verify_result(result);
+        }
     }
     return ret;
 }
@@ -260,71 +325,81 @@ static jbyteArray keyTypes(JNIEnv* e, SSL* ssl) {
 // See https://www.openssl.org/docs/man1.0.2/man3/SSL_set_cert_cb.html for return values.
 static int quic_certificate_cb(SSL* ssl, void* arg) {
     JNIEnv *e = NULL;
-    CRYPTO_BUFFER** certs = NULL;
-    jlong* elements = NULL;
-    int ret = 0;
-    int free = 0;
-
     if (quic_get_java_env(&e) != JNI_OK) {
-        goto done;
+        return 0;
     }
 
-    jobjectArray authMethods = NULL;
-    jobjectArray issuers = NULL;
-    jbyteArray types = NULL;
-    if (SSL_is_server(ssl) == 1) {
-        const STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
-        int len = sk_SSL_CIPHER_num(ciphers);
-        authMethods = (*e)->NewObjectArray(e, len, stringClass, NULL);
-        if (authMethods == NULL) {
-            goto done;
-        }
+    netty_boringssl_ssl_task_t* ssl_task = (netty_boringssl_ssl_task_t*) SSL_get_ex_data(ssl, sslTaskIdx);
 
-        for (int i = 0; i < len; i++) {
-            jstring methodString = (*e)->NewStringUTF(e, SSL_CIPHER_get_kx_name(sk_SSL_CIPHER_value(ciphers, i)));
-            if (methodString == NULL) {
-                // Out of memory
-                goto done;
+    // Let's check if we retried the operation and so have stored a sslTask that runs the certificiate callback.
+    if (ssl_task == NULL) {
+        jobjectArray authMethods = NULL;
+        jobjectArray issuers = NULL;
+        jbyteArray types = NULL;
+        if (SSL_is_server(ssl) == 1) {
+            const STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
+            int len = sk_SSL_CIPHER_num(ciphers);
+            authMethods = (*e)->NewObjectArray(e, len, stringClass, NULL);
+            if (authMethods == NULL) {
+                return 0;
             }
-            (*e)->SetObjectArrayElement(e, authMethods, i, methodString);
+
+            for (int i = 0; i < len; i++) {
+                jstring methodString = (*e)->NewStringUTF(e, SSL_CIPHER_get_kx_name(sk_SSL_CIPHER_value(ciphers, i)));
+                if (methodString == NULL) {
+                    // Out of memory
+                    return 0;
+                }
+                (*e)->SetObjectArrayElement(e, authMethods, i, methodString);
+            }
+
+            // TODO: Consider filling these somehow.
+            types = NULL;
+            issuers = NULL;
+        } else {
+            authMethods = NULL;
+            types = keyTypes(e, ssl);
+            issuers = stackToArray(e, SSL_get0_server_requested_CAs(ssl), 0);
         }
 
-        // TODO: Consider filling these somehow.
-        types = NULL;
-        issuers = NULL;
-    } else {
-        authMethods = NULL;
-        types = keyTypes(e, ssl);
-        issuers = stackToArray(e, SSL_get0_server_requested_CAs(ssl), 0);
+        // Lets create the CertificateCallbackTask and store it on the SSL object. We then later retrieve it via
+        // SSL.getTask(ssl) and run it.
+        jobject task = (*e)->NewObject(e, certificateTaskClass, certificateTaskClassInitMethod, (jlong) ssl, types, issuers, authMethods, arg);
+
+        if ((ssl_task = netty_boringssl_ssl_task_new(e, task)) == NULL) {
+            return 0;
+        }
+
+        SSL_set_ex_data(ssl, sslTaskIdx, ssl_task);
+
+        // Signal back that we want to suspend the handshake.
+        return -1;
     }
 
-    // Execute the java callback
-    jlongArray result = (*e)->CallObjectMethod(e, arg, certificateCallbackMethod, (jlong) ssl, types, issuers, authMethods);
-
-    // Check if java threw an exception and if so signal back that we should not continue with the handshake.
-    if ((*e)->ExceptionCheck(e) == JNI_TRUE) {
-        (*e)->ExceptionClear(e);
-        goto done;
-    }
-    if (result == NULL) {
-        goto done;
+    // Check if the task complete yet. If not the complete field will be still false.
+    if ((*e)->GetBooleanField(e, ssl_task->task, sslTaskComplete) == JNI_FALSE) {
+        // Not done yet, try again later.
+        return -1;
     }
 
-    int arrayLen = (*e)->GetArrayLength(e, result);
-    if (arrayLen != 3) {
-        goto done;
+    // The task is complete, retrieve the return value that should be signaled back.
+    jint retValue = (*e)->GetIntField(e, ssl_task->task, sslTaskReturnValue);
+    if (retValue == 0) {
+        return 0;
     }
 
-    elements = (*e)->GetLongArrayElements(e, result, NULL);
-    EVP_PKEY* pkey = (EVP_PKEY *) elements[0];
-    const STACK_OF(CRYPTO_BUFFER) *cchain = (STACK_OF(CRYPTO_BUFFER) *) elements[1];
-    free = elements[2];
+    int ret = 0;
+    EVP_PKEY* pkey = (EVP_PKEY *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassKeyField);
+    const STACK_OF(CRYPTO_BUFFER) *cchain = (STACK_OF(CRYPTO_BUFFER) *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassChainField);
+
+    SSL_set_ex_data(ssl, sslTaskIdx, NULL);
+    netty_boringssl_ssl_task_free(e, ssl_task);
 
     int numCerts = sk_CRYPTO_BUFFER_num(cchain);
     if (numCerts == 0) {
         goto done;
     }
-    certs = OPENSSL_malloc(sizeof(CRYPTO_BUFFER*) * numCerts);
+    CRYPTO_BUFFER** certs = OPENSSL_malloc(sizeof(CRYPTO_BUFFER*) * numCerts);
 
     if (certs == NULL) {
         goto done;
@@ -338,12 +413,9 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
         ret = 1;
     }
 done:
-    if (elements != NULL) {
-        (*e)->ReleaseLongArrayElements(e, result, elements, 0);
-    }
     OPENSSL_free(certs);
-    if (free == 1) {
-        EVP_PKEY_free(pkey);
+    EVP_PKEY_free(pkey);
+    if (cchain != NULL) {
         sk_CRYPTO_BUFFER_pop_free((STACK_OF(CRYPTO_BUFFER) *) cchain, CRYPTO_BUFFER_free);
     }
     return ret;
@@ -870,6 +942,25 @@ void netty_boringssl_SSL_free(JNIEnv* env, jclass clazz, jlong ssl) {
     SSL_free((SSL *) ssl);
 }
 
+jobject netty_boringssl_SSL_getTask(JNIEnv* env, jclass clazz, jlong ssl) {
+    netty_boringssl_ssl_task_t* ssl_task = SSL_get_ex_data((SSL*) ssl, sslTaskIdx);
+
+    if (ssl_task == NULL || ssl_task->consumed == JNI_TRUE) {
+        // Either no task was produced or it was already consumed by SSL.getTask(...).
+        return NULL;
+    }
+    ssl_task->consumed = JNI_TRUE;
+    return ssl_task->task;
+}
+
+void netty_boringssl_SSL_cleanup(JNIEnv* env, jclass clazz, jlong ssl) {
+    netty_boringssl_ssl_task_t* sslTask = SSL_get_ex_data((SSL *) ssl, sslTaskIdx);
+    if (sslTask != NULL) {
+        SSL_set_ex_data((SSL *) ssl, sslTaskIdx, NULL);
+        netty_boringssl_ssl_task_free(env, sslTask);
+    }
+}
+
 int netty_boringssl_password_callback(char *buf, int bufsiz, int verify, void *cb) {
     char *password = (char *) cb;
     if (password == NULL) {
@@ -936,7 +1027,6 @@ jstring netty_boringssl_ERR_last_error(JNIEnv* env, jclass clazz) {
     return (*env)->NewStringUTF(env, buf);
 }
 
-
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -960,6 +1050,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "SSLContext_set_early_data_enabled", "(JZ)V", (void *) netty_boringssl_SSLContext_set_early_data_enabled },
   { "SSL_new0", "(JZLjava/lang/String;)J", (void *) netty_boringssl_SSL_new0 },
   { "SSL_free", "(J)V", (void *) netty_boringssl_SSL_free },
+  { "SSL_getTask", "(J)Ljava/lang/Runnable;", (void *) netty_boringssl_SSL_getTask },
+  { "SSL_cleanup", "(J)V", (void *) netty_boringssl_SSL_cleanup },
   { "EVP_PKEY_parse", "([BLjava/lang/String;)J", (void *) netty_boringssl_EVP_PKEY_parse },
   { "EVP_PKEY_free", "(J)V", (void *) netty_boringssl_EVP_PKEY_free },
   { "CRYPTO_BUFFER_stack_new", "(J[[B)J", (void *) netty_boringssl_CRYPTO_BUFFER_stack_new },
@@ -971,6 +1063,18 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 
 // JNI Method Registration Table End
 
+static void unload_all_classes(JNIEnv* env) {
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sslTaskClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, certificateTaskClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, verifyTaskClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, keylogCallbackClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sessionCallbackClass);
+}
+
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Quiche to reflect that.
 jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
@@ -978,6 +1082,7 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int staticallyRegistered = 0;
     int nativeRegistered = 0;
     char* name = NULL;
+    char* combinedName = NULL;
 
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -999,17 +1104,33 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     nativeRegistered = 1;
     // Initialize this module
 
-
     NETTY_JNI_UTIL_LOAD_CLASS(env, byteArrayClass, "[B", done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallback", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, certificateCallbackClass, name, done);
-    NETTY_JNI_UTIL_GET_METHOD(env, certificateCallbackClass, certificateCallbackMethod, "handle", "(J[B[[B[Ljava/lang/String;)[J", done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLTask", name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, sslTaskClass, name, done);
+    NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskReturnValue, "returnValue", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskComplete, "complete", "Z", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallback", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, verifyCallbackClass, name, done);
-    NETTY_JNI_UTIL_GET_METHOD(env, verifyCallbackClass, verifyCallbackMethod, "verify", "(J[[BLjava/lang/String;)I", done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallbackTask", name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, certificateTaskClass, name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallback;)V", name, done);
+    NETTY_JNI_UTIL_PREPEND("(J[B[[B[Ljava/lang/String;L", name, combinedName, done);
+    free(name);
+    name = combinedName;
+    combinedName = NULL;
+    NETTY_JNI_UTIL_GET_METHOD(env, certificateTaskClass, certificateTaskClassInitMethod, "<init>", name, done);
+    NETTY_JNI_UTIL_GET_FIELD(env, certificateTaskClass, certificateTaskClassChainField, "chain", "J", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, certificateTaskClass, certificateTaskClassKeyField, "key", "J", done);
+
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallbackTask", name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, verifyTaskClass, name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallback;)V", name, done);
+    NETTY_JNI_UTIL_PREPEND("(J[[BLjava/lang/String;L", name, combinedName, done);
+    free(name);
+    name = combinedName;
+    combinedName = NULL;
+    NETTY_JNI_UTIL_GET_METHOD(env, verifyTaskClass, verifyTaskClassInitMethod, "<init>", name, done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLHandshakeCompleteCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, handshakeCompleteCallbackClass, name, done);
@@ -1033,6 +1154,7 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     servernameCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     keylogCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     sessionCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    sslTaskIdx = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 
     alpn_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     crypto_buffer_pool_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
@@ -1046,26 +1168,13 @@ done:
             netty_jni_util_unregister_natives(env, packagePrefix, CLASSNAME);
         }
 
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, certificateCallbackClass);
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, verifyCallbackClass);
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, keylogCallbackClass);
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, sessionCallbackClass);
+        unload_all_classes(env);
     }
     return ret;
 }
 
 void netty_boringssl_JNI_OnUnload(JNIEnv* env, const char* packagePrefix) {
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, certificateCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, verifyCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, keylogCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sessionCallbackClass);
+    unload_all_classes(env);
 
     netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
     netty_jni_util_unregister_natives(env, packagePrefix, CLASSNAME);

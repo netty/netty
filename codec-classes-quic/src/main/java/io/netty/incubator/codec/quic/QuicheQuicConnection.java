@@ -82,6 +82,7 @@ final class QuicheQuicConnection {
         synchronized (this) {
             if (connection != -1) {
                 try {
+                    BoringSSL.SSL_cleanup(ssl);
                     Quiche.quiche_conn_free(connection);
                     engine.ctx.remove(engine);
                     release = true;
@@ -95,6 +96,26 @@ final class QuicheQuicConnection {
             recvInfoBuffer.release();
             sendInfoBuffer.release();
         }
+    }
+
+    Runnable sslTask() {
+        final Runnable task;
+        synchronized (this) {
+            if (connection != -1) {
+                task = BoringSSL.SSL_getTask(ssl);
+            } else {
+                task = null;
+            }
+        }
+        if (task == null) {
+            return null;
+        }
+        return () -> {
+            if (connection == -1) {
+                return;
+            }
+            task.run();
+        };
     }
 
     QuicConnectionAddress sourceId() {

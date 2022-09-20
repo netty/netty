@@ -20,10 +20,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -32,13 +34,14 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
     private static final AttributeKey<String> ATTRIBUTE_KEY = AttributeKey.newInstance("testKey");
     private static final String ATTRIBUTE_VALUE = "Test";
 
-    @Test
-    public void testCreateStream() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCreateStream(Executor executor) throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
-        Channel server = QuicTestUtils.newServer(serverHandler,
+        Channel server = QuicTestUtils.newServer(executor, serverHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
 
         try {
@@ -72,13 +75,14 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testCreateStreamViaBootstrap() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCreateStreamViaBootstrap(Executor executor) throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
-        Channel server = QuicTestUtils.newServer(serverHandler,
+        Channel server = QuicTestUtils.newServer(executor, serverHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(executor);
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
 
         try {

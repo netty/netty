@@ -28,6 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
@@ -39,6 +40,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicServerCodec.class);
 
     private final Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
+    private final Executor sslTaskExecutor;
     private final QuicConnectionIdGenerator connectionIdAddressGenerator;
     private final QuicTokenHandler tokenHandler;
     private final ChannelHandler handler;
@@ -56,6 +58,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                           QuicConnectionIdGenerator connectionIdAddressGenerator,
                           FlushStrategy flushStrategy,
                           Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+                          Executor sslTaskExecutor,
                           ChannelHandler handler,
                           Map.Entry<ChannelOption<?>, Object>[] optionsArray,
                           Map.Entry<AttributeKey<?>, Object>[] attrsArray,
@@ -66,6 +69,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
         this.sslEngineProvider = sslEngineProvider;
+        this.sslTaskExecutor = sslTaskExecutor;
         this.handler = handler;
         this.optionsArray = optionsArray;
         this.attrsArray = attrsArray;
@@ -205,7 +209,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         }
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
                 ctx.channel(), key, recipient, sender, config.isDatagramSupported(),
-                streamHandler, streamOptionsArray, streamAttrsArray, this::removeChannel);
+                streamHandler, streamOptionsArray, streamAttrsArray, this::removeChannel, sslTaskExecutor);
 
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         QuicSslEngine engine = sslEngineProvider.apply(channel);

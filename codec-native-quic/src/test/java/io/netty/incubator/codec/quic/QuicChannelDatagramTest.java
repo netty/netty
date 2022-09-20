@@ -26,11 +26,13 @@ import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -47,17 +49,19 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
         random.nextBytes(data);
     }
 
-    @Test
-    public void testDatagramFlushInChannelRead() throws Throwable {
-        testDatagram(false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testDatagramFlushInChannelRead(Executor executor) throws Throwable {
+        testDatagram(executor, false);
     }
 
-    @Test
-    public void testDatagramFlushInChannelReadComplete() throws Throwable {
-        testDatagram(true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testDatagramFlushInChannelReadComplete(Executor executor) throws Throwable {
+        testDatagram(executor, true);
     }
 
-    private void testDatagram(boolean flushInReadComplete) throws Throwable {
+    private void testDatagram(Executor executor, boolean flushInReadComplete) throws Throwable {
         AtomicReference<QuicDatagramExtensionEvent> serverEventRef = new AtomicReference<>();
 
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
@@ -92,14 +96,14 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
                 super.userEventTriggered(ctx, evt);
             }
         };
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
                         .datagram(10, 10),
                 InsecureQuicTokenHandler.INSTANCE, serverHandler , new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
         Promise<ByteBuf> receivedBuffer = ImmediateEventExecutor.INSTANCE.newPromise();
         AtomicReference<QuicDatagramExtensionEvent> clientEventRef = new AtomicReference<>();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .datagram(10, 10));
 
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {
@@ -153,27 +157,31 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testDatagramNoAutoReadMaxMessagesPerRead1() throws Throwable {
-        testDatagramNoAutoRead(1, false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testDatagramNoAutoReadMaxMessagesPerRead1(Executor executor) throws Throwable {
+        testDatagramNoAutoRead(executor, 1, false);
     }
 
-    @Test
-    public void testDatagramNoAutoReadMaxMessagesPerRead3() throws Throwable {
-        testDatagramNoAutoRead(3, false);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testDatagramNoAutoReadMaxMessagesPerRead3(Executor executor) throws Throwable {
+        testDatagramNoAutoRead(executor, 3, false);
     }
 
-    @Test
-    public void testDatagramNoAutoReadMaxMessagesPerRead1OutSideEventLoop() throws Throwable {
-        testDatagramNoAutoRead(1, true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testDatagramNoAutoReadMaxMessagesPerRead1OutSideEventLoop(Executor executor) throws Throwable {
+        testDatagramNoAutoRead(executor, 1, true);
     }
 
-    @Test
-    public void testDatagramNoAutoReadMaxMessagesPerRead3OutSideEventLoop() throws Throwable {
-        testDatagramNoAutoRead(3, true);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testDatagramNoAutoReadMaxMessagesPerRead3OutSideEventLoop(Executor executor) throws Throwable {
+        testDatagramNoAutoRead(executor, 3, true);
     }
 
-    private void testDatagramNoAutoRead(int maxMessagesPerRead, boolean readLater) throws Throwable {
+    private void testDatagramNoAutoRead(Executor executor, int maxMessagesPerRead, boolean readLater) throws Throwable {
         Promise<Void> serverPromise = ImmediateEventExecutor.INSTANCE.newPromise();
         Promise<ByteBuf> clientPromise = ImmediateEventExecutor.INSTANCE.newPromise();
 
@@ -224,14 +232,14 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
                 }
             }
         };
-        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder()
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
                         .option(ChannelOption.AUTO_READ, false)
                         .option(ChannelOption.MAX_MESSAGES_PER_READ, maxMessagesPerRead)
                         .datagram(10, 10),
                 InsecureQuicTokenHandler.INSTANCE, serverHandler, new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder()
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .datagram(10, 10));
         AtomicInteger clientReadCount = new AtomicInteger();
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {

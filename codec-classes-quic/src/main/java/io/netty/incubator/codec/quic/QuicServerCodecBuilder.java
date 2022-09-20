@@ -23,6 +23,7 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 /**
@@ -184,6 +185,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     @Override
     protected ChannelHandler build(QuicheConfig config,
                                    Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+                                   Executor sslTaskExecutor,
                                    int localConnIdLength, FlushStrategy flushStrategy) {
         validate();
         QuicTokenHandler tokenHandler = this.tokenHandler;
@@ -194,7 +196,8 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;
         return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator, flushStrategy,
-                sslEngineProvider, handler, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs),
+                sslEngineProvider, sslTaskExecutor, handler,
+                Quic.toOptionsArray(options), Quic.toAttributesArray(attrs),
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
     }
 }

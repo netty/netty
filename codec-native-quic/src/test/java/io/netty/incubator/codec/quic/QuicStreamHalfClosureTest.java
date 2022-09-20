@@ -23,9 +23,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,25 +35,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicStreamHalfClosureTest extends AbstractQuicTest {
 
-    @Test
-    public void testCloseHalfClosureUnidirectional() throws Throwable {
-        testCloseHalfClosure(QuicStreamType.UNIDIRECTIONAL);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCloseHalfClosureUnidirectional(Executor executor) throws Throwable {
+        testCloseHalfClosure(executor, QuicStreamType.UNIDIRECTIONAL);
     }
 
-    @Test
-    public void testCloseHalfClosureBidirectional() throws Throwable {
-        testCloseHalfClosure(QuicStreamType.BIDIRECTIONAL);
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCloseHalfClosureBidirectional(Executor executor) throws Throwable {
+        testCloseHalfClosure(executor, QuicStreamType.BIDIRECTIONAL);
     }
 
-    private static void testCloseHalfClosure(QuicStreamType type) throws Throwable {
+    private static void testCloseHalfClosure(Executor executor, QuicStreamType type) throws Throwable {
         Channel server = null;
         Channel channel = null;
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         QuicChannelValidationHandler clientHandler = new StreamCreationHandler(type);
         try {
             StreamHandler handler = new StreamHandler();
-            server = QuicTestUtils.newServer(serverHandler, handler);
-            channel = QuicTestUtils.newClient();
+            server = QuicTestUtils.newServer(executor, serverHandler, handler);
+            channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())

@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelHandler;
 
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 /**
@@ -44,7 +45,8 @@ public final class QuicClientCodecBuilder extends QuicCodecBuilder<QuicClientCod
     @Override
     protected ChannelHandler build(QuicheConfig config,
                                    Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+                                   Executor sslTaskExecutor,
                                    int localConnIdLength, FlushStrategy flushStrategy) {
-        return new QuicheQuicClientCodec(config, sslEngineProvider, localConnIdLength, flushStrategy);
+        return new QuicheQuicClientCodec(config, sslEngineProvider, sslTaskExecutor, localConnIdLength, flushStrategy);
     }
 }

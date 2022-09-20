@@ -39,6 +39,8 @@ import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -57,6 +59,7 @@ import java.nio.channels.ConnectionPendingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -116,6 +119,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final TimeoutHandler timeoutHandler;
     private final EarlyDataSendCallback earlyDataSendCallback;
 
+    private Executor sslTaskExecutor;
+
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
@@ -166,14 +171,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
                               EarlyDataSendCallback earlyDataSendCallback) {
         this(parent, server, key, local,remote, supportsDatagram, streamHandler, streamOptionsArray,
-                streamAttrsArray, null, earlyDataSendCallback);
+                streamAttrsArray, null, earlyDataSendCallback, null);
     }
 
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, InetSocketAddress local,
                               InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
-                              Consumer<QuicheQuicChannel> timeoutTask, EarlyDataSendCallback earlyDataSendCallback) {
+                              Consumer<QuicheQuicChannel> timeoutTask, EarlyDataSendCallback earlyDataSendCallback,
+                              Executor sslTaskExecutor) {
         super(parent);
         config = new QuicheQuicChannelConfig(this);
         this.server = server;
@@ -190,6 +196,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.streamAttrsArray = streamAttrsArray;
         this.earlyDataSendCallback = earlyDataSendCallback;
         timeoutHandler = new TimeoutHandler(timeoutTask);
+        this.sslTaskExecutor = sslTaskExecutor == null ? ImmediateExecutor.INSTANCE : sslTaskExecutor;
     }
 
     static QuicheQuicChannel forClient(Channel parent, InetSocketAddress local, InetSocketAddress remote,
@@ -214,9 +221,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        boolean supportsDatagram, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
-                                       Consumer<QuicheQuicChannel> timeoutTask) {
+                                       Consumer<QuicheQuicChannel> timeoutTask, Executor sslTaskExecutor) {
         return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram,
-                streamHandler, streamOptionsArray, streamAttrsArray, timeoutTask, null);
+                streamHandler, streamOptionsArray, streamAttrsArray, timeoutTask, null,
+                sslTaskExecutor);
     }
 
     @Override
@@ -305,13 +313,16 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private void connect(Function<QuicChannel, ? extends QuicSslEngine> engineProvider,
+    private void connect(Function<QuicChannel, ? extends QuicSslEngine> engineProvider, Executor sslTaskExecutor,
                          long configAddr, int localConnIdLength,
                          boolean supportsDatagram, ByteBuffer fromSockaddrMemory, ByteBuffer toSockaddrMemory)
             throws Exception {
         assert this.connection == null;
         assert this.traceId == null;
         assert this.key == null;
+
+        this.sslTaskExecutor = sslTaskExecutor;
+
         QuicConnectionAddress address = this.connectAddress;
         if (address == QuicConnectionAddress.EPHEMERAL) {
             address = QuicConnectionAddress.random(localConnIdLength);
@@ -1006,6 +1017,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 done = Quiche.throwIfError(written);
             } catch (Exception e) {
                 done = true;
+                if (tryFailConnectPromise(e)) {
+                    // We are done, release the buffer and send what we did build up so far.
+                    out.release();
+                    return packetWasWritten;
+                }
                 fireExceptionEvents(e);
             }
             if (done) {
@@ -1100,7 +1116,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             } catch (Exception e) {
                 out.release();
-                fireExceptionEvents(e);
+                if (!tryFailConnectPromise(e)) {
+                    fireExceptionEvents(e);
+                }
                 break;
             }
 
@@ -1289,6 +1307,28 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             }
                             fireExceptionEvents(e);
                             done = true;
+                        }
+
+                        Runnable task = connection.sslTask();
+                        if (task != null) {
+                            if (sslTaskExecutor == null || sslTaskExecutor == ImmediateExecutor.INSTANCE ||
+                                    sslTaskExecutor == ImmediateEventExecutor.INSTANCE) {
+                                task.run();
+                            } else {
+                                sslTaskExecutor.execute(() -> {
+                                    try {
+                                        task.run();
+                                    } finally {
+                                        // Move back to the EventLoop.
+                                        eventLoop().execute(() -> {
+                                            // Call connection send to continue handshake if needed.
+                                            if (connectionSend()) {
+                                                forceFlushParent();
+                                            }
+                                        });
+                                    }
+                                });
+                            }
                         }
 
                         // Handle pending channelActive if needed.
@@ -1521,14 +1561,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     // TODO: Come up with something better.
     static QuicheQuicChannel handleConnect(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+                                           Executor sslTaskExecutor,
                                            SocketAddress address, long config, int localConnIdLength,
                                            boolean supportsDatagram, ByteBuffer fromSockaddrMemory,
                                            ByteBuffer toSockaddrMemory) throws Exception {
         if (address instanceof QuicheQuicChannel.QuicheQuicChannelAddress) {
             QuicheQuicChannel.QuicheQuicChannelAddress addr = (QuicheQuicChannel.QuicheQuicChannelAddress) address;
             QuicheQuicChannel channel = addr.channel;
-            channel.connect(sslEngineProvider, config, localConnIdLength, supportsDatagram, fromSockaddrMemory,
-                    toSockaddrMemory);
+            channel.connect(sslEngineProvider, sslTaskExecutor, config, localConnIdLength, supportsDatagram,
+                    fromSockaddrMemory, toSockaddrMemory);
             return channel;
         }
         return null;

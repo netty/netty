@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 /**
@@ -30,13 +31,15 @@ import java.util.function.Function;
 final class QuicheQuicClientCodec extends QuicheQuicCodec {
 
     private final Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
+    private final Executor sslTaskExecutor;
 
     QuicheQuicClientCodec(QuicheConfig config, Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
-                          int localConnIdLength, FlushStrategy flushStrategy) {
+                          Executor sslTaskExecutor, int localConnIdLength, FlushStrategy flushStrategy) {
         // Let's just use Quic.MAX_DATAGRAM_SIZE as the maximum size for a token on the client side. This should be
         // safe enough and as we not have too many codecs at the same time this should be ok.
         super(config, localConnIdLength, Quic.MAX_DATAGRAM_SIZE, flushStrategy);
         this.sslEngineProvider = sslEngineProvider;
+        this.sslTaskExecutor = sslTaskExecutor;
     }
 
     @Override
@@ -53,7 +56,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
                         SocketAddress localAddress, ChannelPromise promise) {
         final QuicheQuicChannel channel;
         try {
-            channel = QuicheQuicChannel.handleConnect(sslEngineProvider, remoteAddress, config.nativeAddress(),
+            channel = QuicheQuicChannel.handleConnect(sslEngineProvider, sslTaskExecutor, remoteAddress, config.nativeAddress(),
                     localConnIdLength, config.isDatagramSupported(),
                     senderSockaddrMemory.internalNioBuffer(0, senderSockaddrMemory.capacity()),
                     recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity()));

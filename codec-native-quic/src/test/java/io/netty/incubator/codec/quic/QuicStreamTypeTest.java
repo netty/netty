@@ -23,7 +23,10 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.concurrent.Executor;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,8 +37,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicStreamTypeTest extends AbstractQuicTest {
 
-    @Test
-    public void testUnidirectionalCreatedByClient() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testUnidirectionalCreatedByClient(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
@@ -43,7 +47,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
 
         try {
             Promise<Throwable> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(serverHandler, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
@@ -59,7 +63,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
                 }
             });
 
-            channel = QuicTestUtils.newClient();
+            channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
@@ -85,8 +89,9 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
         }
     }
 
-    @Test
-    public void testUnidirectionalCreatedByServer() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testUnidirectionalCreatedByServer(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;
         Promise<Void> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
@@ -108,9 +113,9 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
         };
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            server = QuicTestUtils.newServer(serverHandler, new ChannelInboundHandlerAdapter());
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter());
 
-            channel = QuicTestUtils.newClient();
+            channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter() {

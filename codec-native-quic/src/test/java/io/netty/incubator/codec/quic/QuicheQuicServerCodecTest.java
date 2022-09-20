@@ -16,11 +16,12 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.concurrent.ImmediateExecutor;
 
 public class QuicheQuicServerCodecTest extends QuicheQuicCodecTest<QuicServerCodecBuilder> {
     @Override
     protected QuicServerCodecBuilder newCodecBuilder() {
-        return QuicTestUtils.newQuicServerBuilder()
+        return QuicTestUtils.newQuicServerBuilder(ImmediateExecutor.INSTANCE)
                 .streamHandler(new ChannelInboundHandlerAdapter())
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE);
     }

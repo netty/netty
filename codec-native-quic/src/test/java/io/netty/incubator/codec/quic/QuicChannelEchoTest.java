@@ -30,6 +30,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateExecutor;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -118,7 +119,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         final EchoHandler sh = new EchoHandler(true, autoRead, allocator);
         final EchoHandler ch = new EchoHandler(false, autoRead, allocator);
         AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
-        Channel server = QuicTestUtils.newServer(new ChannelInboundHandlerAdapter() {
+        Channel server = QuicTestUtils.newServer(ImmediateExecutor.INSTANCE, new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 setAllocator(ctx.channel(), allocator);
@@ -145,7 +146,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         }, sh);
         setAllocator(server, allocator);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(ImmediateExecutor.INSTANCE);
         QuicChannel quicChannel = null;
         try {
             quicChannel = QuicChannel.newBootstrap(channel)
@@ -235,10 +236,10 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
             }
         };
 
-        Channel server = QuicTestUtils.newServer(serverHandler, sh);
+        Channel server = QuicTestUtils.newServer(ImmediateExecutor.INSTANCE, serverHandler, sh);
         setAllocator(server, allocator);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient();
+        Channel channel = QuicTestUtils.newClient(ImmediateExecutor.INSTANCE);
         QuicChannel quicChannel = null;
         try {
             QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {

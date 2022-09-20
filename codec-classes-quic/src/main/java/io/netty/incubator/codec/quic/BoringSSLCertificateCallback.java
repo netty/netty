@@ -199,7 +199,7 @@ final class BoringSSLCertificateCallback {
         engine.setLocalCertificateChain(certificates);
 
         // Return and signal that the key and chain should be released as well.
-        return new long[] { key,  chain , 1 };
+        return new long[] { key,  chain };
     }
 
     private static byte[] toPemEncoded(PrivateKey key) {

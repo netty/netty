@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.ChannelHandler;
 
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -55,6 +56,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Long activeConnectionIdLimit;
     private byte[] statelessResetToken;
 
+    private Executor sslTaskExecutor;
+
     // package-private for testing only
     int version;
 
@@ -90,6 +93,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.sendQueueLen = builder.sendQueueLen;
         this.activeConnectionIdLimit = builder.activeConnectionIdLimit;
         this.statelessResetToken = builder.statelessResetToken;
+        this.sslTaskExecutor = builder.sslTaskExecutor;
         this.version = builder.version;
     }
 
@@ -406,6 +410,17 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     /**
+     * Allow to configure a {@link Executor} that will be used to run expensive SSL operations.
+     *
+     * @param sslTaskExecutor       the {@link Executor} that will be used to offload expensive SSL operations.
+     * @return                      the instance itself.
+     */
+    public final B sslTaskExecutor(Executor sslTaskExecutor) {
+        this.sslTaskExecutor = sslTaskExecutor;
+        return self();
+    }
+
+    /**
      * Allows to configure the {@code active connect id limit} that should be used.
      *
      * @param limit     the limit to use.
@@ -462,7 +477,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         validate();
         QuicheConfig config = createConfig();
         try {
-            return build(config, sslEngineProvider, localConnIdLength, flushStrategy);
+            return build(config, sslEngineProvider, sslTaskExecutor, localConnIdLength, flushStrategy);
         } catch (Throwable cause) {
             config.free();
             throw cause;
@@ -481,11 +496,13 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      *
      * @param config                the {@link QuicheConfig} that should be used.
      * @param sslContextProvider    the context provider
+     * @param sslTaskExecutor       the {@link Executor} to use.
      * @param localConnIdLength     the local connection id length.
      * @param flushStrategy         the {@link FlushStrategy}  that should be used.
      * @return                      the {@link ChannelHandler} which acts as codec.
      */
     protected abstract ChannelHandler build(QuicheConfig config,
                                             Function<QuicChannel, ? extends QuicSslEngine> sslContextProvider,
+                                            Executor sslTaskExecutor,
                                             int localConnIdLength, FlushStrategy flushStrategy);
 }

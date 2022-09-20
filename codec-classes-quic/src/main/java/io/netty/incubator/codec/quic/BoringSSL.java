@@ -82,6 +82,11 @@ final class BoringSSL {
     }
     static native long SSL_new0(long context, boolean server, String hostname);
     static native void SSL_free(long ssl);
+
+    static native Runnable SSL_getTask(long ssl);
+
+    static native void SSL_cleanup(long ssl);
+
     static native long EVP_PKEY_parse(byte[] bytes, String pass);
     static native void EVP_PKEY_free(long key);
 
