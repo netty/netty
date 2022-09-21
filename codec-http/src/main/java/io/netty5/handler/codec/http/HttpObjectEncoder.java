@@ -141,13 +141,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
                         break;
                     } else {
-                        Resource.dispose(msg);
                         // do not break, let's fall-through
                     }
 
                     // fall-through!
                 case ST_CONTENT_ALWAYS_EMPTY:
 
+                    Resource.dispose(msg);
                     if (buf != null) {
                         // We allocated a buffer so add it now.
                         out.add(buf);
