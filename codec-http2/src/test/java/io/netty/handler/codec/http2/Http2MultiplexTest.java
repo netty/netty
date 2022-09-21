@@ -78,7 +78,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
             .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
 
-    private EmbeddedChannel parentChannel;
+    EmbeddedChannel parentChannel;
     private Http2FrameWriter frameWriter;
     private Http2FrameInboundWriter frameInboundWriter;
     private TestChannelInitializer childChannelInitializer;
@@ -161,7 +161,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 any(ByteBuf.class), any(ChannelPromise.class));
     }
 
-    private Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
+    Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
         return newInboundStream(streamId, endStream, null, childHandler);
     }
 

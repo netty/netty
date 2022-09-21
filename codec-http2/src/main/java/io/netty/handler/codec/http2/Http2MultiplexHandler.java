@@ -279,17 +279,28 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             return;
         }
         if (cause.getCause() instanceof SSLException) {
-            forEachActiveStream(new Http2FrameStreamVisitor() {
-                @Override
-                public boolean visit(Http2FrameStream stream) {
-                    AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
-                            ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireExceptionCaught(cause);
-                    return true;
-                }
-            });
+            forwardExceptionToActiveStreams0(cause);
         }
         ctx.fireExceptionCaught(cause);
+    }
+
+    public void fireExceptionToActiveStreams(final Throwable t) throws Exception {
+        if (!ctx.executor().inEventLoop()) {
+            throw new IllegalStateException("Must be in event loop");
+        }
+        forwardExceptionToActiveStreams0(t);
+    }
+
+    private void forwardExceptionToActiveStreams0(final Throwable t) throws Exception {
+        forEachActiveStream(new Http2FrameStreamVisitor() {
+            @Override
+            public boolean visit(Http2FrameStream stream) {
+                AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                        ((DefaultHttp2FrameStream) stream).attachment;
+                childChannel.pipeline().fireExceptionCaught(t);
+                return true;
+            }
+        });
     }
 
     private static boolean isServer(ChannelHandlerContext ctx) {
