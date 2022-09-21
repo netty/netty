@@ -107,7 +107,7 @@ final class HpackEncoder {
 
     /**
      * Encode the header field into the header block.
-     *
+     * <p>
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
     public void encodeHeaders(int streamId, ByteBuf out, Http2Headers headers, SensitivityDetector sensitivityDetector)
@@ -149,7 +149,7 @@ final class HpackEncoder {
 
     /**
      * Encode the header field into the header block.
-     *
+     * <p>
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
     private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {

@@ -173,6 +173,23 @@ public class DefaultHttp2HeadersTest {
         assertFalse(headers.contains("2name", "Value3", false));
     }
 
+    @Test
+    void setMustOverwritePseudoHeaders() {
+        Http2Headers headers = newHeaders();
+        // The headers are already populated with pseudo headers.
+        headers.method(of("GET"));
+        headers.path(of("/index2.html"));
+        headers.status(of("101"));
+        headers.authority(of("github.com"));
+        headers.scheme(of("http"));
+        headers.set(of(":protocol"), of("http"));
+        assertEquals(of("GET"), headers.method());
+        assertEquals(of("/index2.html"), headers.path());
+        assertEquals(of("101"), headers.status());
+        assertEquals(of("github.com"), headers.authority());
+        assertEquals(of("http"), headers.scheme());
+    }
+
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {
         for (PseudoHeaderName pseudoName : PseudoHeaderName.values()) {
             assertNotNull(headers.get(pseudoName.value()));

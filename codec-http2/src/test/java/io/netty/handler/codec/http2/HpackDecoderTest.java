@@ -52,7 +52,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.reset;
@@ -664,11 +663,11 @@ public class HpackDecoderTest {
         try {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = new DefaultHttp2Headers(false);
             toEncode.add(":test", "1");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = new DefaultHttp2Headers();
+            final Http2Headers decoded = new DefaultHttp2Headers(true);
 
             assertThrows(Http2Exception.StreamException.class, new Executable() {
                 @Override
@@ -687,13 +686,13 @@ public class HpackDecoderTest {
         try {
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
-            Http2Headers toEncode = new DefaultHttp2Headers();
+            Http2Headers toEncode = new DefaultHttp2Headers(false);
             toEncode.add(":test", "1");
             toEncode.add(":status", "200");
             toEncode.add(":method", "GET");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            Http2Headers decoded = new DefaultHttp2Headers();
+            Http2Headers decoded = new DefaultHttp2Headers(false);
 
             hpackDecoder.decode(1, in, decoded, false);
 
