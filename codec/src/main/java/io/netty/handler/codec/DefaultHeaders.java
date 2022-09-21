@@ -139,12 +139,12 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         this.valueConverter = checkNotNull(valueConverter, "valueConverter");
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
         hashingStrategy = checkNotNull(nameHashingStrategy, "nameHashingStrategy");
+        this.valueValidator = checkNotNull(valueValidator, "valueValidator");
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
         entries = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (entries.length - 1);
         head = new HeaderEntry<K, V>();
-        this.valueValidator = checkNotNull(valueValidator, "valueValidator");
     }
 
     @Override
