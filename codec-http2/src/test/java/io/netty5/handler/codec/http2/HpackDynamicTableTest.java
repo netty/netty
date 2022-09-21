@@ -14,6 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -22,12 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HpackDynamicTableTest {
+    private static final AsciiString FOO = AsciiString.cached("foo");
+    private static final AsciiString BAR = AsciiString.cached("bar");
+    private static final AsciiString HELLO = AsciiString.cached("hello");
+    private static final AsciiString WORLD = AsciiString.cached("world");
 
     @Test
     public void testLength() {
         HpackDynamicTable table = new HpackDynamicTable(100);
         assertEquals(0, table.length());
-        HpackHeaderField entry = new HpackHeaderField("foo", "bar");
+        HpackHeaderField entry = new HpackHeaderField(FOO, BAR);
         table.add(entry);
         assertEquals(1, table.length());
         table.clear();
@@ -38,7 +43,7 @@ public class HpackDynamicTableTest {
     public void testSize() {
         HpackDynamicTable table = new HpackDynamicTable(100);
         assertEquals(0, table.size());
-        HpackHeaderField entry = new HpackHeaderField("foo", "bar");
+        HpackHeaderField entry = new HpackHeaderField(FOO, BAR);
         table.add(entry);
         assertEquals(entry.size(), table.size());
         table.clear();
@@ -48,7 +53,7 @@ public class HpackDynamicTableTest {
     @Test
     public void testGetEntry() {
         final HpackDynamicTable table = new HpackDynamicTable(100);
-        HpackHeaderField entry = new HpackHeaderField("foo", "bar");
+        HpackHeaderField entry = new HpackHeaderField(FOO, BAR);
         table.add(entry);
         assertEquals(entry, table.getEntry(1));
         table.clear();
@@ -76,8 +81,8 @@ public class HpackDynamicTableTest {
     public void testRemove() {
         HpackDynamicTable table = new HpackDynamicTable(100);
         assertNull(table.remove());
-        HpackHeaderField entry1 = new HpackHeaderField("foo", "bar");
-        HpackHeaderField entry2 = new HpackHeaderField("hello", "world");
+        HpackHeaderField entry1 = new HpackHeaderField(FOO, BAR);
+        HpackHeaderField entry2 = new HpackHeaderField(HELLO, WORLD);
         table.add(entry1);
         table.add(entry2);
         assertEquals(entry1, table.remove());
@@ -88,8 +93,8 @@ public class HpackDynamicTableTest {
 
     @Test
     public void testSetCapacity() {
-        HpackHeaderField entry1 = new HpackHeaderField("foo", "bar");
-        HpackHeaderField entry2 = new HpackHeaderField("hello", "world");
+        HpackHeaderField entry1 = new HpackHeaderField(FOO, BAR);
+        HpackHeaderField entry2 = new HpackHeaderField(HELLO, WORLD);
         final int size1 = entry1.size();
         final int size2 = entry2.size();
         HpackDynamicTable table = new HpackDynamicTable(size1 + size2);
@@ -114,8 +119,8 @@ public class HpackDynamicTableTest {
     public void testAdd() {
         HpackDynamicTable table = new HpackDynamicTable(100);
         assertEquals(0, table.size());
-        HpackHeaderField entry1 = new HpackHeaderField("foo", "bar"); //size:3+3+32=38
-        HpackHeaderField entry2 = new HpackHeaderField("hello", "world");
+        HpackHeaderField entry1 = new HpackHeaderField(FOO, BAR); //size:3+3+32=38
+        HpackHeaderField entry2 = new HpackHeaderField(HELLO, WORLD);
         table.add(entry1); //success
         assertEquals(entry1.size(), table.size());
         table.setCapacity(32); //entry1 is removed from table

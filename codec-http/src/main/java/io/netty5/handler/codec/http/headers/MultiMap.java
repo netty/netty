@@ -123,17 +123,20 @@ public abstract class MultiMap<K, V> {
      * Validate the key before inserting it into this {@link MultiMap}.
      *
      * @param key The key which will be inserted.
+     * @param forAdd {@code true} if this validation is for adding to the headers, or {@code false} if this is for
+     * setting (overwriting) the given header.
      */
     @Internal
-    protected abstract K validateKey(K key);
+    protected abstract K validateKey(K key, boolean forAdd);
 
     /**
      * Validate the value before inserting it into this {@link MultiMap}.
      *
+     * @param key The key for which the value is being inserted, for reference.
      * @param value The value which will be inserted.
      */
     @Internal
-    protected abstract V validateValue(V value);
+    protected abstract V validateValue(K key, V value);
 
     /**
      * Generate a hash code for {@code value} using for equality comparisons and {@link #hashCode(Object)}.
@@ -253,25 +256,25 @@ public abstract class MultiMap<K, V> {
     }
 
     final void put(final K key, final V value) {
-        final int keyHash = hashCode(validateKey(key));
+        final int keyHash = hashCode(validateKey(key, true));
         final int bucketIndex = index(keyHash);
-        putEntry(keyHash, bucketIndex, key, validateValue(value));
+        putEntry(keyHash, bucketIndex, key, validateValue(key, value));
     }
 
     final void putAll(final K key, final Iterable<? extends V> values) {
-        final int keyHash = hashCode(validateKey(key));
+        final int keyHash = hashCode(validateKey(key, true));
         final int bucketIndex = index(keyHash);
         BucketHead<K, V> bucketHead = entries[bucketIndex];
         if (bucketHead != null) {
             for (final V v : values) {
-                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(v));
+                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(key, v));
             }
         } else {
             final Iterator<? extends V> valueItr = values.iterator();
             if (valueItr.hasNext()) {
-                bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(valueItr.next()));
+                bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(key, valueItr.next()));
                 while (valueItr.hasNext()) {
-                    putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(valueItr.next()));
+                    putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(key, valueItr.next()));
                 }
             }
         }
@@ -279,17 +282,17 @@ public abstract class MultiMap<K, V> {
 
     @SafeVarargs
     final void putAll(final K key, final V... values) {
-        final int keyHash = hashCode(validateKey(key));
+        final int keyHash = hashCode(validateKey(key, true));
         final int bucketIndex = index(keyHash);
         BucketHead<K, V> bucketHead = entries[bucketIndex];
         if (bucketHead != null) {
             for (final V v : values) {
-                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(v));
+                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(key, v));
             }
         } else if (values.length != 0) {
-            bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(values[0]));
+            bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(key, values[0]));
             for (int i = 1; i < values.length; ++i) {
-                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(values[i]));
+                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(key, values[i]));
             }
         }
     }
@@ -299,45 +302,45 @@ public abstract class MultiMap<K, V> {
     }
 
     final void putExclusive(final K key, final V value) {
-        final int keyHash = hashCode(validateKey(key));
+        final int keyHash = hashCode(validateKey(key, false));
         final int bucketIndex = index(keyHash);
         removeAll(key, keyHash, bucketIndex);
-        putEntry(keyHash, bucketIndex, key, validateValue(value));
+        putEntry(keyHash, bucketIndex, key, validateValue(key, value));
     }
 
     final void putExclusive(final K key, final Iterable<? extends V> values) {
-        final int keyHash = hashCode(validateKey(key));
+        final int keyHash = hashCode(validateKey(key, false));
         final int bucketIndex = index(keyHash);
         removeAll(key, keyHash, bucketIndex);
         final Iterator<? extends V> valueItr = values.iterator();
         if (valueItr.hasNext()) {
             BucketHead<K, V> bucketHead = entries[bucketIndex];
             if (bucketHead == null) {
-                bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(valueItr.next()));
+                bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(key, valueItr.next()));
                 if (!valueItr.hasNext()) {
                     return;
                 }
             }
             do {
-                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(valueItr.next()));
+                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(key, valueItr.next()));
             } while (valueItr.hasNext());
         }
     }
 
     @SafeVarargs
     final void putExclusive(final K key, final V... values) {
-        final int keyHash = hashCode(validateKey(key));
+        final int keyHash = hashCode(validateKey(key, false));
         final int bucketIndex = index(keyHash);
         removeAll(key, keyHash, bucketIndex);
         if (values.length != 0) {
             BucketHead<K, V> bucketHead = entries[bucketIndex];
             int i = 0;
             if (bucketHead == null) {
-                bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(values[0]));
+                bucketHead = putEntry(keyHash, bucketIndex, key, validateValue(key, values[0]));
                 i = 1;
             }
             for (; i < values.length; ++i) {
-                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(values[i]));
+                putEntry(bucketHead, keyHash, bucketIndex, key, validateValue(key, values[i]));
             }
         }
     }

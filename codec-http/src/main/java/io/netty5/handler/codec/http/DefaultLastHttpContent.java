@@ -109,13 +109,13 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
         }
 
         @Override
-        protected CharSequence validateKey(@Nullable CharSequence name) {
+        protected CharSequence validateKey(@Nullable CharSequence name, boolean forAdd) {
             if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
                 || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
                 || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
                 throw new IllegalArgumentException("Prohibited trailing header: " + name);
             }
-            return super.validateKey(name);
+            return super.validateKey(name, forAdd);
         }
     }
 }

@@ -34,7 +34,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static io.netty5.handler.codec.http.headers.HeaderUtils.validateCookieNameAndValue;
-import static io.netty5.handler.codec.http.headers.HeaderUtils.validateToken;
 import static io.netty5.util.AsciiString.contentEquals;
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
 import static java.lang.Long.parseLong;
@@ -194,7 +193,13 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                         }
                         name = setCookieString.subSequence(begin, i);
                         if (validateContent) {
-                            validateToken(name);
+                            int index = HttpHeaderValidationUtil.validateToken(name);
+                            if (index != -1) {
+                                throw new HeaderValidationException(
+                                        "a cookie name can only contain \"token\" characters, " +
+                                        "but found invalid character 0x" + Integer.toHexString(c) +
+                                        " at index " + index + " of header '" + name + "'.");
+                            }
                         }
                         parseState = ParseState.ParsingValue;
                     } else if (parseState == ParseState.Unknown) {

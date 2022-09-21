@@ -146,7 +146,7 @@ public class HttpConversionUtilTest {
 
     @Test
     public void stripTEHeadersAccountsForOWS() {
-        HttpHeaders inHeaders = HttpHeaders.newHeaders();
+        HttpHeaders inHeaders = HttpHeaders.newHeaders(false);
         inHeaders.add(TE, " " + TRAILERS + ' ');
         Http2Headers out = Http2Headers.newHeaders();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
