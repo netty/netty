@@ -396,4 +396,32 @@ public class HttpResponseEncoderTest {
         assertEquals(responseText, written.toString());
         assertFalse(channel.finish());
     }
+
+    @Test
+    void testResponseNoContentWithEmptyLastContentClosed() {
+        testResponseNoContentWithLastContentClosed(new EmptyLastHttpContent(preferredAllocator()));
+    }
+
+    @Test
+    void testResponseNoContentWithDefaultLastHttpContentClosed() {
+        testResponseNoContentWithLastContentClosed(new DefaultLastHttpContent(preferredAllocator().allocate(0)));
+    }
+
+    private void testResponseNoContentWithLastContentClosed(LastHttpContent<?> lastHttpContent) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT);
+        assertTrue(channel.writeOutbound(response, lastHttpContent));
+        assertTrue(channel.finishAndReleaseAll());
+        assertFalse(lastHttpContent.isAccessible());
+    }
+
+    @Test
+    void testFullResponseNoContentClosed() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT,
+                preferredAllocator().allocate(0));
+        assertTrue(channel.writeOutbound(response));
+        assertTrue(channel.finishAndReleaseAll());
+        assertFalse(response.isAccessible());
+    }
 }
