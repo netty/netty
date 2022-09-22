@@ -280,7 +280,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                     }
                     parseState = ParseState.Unknown;
                     if (validateContent && HeaderUtils.cookieParsingPedantic) {
-                        // Only enable this check in pedantic-mode. At least the Jersey web framework typically don't
+                        // Only enable this check in pedantic-mode. At least the Jersey web framework typically doesn't
                         // include the space.
                         if (i + 1 >= length || ' ' != setCookieString.charAt(i + 1)) {
                             throw new IllegalArgumentException(

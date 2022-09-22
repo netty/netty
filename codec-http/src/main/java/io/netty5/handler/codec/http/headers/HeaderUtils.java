@@ -67,7 +67,7 @@ public final class HeaderUtils {
      * Whether cookie parsing should be strictly spec compliant ({@code true}),
      * or allow some deviations that are commonly observed in practice ({@code false}, the default).
      */
-    public static boolean cookieParsingPedantic = SystemPropertyUtil.getBoolean(
+    static boolean cookieParsingPedantic = SystemPropertyUtil.getBoolean(
             "io.netty5.handler.codec.http.headers.cookieParsingPedantic", false);
 
     private HeaderUtils() {
