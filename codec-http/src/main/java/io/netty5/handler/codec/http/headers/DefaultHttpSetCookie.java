@@ -30,6 +30,7 @@
 package io.netty5.handler.codec.http.headers;
 
 import io.netty5.util.AsciiString;
+import io.netty5.util.internal.SystemPropertyUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -278,7 +279,9 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                             break;
                     }
                     parseState = ParseState.Unknown;
-                    if (validateContent) {
+                    if (validateContent && HeaderUtils.cookieParsingPedantic) {
+                        // Only enable this check in pedantic-mode. At least the Jersey web framework typically don't
+                        // include the space.
                         if (i + 1 >= length || ' ' != setCookieString.charAt(i + 1)) {
                             throw new IllegalArgumentException(
                                     "a space is required after ; in cookie attribute-value lists");

@@ -32,6 +32,8 @@ package io.netty5.handler.codec.http.headers;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
+import io.netty5.util.internal.SystemPropertyUtil;
+import io.netty5.util.internal.SystemPropertyUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -60,6 +62,13 @@ public final class HeaderUtils {
     static final int HASH_CODE_SEED = 0xc2b2ae35;
     public static final BiFunction<? super CharSequence, ? super CharSequence, CharSequence> DEFAULT_HEADER_FILTER =
             (k, v) -> "<filtered>";
+
+    /**
+     * Whether cookie parsing should be strictly spec compliant ({@code true}),
+     * or allow some deviations that are commonly observed in practice ({@code false}, the default).
+     */
+    public static boolean cookieParsingPedantic = SystemPropertyUtil.getBoolean(
+            "io.netty5.handler.codec.http.headers.cookieParsingPedantic", false);
 
     private HeaderUtils() {
         // no instances
