@@ -30,7 +30,6 @@
 package io.netty5.handler.codec.http.headers;
 
 import io.netty5.util.AsciiString;
-import io.netty5.util.internal.SystemPropertyUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
