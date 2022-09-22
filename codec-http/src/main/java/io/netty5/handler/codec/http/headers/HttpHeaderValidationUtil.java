@@ -19,13 +19,14 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.ApiStatus;
 
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
 
 /**
  * Functions used to perform various validations of HTTP header names and values.
  */
-@UnstableApi
+@ApiStatus.Internal
 public final class HttpHeaderValidationUtil {
     private HttpHeaderValidationUtil() {
     }
