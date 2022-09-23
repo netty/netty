@@ -18,6 +18,7 @@ package io.netty5.handler.codec.http2.headers;
 import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpHeaderValidationUtil;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.headers.MultiMap;
@@ -57,7 +58,7 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
     }
 
     @Override
-    protected CharSequence validateKey(@Nullable CharSequence name) {
+    protected CharSequence validateKey(@Nullable CharSequence name, boolean forAdd) {
         if (name == null || name.length() == 0) {
             throw new HeaderValidationException("empty headers are not allowed");
         }
@@ -65,6 +66,9 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
             if (PseudoHeaderName.hasPseudoHeaderFormat(name)) {
                 if (!PseudoHeaderName.isPseudoHeader(name)) {
                     throw new HeaderValidationException("'" + name + "' is not a standard pseudo-header.");
+                }
+                if (forAdd && contains(name)) {
+                    throw new HeaderValidationException("Duplicate HTTP/2 pseudo-header '" + name + "' encountered.");
                 }
             } else {
                 validateHeaderName(name);
@@ -80,9 +84,22 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
                         }
                     }
                 }
+                if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
+                    throw new HeaderValidationException(
+                            "Illegal connection-specific header '" + name + "' encountered.");
+                }
             }
         }
         return name;
+    }
+
+    @Override
+    protected CharSequence validateValue(CharSequence key, CharSequence value) {
+        if (validateValues && HttpHeaderValidationUtil.isTeNotTrailers(key, value)) {
+            throw new HeaderValidationException(
+                    "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+        }
+        return super.validateValue(key, value);
     }
 
     @Override

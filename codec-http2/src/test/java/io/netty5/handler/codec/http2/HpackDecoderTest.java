@@ -374,7 +374,6 @@ public class HpackDecoderTest {
         sb.append("417F811F");
         sb.append("61".repeat(4096)); // 'a'
         decode(sb.toString());
-        verify(mockHeaders).contains(of(":authority"));
         verify(mockHeaders).add(of(":authority"), of(value));
         verifyNoMoreInteractions(mockHeaders);
         reset(mockHeaders);
@@ -582,7 +581,7 @@ public class HpackDecoderTest {
             toEncode.add(":test", "1");
             hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
-            final Http2Headers decoded = Http2Headers.newHeaders();
+            final Http2Headers decoded = Http2Headers.newHeaders(true);
 
             assertThrows(Http2Exception.StreamException.class, new Executable() {
                 @Override

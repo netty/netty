@@ -26,4 +26,9 @@ public final class DefaultHeadersImpl<K, V> extends DefaultHeaders<K, V, Default
             ValueConverter<V> valueConverter, NameValidator<K> nameValidator) {
         super(nameHashingStrategy, valueConverter, nameValidator);
     }
+
+    public DefaultHeadersImpl(HashingStrategy<K> nameHashingStrategy, ValueConverter<V> valueConverter,
+                              NameValidator<K> nameValidator, int arraySizeHint, ValueValidator<V> valueValidator) {
+        super(nameHashingStrategy, valueConverter, nameValidator, arraySizeHint, valueValidator);
+    }
 }

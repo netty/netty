@@ -33,13 +33,11 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.VisibleForTesting;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.TRANSFER_ENCODING;
 import static io.netty5.handler.codec.http.HttpHeaderValues.CHUNKED;
@@ -62,17 +60,6 @@ public final class HeaderUtils {
     static final int HASH_CODE_SEED = 0xc2b2ae35;
     public static final BiFunction<? super CharSequence, ? super CharSequence, CharSequence> DEFAULT_HEADER_FILTER =
             (k, v) -> "<filtered>";
-
-    // ASCII symbols:
-    private static final byte HT = 9;
-    private static final byte DEL = 127;
-    private static final byte CONTROL_CHARS_MASK = (byte) 0xE0;
-    @VisibleForTesting
-    static final BitSet128 TOKEN_CHARS = new BitSet128(builder -> {
-        builder.range('0', '9').range('a', 'z').range('A', 'Z'); // Alphanumeric.
-        builder.bits('-', '.', '_', '~'); // Unreserved characters.
-        builder.bits('!', '#', '$', '%', '&', '\'', '*', '+', '^', '`', '|'); // Token special characters.
-    });
 
     private HeaderUtils() {
         // no instances
@@ -187,14 +174,19 @@ public final class HeaderUtils {
      * @param token the token to validate.
      */
     static void validateToken(final CharSequence token) {
-        for (int i = 0, len = token.length(); i < len; i++) {
-            validateTokenChar((byte) token.charAt(i));
+        int index = HttpHeaderValidationUtil.validateToken(token);
+        if (index != -1) {
+            throw new HeaderValidationException("a header name can only contain \"token\" characters, " +
+                    "but found invalid character 0x" + Integer.toHexString(token.charAt(index)) +
+                    " at index " + index + " of header '" + token + "'.");
         }
     }
 
     static void validateHeaderValue(final CharSequence value) {
-        for (int i = 0, len = value.length(); i < len; i++) {
-            validateHeaderValue((byte) value.charAt(i));
+        int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
+        if (index != -1) {
+            throw new HeaderValidationException("a header value contains prohibited character 0x" +
+                    Integer.toHexString(value.charAt(index)) + " at index " + index + '.');
         }
     }
 
@@ -618,119 +610,5 @@ public final class HeaderUtils {
             }
         }
         return -1;
-    }
-
-    /**
-     * Validate char is a valid <a href="https://tools.ietf.org/html/rfc7230#section-3.2.6">token</a> character.
-     *
-     * @param value the character to validate.
-     */
-    @VisibleForTesting
-    static boolean validateTokenChar(final byte value) {
-        // HEADER
-        // header-field   = field-name ":" OWS field-value OWS
-        //
-        // field-name     = token
-        // token          = 1*tchar
-        //
-        // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
-        //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
-        //                    / DIGIT / ALPHA
-        //                    ; any VCHAR, except delimiters.
-        //  Delimiters are chosen
-        //   from the set of US-ASCII visual characters not allowed in a token
-        //   (DQUOTE and "(),/:;<=>?@[\]{}")
-        //
-        // COOKIE
-        // cookie-pair       = cookie-name "=" cookie-value
-        // cookie-name       = token
-        // token          = 1*<any CHAR except CTLs or separators>
-        // CTL = <any US-ASCII control character
-        //       (octets 0 - 31) and DEL (127)>
-        // separators     = "(" | ")" | "<" | ">" | "@"
-        //                      | "," | ";" | ":" | "\" | <">
-        //                      | "/" | "[" | "]" | "?" | "="
-        //                      | "{" | "}" | SP | HT
-        //
-        // field-name's token is equivalent to cookie-name's token, we can reuse the tchar mask for both:
-        if (!TOKEN_CHARS.contains(value)) {
-            throw new HeaderValidationException(
-                    value, "! / # / $ / % / & / ' / * / + / - / . / ^ / _ / ` / | / ~ / DIGIT / ALPHA");
-        }
-        return true;
-    }
-
-    /**
-     * Validate char is a valid <a href="https://tools.ietf.org/html/rfc7230#section-3.2">field-value</a> character.
-     *
-     * @param value the character to validate.
-     */
-    private static boolean validateHeaderValue(final byte value) {
-        // HEADER
-        // header-field   = field-name ":" OWS field-value OWS
-        //
-        // field-value    = *( field-content / obs-fold )
-        // field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-        // field-vchar    = VCHAR / obs-text
-        //
-        // obs-fold       = CRLF 1*( SP / HTAB )
-        //                ; obsolete line folding
-        //                ; see Section 3.2.4
-        //
-        // Note: we do not support obs-fold.
-        // Illegal chars are control chars (0-31) except HT (9), and DEL (127):
-        if ((value & CONTROL_CHARS_MASK) == 0 && value != HT || value == DEL) {
-            throw new HeaderValidationException(value, "(VCHAR / obs-text) [ 1*(SP / HTAB) (VCHAR / obs-text) ]");
-        }
-        return true;
-    }
-
-    static final class BitSet128 {
-        private final long high;
-        private final long low;
-
-        static final class Builder {
-            private long high;
-            private long low;
-
-            Builder range(char fromInc, char toInc) {
-                for (int bit = fromInc; bit <= toInc; bit++) {
-                    if (bit < 64) {
-                        low |= 1L << bit;
-                    } else {
-                        high |= 1L << bit - 64;
-                    }
-                }
-                return this;
-            }
-
-            Builder bits(char... bits) {
-                for (char bit : bits) {
-                    if (bit < 64) {
-                        low |= 1L << bit;
-                    } else {
-                        high |= 1L << bit - 64;
-                    }
-                }
-                return this;
-            }
-        }
-
-        BitSet128(Consumer<Builder> builder) {
-            Builder container = new Builder();
-            builder.accept(container);
-            high = container.high;
-            low = container.low;
-        }
-
-        boolean contains(byte bit) {
-            if (bit < 0) {
-                return false;
-            }
-            if (bit < 64) {
-                return 0 != (low & 1L << bit);
-            }
-            return 0 != (high & 1L << bit - 64);
-        }
     }
 }

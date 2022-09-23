@@ -35,7 +35,6 @@ import org.junit.jupiter.api.Test;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty5.handler.codec.http.HttpHeaderNames.TRANSFER_ENCODING;
 import static io.netty5.handler.codec.http.HttpHeaderValues.CHUNKED;
-import static io.netty5.handler.codec.http.headers.HeaderUtils.TOKEN_CHARS;
 import static io.netty5.handler.codec.http.headers.HeaderUtils.isTransferEncodingChunked;
 import static io.netty5.handler.codec.http.headers.HeaderUtils.pathMatches;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -96,16 +95,6 @@ class HeaderUtilsTest {
     private static void assertOneTransferEncodingChunked(final HttpHeaders headers) {
         assertEquals(1, headers.size());
         assertTrue(isTransferEncodingChunked(headers));
-    }
-
-    @Test
-    void validateToken() {
-        // Make sure the old and new validation logic is equivalent:
-        for (int b = Byte.MIN_VALUE; b <= Byte.MAX_VALUE; ++b) {
-            final byte value = (byte) (b & 0xff);
-            assertEquals(originalValidateTokenLogic(value), TOKEN_CHARS.contains(value),
-                    () -> "Unexpected result for byte: " + value);
-        }
     }
 
     @Test

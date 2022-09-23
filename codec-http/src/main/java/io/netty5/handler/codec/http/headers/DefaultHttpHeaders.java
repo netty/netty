@@ -51,7 +51,6 @@ import static io.netty5.handler.codec.http.headers.HeaderUtils.domainMatches;
 import static io.netty5.handler.codec.http.headers.HeaderUtils.isSetCookieNameMatches;
 import static io.netty5.handler.codec.http.headers.HeaderUtils.parseCookiePair;
 import static io.netty5.handler.codec.http.headers.HeaderUtils.pathMatches;
-import static io.netty5.handler.codec.http.headers.HeaderUtils.validateToken;
 import static io.netty5.util.AsciiString.contentEquals;
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty5.util.AsciiString.trim;
@@ -271,7 +270,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
             MultiMapEntry<CharSequence, CharSequence> e = bucketHead.entry;
             do {
                 if (e.keyHash == keyHash && contentEqualsIgnoreCase(COOKIE, e.getKey())) {
-                    e.value = e.value + "; " + validateValue(encoded);
+                    e.value = e.value + "; " + validateValue(COOKIE, encoded);
                     return this;
                 }
                 e = e.bucketNext;
@@ -608,7 +607,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     }
 
     @Override
-    protected CharSequence validateKey(@Nullable final CharSequence name) {
+    protected CharSequence validateKey(@Nullable final CharSequence name, boolean forAdd) {
         if (name == null || name.length() == 0) {
             throw new HeaderValidationException("Empty header names are not allowed");
         }
@@ -619,7 +618,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     }
 
     @Override
-    protected CharSequence validateValue(final CharSequence value) {
+    protected CharSequence validateValue(CharSequence key, final CharSequence value) {
         if (validateValues) {
             validateHeaderValue(value);
         }
@@ -632,7 +631,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
      * @param name The filed-name to validate.
      */
     protected static void validateHeaderName(final CharSequence name) {
-        validateToken(name);
+        HeaderUtils.validateToken(name);
     }
 
     /**
