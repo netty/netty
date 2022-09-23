@@ -64,14 +64,27 @@ public final class HeaderUtils {
             (k, v) -> "<filtered>";
 
     /**
-     * Whether cookie parsing should be strictly spec compliant ({@code true}),
-     * or allow some deviations that are commonly observed in practice ({@code false}, the default).
+     * Whether cookie parsing should be strictly spec compliant with
+     * <a href="https://www.rfc-editor.org/rfc/rfc6265">RFC6265</a> ({@code true}), or allow some deviations that are
+     * commonly observed in practice and allowed by the obsolete
+     * <a href="https://www.rfc-editor.org/rfc/rfc2965">RFC2965</a>/
+     * <a href="https://www.rfc-editor.org/rfc/rfc2109">RFC2109</a> ({@code false}, the default).
      */
-    static boolean cookieParsingPedantic = SystemPropertyUtil.getBoolean(
-            "io.netty5.handler.codec.http.headers.cookieParsingPedantic", false);
+    // not final for testing
+    private static boolean cookieParsingStrictRfc6265 = SystemPropertyUtil.getBoolean(
+            "io.netty5.handler.codec.http.headers.cookieParsingStrictRfc6265", false);
 
     private HeaderUtils() {
         // no instances
+    }
+
+    static boolean cookieParsingStrictRfc6265() {
+        return cookieParsingStrictRfc6265;
+    }
+
+    @VisibleForTesting
+    static void cookieParsingStrictRfc6265(boolean value) {
+        cookieParsingStrictRfc6265 = value;
     }
 
     static String toString(final HttpHeaders headers,

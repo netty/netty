@@ -29,7 +29,6 @@
  */
 package io.netty5.handler.codec.http.headers;
 
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -39,8 +38,9 @@ import org.junit.jupiter.api.parallel.Isolated;
 
 import java.lang.invoke.VarHandle;
 
+import static io.netty5.handler.codec.http.headers.DefaultHttpSetCookiesTest.quotesInValuePreserved;
 import static io.netty5.handler.codec.http.headers.HttpHeaders.newHeaders;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Isolated
@@ -48,13 +48,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class DefaultHttpSetCookiesPedanticTest {
     @BeforeAll
     public static void enablePedantic() {
-        HeaderUtils.cookieParsingPedantic = true;
+        HeaderUtils.cookieParsingStrictRfc6265(true);
         VarHandle.fullFence();
     }
 
     @AfterAll
     public static void disablePedantic() {
-        HeaderUtils.cookieParsingPedantic = false;
+        HeaderUtils.cookieParsingStrictRfc6265(false);
         VarHandle.fullFence();
     }
 
@@ -63,6 +63,7 @@ public class DefaultHttpSetCookiesPedanticTest {
         final HttpHeaders headers = newHeaders();
         headers.add("set-cookie", "first=12345;Extension");
         headers.add("set-cookie", "second=12345;Expires=Mon, 22 Aug 2022 20:12:35 GMT");
+        headers.add("set-cookie", "third=\"12345\";Expires=Mon, 22 Aug 2022 20:12:35 GMT");
         throwIfNoSpaceBeforeCookieAttributeValue(headers);
     }
 
@@ -70,9 +71,26 @@ public class DefaultHttpSetCookiesPedanticTest {
         Exception exception;
 
         exception = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("first"));
-        MatcherAssert.assertThat(exception.getMessage(), containsString("space is required after ;"));
+        assertThat(exception)
+                .hasMessageContaining("first")
+                .hasMessageContaining("space is required after ;");
 
         exception = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("second"));
-        MatcherAssert.assertThat(exception.getMessage(), containsString("space is required after ;"));
+        assertThat(exception)
+                .hasMessageContaining("second")
+                .hasMessageContaining("space is required after ;");
+
+        exception = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("third"));
+        assertThat(exception)
+                .hasMessageContaining("third")
+                .hasMessageContaining("space is required after ;");
+    }
+
+    @Test
+    void spaceAfterQuotedValue() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("set-cookie",
+                "qwerty=\"12345\"; Domain=somecompany.co.uk; Path=/; Expires=Wed, 30 Aug 2019 00:00:00 GMT");
+        quotesInValuePreserved(headers);
     }
 }

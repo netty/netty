@@ -39,6 +39,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
+import static io.netty5.handler.codec.http.headers.DefaultHttpSetCookie.parseSetCookie;
 import static io.netty5.handler.codec.http.headers.HttpHeaders.newHeaders;
 import static io.netty5.util.AsciiString.contentEqualsIgnoreCase;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -411,6 +412,26 @@ class DefaultHttpSetCookiesTest {
         assertFalse(cookieItr.hasNext());
     }
 
+     @Test
+     void quotedValueWithSpace() {
+         final HttpHeaders headers = newHeaders();
+         headers.add("set-cookie", "qwerty=\"12 345\"");
+         Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("qwerty"));
+         assertThat(e)
+                 .hasMessageContaining("qwerty")
+                 .hasMessageContaining("unexpected hex value");
+     }
+
+     @Test
+     void noSemicolonAfterQuotedValue() {
+         final HttpHeaders headers = newHeaders();
+         headers.add("set-cookie", "qwerty=\"12345\" max-age=12");
+         Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("qwerty"));
+         assertThat(e)
+                 .hasMessageContaining("qwerty")
+                 .hasMessageContaining("expected semicolon");
+     }
+
     @Test
     void quotesInValuePreserved() {
         final HttpHeaders headers = newHeaders();
@@ -419,9 +440,10 @@ class DefaultHttpSetCookiesTest {
         quotesInValuePreserved(headers);
     }
 
-    private static void quotesInValuePreserved(HttpHeaders headers) {
+    static void quotesInValuePreserved(HttpHeaders headers) {
         final HttpSetCookie cookie = headers.getSetCookie("qwerty");
         assertNotNull(cookie);
+        assertTrue(cookie.isWrapped());
         assertTrue(areSetCookiesEqual(new TestSetCookie("qwerty", "12345", "/",
                 "somecompany.co.uk", "Wed, 30 Aug 2019 00:00:00 GMT", null, null, true, false, false), cookie));
 
@@ -619,11 +641,83 @@ class DefaultHttpSetCookiesTest {
         assertNull(headers.getSetCookie("qwerty12345"));
     }
 
+     @Test
+     void expiresAfterSemicolon() {
+         final HttpHeaders headers = newHeaders();
+         headers.add("set-cookie",
+                 "qwerty=12345; Domain=somecompany.co.uk; Expires=Wed, 30 Aug 2019 00:00:00 GMT; Path=/");
+         HttpSetCookie cookie = headers.getSetCookie("qwerty");
+         assertNotNull(cookie);
+         assertThat(cookie.name()).isEqualToIgnoringCase("qwerty");
+         assertThat(cookie.value()).isEqualToIgnoringCase("12345");
+         assertThat(cookie.domain()).isEqualToIgnoringCase("somecompany.co.uk");
+         assertThat(cookie.expires()).isEqualToIgnoringCase("Wed, 30 Aug 2019 00:00:00 GMT");
+         assertThat(cookie.path()).isEqualToIgnoringCase("/");
+     }
+
+     @Test
+     void emptyValue() {
+         final HttpHeaders headers = newHeaders();
+         headers.add("set-cookie", "qwerty=");
+         HttpSetCookie cookie = headers.getSetCookie("qwerty");
+         assertNotNull(cookie);
+         assertThat(cookie.value()).isEmpty();
+     }
+
+     @Test
+     void emptyDomain() {
+         final HttpHeaders headers = newHeaders();
+         headers.add("set-cookie", "qwerty=12345; Domain=");
+         HttpSetCookie cookie = headers.getSetCookie("qwerty");
+         assertNotNull(cookie);
+         assertThat(cookie.value()).isEqualToIgnoringCase("12345");
+         assertThat(cookie.domain()).isEmpty();
+     }
+
+     @Test
+     void valueContainsEqualsSign() {
+         final HttpHeaders headers = newHeaders();
+         headers.add("set-cookie", "qwerty=123=45");
+         HttpSetCookie cookie = headers.getSetCookie("qwerty");
+         assertNotNull(cookie);
+         assertThat(cookie.value()).isEqualToIgnoringCase("123=45");
+     }
+
+     @Test
+     void attributeValueContainsEqualsSign() {
+         final HttpHeaders headers = newHeaders();
+         headers.add("set-cookie", "qwerty=12345; max-age=12=1");
+         Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("qwerty"));
+         assertThat(e).hasMessageContaining("qwerty").hasMessageContaining("=");
+     }
+
+     @Test
+     void parseSetCookieWithEmptyName() {
+         Exception e = assertThrows(IllegalArgumentException.class, () -> parseSetCookie("=123", false));
+         assertThat(e).hasMessageContaining("cookie name cannot be null or empty");
+
+         e = assertThrows(IllegalArgumentException.class, () -> parseSetCookie("; max-age=123", false));
+         assertThat(e).hasMessageContaining("cookie name cannot be null or empty");
+     }
+
+     @Test
+     void parseSetCookieWithEmptyValue() {
+         Exception e = assertThrows(IllegalArgumentException.class, () -> parseSetCookie("q", false));
+         assertThat(e).hasMessageContaining("set-cookie value not found at index 1");
+     }
+
+     @Test
+     void parseSetCookieWithUnexpectedQuote() {
+         Exception e = assertThrows(IllegalArgumentException.class, () -> parseSetCookie("\"123\"", false));
+         assertThat(e).hasMessageContaining("unexpected quote at index: 0");
+     }
+
     @Test
     void trailingSemiColon() {
         final HttpHeaders headers = newHeaders();
         headers.add("set-cookie", "qwerty=12345;");
-        assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("qwerty"));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("qwerty"));
+        assertThat(e).hasMessageContaining("qwerty").hasMessageContaining(";");
     }
 
     @Test
