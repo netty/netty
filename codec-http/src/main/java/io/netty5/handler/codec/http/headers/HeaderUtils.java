@@ -33,8 +33,8 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.SystemPropertyUtil;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -475,9 +475,12 @@ public final class HeaderUtils {
                 if (cookieHeaderValue.length() - 2 <= semiIndex) {
                     advanceCookieHeaderValue();
                     nextNextStart = 0;
-                } else {
-                    // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                } else if (cookieHeaderValue.charAt(semiIndex + 1) == ' ') {
+                    // Skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
                     nextNextStart = semiIndex + 2;
+                } else {
+                    // Older cookie spec delimit with just semicolon. See https://www.rfc-editor.org/rfc/rfc2965
+                    nextNextStart = semiIndex + 1;
                 }
             } else {
                 advanceCookieHeaderValue();
