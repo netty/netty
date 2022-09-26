@@ -847,8 +847,17 @@ error:
     if (certificateCallbackRef != NULL) {
         (*env)->DeleteGlobalRef(env, certificateCallbackRef);
     }
-    if (certificateCallbackRef != NULL) {
-        (*env)->DeleteGlobalRef(env, certificateCallbackRef);
+    if (verifyCallbackRef != NULL) {
+        (*env)->DeleteGlobalRef(env, verifyCallbackRef);
+    }
+    if (servernameCallbackRef != NULL) {
+        (*env)->DeleteGlobalRef(env, servernameCallbackRef);
+    }
+    if (keylogCallbackRef != NULL) {
+        (*env)->DeleteGlobalRef(env, keylogCallbackRef);
+    }
+    if (sessionCallbackRef != NULL) {
+        (*env)->DeleteGlobalRef(env, sessionCallbackRef);
     }
     return -1;
 }
