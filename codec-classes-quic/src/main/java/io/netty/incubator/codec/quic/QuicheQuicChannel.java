@@ -1323,19 +1323,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                     try {
                                         finalTask.run();
                                     } finally {
-                                        Runnable nextTask = connection.sslTask();
-                                        // Consume all tasks before moving back to the EventLoop.
-                                        if (nextTask == null) {
-                                            // Move back to the EventLoop.
-                                            eventLoop().execute(() -> {
-                                                // Call connection send to continue handshake if needed.
-                                                if (connectionSend()) {
-                                                    forceFlushParent();
+                                        // Move back to the EventLoop.
+                                        eventLoop().execute(() -> {
+                                            if (connection != null) {
+                                                Runnable nextTask = connection.sslTask();
+                                                // Consume all tasks before moving back to the EventLoop.
+                                                if (nextTask == null) {
+                                                    // Call connection send to continue handshake if needed.
+                                                    if (connectionSend()) {
+                                                        forceFlushParent();
+                                                    }
+                                                } else {
+                                                    sslTaskExecutor.execute(nextTask);
                                                 }
-                                            });
-                                        } else {
-                                            sslTaskExecutor.execute(nextTask);
-                                        }
+                                            }
+                                        });
                                     }
                                 });
                             }
