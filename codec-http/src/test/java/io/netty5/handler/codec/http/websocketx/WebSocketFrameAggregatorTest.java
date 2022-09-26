@@ -56,25 +56,29 @@ public class WebSocketFrameAggregatorTest {
 
         assertTrue(channel.finish());
 
-        BinaryWebSocketFrame frame = channel.readInbound();
-        assertTrue(frame.isFinalFragment());
-        assertEquals(1, frame.rsv());
-        assertArrayEquals(content1, toBytes(frame.binaryData()));
+        try (BinaryWebSocketFrame frame = channel.readInbound()) {
+            assertTrue(frame.isFinalFragment());
+            assertEquals(1, frame.rsv());
+            assertArrayEquals(content1, toBytes(frame.binaryData()));
+        }
 
-        PingWebSocketFrame frame2 = channel.readInbound();
-        assertTrue(frame2.isFinalFragment());
-        assertEquals(0, frame2.rsv());
-        assertArrayEquals(content1, toBytes(frame2.binaryData()));
+        try (PingWebSocketFrame frame2 = channel.readInbound()) {
+            assertTrue(frame2.isFinalFragment());
+            assertEquals(0, frame2.rsv());
+            assertArrayEquals(content1, toBytes(frame2.binaryData()));
+        }
 
-        PongWebSocketFrame frame3 = channel.readInbound();
-        assertTrue(frame3.isFinalFragment());
-        assertEquals(0, frame3.rsv());
-        assertArrayEquals(content1, toBytes(frame3.binaryData()));
+        try (PongWebSocketFrame frame3 = channel.readInbound()) {
+            assertTrue(frame3.isFinalFragment());
+            assertEquals(0, frame3.rsv());
+            assertArrayEquals(content1, toBytes(frame3.binaryData()));
+        }
 
-        BinaryWebSocketFrame frame4 = channel.readInbound();
-        assertTrue(frame4.isFinalFragment());
-        assertEquals(0, frame4.rsv());
-        assertArrayEquals(aggregatedContent, toBytes(frame4.binaryData()));
+        try (BinaryWebSocketFrame frame4 = channel.readInbound()) {
+            assertTrue(frame4.isFinalFragment());
+            assertEquals(0, frame4.rsv());
+            assertArrayEquals(aggregatedContent, toBytes(frame4.binaryData()));
+        }
 
         assertNull(channel.readInbound());
     }
@@ -91,25 +95,29 @@ public class WebSocketFrameAggregatorTest {
 
         assertTrue(channel.finish());
 
-        TextWebSocketFrame frame = channel.readInbound();
-        assertTrue(frame.isFinalFragment());
-        assertEquals(1, frame.rsv());
-        assertArrayEquals(content1, toBytes(frame.binaryData()));
+        try (TextWebSocketFrame frame = channel.readInbound()) {
+            assertTrue(frame.isFinalFragment());
+            assertEquals(1, frame.rsv());
+            assertArrayEquals(content1, toBytes(frame.binaryData()));
+        }
 
-        PingWebSocketFrame frame2 = channel.readInbound();
-        assertTrue(frame2.isFinalFragment());
-        assertEquals(0, frame2.rsv());
-        assertArrayEquals(content1, toBytes(frame2.binaryData()));
+        try (PingWebSocketFrame frame2 = channel.readInbound()) {
+            assertTrue(frame2.isFinalFragment());
+            assertEquals(0, frame2.rsv());
+            assertArrayEquals(content1, toBytes(frame2.binaryData()));
+        }
 
-        PongWebSocketFrame frame3 = channel.readInbound();
-        assertTrue(frame3.isFinalFragment());
-        assertEquals(0, frame3.rsv());
-        assertArrayEquals(content1, toBytes(frame3.binaryData()));
+        try (PongWebSocketFrame frame3 = channel.readInbound()) {
+            assertTrue(frame3.isFinalFragment());
+            assertEquals(0, frame3.rsv());
+            assertArrayEquals(content1, toBytes(frame3.binaryData()));
+        }
 
-        TextWebSocketFrame frame4 = channel.readInbound();
-        assertTrue(frame4.isFinalFragment());
-        assertEquals(0, frame4.rsv());
-        assertArrayEquals(aggregatedContent, toBytes(frame4.binaryData()));
+        try (TextWebSocketFrame frame4 = channel.readInbound()) {
+            assertTrue(frame4.isFinalFragment());
+            assertEquals(0, frame4.rsv());
+            assertArrayEquals(aggregatedContent, toBytes(frame4.binaryData()));
+        }
 
         assertNull(channel.readInbound());
     }

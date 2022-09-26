@@ -140,11 +140,12 @@ public class HttpContentDecoderTest {
 
         Object ob3 = channel.readInbound();
         assertThat(ob3).isInstanceOf(LastHttpContent.class);
-        LastHttpContent<?> lastContent = (LastHttpContent<?>) ob3;
-        assertNotNull(lastContent.decoderResult());
-        assertTrue(lastContent.decoderResult().isSuccess());
-        assertFalse(lastContent.trailingHeaders().isEmpty());
-        assertEquals("42", lastContent.trailingHeaders().get("My-Trailer"));
+        try (LastHttpContent<?> lastContent = (LastHttpContent<?>) ob3) {
+            assertNotNull(lastContent.decoderResult());
+            assertTrue(lastContent.decoderResult().isSuccess());
+            assertFalse(lastContent.trailingHeaders().isEmpty());
+            assertEquals("42", lastContent.trailingHeaders().get("My-Trailer"));
+        }
         assertHasInboundMessages(channel, false);
         assertHasOutboundMessages(channel, false);
         assertFalse(channel.finish());

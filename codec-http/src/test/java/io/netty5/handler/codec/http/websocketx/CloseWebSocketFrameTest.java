@@ -58,7 +58,9 @@ class CloseWebSocketFrameTest {
     }
 
     private static void doTestValidCode(CloseWebSocketFrame frame, int expectedCode, String expectedReason) {
-        assertThat(frame.statusCode()).isEqualTo(expectedCode);
-        assertThat(frame.reasonText()).isEqualTo(expectedReason);
+        try (frame) {
+            assertThat(frame.statusCode()).isEqualTo(expectedCode);
+            assertThat(frame.reasonText()).isEqualTo(expectedReason);
+        }
     }
 }

@@ -377,10 +377,11 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
-        CloseWebSocketFrame closeMessage = decode(server.readOutbound(), CloseWebSocketFrame.class);
-        assertEquals(closeMessage, new CloseWebSocketFrame(client.bufferAllocator(),
-                WebSocketCloseStatus.NORMAL_CLOSURE));
-        closeMessage.close();
+        try (CloseWebSocketFrame closeMessage1 = decode(server.readOutbound(), CloseWebSocketFrame.class);
+             CloseWebSocketFrame closeMessage2 = new CloseWebSocketFrame(client.bufferAllocator(),
+                     WebSocketCloseStatus.NORMAL_CLOSURE)) {
+            assertEquals(closeMessage1, closeMessage2);
+        }
 
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());

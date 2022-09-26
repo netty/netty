@@ -78,6 +78,7 @@ public class HttpObjectAggregatorTest {
         for (Buffer buf: buffers) {
             // This should be false as we decompose the buffer before to not have deep hierarchy
             assertFalse(isComposite(buf));
+            buf.close();
         }
     }
 
@@ -117,18 +118,20 @@ public class HttpObjectAggregatorTest {
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
         HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
         HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
-        final HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator());
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
 
-        FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        try (FullHttpResponse response = embedder.readOutbound()) {
+            assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+            assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        }
         assertFalse(embedder.isOpen());
 
-        assertThrows(ClosedChannelException.class, () -> embedder.writeInbound(chunk3));
+        try (HttpContent<?> chunk3 = new EmptyLastHttpContent(preferredAllocator())) {
+            assertThrows(ClosedChannelException.class, () -> embedder.writeInbound(chunk3));
+        }
 
         assertFalse(embedder.finish());
     }
@@ -217,8 +220,9 @@ public class HttpObjectAggregatorTest {
         if (serverShouldCloseConnection(message, response)) {
             assertFalse(embedder.isOpen());
 
-            assertThrows(ClosedChannelException.class,
-                    () -> embedder.writeInbound(new DefaultHttpContent(preferredAllocator().allocate(0))));
+            try (DefaultHttpContent content = new DefaultHttpContent(preferredAllocator().allocate(0))) {
+                assertThrows(ClosedChannelException.class, () -> embedder.writeInbound(content));
+            }
 
             assertFalse(embedder.finish());
         } else {
@@ -325,6 +329,7 @@ public class HttpObjectAggregatorTest {
         Object inbound = ch.readInbound();
         assertThat(inbound).isInstanceOf(FullHttpRequest.class);
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
+        ((FullHttpRequest) inbound).close();
         assertNull(ch.readInbound());
         ch.finish();
     }
@@ -338,6 +343,7 @@ public class HttpObjectAggregatorTest {
         assertThat(inbound).isInstanceOf(FullHttpResponse.class);
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
         assertNull(ch.readInbound());
+        ((FullHttpResponse) inbound).close();
         ch.finish();
     }
 
@@ -358,9 +364,10 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(message));
 
         // The aggregator should respond with '413.'
-        FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        try (FullHttpResponse response = embedder.readOutbound()) {
+            assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+            assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        }
 
         // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
         assertFalse(embedder.writeInbound(chunk1));
@@ -460,9 +467,10 @@ public class HttpObjectAggregatorTest {
 
         assertNull(embedder.readInbound());
 
-        FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        try (FullHttpResponse response = embedder.readOutbound()) {
+            assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+            assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        }
 
         // Keep-alive is on by default in HTTP/1.1, so the connection should be still alive.
         assertTrue(embedder.isOpen());
@@ -490,9 +498,10 @@ public class HttpObjectAggregatorTest {
 
         assertNull(embedder.readInbound());
 
-        FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        try (FullHttpResponse response = embedder.readOutbound()) {
+            assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+            assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        }
 
         // We are forcing the connection closed if an expectation is exceeded.
         assertFalse(embedder.isOpen());
@@ -517,9 +526,10 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(message));
 
         // The aggregator should respond with '413'.
-        FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        try (FullHttpResponse response = embedder.readOutbound()) {
+            assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+            assertThat(response.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualToIgnoringCase("0");
+        }
 
         // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
         assertFalse(embedder.writeInbound(chunk1));
@@ -585,16 +595,17 @@ public class HttpObjectAggregatorTest {
             HttpRequest request2 = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/");
             HttpContent<?> content2 = new DefaultHttpContent(preferredAllocator().copyOf(data));
             request2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+            EmptyLastHttpContent emptyLastHttpContent = new EmptyLastHttpContent(preferredAllocator());
 
             try (AutoCloseable ignore1 = autoClosing(request2);
-                 AutoCloseable ignore2 = autoClosing(content2)) {
-                assertTrue(channel.writeInbound(request2, content2,
-                        new EmptyLastHttpContent(preferredAllocator())));
+                 AutoCloseable ignore2 = autoClosing(content2);
+                 AutoCloseable ignore3 = autoClosing(emptyLastHttpContent)) {
+                assertTrue(channel.writeInbound(request2, content2, emptyLastHttpContent));
 
                 // Getting the same response objects out
                 assertSame(request2, channel.readInbound());
                 assertSame(content2, channel.readInbound());
-                assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
+                assertSame(emptyLastHttpContent, channel.readInbound());
             }
 
             assertFalse(channel.finish());
@@ -645,16 +656,17 @@ public class HttpObjectAggregatorTest {
             HttpContent<?> content2 = new DefaultHttpContent(preferredAllocator().copyOf(
                     "{key: 'value'}", UTF_8));
             response2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            EmptyLastHttpContent emptyLastHttpContent = new EmptyLastHttpContent(preferredAllocator());
 
             try (AutoCloseable ignore1 = autoClosing(response2);
-                 AutoCloseable ignore2 = autoClosing(content2)) {
-                assertTrue(channel.writeInbound(response2, content2,
-                        new EmptyLastHttpContent(preferredAllocator())));
+                 AutoCloseable ignore2 = autoClosing(content2);
+                 AutoCloseable ignore3 = autoClosing(emptyLastHttpContent)) {
+                assertTrue(channel.writeInbound(response2, content2, emptyLastHttpContent));
 
                 // Getting the same response objects out
                 assertSame(response2, channel.readInbound());
                 assertSame(content2, channel.readInbound());
-                assertEquals(new EmptyLastHttpContent(preferredAllocator()), channel.readInbound());
+                assertSame(emptyLastHttpContent, channel.readInbound());
             }
 
             assertFalse(channel.finish());

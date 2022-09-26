@@ -130,20 +130,22 @@ public class HttpResponseEncoderTest {
         // Test writing an empty buffer works when the encoder is at ST_INIT.
         try (Buffer emptyBuffer = channel.bufferAllocator().allocate(0)) {
             assertTrue(channel.writeOutbound(emptyBuffer.copy()));
-            Buffer buffer = channel.readOutbound();
-            assertEquals(buffer, emptyBuffer);
+            try (Buffer buffer = channel.readOutbound()) {
+                assertEquals(buffer, emptyBuffer);
+            }
 
             // Leave the ST_INIT state.
             HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
             assertTrue(channel.writeOutbound(response));
-            buffer = channel.readOutbound();
-            assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(US_ASCII));
-            buffer.close();
+            try (Buffer buffer = channel.readOutbound()) {
+                assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(US_ASCII));
+            }
 
             // Test writing an empty buffer works when the encoder is not at ST_INIT.
             channel.writeOutbound(emptyBuffer.copy());
-            buffer = channel.readOutbound();
-            assertEquals(buffer, emptyBuffer);
+            try (Buffer buffer = channel.readOutbound()) {
+                assertEquals(buffer, emptyBuffer);
+            }
         }
 
         assertFalse(channel.finish());

@@ -133,32 +133,33 @@ public class PerMessageDeflateDecoderTest {
         assertTrue(decoderChannel.writeInbound(compressedFrame1));
         assertTrue(decoderChannel.writeInbound(compressedFrame2));
         assertTrue(decoderChannel.writeInbound(compressedFrame3));
-        BinaryWebSocketFrame uncompressedFrame1 = decoderChannel.readInbound();
-        ContinuationWebSocketFrame uncompressedFrame2 = decoderChannel.readInbound();
-        ContinuationWebSocketFrame uncompressedFrame3 = decoderChannel.readInbound();
+        try (BinaryWebSocketFrame uncompressedFrame1 = decoderChannel.readInbound();
+             ContinuationWebSocketFrame uncompressedFrame2 = decoderChannel.readInbound();
+             ContinuationWebSocketFrame uncompressedFrame3 = decoderChannel.readInbound()) {
 
-        // test
-        assertNotNull(uncompressedFrame1);
-        assertNotNull(uncompressedFrame2);
-        assertNotNull(uncompressedFrame3);
-        assertEquals(RSV3, uncompressedFrame1.rsv());
-        assertEquals(RSV3, uncompressedFrame2.rsv());
-        assertEquals(RSV3, uncompressedFrame3.rsv());
+            // test
+            assertNotNull(uncompressedFrame1);
+            assertNotNull(uncompressedFrame2);
+            assertNotNull(uncompressedFrame3);
+            assertEquals(RSV3, uncompressedFrame1.rsv());
+            assertEquals(RSV3, uncompressedFrame2.rsv());
+            assertEquals(RSV3, uncompressedFrame3.rsv());
 
-        Buffer finalPayloadWrapped = encoderChannel.bufferAllocator()
-                .allocate(uncompressedFrame1.binaryData().readableBytes() +
-                        uncompressedFrame2.binaryData().readableBytes() +
-                        uncompressedFrame3.binaryData().readableBytes());
-        finalPayloadWrapped.writeBytes(uncompressedFrame1.binaryData());
-        finalPayloadWrapped.writeBytes(uncompressedFrame2.binaryData());
-        finalPayloadWrapped.writeBytes(uncompressedFrame3.binaryData());
+            Buffer finalPayloadWrapped = encoderChannel.bufferAllocator()
+                    .allocate(uncompressedFrame1.binaryData().readableBytes() +
+                            uncompressedFrame2.binaryData().readableBytes() +
+                            uncompressedFrame3.binaryData().readableBytes());
+            finalPayloadWrapped.writeBytes(uncompressedFrame1.binaryData());
+            finalPayloadWrapped.writeBytes(uncompressedFrame2.binaryData());
+            finalPayloadWrapped.writeBytes(uncompressedFrame3.binaryData());
 
-        assertEquals(300, finalPayloadWrapped.readableBytes());
+            assertEquals(300, finalPayloadWrapped.readableBytes());
 
-        byte[] finalPayload = new byte[300];
-        finalPayloadWrapped.readBytes(finalPayload, 0, finalPayload.length);
-        assertArrayEquals(finalPayload, payload);
-        finalPayloadWrapped.close();
+            byte[] finalPayload = new byte[300];
+            finalPayloadWrapped.readBytes(finalPayload, 0, finalPayload.length);
+            assertArrayEquals(finalPayload, payload);
+            finalPayloadWrapped.close();
+        }
     }
 
     @Test
@@ -371,25 +372,26 @@ public class PerMessageDeflateDecoderTest {
         assertTrue(decoderChannel.writeInbound(compressedFrameWithExtraData));
 
         // read uncompressed frames
-        TextWebSocketFrame uncompressedFrame1 = decoderChannel.readInbound();
-        ContinuationWebSocketFrame uncompressedFrame2 = decoderChannel.readInbound();
-        ContinuationWebSocketFrame uncompressedFrame3 = decoderChannel.readInbound();
-        ContinuationWebSocketFrame uncompressedExtraData = decoderChannel.readInbound();
-        assertThat(uncompressedExtraData.binaryData().readableBytes()).isZero();
+        try (TextWebSocketFrame uncompressedFrame1 = decoderChannel.readInbound();
+             ContinuationWebSocketFrame uncompressedFrame2 = decoderChannel.readInbound();
+             ContinuationWebSocketFrame uncompressedFrame3 = decoderChannel.readInbound();
+             ContinuationWebSocketFrame uncompressedExtraData = decoderChannel.readInbound()) {
+            assertThat(uncompressedExtraData.binaryData().readableBytes()).isZero();
 
-        Buffer uncompressedPayload = encoderChannel.bufferAllocator()
-                .allocate(uncompressedFrame1.binaryData().readableBytes() +
-                        uncompressedFrame2.binaryData().readableBytes() +
-                        uncompressedFrame3.binaryData().readableBytes());
-        uncompressedPayload.writeBytes(uncompressedFrame1.binaryData());
-        uncompressedPayload.writeBytes(uncompressedFrame2.binaryData());
-        uncompressedPayload.writeBytes(uncompressedFrame3.binaryData());
-        assertEquals(originPayload, uncompressedPayload);
+            Buffer uncompressedPayload = encoderChannel.bufferAllocator()
+                    .allocate(uncompressedFrame1.binaryData().readableBytes() +
+                            uncompressedFrame2.binaryData().readableBytes() +
+                            uncompressedFrame3.binaryData().readableBytes());
+            uncompressedPayload.writeBytes(uncompressedFrame1.binaryData());
+            uncompressedPayload.writeBytes(uncompressedFrame2.binaryData());
+            uncompressedPayload.writeBytes(uncompressedFrame3.binaryData());
+            assertEquals(originPayload, uncompressedPayload);
 
-        assertTrue(originPayload.isAccessible());
-        originPayload.close();
-        assertTrue(uncompressedPayload.isAccessible());
-        uncompressedPayload.close();
+            assertTrue(originPayload.isAccessible());
+            originPayload.close();
+            assertTrue(uncompressedPayload.isAccessible());
+            uncompressedPayload.close();
+        }
 
         assertTrue(encoderChannel.finishAndReleaseAll());
         assertFalse(decoderChannel.finish());

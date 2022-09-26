@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Random;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -41,6 +42,8 @@ public class HttpInvalidMessageTest {
         DecoderResult dr = req.decoderResult();
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
+        assertThat(req).isInstanceOf(FullHttpRequest.class);
+        ((FullHttpRequest) req).close();
         ensureInboundTrafficDiscarded(ch);
     }
 
@@ -73,6 +76,8 @@ public class HttpInvalidMessageTest {
         DecoderResult dr = res.decoderResult();
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
+        assertThat(res).isInstanceOf(FullHttpResponse.class);
+        ((FullHttpResponse) res).close();
         ensureInboundTrafficDiscarded(ch);
     }
 
@@ -108,11 +113,11 @@ public class HttpInvalidMessageTest {
 
         HttpRequest req = ch.readInbound();
         assertTrue(req.decoderResult().isSuccess());
-
-        LastHttpContent<?> chunk = ch.readInbound();
-        DecoderResult dr = chunk.decoderResult();
-        assertFalse(dr.isSuccess());
-        assertTrue(dr.isFailure());
+        try (LastHttpContent<?> chunk = ch.readInbound()) {
+            DecoderResult dr = chunk.decoderResult();
+            assertFalse(dr.isSuccess());
+            assertTrue(dr.isFailure());
+        }
         ensureInboundTrafficDiscarded(ch);
     }
 

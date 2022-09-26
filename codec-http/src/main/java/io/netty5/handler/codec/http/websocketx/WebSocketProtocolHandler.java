@@ -75,6 +75,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return;
         }
         if (frame instanceof PongWebSocketFrame && dropPongFrames) {
+            frame.close();
             readIfNeeded(ctx);
             return;
         }
