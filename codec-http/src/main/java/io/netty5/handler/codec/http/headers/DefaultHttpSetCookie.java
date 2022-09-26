@@ -211,7 +211,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                         ++i;
                         break;
                     } else {
-                        throw new IllegalArgumentException("set-cookie '" +name + "': unexpected = at index: " + i);
+                        throw new IllegalArgumentException("set-cookie '" + name + "': unexpected = at index: " + i);
                     }
                     ++i;
                     begin = i;
