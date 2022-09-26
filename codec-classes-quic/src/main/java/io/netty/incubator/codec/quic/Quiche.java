@@ -710,6 +710,10 @@ final class Quiche {
         return reason;
     }
 
+    static boolean shouldClose(int res)  {
+        return res == Quiche.QUICHE_ERR_CRYPTO_FAIL || res == Quiche.QUICHE_ERR_TLS_FAIL;
+    }
+
     static boolean throwIfError(int res) throws Exception {
         if (res < 0) {
              if (res == Quiche.QUICHE_ERR_DONE) {

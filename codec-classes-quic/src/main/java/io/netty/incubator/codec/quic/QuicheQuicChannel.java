@@ -996,111 +996,122 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         List<ByteBuf> bufferList = new ArrayList<>(segmentedDatagramPacketAllocator.maxNumSegments());
         long connAddr = connection.address();
         boolean packetWasWritten = false;
-        for (;;) {
-            ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+        boolean close = false;
+        try {
+            for (;;) {
+                ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
 
-            ByteBuffer sendInfo = connection.nextSendInfo();
-            InetSocketAddress sendToAddress = this.remote;
+                ByteBuffer sendInfo = connection.nextSendInfo();
+                InetSocketAddress sendToAddress = this.remote;
 
-            boolean done;
-            int writerIndex = out.writerIndex();
-            int written = Quiche.quiche_conn_send(
-                    connAddr, Quiche.memoryAddress(out) + writerIndex, out.writableBytes(),
-                    Quiche.memoryAddressWithPosition(sendInfo));
-            if (written == 0) {
-                out.release();
-                // No need to create a new datagram packet. Just try again.
-                continue;
-            }
+                boolean done;
+                int writerIndex = out.writerIndex();
+                int written = Quiche.quiche_conn_send(
+                        connAddr, Quiche.memoryAddress(out) + writerIndex, out.writableBytes(),
+                        Quiche.memoryAddressWithPosition(sendInfo));
+                if (written == 0) {
+                    out.release();
+                    // No need to create a new datagram packet. Just try again.
+                    continue;
+                }
 
-            try {
-                done = Quiche.throwIfError(written);
-            } catch (Exception e) {
-                done = true;
-                if (tryFailConnectPromise(e)) {
+                try {
+                    done = Quiche.throwIfError(written);
+                } catch (Exception e) {
+                    done = true;
+                    close = Quiche.shouldClose(written);
+                    if (tryFailConnectPromise(e)) {
+                        // We are done, release the buffer and send what we did build up so far.
+                        out.release();
+                        return packetWasWritten;
+                    }
+                    fireExceptionEvents(e);
+                }
+                if (done) {
                     // We are done, release the buffer and send what we did build up so far.
                     out.release();
-                    return packetWasWritten;
+
+                    int size = bufferList.size();
+                    switch (size) {
+                        case 0:
+                            // Nothing more to write.
+                            return packetWasWritten;
+                        case 1:
+                            // We can write a normal datagram packet.
+                            parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
+                            return true;
+                        default:
+                            // We had more than one buffer, create a segmented packet.
+                            parent().write(segmentedDatagramPacketAllocator.newPacket(
+                                    Unpooled.wrappedBuffer(bufferList.toArray(new ByteBuf[0])),
+                                    bufferList.get(size - 1).readableBytes(), sendToAddress));
+                            return true;
+                    }
                 }
-                fireExceptionEvents(e);
-            }
-            if (done) {
-                // We are done, release the buffer and send what we did build up so far.
-                out.release();
+                out.writerIndex(writerIndex + written);
 
                 int size = bufferList.size();
-                switch (size) {
-                    case 0:
-                        // Nothing more to write.
-                        return packetWasWritten;
-                    case 1:
-                        // We can write a normal datagram packet.
-                        parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
-                        return true;
-                    default:
-                        // We had more than one buffer, create a segmented packet.
-                        parent().write(segmentedDatagramPacketAllocator.newPacket(
-                                Unpooled.wrappedBuffer(bufferList.toArray(new ByteBuf[0])),
-                                bufferList.get(size - 1).readableBytes(), sendToAddress));
-                        return true;
+                int segmentSize = -1;
+                if (connection.isSendInfoChanged()) {
+                    // Change the cached address and let the user know there was a connection migration.
+                    InetSocketAddress oldRemote = remote;
+                    remote = QuicheSendInfo.getToAddress(sendInfo);
+                    local = QuicheSendInfo.getFromAddress(sendInfo);
+                    pipeline().fireUserEventTriggered(
+                            new QuicConnectionEvent(oldRemote, remote));
+                    if (size > 0) {
+                        // We have something in the out list already, we need to send this now and so we set the
+                        // segmentSize.
+                        segmentSize = bufferList.get(size - 1).readableBytes();
+                    }
+                } else if (size > 0) {
+                    int lastReadable = bufferList.get(size - 1).readableBytes();
+                    // Check if we either need to send now because the last buffer we added has a smaller size then this
+                    // one or if we reached the maximum number of segments that we can send.
+                    if (lastReadable != out.readableBytes() ||
+                            size == segmentedDatagramPacketAllocator.maxNumSegments()) {
+                        segmentSize = lastReadable;
+                    }
                 }
-            }
-            out.writerIndex(writerIndex + written);
 
-            int size = bufferList.size();
-            int segmentSize = -1;
-            if (connection.isSendInfoChanged()) {
-                // Change the cached address and let the user know there was a connection migration.
-                InetSocketAddress oldRemote = remote;
-                remote = QuicheSendInfo.getToAddress(sendInfo);
-                local = QuicheSendInfo.getFromAddress(sendInfo);
-                pipeline().fireUserEventTriggered(
-                        new QuicConnectionEvent(oldRemote, remote));
-                if (size > 0) {
-                    // We have something in the out list already, we need to send this now and so we set the
-                    // segmentSize.
-                    segmentSize = bufferList.get(size - 1).readableBytes();
+                // If the segmentSize is not -1 we know we need to send now what was in the out list (which might be
+                // nothing as well).
+                if (segmentSize != -1) {
+                    switch (size) {
+                        case 0:
+                            // There was nothing in the out list, just move on.
+                            break;
+                        case 1:
+                            // Only one buffer in the out list, there is no need to use segments.
+                            parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
+                            packetWasWritten = true;
+                            break;
+                        default:
+                            // Create a packet with segments in.
+                            parent().write(segmentedDatagramPacketAllocator.newPacket(
+                                    Unpooled.wrappedBuffer(bufferList.toArray(
+                                            new ByteBuf[0])), segmentSize, sendToAddress));
+                            packetWasWritten = true;
+                            break;
+                    }
+                    // We processed everything that was in the list, clear it.
+                    bufferList.clear();
                 }
-            } else if (size > 0) {
-                int lastReadable = bufferList.get(size - 1).readableBytes();
-                // Check if we either need to send now because the last buffer we added has a smaller size then this
-                // one or if we reached the maximum number of segments that we can send.
-                if (lastReadable != out.readableBytes() || size == segmentedDatagramPacketAllocator.maxNumSegments()) {
-                    segmentSize = lastReadable;
-                }
+                // store for later, so we can make use of segments.
+                bufferList.add(out);
             }
-
-            // If the segmentSize is not -1 we know we need to send now what was in the out list (which might be
-            // nothing as well).
-            if (segmentSize != -1) {
-                switch (size) {
-                    case 0:
-                        // There was nothing in the out list, just move on.
-                        break;
-                    case 1:
-                        // Only one buffer in the out list, there is no need to use segments.
-                        parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
-                        packetWasWritten = true;
-                        break;
-                    default:
-                        // Create a packet with segments in.
-                        parent().write(segmentedDatagramPacketAllocator.newPacket(
-                                Unpooled.wrappedBuffer(bufferList.toArray(
-                                        new ByteBuf[0])), segmentSize, sendToAddress));
-                        packetWasWritten = true;
-                        break;
-                }
-                // We processed everything that was in the list, clear it.
-                bufferList.clear();
+        } finally {
+            if (close) {
+                // Close now... now way to recover.
+                unsafe().close(newPromise());
             }
-            // store for later, so we can make use of segments.
-            bufferList.add(out);
         }
     }
 
     private boolean connectionSendSimple() {
         long connAddr = connection.address();
         boolean packetWasWritten = false;
+        boolean close = false;
         for (;;) {
             ByteBuffer sendInfo = connection.nextSendInfo();
             ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
@@ -1115,6 +1126,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     break;
                 }
             } catch (Exception e) {
+                close = Quiche.shouldClose(written);
                 out.release();
                 if (!tryFailConnectPromise(e)) {
                     fireExceptionEvents(e);
@@ -1138,6 +1150,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             out.writerIndex(writerIndex + written);
             parent().write(new DatagramPacket(out, remote));
             packetWasWritten = true;
+        }
+        if (close) {
+            // Close now... now way to recover.
+            unsafe().close(newPromise());
         }
         return packetWasWritten;
     }
@@ -1266,7 +1282,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
 
             reantranceGuard |= IN_RECV;
-
+            boolean close = false;
             try {
                 ByteBuf tmpBuffer = null;
                 // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
@@ -1302,11 +1318,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         try {
                             done = Quiche.throwIfError(res);
                         } catch (Exception e) {
+                            done = true;
+                            close = Quiche.shouldClose(res);
                             if (tryFailConnectPromise(e)) {
                                 break;
                             }
                             fireExceptionEvents(e);
-                            done = true;
                         }
 
                         Runnable task = connection.sslTask();
@@ -1389,6 +1406,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     if (tmpBuffer != null) {
                         tmpBuffer.release();
                     }
+                }
+                if (close) {
+                    // Let's close now as there is no way to recover
+                    unsafe().close(newPromise());
                 }
             } finally {
                 reantranceGuard &= ~IN_RECV;
