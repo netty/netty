@@ -1313,19 +1313,29 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         if (task != null) {
                             if (sslTaskExecutor == null || sslTaskExecutor == ImmediateExecutor.INSTANCE ||
                                     sslTaskExecutor == ImmediateEventExecutor.INSTANCE) {
-                                task.run();
+                                // Consume all tasks
+                                do {
+                                    task.run();
+                                } while ((task = connection.sslTask()) != null);
                             } else {
+                                Runnable finalTask = task;
                                 sslTaskExecutor.execute(() -> {
                                     try {
-                                        task.run();
+                                        finalTask.run();
                                     } finally {
-                                        // Move back to the EventLoop.
-                                        eventLoop().execute(() -> {
-                                            // Call connection send to continue handshake if needed.
-                                            if (connectionSend()) {
-                                                forceFlushParent();
-                                            }
-                                        });
+                                        Runnable nextTask = connection.sslTask();
+                                        // Consume all tasks before moving back to the EventLoop.
+                                        if (nextTask == null) {
+                                            // Move back to the EventLoop.
+                                            eventLoop().execute(() -> {
+                                                // Call connection send to continue handshake if needed.
+                                                if (connectionSend()) {
+                                                    forceFlushParent();
+                                                }
+                                            });
+                                        } else {
+                                            sslTaskExecutor.execute(nextTask);
+                                        }
                                     }
                                 });
                             }
