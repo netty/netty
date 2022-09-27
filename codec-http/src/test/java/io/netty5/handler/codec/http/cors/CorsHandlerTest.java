@@ -21,6 +21,7 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.FullHttpRequest;
+import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpUtil;
@@ -468,10 +469,14 @@ public class CorsHandlerTest {
         final HttpResponse preFlightHost1 = preflightRequest(corsConfigs, host1, "", false);
         assertThat(preFlightHost1.headers().get(ACCESS_CONTROL_ALLOW_METHODS)).isEqualToIgnoringCase("GET");
         assertThat(preFlightHost1.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS)).isNull();
+        assertThat(preFlightHost1).isInstanceOf(FullHttpResponse.class);
+        ((FullHttpResponse) preFlightHost1).close();
 
         final HttpResponse preFlightHost2 = preflightRequest(corsConfigs, host2, "", false);
         assertValues(preFlightHost2, ACCESS_CONTROL_ALLOW_METHODS.toString(), "GET", "POST");
         assertThat(preFlightHost2.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS)).isEqualToIgnoringCase("true");
+        assertThat(preFlightHost2).isInstanceOf(FullHttpResponse.class);
+        ((FullHttpResponse) preFlightHost2).close();
     }
 
     @Test
@@ -488,11 +493,15 @@ public class CorsHandlerTest {
         final HttpResponse host1Response = preflightRequest(rules, host1, "", false);
         assertThat(host1Response.headers().get(ACCESS_CONTROL_ALLOW_METHODS)).isEqualToIgnoringCase("GET");
         assertThat(host1Response.headers().get(ACCESS_CONTROL_MAX_AGE)).isEqualToIgnoringCase("3600");
+        assertThat(host1Response).isInstanceOf(FullHttpResponse.class);
+        ((FullHttpResponse) host1Response).close();
 
         final HttpResponse host2Response = preflightRequest(rules, host2, "", false);
         assertValues(host2Response, ACCESS_CONTROL_ALLOW_METHODS.toString(), "POST", "GET", "OPTIONS");
         assertThat(host2Response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualToIgnoringCase("*");
         assertThat(host2Response.headers().get(ACCESS_CONTROL_MAX_AGE)).isEqualToIgnoringCase("1800");
+        assertThat(host2Response).isInstanceOf(FullHttpResponse.class);
+        ((FullHttpResponse) host2Response).close();
     }
 
     @Test

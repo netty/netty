@@ -115,124 +115,127 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     protected void encodeAndClose(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         final boolean isFull = msg instanceof HttpResponse && msg instanceof LastHttpContent;
         boolean dispose = true;
-        switch (state) {
-            case AWAIT_HEADERS: {
-                ensureHeaders(msg);
-                assert compressor == null;
-                assert msg instanceof HttpResponse;
+        try {
+            switch (state) {
+                case AWAIT_HEADERS: {
+                    ensureHeaders(msg);
+                    assert compressor == null;
+                    assert msg instanceof HttpResponse;
 
-                final HttpResponse res = (HttpResponse) msg;
-                final int code = res.status().code();
-                final CharSequence acceptEncoding;
-                if (code == CONTINUE_CODE) {
-                    // We need to not poll the encoding when response with CONTINUE as another response will follow
-                    // for the issued request. See https://github.com/netty/netty/issues/4079
-                    acceptEncoding = null;
-                } else {
-                    // Get the list of encodings accepted by the peer.
-                    acceptEncoding = acceptEncodingQueue.poll();
-                    if (acceptEncoding == null) {
-                        throw new IllegalStateException("cannot send more responses than requests");
+                    final HttpResponse res = (HttpResponse) msg;
+                    final int code = res.status().code();
+                    final CharSequence acceptEncoding;
+                    if (code == CONTINUE_CODE) {
+                        // We need to not poll the encoding when response with CONTINUE as another response will follow
+                        // for the issued request. See https://github.com/netty/netty/issues/4079
+                        acceptEncoding = null;
+                    } else {
+                        // Get the list of encodings accepted by the peer.
+                        acceptEncoding = acceptEncodingQueue.poll();
+                        if (acceptEncoding == null) {
+                            throw new IllegalStateException("cannot send more responses than requests");
+                        }
                     }
-                }
 
-                /*
-                 * per rfc2616 4.3 Message Body
-                 * All 1xx (informational), 204 (no content), and 304 (not modified) responses MUST NOT include a
-                 * message-body. All other responses do include a message-body, although it MAY be of zero length.
-                 *
-                 * 9.4 HEAD
-                 * The HEAD method is identical to GET except that the server MUST NOT return a message-body
-                 * in the response.
-                 *
-                 * Also we should pass through HTTP/1.0 as transfer-encoding: chunked is not supported.
-                 *
-                 * See https://github.com/netty/netty/issues/5382
-                 */
-                if (isPassthru(res.protocolVersion(), code, acceptEncoding)) {
-                    out.add(res);
-                    dispose = false;
-                    if (!isFull) {
-                        // Pass through all following contents.
-                        state = State.PASS_THROUGH;
-                    }
-                    break;
-                }
-
-                // Pass through the full response with empty content and continue waiting for the next resp.
-                if (isFull && ((LastHttpContent<?>) res).payload().readableBytes() == 0) {
-                    out.add(res);
-                    dispose = false;
-                    break;
-                }
-
-                // Prepare to encode the content.
-                assert acceptEncoding != null;
-                final Result result = beginEncode(res, acceptEncoding.toString());
-
-                // If unable to encode, pass through.
-                if (result == null) {
-                    out.add(res);
-                    dispose = false;
-                    if (!isFull) {
-                        // Pass through all following contents.
-                        state = State.PASS_THROUGH;
-                    }
-                    break;
-                }
-
-                compressor = result.contentCompressor();
-
-                // Encode the content and remove or replace the existing headers
-                // so that the message looks like a decoded message.
-                res.headers().set(HttpHeaderNames.CONTENT_ENCODING, result.targetContentEncoding());
-
-                // Output the rewritten response.
-                if (isFull) {
-                    // Convert full message into unfull one.
-                    HttpResponse newRes = new DefaultHttpResponse(res.protocolVersion(), res.status());
-                    newRes.headers().set(res.headers());
-                    out.add(newRes);
-
-                    ensureContent(res);
-                    encodeFullResponse(ctx, newRes, (HttpContent<?>) res, out);
-                    break;
-                } else {
-                    // Make the response chunked to simplify content transformation.
-                    res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
-                    res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-
-                    out.add(res);
-                    dispose = false;
-                    state = State.AWAIT_CONTENT;
-                    if (!(msg instanceof HttpContent)) {
-                        // only break out the switch statement if we have not content to process
-                        // See https://github.com/netty/netty/issues/2006
+                    /*
+                     * per rfc2616 4.3 Message Body
+                     * All 1xx (informational), 204 (no content), and 304 (not modified) responses MUST NOT include a
+                     * message-body. All other responses do include a message-body, although it MAY be of zero length.
+                     *
+                     * 9.4 HEAD
+                     * The HEAD method is identical to GET except that the server MUST NOT return a message-body
+                     * in the response.
+                     *
+                     * Also we should pass through HTTP/1.0 as transfer-encoding: chunked is not supported.
+                     *
+                     * See https://github.com/netty/netty/issues/5382
+                     */
+                    if (isPassthru(res.protocolVersion(), code, acceptEncoding)) {
+                        out.add(res);
+                        dispose = false;
+                        if (!isFull) {
+                            // Pass through all following contents.
+                            state = State.PASS_THROUGH;
+                        }
                         break;
                     }
-                    // Fall through to encode the content
+
+                    // Pass through the full response with empty content and continue waiting for the next resp.
+                    if (isFull && ((LastHttpContent<?>) res).payload().readableBytes() == 0) {
+                        out.add(res);
+                        dispose = false;
+                        break;
+                    }
+
+                    // Prepare to encode the content.
+                    assert acceptEncoding != null;
+                    final Result result = beginEncode(res, acceptEncoding.toString());
+
+                    // If unable to encode, pass through.
+                    if (result == null) {
+                        out.add(res);
+                        dispose = false;
+                        if (!isFull) {
+                            // Pass through all following contents.
+                            state = State.PASS_THROUGH;
+                        }
+                        break;
+                    }
+
+                    compressor = result.contentCompressor();
+
+                    // Encode the content and remove or replace the existing headers
+                    // so that the message looks like a decoded message.
+                    res.headers().set(HttpHeaderNames.CONTENT_ENCODING, result.targetContentEncoding());
+
+                    // Output the rewritten response.
+                    if (isFull) {
+                        // Convert full message into unfull one.
+                        HttpResponse newRes = new DefaultHttpResponse(res.protocolVersion(), res.status());
+                        newRes.headers().set(res.headers());
+                        out.add(newRes);
+
+                        ensureContent(res);
+                        encodeFullResponse(ctx, newRes, (HttpContent<?>) res, out);
+                        break;
+                    } else {
+                        // Make the response chunked to simplify content transformation.
+                        res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+                        res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+
+                        out.add(res);
+                        dispose = false;
+                        state = State.AWAIT_CONTENT;
+                        if (!(msg instanceof HttpContent)) {
+                            // only break out the switch statement if we have not content to process
+                            // See https://github.com/netty/netty/issues/2006
+                            break;
+                        }
+                        // Fall through to encode the content
+                    }
+                }
+                case AWAIT_CONTENT: {
+                    ensureContent(msg);
+                    if (encodeContent(ctx, (HttpContent<?>) msg, out)) {
+                        state = State.AWAIT_HEADERS;
+                    }
+                    break;
+                }
+                case PASS_THROUGH: {
+                    ensureContent(msg);
+                    out.add(msg);
+                    dispose = false;
+                    // Passed through all following contents of the current response.
+                    if (msg instanceof LastHttpContent) {
+                        state = State.AWAIT_HEADERS;
+                    }
+                    break;
                 }
             }
-            case AWAIT_CONTENT: {
-                ensureContent(msg);
-                if (encodeContent(ctx, (HttpContent<?>) msg, out)) {
-                    state = State.AWAIT_HEADERS;
-                }
-                break;
+        } finally {
+            if (dispose) {
+                Resource.dispose(msg);
             }
-            case PASS_THROUGH: {
-                ensureContent(msg);
-                out.add(msg);
-                dispose = false;
-                // Passed through all following contents of the current response.
-                if (msg instanceof LastHttpContent) {
-                    state = State.AWAIT_HEADERS;
-                }
-                break;
-            }
-        }
-        if (dispose) {
-            Resource.dispose(msg);
         }
     }
 

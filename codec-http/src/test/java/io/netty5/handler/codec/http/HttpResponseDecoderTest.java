@@ -95,7 +95,9 @@ public class HttpResponseDecoderTest {
 
         assertNull(channel.readInbound());
         assertTrue(channel.finish());
-        assertThat((Object) channel.readInbound()).isInstanceOf(LastHttpContent.class);
+        Object msg = channel.readInbound();
+        assertThat(msg).isInstanceOf(LastHttpContent.class);
+        ((LastHttpContent<?>) msg).close();
     }
 
     /**
@@ -446,14 +448,16 @@ public class HttpResponseDecoderTest {
         assertThat(res.protocolVersion()).isSameAs(HttpVersion.HTTP_1_1);
         assertThat(res.status()).isEqualTo(HttpResponseStatus.OK);
 
-        HttpContent<?> firstContent = channel.readInbound();
-        assertThat(firstContent.payload().readableBytes()).isEqualTo(5);
-        assertEquals(copiedBuffer(allocator, data, 0, 5), firstContent.payload());
-        firstContent.close();
+        try (HttpContent<?> firstContent = channel.readInbound();
+             Buffer buffer = copiedBuffer(allocator, data, 0, 5)) {
+            assertThat(firstContent.payload().readableBytes()).isEqualTo(5);
+            assertEquals(buffer, firstContent.payload());
+        }
 
-        try (LastHttpContent<?> lastContent = channel.readInbound()) {
+        try (LastHttpContent<?> lastContent = channel.readInbound();
+             Buffer buffer = allocator.allocate(5).writeBytes(data, 5, 5)) {
             assertEquals(5, lastContent.payload().readableBytes());
-            assertEquals(allocator.allocate(5).writeBytes(data, 5, 5), lastContent.payload());
+            assertEquals(buffer, lastContent.payload());
         }
 
         assertFalse(channel.finish());
@@ -496,14 +500,16 @@ public class HttpResponseDecoderTest {
         assertThat(res.protocolVersion()).isSameAs(HttpVersion.HTTP_1_1);
         assertThat(res.status()).isEqualTo(HttpResponseStatus.OK);
 
-        try (HttpContent<?> firstContent = channel.readInbound()) {
+        try (HttpContent<?> firstContent = channel.readInbound();
+             Buffer buffer = allocator.allocate(5).writeBytes(data, 0, 5)) {
             assertThat(firstContent.payload().readableBytes()).isEqualTo(5);
-            assertEquals(allocator.allocate(5).writeBytes(data, 0, 5), firstContent.payload());
+            assertEquals(buffer, firstContent.payload());
         }
 
-        try (LastHttpContent<?> lastContent = channel.readInbound()) {
+        try (LastHttpContent<?> lastContent = channel.readInbound();
+             Buffer buffer = allocator.allocate(5).writeBytes(data, 5, 5)) {
             assertEquals(5, lastContent.payload().readableBytes());
-            assertEquals(allocator.allocate(5).writeBytes(data, 5, 5), lastContent.payload());
+            assertEquals(buffer, lastContent.payload());
         }
 
         assertFalse(channel.finish());
@@ -590,6 +596,8 @@ public class HttpResponseDecoderTest {
         assertThat(res.protocolVersion()).isSameAs(HttpVersion.HTTP_1_0);
         assertThat(res.status().code()).isEqualTo(999);
         assertTrue(res.decoderResult().isFailure());
+        assertThat(res).isInstanceOf(FullHttpResponse.class);
+        ((FullHttpResponse) res).close();
         assertThat((Object) channel.readInbound()).isNull();
 
         // More garbage should not generate anything (i.e. the decoder discards anything beyond this point.)

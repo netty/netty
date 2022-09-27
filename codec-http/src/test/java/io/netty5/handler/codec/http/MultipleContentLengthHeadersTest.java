@@ -74,9 +74,10 @@ public class MultipleContentLengthHeadersTest {
                 assertValid(request);
                 Iterable<CharSequence> contentLengths = request.headers().values(HttpHeaderNames.CONTENT_LENGTH);
                 assertThat(contentLengths, contains("1"));
-                LastHttpContent<?> body = channel.readInbound();
-                assertThat(body.payload().readableBytes(), is(1));
-                assertThat(body.payload().readCharSequence(1, US_ASCII).toString(), is("a"));
+                try (LastHttpContent<?> body = channel.readInbound()) {
+                    assertThat(body.payload().readableBytes(), is(1));
+                    assertThat(body.payload().readCharSequence(1, US_ASCII).toString(), is("a"));
+                }
             } else {
                 assertInvalid(request);
             }

@@ -317,6 +317,7 @@ public class HttpContentEncoderTest {
         assertEquals("Netty", res.trailingHeaders().get("X-Test"));
         assertEquals(DecoderResult.success(), res.decoderResult());
         assertThat((Object) ch.readOutbound()).isNull();
+        res.close();
     }
 
     @Test

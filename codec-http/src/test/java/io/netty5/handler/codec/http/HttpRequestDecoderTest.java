@@ -108,9 +108,11 @@ public class HttpRequestDecoderTest {
         LastHttpContent<?> c = channel.readInbound();
         final Buffer payload = c.payload();
         assertEquals(CONTENT_LENGTH, payload.readableBytes());
-        assertEquals(allocator.allocate(CONTENT_LENGTH)
-                                         .writeBytes(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
-                     payload.copy(payload.readerOffset(), CONTENT_LENGTH));
+        try (Buffer buffer1 = allocator.allocate(CONTENT_LENGTH)
+                .writeBytes(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH);
+             Buffer buffer2 = payload.copy(payload.readerOffset(), CONTENT_LENGTH)) {
+            assertEquals(buffer1, buffer2);
+        }
         c.close();
 
         assertFalse(channel.finish());
@@ -245,7 +247,9 @@ public class HttpRequestDecoderTest {
         byte[] query = "GET /max-file-size HTTP/1.1\r\n\r\n".getBytes(US_ASCII);
         channel.writeInbound(allocator.copyOf(query));
         assertThat((Object) channel.readInbound()).isInstanceOf(HttpRequest.class);
-        assertThat((Object) channel.readInbound()).isInstanceOf(LastHttpContent.class);
+        Object msg = channel.readInbound();
+        assertThat(msg).isInstanceOf(LastHttpContent.class);
+        ((LastHttpContent<?>) msg).close();
 
         assertFalse(channel.finish());
     }
@@ -271,8 +275,11 @@ public class HttpRequestDecoderTest {
 
         byte[] query = "GET /max-file-size HTTP/1.1\r\n\r\n".getBytes(US_ASCII);
         channel.writeInbound(allocator.copyOf(query));
-        assertThat((Object) channel.readInbound()).isInstanceOf(HttpRequest.class);
-        assertThat((Object) channel.readInbound()).isInstanceOf(LastHttpContent.class);
+        Object msg = channel.readInbound();
+        assertThat(msg).isInstanceOf(HttpRequest.class);
+        msg = channel.readInbound();
+        assertThat(msg).isInstanceOf(LastHttpContent.class);
+        ((LastHttpContent<?>) msg).close();
 
         assertFalse(channel.finish());
     }
@@ -314,6 +321,8 @@ public class HttpRequestDecoderTest {
         HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
+        assertThat(request).isInstanceOf(FullHttpRequest.class);
+        ((FullHttpRequest) request).close();
         assertFalse(channel.finish());
     }
 
@@ -335,6 +344,8 @@ public class HttpRequestDecoderTest {
         HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
+        assertThat(request).isInstanceOf(FullHttpRequest.class);
+        ((FullHttpRequest) request).close();
         assertFalse(channel.finish());
     }
 
@@ -545,6 +556,9 @@ public class HttpRequestDecoderTest {
         HttpRequest request = channel.readInbound();
         assertThat(request.decoderResult().cause()).isInstanceOf(IllegalArgumentException.class);
         assertTrue(request.decoderResult().isFailure());
+        if (request instanceof FullHttpRequest) {
+            ((FullHttpRequest) request).close();
+        }
         assertFalse(channel.finish());
     }
 
@@ -560,7 +574,9 @@ public class HttpRequestDecoderTest {
         assertFalse(request.decoderResult().isFailure());
         assertTrue(request.headers().contains("Transfer-Encoding", "chunked"));
         assertFalse(request.headers().contains("Content-Length"));
-        channel.readInbound();
+        Object msg = channel.readInbound();
+        assertThat(msg).isInstanceOf(LastHttpContent.class);
+        ((LastHttpContent<?>) msg).close();
         assertFalse(channel.finish());
     }
 

@@ -118,8 +118,9 @@ public class HttpChunkedInputTest {
                 return 0;
             }
         };
-        HttpChunkedInput input = new HttpChunkedInput(inputStub, emptyLastContent());
-        assertNull(input.readChunk(preferredAllocator()));
+        try (HttpChunkedInput input = new HttpChunkedInput(inputStub, emptyLastContent())) {
+            assertNull(input.readChunk(preferredAllocator()));
+        }
     }
 
     private static EmptyLastHttpContent emptyLastContent() {
@@ -166,5 +167,6 @@ public class HttpChunkedInputTest {
         assertEquals(BYTES.length * inputs.length, read);
         assertThat(lastHttpContent).isInstanceOf(LastHttpContent.class);
         assertThat(lastHttpContent.payload().readableBytes()).isZero();
+        lastHttpContent.close();
     }
 }

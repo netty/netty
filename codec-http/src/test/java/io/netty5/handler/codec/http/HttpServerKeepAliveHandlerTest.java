@@ -36,6 +36,7 @@ import static io.netty5.handler.codec.http.HttpUtil.isKeepAlive;
 import static io.netty5.handler.codec.http.HttpUtil.setContentLength;
 import static io.netty5.handler.codec.http.HttpUtil.setKeepAlive;
 import static io.netty5.handler.codec.http.HttpUtil.setTransferEncodingChunked;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -202,6 +203,8 @@ public class HttpServerKeepAliveHandlerTest {
             HttpResponse finalResponse = channel.readOutbound();
             assertFalse(channel.isOpen(), "channel.isOpen");
             assertFalse(isKeepAlive(finalResponse), "response keep-alive");
+            assertThat(finalResponse).isInstanceOf(FullHttpResponse.class);
+            ((FullHttpResponse) finalResponse).close();
         }
         closeIfCloseable(response);
         assertFalse(channel.finishAndReleaseAll());

@@ -453,6 +453,7 @@ public class HttpContentCompressorTest {
         assertEquals("Netty", res.trailingHeaders().get("X-Test"));
         assertEquals(DecoderResult.success(), res.decoderResult());
         assertThat((Object) ch.readOutbound()).isNull();
+        res.close();
     }
 
     @Test
@@ -493,6 +494,7 @@ public class HttpContentCompressorTest {
         assertEquals("Netty", res.trailingHeaders().get("X-Test"));
         assertEquals(DecoderResult.success(), res.decoderResult());
         assertThat((Object) ch.readOutbound()).isNull();
+        res.close();
     }
 
     @Test
@@ -605,6 +607,8 @@ public class HttpContentCompressorTest {
         assertTrue(ch.writeOutbound(res1023));
         DefaultHttpResponse response1023 = ch.readOutbound();
         assertFalse(response1023.headers().contains(HttpHeaderNames.CONTENT_ENCODING));
+        assertThat(response1023).isInstanceOf(FullHttpResponse.class);
+        ((FullHttpResponse) response1023).close();
         ch.releaseOutbound();
 
         assertTrue(ch.writeInbound(newRequest()));

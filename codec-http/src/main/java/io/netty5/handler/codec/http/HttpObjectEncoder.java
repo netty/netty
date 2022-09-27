@@ -118,6 +118,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         if (msg instanceof HttpContent || msg instanceof Buffer || msg instanceof FileRegion) {
             switch (state) {
                 case ST_INIT:
+                    Resource.dispose(msg);
                     throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
                         + ", state: " + state);
                 case ST_CONTENT_NON_CHUNK:

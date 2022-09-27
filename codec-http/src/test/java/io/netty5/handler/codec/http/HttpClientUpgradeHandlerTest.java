@@ -144,9 +144,10 @@ public class HttpClientUpgradeHandlerTest {
         HttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
 
-        LastHttpContent<?> last = channel.readInbound();
-        assertEquals(new EmptyLastHttpContent(channel.bufferAllocator()), last);
-        last.close();
+        try (LastHttpContent<?> last = channel.readInbound();
+             EmptyLastHttpContent empty = new EmptyLastHttpContent(channel.bufferAllocator())) {
+            assertEquals(empty, last);
+        }
         assertFalse(channel.finish());
     }
 

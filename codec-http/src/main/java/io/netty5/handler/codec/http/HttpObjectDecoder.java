@@ -434,7 +434,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (currentState == State.READ_HEADER) {
                 // If we are still in the state of reading headers we need to create a new invalid message that
                 // signals that the connection was closed before we received the headers.
-                ctx.fireChannelRead(invalidMessage(ctx, ctx.bufferAllocator().allocate(0),
+                ctx.fireChannelRead(invalidMessage(ctx,
                         new PrematureChannelClosureException("Connection closed before received headers")));
                 resetNow();
                 return;
@@ -537,11 +537,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private HttpMessage invalidMessage(ChannelHandlerContext ctx, Buffer in, Exception cause) {
-        currentState = State.BAD_MESSAGE;
-
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
         in.skipReadableBytes(in.readableBytes());
+        return invalidMessage(ctx, cause);
+    }
+
+    private HttpMessage invalidMessage(ChannelHandlerContext ctx, Exception cause) {
+        currentState = State.BAD_MESSAGE;
 
         if (message == null) {
             message = createInvalidMessage(ctx);
