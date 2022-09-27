@@ -168,8 +168,9 @@ public class StreamBufferingEncoderTest {
         encoder.writeData(ctx, 3, data(), 0, false);
         when(writer.writeData(any(ChannelHandlerContext.class), eq(3), any(Buffer.class), eq(0), eq(false)))
                 .thenAnswer(inv -> {
-                    Buffer buffer = inv.getArgument(2);
-                    assertEquals(expectedBytes, buffer.readableBytes());
+                    try (Buffer buffer = inv.getArgument(2)) {
+                        assertEquals(expectedBytes, buffer.readableBytes());
+                    }
                     return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                 });
         encoderWriteHeaders(3);
@@ -220,18 +221,24 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, empty(), 0, false);
-        writeVerifyWriteHeaders(times(1), 3);
-        encoder.writeData(ctx, 5, empty(), 0, false);
-        verify(writer, never())
-                .writeData(eq(ctx), eq(5), any(Buffer.class), eq(0), eq(false));
+        try (Buffer empty = empty()) {
+            encoder.writeData(ctx, 3, empty, 0, false);
+            writeVerifyWriteHeaders(times(1), 3);
+            // data is cached in pendingStream.frames
+            encoder.writeData(ctx, 5, empty, 0, false);
+            verify(writer, never())
+                    .writeData(eq(ctx), eq(5), any(Buffer.class), eq(0), eq(false));
+        }
     }
 
     @Test
     public void bufferingNewStreamFailsAfterGoAwayReceived() throws Http2Exception {
         encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(0);
-        connection.goAwayReceived(1, 8, empty());
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            connection.goAwayReceived(1, 8, empty);
+        }
 
         Future<Void> future = encoderWriteHeaders(3);
         assertEquals(0, encoder.numBufferedStreams());
@@ -253,7 +260,10 @@ public class StreamBufferingEncoderTest {
         assertEquals(5, connection.numActiveStreams());
         assertEquals(4, encoder.numBufferedStreams());
 
-        connection.goAwayReceived(11, 8, empty());
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            connection.goAwayReceived(11, 8, empty);
+        }
 
         assertEquals(5, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
@@ -272,7 +282,10 @@ public class StreamBufferingEncoderTest {
         encoder.writeSettingsAck(ctx);
         setMaxConcurrentStreams(1);
         encoderWriteHeaders(3);
-        connection.goAwayReceived(11, 8, empty());
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            connection.goAwayReceived(11, 8, empty);
+        }
         Future<Void> f = encoderWriteHeaders(5);
 
         assertThat(f.asStage().getCause()).isInstanceOf(Http2GoAwayException.class);

@@ -39,6 +39,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -199,8 +201,11 @@ public class Http2ConnectionHandlerTest {
             Resource.dispose(msg);
             return null;
         }).when(ctx).fireChannelRead(any());
-        doAnswer((Answer<Future<Void>>) in ->
-                ImmediateEventExecutor.INSTANCE.newSucceededFuture(null)).when(ctx).write(any());
+        doAnswer((Answer<Future<Void>>) in -> {
+            // the preface is sent when creating the handler and the channel state is active
+            Resource.dispose(in.getArgument(0));
+            return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+        }).when(ctx).write(any(Buffer.class));
         doAnswer((Answer<Future<Void>>) in ->
                 ImmediateEventExecutor.INSTANCE.newSucceededFuture(null)).when(ctx).close();
     }
@@ -233,6 +238,7 @@ public class Http2ConnectionHandlerTest {
             }
         });
         assertEquals(Http2Error.INTERNAL_ERROR, e.error());
+        handler.encoder().close();
     }
 
     @Test
@@ -245,6 +251,7 @@ public class Http2ConnectionHandlerTest {
             }
         });
         assertEquals(Http2Error.INTERNAL_ERROR, e.error());
+        handler.encoder().close();
     }
 
     @ParameterizedTest
@@ -253,6 +260,11 @@ public class Http2ConnectionHandlerTest {
             throws Exception {
         when(connection.isServer()).thenReturn(false);
         when(channel.isActive()).thenReturn(false);
+        List<Buffer> preface = new ArrayList<>();
+        doAnswer((Answer<Future<Void>>) in -> {
+            preface.add(in.getArgument(0));
+            return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+        }).when(ctx).write(any(Buffer.class));
         handler = newHandler(flushPreface);
         when(channel.isActive()).thenReturn(true);
 
@@ -262,9 +274,6 @@ public class Http2ConnectionHandlerTest {
         final AtomicBoolean verified = new AtomicBoolean(false);
         final Answer<Object> verifier = in -> {
             assertEquals(in.getArgument(0), evt);  // sanity check...
-            try (Buffer prefaceBuffer = connectionPrefaceBuffer()) {
-                verify(ctx).write(eq(prefaceBuffer));
-            }
             verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class));
             verified.set(true);
             return null;
@@ -278,6 +287,11 @@ public class Http2ConnectionHandlerTest {
         } else {
             verify(ctx, never()).flush();
         }
+        try (Buffer prefaceBuffer = connectionPrefaceBuffer()) {
+            assertEquals(1, preface.size());
+            assertEquals(prefaceBuffer, preface.get(0));
+            preface.get(0).close();
+        }
         assertTrue(verified.get());
     }
 
@@ -285,11 +299,18 @@ public class Http2ConnectionHandlerTest {
     public void clientShouldSendClientPrefaceStringWhenActive() throws Exception {
         when(connection.isServer()).thenReturn(false);
         when(channel.isActive()).thenReturn(false);
+        List<Buffer> preface = new ArrayList<>();
+        doAnswer((Answer<Future<Void>>) in -> {
+            preface.add(in.getArgument(0));
+            return ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+        }).when(ctx).write(any(Buffer.class));
         handler = newHandler();
         when(channel.isActive()).thenReturn(true);
         handler.channelActive(ctx);
         try (Buffer prefaceBuffer = connectionPrefaceBuffer()) {
-            verify(ctx).write(eq(prefaceBuffer));
+            assertEquals(1, preface.size());
+            assertEquals(prefaceBuffer, preface.get(0));
+            preface.get(0).close();
         }
     }
 

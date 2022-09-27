@@ -29,12 +29,14 @@ import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.net.SocketAddress;
 
 /**
  * Utility class which allows easy writing of HTTP2 frames via {@link EmbeddedChannel#writeInbound(Object...)}.
  */
-final class Http2FrameInboundWriter {
+final class Http2FrameInboundWriter implements Closeable {
 
     private final ChannelHandlerContext ctx;
     private final Http2FrameWriter writer;
@@ -102,6 +104,11 @@ final class Http2FrameInboundWriter {
     void writeInboundFrame(
             byte frameType, int streamId, Http2Flags flags, Buffer payload) throws Exception {
         writer.writeFrame(ctx, frameType, streamId, flags, payload).asStage().sync();
+    }
+
+    @Override
+    public void close() throws IOException {
+        writer.close();
     }
 
     private static final class WriteInboundChannelHandlerContext

@@ -24,6 +24,7 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -99,6 +100,11 @@ public class Http2FrameRoundtripTest {
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, false, newTestDecoder()));
+    }
+
+    @AfterEach
+    public void tearDown() {
+        writer.close();
     }
 
     @Test
@@ -188,7 +194,8 @@ public class Http2FrameRoundtripTest {
 
             // Make sure the data matches the original.
             for (Buffer chunk : datas) {
-                try (Buffer originalChunk = originalData.readSplit(chunk.readableBytes())) {
+                try (Buffer originalChunk = originalData.readSplit(chunk.readableBytes());
+                     chunk) {
                     assertEquals(originalChunk, chunk);
                 }
             }
@@ -426,8 +433,9 @@ public class Http2FrameRoundtripTest {
 
     private void readFrames() throws Http2Exception {
         // Now read all of the written frames.
-        Buffer write = captureWrites();
-        reader.readFrame(ctx, write, listener);
+        try (Buffer write = captureWrites()) {
+            reader.readFrame(ctx, write, listener);
+        }
     }
 
     private static Buffer data(int size) {
@@ -450,7 +458,9 @@ public class Http2FrameRoundtripTest {
         }
         Buffer combined = onHeapAllocator().allocate(bytesWritten);
         for (Buffer buffer : allWrites) {
-            combined.writeBytes(buffer);
+            try (buffer) {
+                combined.writeBytes(buffer);
+            }
         }
         return combined;
     }

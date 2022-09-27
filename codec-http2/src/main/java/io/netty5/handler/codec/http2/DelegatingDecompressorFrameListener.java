@@ -92,15 +92,21 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
             for (;;) {
                 if (decomp.isFinished()) {
-                    flowController.consumeBytes(stream, listener.onDataRead(
-                            ctx, streamId, ctx.bufferAllocator().allocate(0), padding, endOfStream));
+                    try (Buffer empty = ctx.bufferAllocator().allocate(0)) {
+                        // The ownership is not transferred to "Http2FrameListener.onDataRead"
+                        int bytes = listener.onDataRead(ctx, streamId, empty, padding, endOfStream);
+                        flowController.consumeBytes(stream, bytes);
+                    }
                     break;
                 }
                 int idx = data.readerOffset();
                 decompressed = decomp.decompress(data, ctx.bufferAllocator());
                 if (decompressed == null || idx == data.readerOffset()) {
-                    flowController.consumeBytes(stream, listener.onDataRead(
-                            ctx, streamId, ctx.bufferAllocator().allocate(0), padding, endOfStream));
+                    try (Buffer empty = ctx.bufferAllocator().allocate(0)) {
+                        // The ownership is not transferred to "Http2FrameListener.onDataRead"
+                        int bytes = listener.onDataRead(ctx, streamId, empty, padding, endOfStream);
+                        flowController.consumeBytes(stream, bytes);
+                    }
                     break;
                 } else {
                     // Immediately return the bytes back to the flow controller. ConsumedBytesConverter will convert

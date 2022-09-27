@@ -54,50 +54,55 @@ public class Http2ServerUpgradeCodecTest {
     }
 
     private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) throws Exception {
-        FullHttpRequest request = new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*", preferredAllocator().allocate(0));
-        request.headers().set(HttpHeaderNames.HOST, "netty.io");
-        request.headers().set(HttpHeaderNames.CONNECTION, "Upgrade, HTTP2-Settings");
-        request.headers().set(HttpHeaderNames.UPGRADE, "h2c");
-        request.headers().set("HTTP2-Settings", "AAMAAABkAAQAAP__");
+        try (FullHttpRequest request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*", preferredAllocator().allocate(0))) {
+            request.headers().set(HttpHeaderNames.HOST, "netty.io");
+            request.headers().set(HttpHeaderNames.CONNECTION, "Upgrade, HTTP2-Settings");
+            request.headers().set(HttpHeaderNames.UPGRADE, "h2c");
+            request.headers().set("HTTP2-Settings", "AAMAAABkAAQAAP__");
 
-        ServerChannel parent = Mockito.mock(ServerChannel.class);
-        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                new ChannelHandler() { });
-        ChannelHandlerContext ctx = channel.pipeline().firstContext();
-        Http2ServerUpgradeCodec codec;
-        if (multiplexer == null) {
-            codec = new Http2ServerUpgradeCodec(handler);
-        } else {
-            codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
+            ServerChannel parent = Mockito.mock(ServerChannel.class);
+            EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
+                    new ChannelHandler() {
+                    });
+            ChannelHandlerContext ctx = channel.pipeline().firstContext();
+            Http2ServerUpgradeCodec codec;
+            if (multiplexer == null) {
+                codec = new Http2ServerUpgradeCodec(handler);
+            } else {
+                codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
+            }
+            channel.executor().execute(() -> {
+                // Only request headers are read by the codec
+                assertTrue(codec.prepareUpgradeResponse(ctx, request, HttpHeaders.newHeaders()));
+                codec.upgradeTo(ctx, request);
+            });
+
+            // Flush the channel to ensure we write out all buffered data
+            channel.flush();
+
+            channel.writeInbound(Http2CodecUtil.connectionPrefaceBuffer());
+            Http2FrameInboundWriter writer = new Http2FrameInboundWriter(channel);
+            writer.writeInboundSettings(new Http2Settings());
+            writer.writeInboundRstStream(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, Http2Error.CANCEL.code());
+            writer.close();
+
+            assertSame(handler, channel.pipeline().remove(handler.getClass()));
+            assertNull(channel.pipeline().get(handler.getClass()));
+            assertTrue(channel.finish());
+
+            // Check that the preface was send (a.k.a the settings frame)
+            Buffer settingsBuffer = channel.readOutbound();
+            assertNotNull(settingsBuffer);
+            settingsBuffer.close();
+
+            Buffer buf = channel.readOutbound();
+            assertNotNull(buf);
+            buf.close();
+
+            assertNull(channel.readOutbound());
+            handler.encoder().close();
         }
-        channel.executor().execute(() -> {
-            assertTrue(codec.prepareUpgradeResponse(ctx, request, HttpHeaders.newHeaders()));
-            codec.upgradeTo(ctx, request);
-        });
-
-        // Flush the channel to ensure we write out all buffered data
-        channel.flush();
-
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuffer());
-        Http2FrameInboundWriter writer = new Http2FrameInboundWriter(channel);
-        writer.writeInboundSettings(new Http2Settings());
-        writer.writeInboundRstStream(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, Http2Error.CANCEL.code());
-
-        assertSame(handler, channel.pipeline().remove(handler.getClass()));
-        assertNull(channel.pipeline().get(handler.getClass()));
-        assertTrue(channel.finish());
-
-        // Check that the preface was send (a.k.a the settings frame)
-        Buffer settingsBuffer = channel.readOutbound();
-        assertNotNull(settingsBuffer);
-        settingsBuffer.close();
-
-        Buffer buf = channel.readOutbound();
-        assertNotNull(buf);
-        buf.close();
-
-        assertNull(channel.readOutbound());
     }
 
     private static final class HttpInboundHandler implements ChannelHandler {

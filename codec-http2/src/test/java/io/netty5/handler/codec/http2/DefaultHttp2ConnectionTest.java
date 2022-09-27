@@ -36,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
+import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -448,37 +449,49 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void goAwayReceivedShouldDisallowLocalCreation() throws Http2Exception {
-        server.goAwayReceived(0, 1L, onHeapAllocator().allocate(0));
-        assertThrows(Http2Exception.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                server.local().createStream(3, true);
-            }
-        });
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            server.goAwayReceived(0, 1L, empty);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    server.local().createStream(3, true);
+                }
+            });
+        }
     }
 
     @Test
     public void goAwayReceivedShouldAllowRemoteCreation() throws Http2Exception {
-        server.goAwayReceived(0, 1L, onHeapAllocator().allocate(0));
-        server.remote().createStream(3, true);
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            server.goAwayReceived(0, 1L, empty);
+            server.remote().createStream(3, true);
+        }
     }
 
     @Test
     public void goAwaySentShouldDisallowRemoteCreation() throws Http2Exception {
-        server.goAwaySent(0, 1L, onHeapAllocator().allocate(0));
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            server.goAwaySent(0, 1L, empty);
 
-        assertThrows(Http2Exception.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                server.remote().createStream(2, true);
-            }
-        });
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    server.remote().createStream(2, true);
+                }
+            });
+        }
     }
 
     @Test
     public void goAwaySentShouldAllowLocalCreation() throws Http2Exception {
-        server.goAwaySent(0, 1L, onHeapAllocator().allocate(0));
-        server.local().createStream(2, true);
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            server.goAwaySent(0, 1L, empty);
+            server.local().createStream(2, true);
+        }
     }
 
     @Test
@@ -591,7 +604,7 @@ public class DefaultHttp2ConnectionTest {
             .when(clientListener2).onStreamAdded(any(Http2Stream.class));
 
         // Now we add clientListener2 and exercise all listener functionality
-        try {
+        try (Buffer empty = empty()) {
             client.addListener(clientListener2);
             Http2Stream stream = client.local().createStream(3, false);
             verify(clientListener).onStreamAdded(any(Http2Stream.class));
@@ -617,13 +630,13 @@ public class DefaultHttp2ConnectionTest {
             verify(clientListener).onStreamRemoved(any(Http2Stream.class));
             verify(clientListener2).onStreamRemoved(any(Http2Stream.class));
 
-            client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(),
-                              onHeapAllocator().allocate(0));
+            // the buffer ownership belongs to the caller
+            client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(), empty);
             verify(clientListener).onGoAwaySent(anyInt(), anyLong(), any(Buffer.class));
             verify(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(Buffer.class));
 
-            client.goAwayReceived(client.connectionStream().id(),
-                    Http2Error.INTERNAL_ERROR.code(), onHeapAllocator().allocate(0));
+            // the buffer ownership belongs to the caller
+            client.goAwayReceived(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(), empty);
             verify(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(Buffer.class));
             verify(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(Buffer.class));
         } finally {

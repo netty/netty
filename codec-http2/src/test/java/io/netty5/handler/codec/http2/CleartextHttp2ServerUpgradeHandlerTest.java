@@ -90,6 +90,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     @AfterEach
     public void tearDown() throws Exception {
         channel.finishAndReleaseAll();
+        channel.close();
     }
 
     @Test
@@ -186,6 +187,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         ((LastHttpContent<?>) channel.readInbound()).close();
 
         assertNull(channel.readInbound());
+        http2ConnectionHandler.encoder().close();
     }
 
     private static Buffer settingsFrameBuf() {

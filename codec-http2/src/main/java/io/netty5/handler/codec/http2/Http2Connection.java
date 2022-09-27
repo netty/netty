@@ -347,6 +347,7 @@ public interface Http2Connection {
      * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame.
      * @param errorCode the Error Code in the
      * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame.
+     * @param message The Additional Debug Data in the
      * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame. Note that reference count ownership
      * belongs to the caller (ownership is not transferred to this method).
      * @return {@code true} if the corresponding {@code GOAWAY} frame should be sent to the remote endpoint.

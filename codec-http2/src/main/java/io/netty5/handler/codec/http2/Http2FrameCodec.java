@@ -582,7 +582,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 return;
             }
             onHttp2Frame(ctx, new DefaultHttp2UnknownFrame(frameType, flags, payload.split())
-                    .stream(requireStream(streamId)).copy());
+                    .stream(requireStream(streamId)));
         }
 
         @Override

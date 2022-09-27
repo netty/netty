@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
@@ -742,9 +743,12 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void goAwayShouldReadShouldUpdateConnectionState() throws Exception {
-        decode().onGoAwayRead(ctx, 1, 2L, empty());
-        verify(connection).goAwayReceived(eq(1), eq(2L), eq(empty()));
-        verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(empty()));
+        // the buffer ownership belongs to the caller
+        try (Buffer empty = empty()) {
+            decode().onGoAwayRead(ctx, 1, 2L, empty);
+            verify(connection).goAwayReceived(eq(1), eq(2L), eq(empty));
+            verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(empty));
+        }
     }
 
     @Test
@@ -881,7 +885,9 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Http2FrameListener decode() throws Exception {
         ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
         doNothing().when(reader).readFrame(eq(ctx), any(Buffer.class), internalListener.capture());
-        decoder.decodeFrame(ctx, empty());
+        try (Buffer empty = empty()) {
+            decoder.decodeFrame(ctx, empty);
+        }
         return internalListener.getValue();
     }
 

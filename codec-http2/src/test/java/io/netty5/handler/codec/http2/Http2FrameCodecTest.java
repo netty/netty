@@ -116,6 +116,9 @@ public class Http2FrameCodecTest {
             channel.close();
             channel = null;
         }
+        if (frameInboundWriter != null) {
+            frameInboundWriter.close();
+        }
     }
 
     private void setUp(Http2FrameCodecBuilder frameCodecBuilder, Http2Settings initialRemoteSettings) throws Exception {
@@ -276,7 +279,8 @@ public class Http2FrameCodecTest {
         assertEquals(bb, outboundData.getValue());
         assertTrue(outboundData.getValue().isAccessible());
         bb.close();
-        outboundData.getValue().close();
+        // the mock will release the data
+        //outboundData.getValue().close();
 
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class),
                 anyInt(), anyLong());
