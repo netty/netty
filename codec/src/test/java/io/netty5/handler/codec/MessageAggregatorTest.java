@@ -153,7 +153,6 @@ public class MessageAggregatorTest {
                 assertTrue(out.isAccessible());
             }
             assertFalse(embedded.finish());
-            embedded.close();
         }
     }
 }
