@@ -114,6 +114,12 @@ public class MessageAggregatorTest {
         protected void aggregate(BufferAllocator allocator, CompositeBuffer aggregated, Buffer content) {
             aggregated.extendWith(content.copy().send());
         }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            first.close();
+            last.close();
+        }
     }
 
     private static Buffer message(BufferAllocator allocator, String string) {
@@ -147,6 +153,7 @@ public class MessageAggregatorTest {
                 assertTrue(out.isAccessible());
             }
             assertFalse(embedded.finish());
+            embedded.close();
         }
     }
 }

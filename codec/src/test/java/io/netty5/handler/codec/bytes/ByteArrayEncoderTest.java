@@ -47,8 +47,9 @@ public class ByteArrayEncoderTest {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         ch.writeOutbound(b);
-        try (Buffer encoded = ch.readOutbound()) {
-            assertThat(encoded).isEqualTo(preferredAllocator().copyOf(b));
+        try (Buffer encoded = ch.readOutbound();
+             Buffer expected = preferredAllocator().copyOf(b)) {
+            assertThat(encoded).isEqualTo(expected);
         }
     }
 
