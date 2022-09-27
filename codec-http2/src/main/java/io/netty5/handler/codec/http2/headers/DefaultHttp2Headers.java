@@ -24,15 +24,15 @@ import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.headers.MultiMap;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ByteProcessor;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import static io.netty5.util.AsciiString.isUpperCase;
+import static java.util.Collections.emptyIterator;
 
 /**
  * Default implementation of {@link Http2Headers}.
@@ -42,6 +42,11 @@ import static io.netty5.util.AsciiString.isUpperCase;
  */
 public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Headers {
     private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = value -> !isUpperCase(value);
+
+    private Http2MultiMapEntry firstPseudoHeader;
+    private Http2MultiMapEntry lastPseudoHeader;
+    private Http2MultiMapEntry firstNormalHeader;
+    private Http2MultiMapEntry lastNormalHeader;
 
     /**
      * Create a new instance.
@@ -179,6 +184,7 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
     @Override
     public Http2Headers clear() {
         super.clear();
+        firstPseudoHeader = lastPseudoHeader = firstNormalHeader = lastNormalHeader = null;
         return this;
     }
 
@@ -262,69 +268,138 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
     }
 
     @Override
-    public Iterator<Entry<CharSequence, CharSequence>> iterator() {
-        return concat(filter(super.iterator(), entry -> PseudoHeaderName.isPseudoHeader(entry.getKey())),
-                      () -> filter(super.iterator(), entry -> !PseudoHeaderName.isPseudoHeader(entry.getKey())));
-    }
-
-    private static <T> Iterator<T> concat(Iterator<T> first, Supplier<Iterator<T>> secondSupplier) {
-        return new Iterator<T>() {
-            private Iterator<T> current = first;
-            private Supplier<Iterator<T>> supplierOfSecond = secondSupplier;
-
-            @Override
-            public boolean hasNext() {
-                while (!current.hasNext()) {
-                    if (supplierOfSecond == null) {
-                        return false;
-                    }
-                    current = supplierOfSecond.get();
-                    supplierOfSecond = null;
-                }
-                return true;
+    protected void removeEntry(MultiMap.@NotNull BucketHead<CharSequence, CharSequence> bucketHead,
+                               @NotNull MultiMapEntry<CharSequence, CharSequence> entryToRemove, int bucketIndex) {
+        super.removeEntry(bucketHead, entryToRemove, bucketIndex);
+        Http2MultiMapEntry entry = (Http2MultiMapEntry) entryToRemove;
+        if (entry == lastNormalHeader) {
+            if (entry == firstNormalHeader) {
+                firstNormalHeader = lastNormalHeader = null;
+            } else {
+                lastNormalHeader = entry.toPrev;
             }
-
-            @Override
-            public void remove() {
-                current.remove();
+        } else if (entry == firstNormalHeader) {
+            firstNormalHeader = entry.toNext;
+        } else if (entry == lastPseudoHeader) {
+            if (entry == firstPseudoHeader) {
+                firstPseudoHeader = lastPseudoHeader = null;
+            } else {
+                lastPseudoHeader = entry.toPrev;
             }
-
-            @Override
-            public T next() {
-                if (!hasNext()) {
-                    throw new NoSuchElementException();
-                }
-                return current.next();
-            }
-        };
-    }
-
-    private static <T> Iterator<T> filter(Iterator<T> iterator, Predicate<T> predicate) {
-        if (!iterator.hasNext()) {
-            return iterator;
+        } else if (entry == firstPseudoHeader) {
+            firstPseudoHeader = entry.toNext;
         }
-        EntryIterator<T> entryIterator = (EntryIterator<T>) iterator;
-        return new Iterator<T>() {
-            @Override
-            public boolean hasNext() {
-                while (entryIterator.hasNext() && !predicate.test(entryIterator.peekNext())) {
-                    entryIterator.next();
-                }
-                return entryIterator.hasNext();
-            }
+        entry.unlink();
+    }
 
-            @Override
-            public T next() {
-                if (!hasNext()) {
-                    throw new NoSuchElementException();
+    @Override
+    protected MultiMapEntry<CharSequence, CharSequence> newEntry(CharSequence key, CharSequence value, int keyHash) {
+        Http2MultiMapEntry entry = new Http2MultiMapEntry(key, value, keyHash);
+        if (PseudoHeaderName.hasPseudoHeaderFormat(key)) {
+            if (firstPseudoHeader == null) {
+                assert lastPseudoHeader == null;
+                firstPseudoHeader = lastPseudoHeader = entry;
+                if (firstNormalHeader != null) {
+                    entry.linkBefore(firstNormalHeader);
                 }
-                return entryIterator.next();
+            } else {
+                entry.linkAfter(lastPseudoHeader);
+                lastPseudoHeader = entry;
             }
+        } else {
+            if (firstNormalHeader == null) {
+                firstNormalHeader = lastNormalHeader = entry;
+                if (lastPseudoHeader != null) {
+                    entry.linkAfter(lastPseudoHeader);
+                }
+            } else {
+                entry.linkAfter(lastNormalHeader);
+                lastNormalHeader = entry;
+            }
+        }
+        return entry;
+    }
 
-            @Override
-            public void remove() {
-                entryIterator.remove();
+    private static class Http2MultiMapEntry extends MultiMapEntry<CharSequence, CharSequence> {
+        // Total-Order linkages that preserves pseudo-headers in the front.
+        private Http2MultiMapEntry toNext;
+        private Http2MultiMapEntry toPrev;
+
+        protected Http2MultiMapEntry(CharSequence key, CharSequence value, int keyHash) {
+            super(key, value, keyHash);
+        }
+
+        void linkBefore(Http2MultiMapEntry entry) {
+            toNext = entry;
+            if (entry.toPrev != null) {
+                toPrev = entry.toPrev;
+                toPrev.toNext = this;
             }
-        };
+            entry.toPrev = this;
+        }
+
+        void linkAfter(Http2MultiMapEntry entry) {
+            toPrev = entry;
+            if (entry.toNext != null) {
+                toNext = entry.toNext;
+                toNext.toPrev = this;
+            }
+            entry.toNext = this;
+        }
+
+        void unlink() {
+            if (toNext != null) {
+                toNext.toPrev = toPrev;
+            }
+            if (toPrev != null) {
+                toPrev.toNext = toNext;
+            }
+            toNext = null;
+            toPrev = null;
+        }
+
+        int keyHash() {
+            return keyHash;
+        }
+    }
+
+    @Override
+    public Iterator<Entry<CharSequence, CharSequence>> iterator() {
+        return isEmpty() ? emptyIterator() : new FullHttp2EntryIterator(
+                firstPseudoHeader != null ? firstPseudoHeader : firstNormalHeader);
+    }
+
+    private class FullHttp2EntryIterator implements Iterator<Entry<CharSequence, CharSequence>> {
+        private Http2MultiMapEntry curr;
+        private Http2MultiMapEntry prev;
+
+        FullHttp2EntryIterator(Http2MultiMapEntry entry) {
+            curr = entry;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return curr != null;
+        }
+
+        @Override
+        public Entry<CharSequence, CharSequence> next() {
+            if (curr == null) {
+                throw new NoSuchElementException();
+            }
+            prev = curr;
+            curr = curr.toNext;
+            return prev;
+        }
+
+        @Override
+        public void remove() {
+            if (prev == null) {
+                throw new IllegalStateException();
+            }
+            final int i = index(prev.keyHash());
+            removeEntry(entries[i], prev, i);
+            prev = null;
+        }
     }
 }

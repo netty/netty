@@ -55,7 +55,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         return (name.equals("host")) ? "xhost" : name;
     }
 
-    @Param({"SIX", "THIRTY"})
+    @Param({"FIVE", "THIRTY"})
     ExampleHeaders.HeaderExample exampleHeader;
 
     AsciiString[] httpNames;

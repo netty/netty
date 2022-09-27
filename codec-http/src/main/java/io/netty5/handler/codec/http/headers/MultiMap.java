@@ -75,7 +75,7 @@ import static java.util.Objects.requireNonNull;
 @UnstableApi
 @Internal
 public abstract class MultiMap<K, V> {
-    final BucketHead<K, V>[] entries;
+    protected final BucketHead<K, V>[] entries;
     @Nullable
     BucketHead<K, V> lastBucketHead;
     private final byte hashMask;
@@ -165,7 +165,7 @@ public abstract class MultiMap<K, V> {
      * @param keyHash The hash code for {@code key}.
      * @return a new {@link MultiMapEntry} to represent an entry in this {@link MultiMap}.
      */
-    private MultiMapEntry<K, V> newEntry(K key, V value, int keyHash) {
+    protected MultiMapEntry<K, V> newEntry(K key, V value, int keyHash) {
         return new MultiMapEntry<>(key, value, keyHash);
     }
 
@@ -406,15 +406,11 @@ public abstract class MultiMap<K, V> {
         return lastBucketHead == null ? emptyIterator() : new FullEntryIterator(lastBucketHead);
     }
 
-    final Iterator<V> valueIterator() {
-        return lastBucketHead == null ? emptyIterator() : new ValueEntryIterator(lastBucketHead);
-    }
-
-    final int index(final int hash) {
+    protected final int index(final int hash) {
         return hash & hashMask;
     }
 
-    final void removeEntry(@NotNull final BucketHead<K, V> bucketHead,
+    protected void removeEntry(@NotNull final BucketHead<K, V> bucketHead,
                            @NotNull final MultiMapEntry<K, V> entryToRemove,
                            final int bucketIndex) {
         // Check to see if the entry to remove is the bucketHead entry.
@@ -632,17 +628,6 @@ public abstract class MultiMap<K, V> {
         }
     }
 
-    private final class ValueEntryIterator extends EntryIterator<V> {
-        ValueEntryIterator(final BucketHead<K, V> lastBucketHead) {
-            super(lastBucketHead);
-        }
-
-        @Override
-        V extractNextFromEntry(final MultiMapEntry<K, V> entry) {
-            return entry.value;
-        }
-    }
-
     private final class ValuesByNameIterator implements Iterator<V> {
         final int keyHashCode;
         final K key;
@@ -694,7 +679,7 @@ public abstract class MultiMap<K, V> {
         }
     }
 
-    static final class BucketHead<K, V> {
+    protected static final class BucketHead<K, V> {
         @Nullable
         BucketHead<K, V> prevBucketHead;
         @Nullable
@@ -710,8 +695,8 @@ public abstract class MultiMap<K, V> {
         }
     }
 
-    static final class MultiMapEntry<K, V> implements Entry<K, V> {
-        final int keyHash;
+    protected static class MultiMapEntry<K, V> implements Entry<K, V> {
+        protected final int keyHash;
         private final K key;
         V value;
         /**
@@ -730,7 +715,7 @@ public abstract class MultiMap<K, V> {
         @Nullable
         MultiMapEntry<K, V> bucketLastOrPrevious;
 
-        MultiMapEntry(final K key, final V value, final int keyHash) {
+        protected MultiMapEntry(final K key, final V value, final int keyHash) {
             this.key = requireNonNull(key);
             this.value = requireNonNull(value);
             this.keyHash = keyHash;
