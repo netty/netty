@@ -16,6 +16,7 @@
 package io.netty5.util.internal;
 
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.InaccessibleObjectException;
 
 public final class ReflectionUtil {
 
@@ -23,7 +24,7 @@ public final class ReflectionUtil {
 
     /**
      * Try to call {@link AccessibleObject#setAccessible(boolean)} but will catch any {@link SecurityException} and
-     * {@link java.lang.reflect.InaccessibleObjectException} and return it.
+     * {@link InaccessibleObjectException} and return it.
      * The caller must check if it returns {@code null} and if not handle the returned exception.
      */
     public static Throwable trySetAccessible(AccessibleObject object, boolean checkAccessible) {
@@ -33,20 +34,8 @@ public final class ReflectionUtil {
         try {
             object.setAccessible(true);
             return null;
-        } catch (SecurityException e) {
-            return e;
-        } catch (RuntimeException e) {
-            return handleInaccessibleObjectException(e);
-        }
-    }
-
-    private static RuntimeException handleInaccessibleObjectException(RuntimeException e) {
-        // JDK 9 can throw an inaccessible object exception here; since Netty compiles
-        // against JDK 7 and this exception was only added in JDK 9, we have to weakly
-        // check the type
-        if ("java.lang.reflect.InaccessibleObjectException".equals(e.getClass().getName())) {
+        } catch (SecurityException | InaccessibleObjectException e) {
             return e;
         }
-        throw e;
     }
 }
