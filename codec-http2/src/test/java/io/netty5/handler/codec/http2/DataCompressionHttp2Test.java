@@ -285,7 +285,7 @@ public class DataCompressionHttp2Test {
             clientHandler.flush(ctxClient());
         });
         awaitServer();
-        assertEquals(data.readerOffset(0).toString(StandardCharsets.UTF_8),
+        assertEquals(new String(bytes, StandardCharsets.UTF_8),
                      serverOut.toString(StandardCharsets.UTF_8));
     }
 

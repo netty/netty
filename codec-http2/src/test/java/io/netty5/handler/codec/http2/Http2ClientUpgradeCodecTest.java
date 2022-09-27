@@ -82,7 +82,6 @@ public class Http2ClientUpgradeCodecTest {
             }
 
             assertTrue(channel.finishAndReleaseAll());
-            handler.encoder().close();
         }
     }
 
