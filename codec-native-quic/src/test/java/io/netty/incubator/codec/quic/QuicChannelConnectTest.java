@@ -32,6 +32,7 @@ import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
@@ -53,13 +54,18 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.MGF1ParameterSpec;
+import java.security.spec.PSSParameterSpec;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -918,6 +924,105 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             channel.close().sync();
         }
     }
+
+
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectKeyless(Executor executor) throws Throwable {
+        testConnectKeyless0(executor, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testConnectKeylessSignFailure(Executor executor) throws Throwable {
+        testConnectKeyless0(executor, true);
+    }
+
+    public void testConnectKeyless0(Executor executor, boolean fail) throws Throwable {
+        AtomicReference<Throwable> causeRef = new AtomicReference<>();
+        AtomicBoolean signCalled = new AtomicBoolean();
+        BoringSSLAsyncPrivateKeyMethod keyMethod = new BoringSSLAsyncPrivateKeyMethod() {
+            @Override
+            public Future<byte[]> sign(SSLEngine engine, int signatureAlgorithm, byte[] input) {
+                signCalled.set(true);
+
+                assertEquals(QuicTestUtils.SELF_SIGNED_CERTIFICATE.cert().getPublicKey(),
+                        engine.getSession().getLocalCertificates()[0].getPublicKey());
+
+                try {
+                    if (fail) {
+                        return ImmediateEventExecutor.INSTANCE.newFailedFuture(new SignatureException());
+                    }
+                    // Delegate signing to Java implementation.
+                    final Signature signature;
+                    // Depending on the Java version it will pick one or the other.
+                    if (signatureAlgorithm == BoringSSLAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA256) {
+                        signature = Signature.getInstance("SHA256withRSA");
+                    } else if (signatureAlgorithm == BoringSSLAsyncPrivateKeyMethod.SSL_SIGN_RSA_PSS_RSAE_SHA256) {
+                        signature = Signature.getInstance("RSASSA-PSS");
+                        signature.setParameter(new PSSParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256,
+                                32, 1));
+                    } else {
+                        throw new AssertionError("Unexpected signature algorithm " + signatureAlgorithm);
+                    }
+                    signature.initSign(QuicTestUtils.SELF_SIGNED_CERTIFICATE.key());
+                    signature.update(input);
+                    return ImmediateEventExecutor.INSTANCE.newSucceededFuture(signature.sign());
+                } catch (Throwable cause) {
+                    return ImmediateEventExecutor.INSTANCE.newFailedFuture(cause);
+                }
+            }
+
+            @Override
+            public Future<byte[]> decrypt(SSLEngine engine, byte[] input) {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        BoringSSLKeylessManagerFactory factory = BoringSSLKeylessManagerFactory.newKeyless(
+                keyMethod, QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate());
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(factory, null)
+                                .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        causeRef.set(cause);
+                    }
+                } ,
+                new ChannelInboundHandlerAdapter());
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
+                QuicSslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            Future<QuicChannel> connectFuture = QuicChannel.newBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect().await();
+            if (fail) {
+                assertThat(connectFuture.cause(), Matchers.instanceOf(ClosedChannelException.class));
+                assertThat(causeRef.get(), Matchers.instanceOf(SSLHandshakeException.class));
+            } else {
+                QuicChannel quicChannel = connectFuture.get();
+                assertTrue(quicChannel.close().await().isSuccess());
+                ChannelFuture closeFuture = quicChannel.closeFuture().await();
+                assertTrue(closeFuture.isSuccess());
+                clientQuicChannelHandler.assertState();
+                assertNull(causeRef.get());
+            }
+            assertTrue(signCalled.get());
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+        }
+    }
+
 
     @ParameterizedTest
     @MethodSource("sslTaskExecutors")

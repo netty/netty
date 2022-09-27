@@ -49,6 +49,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 import java.util.function.LongFunction;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -96,6 +97,13 @@ final class QuicheQuicSslContext extends QuicSslContext {
         } else {
             keyManager = chooseKeyManager(keyManagerFactory);
         }
+        final BoringSSLPrivateKeyMethod privateKeyMethod;
+        if (keyManagerFactory instanceof  BoringSSLKeylessManagerFactory) {
+            privateKeyMethod = new BoringSSLAsyncPrivateKeyMethodAdapter(engineMap,
+                    ((BoringSSLKeylessManagerFactory) keyManagerFactory).privateKeyMethod);
+        } else {
+            privateKeyMethod = null;
+        }
         sessionCache = server ? null : new QuicClientSessionCache();
         int verifyMode = server ? boringSSLVerifyModeForServer(this.clientAuth) : BoringSSL.SSL_VERIFY_PEER;
         nativeSslContext = new NativeSslContext(BoringSSL.SSLContext_new(server, applicationProtocols,
@@ -104,7 +112,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
                 mapping == null ? null : new BoringSSLTlsextServernameCallback(engineMap, mapping),
                 keylog ? new BoringSSLKeylogCallback() : null,
-                server ? null : new BoringSSLSessionCallback(engineMap, sessionCache), verifyMode,
+                server ? null : new BoringSSLSessionCallback(engineMap, sessionCache), privateKeyMethod, verifyMode,
                 BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
         apn = new QuicheQuicApplicationProtocolNegotiator(applicationProtocols);
         if (this.sessionCache != null) {
@@ -423,6 +431,53 @@ final class QuicheQuicSslContext extends QuicSslContext {
             return "NativeSslContext{" +
                     "ctx=" + ctx +
                     '}';
+        }
+    }
+
+    private static final class BoringSSLAsyncPrivateKeyMethodAdapter implements BoringSSLPrivateKeyMethod {
+        private final QuicheQuicSslEngineMap engineMap;
+        private final BoringSSLAsyncPrivateKeyMethod privateKeyMethod;
+
+        BoringSSLAsyncPrivateKeyMethodAdapter(QuicheQuicSslEngineMap engineMap,
+                                              BoringSSLAsyncPrivateKeyMethod privateKeyMethod) {
+            this.engineMap = engineMap;
+            this.privateKeyMethod = privateKeyMethod;
+        }
+
+        @Override
+        public void sign(long ssl, int signatureAlgorithm, byte[] input, BiConsumer<byte[], Throwable> callback) {
+            final QuicheQuicSslEngine engine = engineMap.get(ssl);
+            if (engine == null) {
+                // May be null if it was destroyed in the meantime.
+                callback.accept(null, null);
+            } else {
+                privateKeyMethod.sign(engine, signatureAlgorithm, input).addListener(f -> {
+                    Throwable cause = f.cause();
+                    if (cause != null) {
+                        callback.accept(null, cause);
+                    } else {
+                        callback.accept((byte[]) f.getNow(), null);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void decrypt(long ssl, byte[] input, BiConsumer<byte[], Throwable> callback) {
+            final QuicheQuicSslEngine engine = engineMap.get(ssl);
+            if (engine == null) {
+                // May be null if it was destroyed in the meantime.
+                callback.accept(null, null);
+            } else {
+                privateKeyMethod.decrypt(engine, input).addListener(f -> {
+                    Throwable cause = f.cause();
+                    if (cause != null) {
+                        callback.accept(null, cause);
+                    } else {
+                        callback.accept((byte[]) f.getNow(), null);
+                    }
+                });
+            }
         }
     }
 }

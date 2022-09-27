@@ -44,11 +44,12 @@ final class BoringSSL {
                                BoringSSLTlsextServernameCallback servernameCallback,
                                BoringSSLKeylogCallback keylogCallback,
                                BoringSSLSessionCallback sessionCallback,
+                               BoringSSLPrivateKeyMethod privateKeyMethod,
                                int verifyMode,
                                byte[][] subjectNames) {
         return SSLContext_new0(server, toWireFormat(applicationProtocols),
                 handshakeCompleteCallback, certificateCallback, verifyCallback, servernameCallback,
-                keylogCallback, sessionCallback, verifyMode, subjectNames);
+                keylogCallback, sessionCallback, privateKeyMethod, verifyMode, subjectNames);
     }
 
     private static byte[] toWireFormat(String[] applicationProtocols) {
@@ -72,6 +73,7 @@ final class BoringSSL {
                                                Object certificateCallback, Object verifyCallback,
                                                Object servernameCallback, Object keylogCallback,
                                                Object sessionCallback,
+                                               Object privateKeyMethod,
                                                int verifyDepth, byte[][] subjectNames);
     static native void SSLContext_set_early_data_enabled(long context, boolean enabled);
     static native long SSLContext_setSessionCacheSize(long context, long size);

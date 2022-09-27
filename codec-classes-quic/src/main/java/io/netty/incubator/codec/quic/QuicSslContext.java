@@ -18,6 +18,10 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
 
+import java.io.InputStream;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
 /**
  * Special {@link SslContext} that can be used for {@code QUIC}.
  */
@@ -28,4 +32,9 @@ public abstract class QuicSslContext extends SslContext {
 
     @Override
     public abstract QuicSslEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort);
+
+    static X509Certificate[] toX509Certificates0(InputStream stream)
+            throws CertificateException {
+        return SslContext.toX509Certificates(stream);
+    }
 }

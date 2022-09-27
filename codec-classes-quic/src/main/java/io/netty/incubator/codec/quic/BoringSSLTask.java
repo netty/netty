@@ -27,7 +27,7 @@ abstract class BoringSSLTask implements Runnable {
 
     // These fields are accessed via JNI.
     private int returnValue;
-    private boolean complete;
+    private volatile boolean complete;
 
     protected BoringSSLTask(long ssl) {
         // It is important that this constructor never throws. Be sure to not change this!
@@ -36,19 +36,12 @@ abstract class BoringSSLTask implements Runnable {
 
     @Override
     public final void run() {
-        run(NOOP);
-    }
-
-    protected final void run(final Runnable completeCallback) {
         if (!didRun) {
             didRun = true;
             runTask(ssl, (long ssl, int result) -> {
                 returnValue = result;
                 complete = true;
-                completeCallback.run();
             });
-        } else {
-            completeCallback.run();
         }
     }
 

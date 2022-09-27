@@ -189,12 +189,17 @@ final class BoringSSLCertificateCallback {
             }
         }
 
+        final long key;
         PrivateKey privateKey = keyManager.getPrivateKey(alias);
-        byte[] pemKey = toPemEncoded(privateKey);
-        if (pemKey == null) {
-            return null;
+        if (privateKey == BoringSSLKeylessPrivateKey.INSTANCE) {
+            key = 0;
+        } else {
+            byte[] pemKey = toPemEncoded(privateKey);
+            if (pemKey == null) {
+                return null;
+            }
+            key = BoringSSL.EVP_PKEY_parse(pemKey, password);
         }
-        long key = BoringSSL.EVP_PKEY_parse(pemKey, password);
         long chain = BoringSSL.CRYPTO_BUFFER_stack_new(ssl, certs);
         engine.setLocalCertificateChain(certificates);
 

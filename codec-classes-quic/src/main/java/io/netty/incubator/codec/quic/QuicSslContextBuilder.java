@@ -32,6 +32,7 @@ import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.function.BiConsumer;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
