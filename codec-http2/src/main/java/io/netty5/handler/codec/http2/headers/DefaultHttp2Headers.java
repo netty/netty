@@ -43,9 +43,13 @@ import static java.util.Collections.emptyIterator;
 public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Headers {
     private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = value -> !isUpperCase(value);
 
+    @Nullable
     private Http2MultiMapEntry firstPseudoHeader;
+    @Nullable
     private Http2MultiMapEntry lastPseudoHeader;
+    @Nullable
     private Http2MultiMapEntry firstNormalHeader;
+    @Nullable
     private Http2MultiMapEntry lastNormalHeader;
 
     /**
@@ -320,12 +324,12 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
         return entry;
     }
 
-    private static class Http2MultiMapEntry extends MultiMapEntry<CharSequence, CharSequence> {
+    private static final class Http2MultiMapEntry extends MultiMapEntry<CharSequence, CharSequence> {
         // Total-Order linkages that preserves pseudo-headers in the front.
         private Http2MultiMapEntry toNext;
         private Http2MultiMapEntry toPrev;
 
-        protected Http2MultiMapEntry(CharSequence key, CharSequence value, int keyHash) {
+        private Http2MultiMapEntry(CharSequence key, CharSequence value, int keyHash) {
             super(key, value, keyHash);
         }
 
@@ -369,7 +373,7 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
                 firstPseudoHeader != null ? firstPseudoHeader : firstNormalHeader);
     }
 
-    private class FullHttp2EntryIterator implements Iterator<Entry<CharSequence, CharSequence>> {
+    private final class FullHttp2EntryIterator implements Iterator<Entry<CharSequence, CharSequence>> {
         private Http2MultiMapEntry curr;
         private Http2MultiMapEntry prev;
 
