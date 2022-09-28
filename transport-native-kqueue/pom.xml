@@ -269,7 +269,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -342,7 +342,7 @@
       <dependencies>
         <dependency>
           <groupId>io.netty</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
