@@ -254,12 +254,14 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void dataFramesDontMergeWithHeaders() throws Exception {
         createStream(STREAM_ID, false);
-        final Buffer data = dummyData();
-        encoder.writeData(ctx, STREAM_ID, data, 0, false);
-        when(remoteFlow.hasFlowControlled(any(Http2Stream.class))).thenReturn(true);
-        encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
-        List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
-        assertFalse(capturedWrites.get(0).merge(ctx, capturedWrites.get(1)));
+        try (Buffer data = dummyData()) {
+            encoder.writeData(ctx, STREAM_ID, data, 0, false);
+            when(remoteFlow.hasFlowControlled(any(Http2Stream.class))).thenReturn(true);
+            encoder.writeHeaders(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, true);
+            List<FlowControlled> capturedWrites = payloadCaptor.getAllValues();
+            // data is cached in FlowControlledData
+            assertFalse(capturedWrites.get(0).merge(ctx, capturedWrites.get(1)));
+        }
     }
 
     @Test
@@ -699,7 +701,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void canWriteDataFrameAfterGoAwaySent() throws Exception {
         Http2Stream stream = createStream(STREAM_ID, false);
-        connection.goAwaySent(0, 0, onHeapAllocator().allocate(0));
+        goAwaySent(0);
         Buffer data = mock(Buffer.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false);
         verify(remoteFlow).addFlowControlled(eq(stream), any(FlowControlled.class));
@@ -774,11 +776,17 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     private void goAwayReceived(int lastStreamId) throws Http2Exception {
-        connection.goAwayReceived(lastStreamId, 0, empty());
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            connection.goAwayReceived(lastStreamId, 0, empty);
+        }
     }
 
     private void goAwaySent(int lastStreamId) throws Http2Exception {
-        connection.goAwaySent(lastStreamId, 0, onHeapAllocator().allocate(0));
+        try (Buffer empty = empty()) {
+            // the buffer ownership belongs to the caller
+            connection.goAwaySent(lastStreamId, 0, empty);
+        }
     }
 
     private static Buffer dummyData() {

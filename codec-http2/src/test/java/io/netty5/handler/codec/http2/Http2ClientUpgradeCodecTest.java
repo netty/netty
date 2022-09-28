@@ -50,36 +50,39 @@ public class Http2ClientUpgradeCodecTest {
 
     private static void testUpgrade(Http2ConnectionHandler handler, Http2MultiplexHandler multiplexer)
             throws Exception {
-        FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, HttpMethod.OPTIONS, "*", preferredAllocator().allocate(0));
+        try (FullHttpRequest request = new DefaultFullHttpRequest(
+                HTTP_1_1, HttpMethod.OPTIONS, "*", preferredAllocator().allocate(0))) {
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() { });
-        ChannelHandlerContext ctx = channel.pipeline().firstContext();
+            EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
+            });
+            ChannelHandlerContext ctx = channel.pipeline().firstContext();
 
-        Http2ClientUpgradeCodec codec;
+            Http2ClientUpgradeCodec codec;
 
-        if (multiplexer == null) {
-            codec = new Http2ClientUpgradeCodec("connectionHandler", handler);
-        } else {
-            codec = new Http2ClientUpgradeCodec("connectionHandler", handler, multiplexer);
+            if (multiplexer == null) {
+                codec = new Http2ClientUpgradeCodec("connectionHandler", handler);
+            } else {
+                codec = new Http2ClientUpgradeCodec("connectionHandler", handler, multiplexer);
+            }
+
+            // Only request headers are read by the codec
+            codec.setUpgradeHeaders(ctx, request);
+            // Flush the channel to ensure we write out all buffered data
+            channel.flush();
+
+            channel.executor().submit(() -> {
+                codec.upgradeTo(ctx,
+                        new DefaultFullHttpResponse(HTTP_1_1, OK, channel.bufferAllocator().allocate(0)).send());
+                return null;
+            }).asStage().sync();
+            assertNotNull(channel.pipeline().get("connectionHandler"));
+
+            if (multiplexer != null) {
+                assertNotNull(channel.pipeline().get(Http2MultiplexHandler.class));
+            }
+
+            assertTrue(channel.finishAndReleaseAll());
         }
-
-        codec.setUpgradeHeaders(ctx, request);
-        // Flush the channel to ensure we write out all buffered data
-        channel.flush();
-
-        channel.executor().submit(() -> {
-            codec.upgradeTo(ctx,
-                    new DefaultFullHttpResponse(HTTP_1_1, OK, channel.bufferAllocator().allocate(0)).send());
-            return null;
-        }).asStage().sync();
-        assertNotNull(channel.pipeline().get("connectionHandler"));
-
-        if (multiplexer != null) {
-            assertNotNull(channel.pipeline().get(Http2MultiplexHandler.class));
-        }
-
-        assertTrue(channel.finishAndReleaseAll());
     }
 
     private static final class HttpInboundHandler implements ChannelHandler {

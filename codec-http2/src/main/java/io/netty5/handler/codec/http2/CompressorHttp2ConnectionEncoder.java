@@ -136,7 +136,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             return super.writeData(ctx, streamId, data, padding, endOfStream);
         }
 
-        try {
+        // The ownership is not transferred to "Compressor.compress"
+        try (data) {
             Buffer buf = compressor.compress(data, ctx.bufferAllocator());
             if (buf.readableBytes() == 0) {
                 buf.close();

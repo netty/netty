@@ -73,8 +73,6 @@ public class DefaultHttp2FrameWriterTest {
 
         outbound = onHeapAllocator().allocate(256);
 
-        expectedOutbound = empty();
-
         Answer<Object> answer = var1 -> {
             Object msg = var1.getArgument(0);
             if (msg instanceof Buffer) {
@@ -93,7 +91,10 @@ public class DefaultHttp2FrameWriterTest {
     @AfterEach
     public void tearDown() throws Exception {
         outbound.close();
-        expectedOutbound.close();
+        if (expectedOutbound != null) {
+            expectedOutbound.close();
+        }
+        http2HeadersEncoder.close();
         frameWriter.close();
     }
 
@@ -150,7 +151,7 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x04, // flags = 0x04
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01 // stream id = 1
         };
-        Buffer expectedOutbound = onHeapAllocator().allocate(256)
+        expectedOutbound = onHeapAllocator().allocate(256)
                                                    .writeBytes(expectedFrameBytes).writeBytes(expectedPayload);
         assertEquals(expectedOutbound, outbound);
     }

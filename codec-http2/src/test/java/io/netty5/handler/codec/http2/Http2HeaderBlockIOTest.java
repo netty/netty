@@ -43,6 +43,7 @@ public class Http2HeaderBlockIOTest {
 
     @AfterEach
     public void teardown() {
+        encoder.close();
         buffer.close();
     }
 

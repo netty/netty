@@ -134,6 +134,7 @@ public class Http2MultiplexTest {
         if (childChannelInitializer.handler instanceof LastInboundHandler) {
             ((LastInboundHandler) childChannelInitializer.handler).finishAndReleaseAll();
         }
+        frameInboundWriter.close();
         parentChannel.finishAndReleaseAll();
         codec = null;
     }

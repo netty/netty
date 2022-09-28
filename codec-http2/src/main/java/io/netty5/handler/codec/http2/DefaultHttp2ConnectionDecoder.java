@@ -214,7 +214,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData)
             throws Http2Exception {
-        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData.copy(true));
+        // The ownership is not transferred to "Http2FrameListener.onGoAwayRead"
+        try (Buffer copy = debugData.copy(true)) {
+            listener.onGoAwayRead(ctx, lastStreamId, errorCode, copy);
+        }
         connection.goAwayReceived(lastStreamId, errorCode, debugData);
     }
 
