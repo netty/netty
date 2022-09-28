@@ -26,10 +26,7 @@ import java.util.concurrent.Executors;
 
 @Timeout(10)
 public abstract class AbstractQuicTest {
-    private static final Executor[] executors = new Executor[] {
-            ImmediateExecutor.INSTANCE,
-            Executors.newCachedThreadPool()
-    };
+    private static Executor[] executors;
 
     @BeforeAll
     public static void ensureAvailability() {
@@ -45,10 +42,15 @@ public abstract class AbstractQuicTest {
         }
     }
 
-    static Executor[] sslTaskExecutors() {
-        return new Executor[] {
+    @BeforeAll
+    public static void createExecutors() {
+        executors = new Executor[] {
                 ImmediateExecutor.INSTANCE,
                 Executors.newCachedThreadPool()
         };
+    }
+
+    static Executor[] sslTaskExecutors() {
+        return executors;
     }
 }
