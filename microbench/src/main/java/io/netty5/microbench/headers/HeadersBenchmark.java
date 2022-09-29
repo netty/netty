@@ -41,8 +41,8 @@ import java.util.concurrent.TimeUnit;
 @Threads(1)
 @State(Scope.Benchmark)
 @Fork(1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
+@Warmup(iterations = 10, time = 1)
+@Measurement(iterations = 10, time = 1)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class HeadersBenchmark extends AbstractMicrobenchmark {
 
@@ -55,7 +55,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         return (name.equals("host")) ? "xhost" : name;
     }
 
-    @Param
+    @Param({"FIVE", "THIRTY"})
     ExampleHeaders.HeaderExample exampleHeader;
 
     AsciiString[] httpNames;

@@ -89,7 +89,10 @@ public interface Http2Headers extends HttpHeaders {
         public static boolean hasPseudoHeaderFormat(CharSequence headerName) {
             if (headerName instanceof AsciiString) {
                 final AsciiString asciiHeaderName = (AsciiString) headerName;
-                return !asciiHeaderName.isEmpty() && asciiHeaderName.byteAt(0) == PSEUDO_HEADER_PREFIX_BYTE;
+                // We don't call AsciiString.byteAt() because a direct array access seems to optimise better when we'll
+                // never trigger the bounds-checks.
+                return !asciiHeaderName.isEmpty() &&
+                        asciiHeaderName.array()[asciiHeaderName.arrayOffset()] == PSEUDO_HEADER_PREFIX_BYTE;
             } else {
                 return headerName.length() > 0 && headerName.charAt(0) == PSEUDO_HEADER_PREFIX;
             }
