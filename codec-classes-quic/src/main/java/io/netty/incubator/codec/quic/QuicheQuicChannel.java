@@ -992,6 +992,39 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         pipeline().fireExceptionCaught(cause);
     }
 
+    private boolean runTasksDirectly() {
+        return sslTaskExecutor == null || sslTaskExecutor == ImmediateExecutor.INSTANCE ||
+                sslTaskExecutor == ImmediateEventExecutor.INSTANCE;
+    }
+
+    private void runAllTaskSend(Executor sslTaskExecutor, Runnable task) {
+        sslTaskExecutor.execute(decorateTaskSend(sslTaskExecutor, task));
+    }
+
+    private Runnable decorateTaskSend(Executor sslTaskExecutor, Runnable task) {
+        return () -> {
+            try {
+                task.run();
+            } finally {
+                // Move back to the EventLoop.
+                eventLoop().execute(() -> {
+                    if (connection != null) {
+                        Runnable nextTask = connection.sslTask();
+                        // Consume all tasks before moving back to the EventLoop.
+                        if (nextTask == null) {
+                            // Call connection send to continue handshake if needed.
+                            if (connectionSend()) {
+                                forceFlushParent();
+                            }
+                        } else {
+                            sslTaskExecutor.execute(decorateTaskSend(sslTaskExecutor, nextTask));
+                        }
+                    }
+                });
+            }
+        };
+    }
+
     private boolean connectionSendSegments(SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator) {
         List<ByteBuf> bufferList = new ArrayList<>(segmentedDatagramPacketAllocator.maxNumSegments());
         long connAddr = connection.address();
@@ -1177,6 +1210,23 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             } else {
                 packetWasWritten = connectionSendSimple();
             }
+
+            // Process / schedule all tasks that were created.
+            Runnable task = connection.sslTask();
+            if (task != null) {
+                if (runTasksDirectly()) {
+                    // Consume all tasks
+                    do {
+                        task.run();
+                    } while ((task = connection.sslTask()) != null);
+
+                    // Let's try again sending after we did process all tasks.
+                    return packetWasWritten | connectionSend();
+                } else {
+                    runAllTaskSend(sslTaskExecutor, task);
+                }
+            }
+
             if (packetWasWritten) {
                 timeoutHandler.scheduleTimeout();
             }
@@ -1326,80 +1376,27 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             fireExceptionEvents(e);
                         }
 
+                        // Process / schedule all tasks that were created.
                         Runnable task = connection.sslTask();
                         if (task != null) {
-                            if (sslTaskExecutor == null || sslTaskExecutor == ImmediateExecutor.INSTANCE ||
-                                    sslTaskExecutor == ImmediateEventExecutor.INSTANCE) {
+                            if (runTasksDirectly()) {
                                 // Consume all tasks
                                 do {
                                     task.run();
                                 } while ((task = connection.sslTask()) != null);
+                                processReceived(connAddr);
                             } else {
-                                Runnable finalTask = task;
-                                sslTaskExecutor.execute(() -> {
-                                    try {
-                                        finalTask.run();
-                                    } finally {
-                                        // Move back to the EventLoop.
-                                        eventLoop().execute(() -> {
-                                            if (connection != null) {
-                                                Runnable nextTask = connection.sslTask();
-                                                // Consume all tasks before moving back to the EventLoop.
-                                                if (nextTask == null) {
-                                                    // Call connection send to continue handshake if needed.
-                                                    if (connectionSend()) {
-                                                        forceFlushParent();
-                                                    }
-                                                } else {
-                                                    sslTaskExecutor.execute(nextTask);
-                                                }
-                                            }
-                                        });
-                                    }
-                                });
+                                runAllTaskRecv(sslTaskExecutor, task);
                             }
-                        }
-
-                        // Handle pending channelActive if needed.
-                        if (handlePendingChannelActive()) {
-                            // Connection was closed right away.
-                            return;
-                        }
-
-                        notifyAboutHandshakeCompletionIfNeeded(null);
-
-                        if (Quiche.quiche_conn_is_established(connAddr) ||
-                                Quiche.quiche_conn_is_in_early_data(connAddr)) {
-                            long uniLeftOld = uniStreamsLeft;
-                            long bidiLeftOld = bidiStreamsLeft;
-                            // Only fetch new stream info when we used all our credits
-                            if (uniLeftOld == 0 || bidiLeftOld == 0) {
-                                long uniLeft = Quiche.quiche_conn_peer_streams_left_uni(connAddr);
-                                long bidiLeft = Quiche.quiche_conn_peer_streams_left_bidi(connAddr);
-                                uniStreamsLeft = uniLeft;
-                                bidiStreamsLeft = bidiLeft;
-                                if (uniLeftOld != uniLeft || bidiLeftOld != bidiLeft) {
-                                    pipeline().fireUserEventTriggered(QuicStreamLimitChangedEvent.INSTANCE);
-                                }
-                            }
-
-                            if (handleWritableStreams()) {
-                                // Some data was produced, let's flush.
-                                flushParent();
-                            }
-
-                            datagramReadable = true;
-                            streamReadable = true;
-                            recvDatagram();
-                            recvStream();
+                        } else {
+                            processReceived(connAddr);
                         }
 
                         if (done) {
                             break;
-                        } else {
-                            memoryAddress += res;
-                            bufferReadable -= res;
                         }
+                        memoryAddress += res;
+                        bufferReadable -= res;
                     } while (bufferReadable > 0);
                 } finally {
                     buffer.skipBytes((int) (memoryAddress - Quiche.memoryAddress(buffer)));
@@ -1416,6 +1413,71 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
         }
 
+        private void processReceived(long connAddr) {
+            // Handle pending channelActive if needed.
+            if (handlePendingChannelActive()) {
+                // Connection was closed right away.
+                return;
+            }
+
+            notifyAboutHandshakeCompletionIfNeeded(null);
+
+            if (Quiche.quiche_conn_is_established(connAddr) ||
+                    Quiche.quiche_conn_is_in_early_data(connAddr)) {
+                long uniLeftOld = uniStreamsLeft;
+                long bidiLeftOld = bidiStreamsLeft;
+                // Only fetch new stream info when we used all our credits
+                if (uniLeftOld == 0 || bidiLeftOld == 0) {
+                    long uniLeft = Quiche.quiche_conn_peer_streams_left_uni(connAddr);
+                    long bidiLeft = Quiche.quiche_conn_peer_streams_left_bidi(connAddr);
+                    uniStreamsLeft = uniLeft;
+                    bidiStreamsLeft = bidiLeft;
+                    if (uniLeftOld != uniLeft || bidiLeftOld != bidiLeft) {
+                        pipeline().fireUserEventTriggered(QuicStreamLimitChangedEvent.INSTANCE);
+                    }
+                }
+
+                if (handleWritableStreams()) {
+                    // Some data was produced, let's flush.
+                    flushParent();
+                }
+
+                datagramReadable = true;
+                streamReadable = true;
+                recvDatagram();
+                recvStream();
+            }
+        }
+
+        private void runAllTaskRecv(Executor sslTaskExecutor, Runnable task) {
+            sslTaskExecutor.execute(decorateTaskRecv(sslTaskExecutor, task));
+        }
+
+        private Runnable decorateTaskRecv(Executor sslTaskExecutor, Runnable task) {
+            return () -> {
+                try {
+                    task.run();
+                } finally {
+                    // Move back to the EventLoop.
+                    eventLoop().execute(() -> {
+                        if (connection != null) {
+                            Runnable nextTask = connection.sslTask();
+                            // Consume all tasks before moving back to the EventLoop.
+                            if (nextTask == null) {
+                                processReceived(connection.address());
+
+                                // Call connection send to continue handshake if needed.
+                                if (connectionSend()) {
+                                    forceFlushParent();
+                                }
+                            } else {
+                                sslTaskExecutor.execute(decorateTaskRecv(sslTaskExecutor, nextTask));
+                            }
+                        }
+                    });
+                }
+            };
+        }
         void recv() {
             if ((reantranceGuard & IN_RECV) != 0 || isConnDestroyed()) {
                 return;

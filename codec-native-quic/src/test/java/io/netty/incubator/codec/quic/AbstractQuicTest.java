@@ -46,8 +46,7 @@ public abstract class AbstractQuicTest {
     public static void createExecutors() {
         executors = new Executor[] {
                 ImmediateExecutor.INSTANCE,
-                // TODO: Investigate
-                //Executors.newCachedThreadPool()
+                Executors.newCachedThreadPool()
         };
     }
 

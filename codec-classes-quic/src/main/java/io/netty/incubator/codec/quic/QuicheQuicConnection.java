@@ -110,10 +110,12 @@ final class QuicheQuicConnection {
         if (task == null) {
             return null;
         }
+
         return () -> {
             if (connection == -1) {
                 return;
             }
+
             task.run();
         };
     }
