@@ -93,4 +93,29 @@ public class DefaultHttpSetCookiesPedanticTest {
                 "qwerty=\"12345\"; Domain=somecompany.co.uk; Path=/; Expires=Wed, 30 Aug 2019 00:00:00 GMT");
         quotesInValuePreserved(headers);
     }
+
+    @Test
+    void cookiesWithExtraTrailingSemiColon() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("cookie", "a=v1; b=v2; c=v3;");
+        Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getCookies().forEach(c -> { }));
+        assertThat(e).hasMessageContaining("cookie is not allowed to end with ;");
+    }
+
+    @Test
+    void cookiesWithExtraTrailingSemiColonAndSpace() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("cookie", "a=v1; b=v2; c=v3; ");
+        Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getCookies().forEach(c -> { }));
+        assertThat(e).hasMessageContaining("cookie is not allowed to end with ;");
+    }
+
+    @Test
+    void cookiesWithExtraTrailingSemiColonAndTwoSpaces() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("cookie", "a=v1; b=v2; lastCookie=v3;  ");
+        Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getCookies().forEach(c -> { }));
+        assertThat(e).hasMessageContaining("no cookie value found after")
+                .hasMessageContaining("lastCookie");
+    }
 }

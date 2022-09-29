@@ -470,17 +470,31 @@ public final class HeaderUtils {
          */
         private HttpCookiePair findNext(CharSequence cookieHeaderValue) {
             int semiIndex = nextCookieDelimiter(cookieHeaderValue, nextNextStart);
-            HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(cookieHeaderValue, nextNextStart, semiIndex);
+            int nameLength = indexOf(cookieHeaderValue, '=', nextNextStart) - nextNextStart;
+            if (nameLength < 0) {
+                throw new IllegalArgumentException("no cookie value found after index " + nextNextStart +
+                        (next == null ? " (there was no previous cookie)" :
+                                " (found after parsing the '" + next.name() + "' cookie)"));
+            }
+            HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(
+                    cookieHeaderValue, nextNextStart, nameLength, semiIndex);
             if (semiIndex > 0) {
                 if (cookieHeaderValue.length() - 2 <= semiIndex) {
-                    advanceCookieHeaderValue();
-                    nextNextStart = 0;
-                } else if (cookieHeaderValue.charAt(semiIndex + 1) == ' ') {
+                    if (cookieParsingStrictRfc6265()) {
+                        throw new IllegalArgumentException("cookie is not allowed to end with ;");
+                    } else {
+                        advanceCookieHeaderValue();
+                        nextNextStart = 0;
+                    }
+                } else if (cookieParsingStrictRfc6265()) {
                     // Skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
                     nextNextStart = semiIndex + 2;
                 } else {
                     // Older cookie spec delimit with just semicolon. See https://www.rfc-editor.org/rfc/rfc2965
                     nextNextStart = semiIndex + 1;
+                    if (cookieHeaderValue.charAt(nextNextStart) == ' ') {
+                        nextNextStart++;
+                    }
                 }
             } else {
                 advanceCookieHeaderValue();
