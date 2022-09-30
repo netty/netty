@@ -68,12 +68,6 @@ final class PlatformDependent0 {
     static final int HASH_CODE_C1 = 0xcc9e2d51;
     static final int HASH_CODE_C2 = 0x1b873593;
 
-    /**
-     * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
-     * during a large copy.
-     */
-    private static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
-
     private static final boolean UNALIGNED;
 
     static {
@@ -124,36 +118,6 @@ final class PlatformDependent0 {
             } else {
                 unsafe = (Unsafe) maybeUnsafe;
                 logger.debug("sun.misc.Unsafe.theUnsafe: available");
-            }
-
-            // ensure the unsafe supports all necessary methods to work around the mistake in the latest OpenJDK
-            // https://github.com/netty/netty/issues/1061
-            // https://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
-            if (unsafe != null) {
-                final Unsafe finalUnsafe = unsafe;
-                final Object maybeException = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-                    try {
-                        finalUnsafe.getClass().getDeclaredMethod(
-                                "copyMemory", Object.class, long.class, Object.class, long.class, long.class);
-                        return null;
-                    } catch (NoSuchMethodException | SecurityException e) {
-                        return e;
-                    }
-                });
-
-                if (maybeException == null) {
-                    logger.debug("sun.misc.Unsafe.copyMemory: available");
-                } else {
-                    // Unsafe.copyMemory(Object, long, Object, long, long) unavailable.
-                    unsafe = null;
-                    unsafeUnavailabilityCause = (Throwable) maybeException;
-                    if (logger.isTraceEnabled()) {
-                        logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Throwable) maybeException);
-                    } else {
-                        logger.debug("sun.misc.Unsafe.copyMemory: unavailable: {}",
-                                ((Throwable) maybeException).getMessage());
-                    }
-                }
             }
 
             if (unsafe != null) {
@@ -304,14 +268,9 @@ final class PlatformDependent0 {
                     try {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
-                        int version = javaVersion();
-                        if (unsafeStaticFieldOffsetSupported() && version >= 9) {
-                            // Java9/10 use all lowercase and later versions all uppercase.
-                            String fieldName = version >= 11 ? "UNALIGNED" : "unaligned";
-                            // On Java9 and later we try to directly access the field as we can do this without
-                            // adjust the accessible levels.
+                        if (unsafeStaticFieldOffsetSupported()) {
                             try {
-                                Field unalignedField = bitsClass.getDeclaredField(fieldName);
+                                Field unalignedField = bitsClass.getDeclaredField("UNALIGNED");
                                 if (unalignedField.getType() == boolean.class) {
                                     long offset = UNSAFE.staticFieldOffset(unalignedField);
                                     Object object = UNSAFE.staticFieldBase(unalignedField);
@@ -353,72 +312,64 @@ final class PlatformDependent0 {
 
             UNALIGNED = unaligned;
 
-            if (javaVersion() >= 9) {
-                Object maybeException = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            Object maybeException = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                try {
+                    // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
+                    // sun.misc.Unsafe
+                    Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
+                            .loadClass("jdk.internal.misc.Unsafe");
+                    Method method = internalUnsafeClass.getDeclaredMethod("getUnsafe");
+                    return method.invoke(null);
+                } catch (Throwable e) {
+                    return e;
+                }
+            });
+            if (!(maybeException instanceof Throwable)) {
+                final Object finalInternalUnsafe = maybeException;
+                maybeException = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
                     try {
-                        // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
-                        // sun.misc.Unsafe
-                        Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
-                                .loadClass("jdk.internal.misc.Unsafe");
-                        Method method = internalUnsafeClass.getDeclaredMethod("getUnsafe");
-                        return method.invoke(null);
-                    } catch (Throwable e) {
+                        return MethodHandles.lookup().findVirtual(finalInternalUnsafe.getClass(),
+                                "allocateUninitializedArray",
+                                MethodType.methodType(byte[].class, Class.class, int.class))
+                                .bindTo(finalInternalUnsafe);
+                    } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
                         return e;
                     }
                 });
-                if (!(maybeException instanceof Throwable)) {
-                    final Object finalInternalUnsafe = maybeException;
-                    maybeException = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-                        try {
-                            return MethodHandles.lookup().findVirtual(finalInternalUnsafe.getClass(),
-                                    "allocateUninitializedArray",
-                                    MethodType.methodType(byte[].class, Class.class, int.class))
-                                    .bindTo(finalInternalUnsafe);
-                        } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
-                            return e;
-                        }
-                    });
 
-                    if (maybeException instanceof MethodHandle) {
-                        try {
-                            MethodHandle m = (MethodHandle) maybeException;
-                            byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
-                            assert bytes.length == 8;
-                            allocateArrayHandle = m;
-                        } catch (Throwable e) {
-                            maybeException = e;
-                        }
+                if (maybeException instanceof MethodHandle) {
+                    try {
+                        MethodHandle m = (MethodHandle) maybeException;
+                        byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
+                        assert bytes.length == 8;
+                        allocateArrayHandle = m;
+                    } catch (Throwable e) {
+                        maybeException = e;
                     }
                 }
+            }
 
-                if (maybeException instanceof Throwable) {
-                    if (logger.isTraceEnabled()) {
-                        logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable",
-                                (Throwable) maybeException);
-                    } else {
-                        logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable: {}",
-                                ((Throwable) maybeException).getMessage());
-                    }
+            if (maybeException instanceof Throwable) {
+                if (logger.isTraceEnabled()) {
+                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable",
+                                 (Throwable) maybeException);
                 } else {
-                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): available");
+                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable: {}",
+                                 ((Throwable) maybeException).getMessage());
                 }
             } else {
-                logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable prior to Java9");
+                logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): available");
             }
             ALLOCATE_ARRAY_HANDLE = allocateArrayHandle;
         }
 
-        if (javaVersion() > 9) {
-            ALIGN_SLICE = (Method) AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-                try {
-                    return ByteBuffer.class.getDeclaredMethod("alignedSlice", int.class);
-                } catch (Exception e) {
-                    return null;
-                }
-            });
-        } else {
-            ALIGN_SLICE = null;
-        }
+        ALIGN_SLICE = (Method) AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            try {
+                return ByteBuffer.class.getDeclaredMethod("alignedSlice", int.class);
+            } catch (Exception e) {
+                return null;
+            }
+        });
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int, Object): {}",
                 DIRECT_BUFFER_CONSTRUCTOR_HANDLE != null ? "available" : "unavailable");
@@ -685,44 +636,11 @@ final class PlatformDependent0 {
     }
 
     static void copyMemory(long srcAddr, long dstAddr, long length) {
-        // Manual safe-point polling is only needed prior Java9:
-        // See https://bugs.openjdk.java.net/browse/JDK-8149596
-        if (javaVersion() <= 8) {
-            copyMemoryWithSafePointPolling(srcAddr, dstAddr, length);
-        } else {
-            UNSAFE.copyMemory(srcAddr, dstAddr, length);
-        }
-    }
-
-    private static void copyMemoryWithSafePointPolling(long srcAddr, long dstAddr, long length) {
-        while (length > 0) {
-            long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
-            UNSAFE.copyMemory(srcAddr, dstAddr, size);
-            length -= size;
-            srcAddr += size;
-            dstAddr += size;
-        }
+        UNSAFE.copyMemory(srcAddr, dstAddr, length);
     }
 
     static void copyMemory(Object src, long srcOffset, Object dst, long dstOffset, long length) {
-        // Manual safe-point polling is only needed prior Java9:
-        // See https://bugs.openjdk.java.net/browse/JDK-8149596
-        if (javaVersion() <= 8) {
-            copyMemoryWithSafePointPolling(src, srcOffset, dst, dstOffset, length);
-        } else {
-            UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
-        }
-    }
-
-    private static void copyMemoryWithSafePointPolling(
-            Object src, long srcOffset, Object dst, long dstOffset, long length) {
-        while (length > 0) {
-            long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
-            UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, size);
-            length -= size;
-            srcOffset += size;
-            dstOffset += size;
-        }
+        UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
     }
 
     static void setMemory(long address, long bytes, byte value) {
@@ -926,8 +844,7 @@ final class PlatformDependent0 {
 
     private static boolean explicitTryReflectionSetAccessible0() {
         // we disable reflective access
-        return SystemPropertyUtil.getBoolean("io.netty5.tryReflectionSetAccessible",
-                javaVersion() < 9 || RUNNING_IN_NATIVE_IMAGE);
+        return SystemPropertyUtil.getBoolean("io.netty5.tryReflectionSetAccessible", RUNNING_IN_NATIVE_IMAGE);
     }
 
     static boolean isExplicitTryReflectionSetAccessible() {
@@ -942,7 +859,7 @@ final class PlatformDependent0 {
         final int majorVersion;
 
         if (isAndroid0()) {
-            majorVersion = 6;
+            majorVersion = 11;
         } else {
             majorVersion = majorVersionFromJavaSpecificationVersion();
         }
@@ -954,7 +871,7 @@ final class PlatformDependent0 {
 
     // Package-private for testing only
     static int majorVersionFromJavaSpecificationVersion() {
-        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
+        return majorVersion(SystemPropertyUtil.get("java.specification.version", "11"));
     }
 
     // Package-private for testing only
