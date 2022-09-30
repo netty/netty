@@ -320,13 +320,13 @@ public class BufferCompositionTest extends BufferTestSupport {
                 }
                 assertThat(composite.readableBytes()).isEqualTo(8);
                 assertThat(composite.readLong()).isEqualTo(0x00000000_00000003L);
-                assertThat(composite.capacity()).isEqualTo(16); // 2*4 writable bytes lost in the gaps. 24 - 8 = 16.
+                assertThat(composite.capacity()).isEqualTo(8); // 2*4 writable and 2*4 useless bytes lost in the gaps. 24 - 8 - 8 = 8.
                 try (Buffer b = allocator.allocate(8)) {
                     b.setInt(0, 1);
                     composite.extendWith(b.send());
                 }
-                assertThat(composite.capacity()).isEqualTo(24);
-                assertThat(composite.writerOffset()).isEqualTo(16);
+                assertThat(composite.capacity()).isEqualTo(16);
+                assertThat(composite.writerOffset()).isEqualTo(8);
             }
         }
     }

@@ -216,6 +216,18 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             // Bytes already read, in components after the first readable section, must be trimmed off.
             // Likewise, writable bytes prior to the last readable section must be trimmed off.
             if (firstReadable != -1) {
+                // Remove useless buffers before firstReadable
+                int removeSize = firstReadable;
+                if (removeSize > 0) {
+                    for (int i = 0; i <= removeSize - 1; i++) {
+                        Buffer buf = array[i];
+                        buf.close();
+                    }
+                    System.arraycopy(array, firstReadable, array, 0, index - firstReadable);
+                    firstReadable -= removeSize;
+                    lastReadable -= removeSize;
+                    index -= removeSize;
+                }
                 // Remove middle buffers entirely that have no readable bytes.
                 for (int i = firstReadable + 1; i < lastReadable; i++) {
                     Buffer buf = array[i];
