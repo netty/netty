@@ -76,7 +76,7 @@ public class PlatformDependent0Test {
                 }
             });
 
-            assertEquals(6, PlatformDependent0.majorVersionFromJavaSpecificationVersion());
+            assertEquals(11, PlatformDependent0.majorVersionFromJavaSpecificationVersion());
         } finally {
             System.setSecurityManager(current);
         }
@@ -90,5 +90,7 @@ public class PlatformDependent0Test {
         assertEquals(8, PlatformDependent0.majorVersion("8"));
         assertEquals(9, PlatformDependent0.majorVersion("1.9")); // early version of JDK 9 before Project Verona
         assertEquals(9, PlatformDependent0.majorVersion("9"));
+        assertEquals(10, PlatformDependent0.majorVersion("10"));
+        assertEquals(11, PlatformDependent0.majorVersion("11"));
     }
 }
