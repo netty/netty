@@ -16,7 +16,6 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.handler.codec.UnsupportedValueConverter;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
@@ -474,8 +473,7 @@ public final class HttpConversionUtil {
 
     private static CharSequenceMap<AsciiString> toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
                                                                int arraySizeHint) {
-        UnsupportedValueConverter<AsciiString> valueConverter = UnsupportedValueConverter.instance();
-        CharSequenceMap<AsciiString> result = new CharSequenceMap<>(true, valueConverter, arraySizeHint);
+        CharSequenceMap<AsciiString> result = new CharSequenceMap<>(true, arraySizeHint);
 
         while (valuesIter.hasNext()) {
             AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
