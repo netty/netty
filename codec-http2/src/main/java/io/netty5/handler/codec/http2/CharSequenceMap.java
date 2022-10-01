@@ -55,7 +55,8 @@ public final class CharSequenceMap<V> extends MultiMap<CharSequence, V> {
 
     @Override
     protected boolean isKeyEqualityCompatible(MultiMap<? extends CharSequence, ? extends V> multiMap) {
-        return multiMap instanceof CharSequenceMap && ((CharSequenceMap<?>) multiMap).hashingStrategy == hashingStrategy;
+        return multiMap instanceof CharSequenceMap &&
+                ((CharSequenceMap<?>) multiMap).hashingStrategy == hashingStrategy;
     }
 
     @Override
