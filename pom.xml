@@ -541,7 +541,6 @@
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.9.0</junit.version>
     <nativebuildtools.version>0.9.13</nativebuildtools.version>
-    <brotli4j.version>1.4.2</brotli4j.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
