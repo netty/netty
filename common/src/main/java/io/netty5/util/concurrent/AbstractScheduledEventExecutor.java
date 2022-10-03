@@ -153,6 +153,9 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             }
             if (polled.deadlineNanos() <= nanoTime) {
                 return polled;
+            } else {
+                // We didn't want this task after all.
+                scheduledTaskQueue.offer(polled);
             }
         }
         return null;
