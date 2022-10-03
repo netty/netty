@@ -82,7 +82,7 @@ public abstract class MultiMap<K, V> {
     private int size;
 
     @SuppressWarnings("unchecked")
-    MultiMap(final int arraySizeHint) {
+    protected MultiMap(final int arraySizeHint) {
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
         entries = (BucketHead<K, V>[]) new BucketHead[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
@@ -169,7 +169,7 @@ public abstract class MultiMap<K, V> {
         return new MultiMapEntry<>(key, value, keyHash);
     }
 
-    final Set<K> getKeys() {
+    protected final Set<K> getKeys() {
         if (isEmpty()) {
             return emptySet();
         }
@@ -199,7 +199,7 @@ public abstract class MultiMap<K, V> {
     }
 
     @Nullable
-    final V getValue(final K key) {
+    protected final V getValue(final K key) {
         final int nameHash = hashCode(key);
         final int i = index(nameHash);
         final BucketHead<K, V> bucketHead = entries[i];
@@ -216,7 +216,7 @@ public abstract class MultiMap<K, V> {
         return null;
     }
 
-    final Iterator<V> getValues(final K key) {
+    protected final Iterator<V> getValues(final K key) {
         final int keyHash = hashCode(key);
         final BucketHead<K, V> bucketHead = entries[index(keyHash)];
         if (bucketHead == null) {
@@ -255,13 +255,13 @@ public abstract class MultiMap<K, V> {
         return false;
     }
 
-    final void put(final K key, final V value) {
+    protected final void put(final K key, final V value) {
         final int keyHash = hashCode(validateKey(key, true));
         final int bucketIndex = index(keyHash);
         putEntry(keyHash, bucketIndex, key, validateValue(key, value));
     }
 
-    final void putAll(final K key, final Iterable<? extends V> values) {
+    protected final void putAll(final K key, final Iterable<? extends V> values) {
         final int keyHash = hashCode(validateKey(key, true));
         final int bucketIndex = index(keyHash);
         BucketHead<K, V> bucketHead = entries[bucketIndex];
@@ -281,7 +281,7 @@ public abstract class MultiMap<K, V> {
     }
 
     @SafeVarargs
-    final void putAll(final K key, final V... values) {
+    protected final void putAll(final K key, final V... values) {
         final int keyHash = hashCode(validateKey(key, true));
         final int bucketIndex = index(keyHash);
         BucketHead<K, V> bucketHead = entries[bucketIndex];
@@ -297,18 +297,18 @@ public abstract class MultiMap<K, V> {
         }
     }
 
-    final void putAll(final MultiMap<? extends K, ? extends V> multiMap) {
+    protected final void putAll(final MultiMap<? extends K, ? extends V> multiMap) {
         putAll0(multiMap);
     }
 
-    final void putExclusive(final K key, final V value) {
+    protected final void putExclusive(final K key, final V value) {
         final int keyHash = hashCode(validateKey(key, false));
         final int bucketIndex = index(keyHash);
         removeAll(key, keyHash, bucketIndex);
         putEntry(keyHash, bucketIndex, key, validateValue(key, value));
     }
 
-    final void putExclusive(final K key, final Iterable<? extends V> values) {
+    protected final void putExclusive(final K key, final Iterable<? extends V> values) {
         final int keyHash = hashCode(validateKey(key, false));
         final int bucketIndex = index(keyHash);
         removeAll(key, keyHash, bucketIndex);
@@ -328,7 +328,7 @@ public abstract class MultiMap<K, V> {
     }
 
     @SafeVarargs
-    final void putExclusive(final K key, final V... values) {
+    protected final void putExclusive(final K key, final V... values) {
         final int keyHash = hashCode(validateKey(key, false));
         final int bucketIndex = index(keyHash);
         removeAll(key, keyHash, bucketIndex);
@@ -345,13 +345,13 @@ public abstract class MultiMap<K, V> {
         }
     }
 
-    final void clearAll() {
+    protected final void clearAll() {
         Arrays.fill(entries, null);
         lastBucketHead = null;
         size = 0;
     }
 
-    final boolean removeAll(final K key) {
+    protected final boolean removeAll(final K key) {
         final int keyHash = hashCode(key);
         final int sizeBefore = size;
         removeAll(key, keyHash, index(keyHash));
@@ -377,7 +377,7 @@ public abstract class MultiMap<K, V> {
     }
 
     @Nullable
-    final V removeAllAndGetFirst(final K key) {
+    protected final V removeAllAndGetFirst(final K key) {
         final int keyHash = hashCode(key);
         final int bucketIndex = index(keyHash);
         final BucketHead<K, V> bucketHead = entries[bucketIndex];
@@ -402,7 +402,7 @@ public abstract class MultiMap<K, V> {
         return value;
     }
 
-    final Iterator<Entry<K, V>> entryIterator() {
+    protected final Iterator<Entry<K, V>> entryIterator() {
         return lastBucketHead == null ? emptyIterator() : new FullEntryIterator(lastBucketHead);
     }
 
