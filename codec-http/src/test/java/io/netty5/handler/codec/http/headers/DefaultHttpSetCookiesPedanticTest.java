@@ -118,4 +118,13 @@ public class DefaultHttpSetCookiesPedanticTest {
         assertThat(e).hasMessageContaining("no cookie value found after")
                 .hasMessageContaining("lastCookie");
     }
+
+    @Test
+    void cookiesWithoutSpaceAfterSemicolon() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("cookie", "firstCookie=v1;b=v2");
+        Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getCookies().forEach(c -> { }));
+        assertThat(e).hasMessageContaining("a space is required after ;")
+                .hasMessageContaining("firstCookie");
+    }
 }
