@@ -43,6 +43,9 @@ public class HpackStaticTableBenchmark extends AbstractMicrobenchmark {
     private static final CharSequence X_CONTENT_ENCODING =
             new AsciiString("x-content-encoding".getBytes(US_ASCII), false);
     private static final CharSequence X_GZIP = new AsciiString("x-gzip".getBytes(US_ASCII), false);
+    private static final CharSequence SCHEME = new AsciiString(":scheme".getBytes(US_ASCII), false);
+    private static final CharSequence HTTP = new AsciiString("http".getBytes(US_ASCII), false);
+    private static final CharSequence HTTPS = new AsciiString("https".getBytes(US_ASCII), false);
     private static final CharSequence STATUS = new AsciiString(":status".getBytes(US_ASCII), false);
     private static final CharSequence STATUS_200 = new AsciiString("200".getBytes(US_ASCII), false);
     private static final CharSequence STATUS_500 = new AsciiString("500".getBytes(US_ASCII), false);
@@ -73,6 +76,18 @@ public class HpackStaticTableBenchmark extends AbstractMicrobenchmark {
     @BenchmarkMode(Mode.AverageTime)
     public int lookupNameOnlyMatchBeginTable() {
         return HpackStaticTable.getIndexInsensitive(AUTHORITY, AUTHORITY_NETTY);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public int lookupHttp() {
+        return HpackStaticTable.getIndexInsensitive(SCHEME, HTTP);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public int lookupHttps() {
+        return HpackStaticTable.getIndexInsensitive(SCHEME, HTTPS);
     }
 
     @Benchmark
