@@ -18,18 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.security.AccessController;
-import java.security.PrivateKey;
-import java.security.PrivilegedAction;
-import java.security.Provider;
-
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.openssl.PEMDecryptorProvider;
 import org.bouncycastle.openssl.PEMEncryptedKeyPair;
@@ -42,6 +30,17 @@ import org.bouncycastle.operator.InputDecryptorProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
 import org.bouncycastle.pkcs.PKCSException;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.security.AccessController;
+import java.security.PrivateKey;
+import java.security.PrivilegedAction;
+import java.security.Provider;
 
 final class BouncyCastlePemReader {
     private static final String BC_PROVIDER = "org.bouncycastle.jce.provider.BouncyCastleProvider";
@@ -149,38 +148,48 @@ final class BouncyCastlePemReader {
     private static PrivateKey getPrivateKey(PEMParser pemParser, String keyPassword) throws IOException,
             PKCSException, OperatorCreationException {
         try {
-            Object object = pemParser.readObject();
-            if (logger.isDebugEnabled()) {
-                logger.debug("Parsed PEM object of type {} and assume " +
-                        "key is {}encrypted", object.getClass().getName(), keyPassword == null ? "not " : "");
-            }
             JcaPEMKeyConverter converter = newConverter();
             PrivateKey pk = null;
 
-            if (keyPassword == null) {
-                // assume private key is not encrypted
-                if (object instanceof PrivateKeyInfo) {
-                    pk = converter.getPrivateKey((PrivateKeyInfo) object);
-                } else if (object instanceof PEMKeyPair) {
-                    pk = converter.getKeyPair((PEMKeyPair) object).getPrivate();
-                } else {
-                    logger.debug("Unable to handle PEM object of type {} as a non encrypted key", object.getClass());
+            Object object = pemParser.readObject();
+            while (object != null && pk == null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Parsed PEM object of type {} and assume " +
+                                 "key is {}encrypted", object.getClass().getName(), keyPassword == null? "not " : "");
                 }
-            } else {
-                // assume private key is encrypted
-                if (object instanceof PEMEncryptedKeyPair) {
-                    PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
-                            .setProvider(bcProvider)
-                            .build(keyPassword.toCharArray());
-                    pk = converter.getKeyPair(((PEMEncryptedKeyPair) object).decryptKeyPair(decProv)).getPrivate();
-                } else if (object instanceof PKCS8EncryptedPrivateKeyInfo) {
-                    InputDecryptorProvider pkcs8InputDecryptorProvider = new JceOpenSSLPKCS8DecryptorProviderBuilder()
-                            .setProvider(bcProvider)
-                            .build(keyPassword.toCharArray());
-                    pk = converter.getPrivateKey(((PKCS8EncryptedPrivateKeyInfo) object)
-                            .decryptPrivateKeyInfo(pkcs8InputDecryptorProvider));
+
+                if (keyPassword == null) {
+                    // assume private key is not encrypted
+                    if (object instanceof PrivateKeyInfo) {
+                        pk = converter.getPrivateKey((PrivateKeyInfo) object);
+                    } else if (object instanceof PEMKeyPair) {
+                        pk = converter.getKeyPair((PEMKeyPair) object).getPrivate();
+                    } else {
+                        logger.debug("Unable to handle PEM object of type {} as a non encrypted key",
+                                     object.getClass());
+                    }
                 } else {
-                    logger.debug("Unable to handle PEM object of type {} as a encrypted key", object.getClass());
+                    // assume private key is encrypted
+                    if (object instanceof PEMEncryptedKeyPair) {
+                        PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
+                                .setProvider(bcProvider)
+                                .build(keyPassword.toCharArray());
+                        pk = converter.getKeyPair(((PEMEncryptedKeyPair) object).decryptKeyPair(decProv)).getPrivate();
+                    } else if (object instanceof PKCS8EncryptedPrivateKeyInfo) {
+                        InputDecryptorProvider pkcs8InputDecryptorProvider =
+                                new JceOpenSSLPKCS8DecryptorProviderBuilder()
+                                        .setProvider(bcProvider)
+                                        .build(keyPassword.toCharArray());
+                        pk = converter.getPrivateKey(((PKCS8EncryptedPrivateKeyInfo) object)
+                                                             .decryptPrivateKeyInfo(pkcs8InputDecryptorProvider));
+                    } else {
+                        logger.debug("Unable to handle PEM object of type {} as a encrypted key", object.getClass());
+                    }
+                }
+
+                // Try reading next entry in the pem file if private key is not yet found
+                if (pk == null) {
+                    object = pemParser.readObject();
                 }
             }
 
