@@ -785,7 +785,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
         @Override
         protected void runAfterTransportOperation() {
             super.runAfterTransportOperation();
-            if (!executor().inEventLoop()) {
+            if (!((EmbeddedEventLoop) executor()).isRunning()) {
                 runPendingTasks();
             }
         }

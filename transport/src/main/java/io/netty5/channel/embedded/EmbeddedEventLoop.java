@@ -182,6 +182,10 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         }
     }
 
+    synchronized boolean isRunning() {
+        return running;
+    }
+
     @Override
     protected synchronized long getCurrentTimeNanos() {
         if (timeFrozen) {
