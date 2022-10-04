@@ -48,7 +48,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     private boolean timeFrozen;
 
     private final Queue<Runnable> tasks = new ArrayDeque<>(2);
-    boolean running;
+    private boolean running;
 
     private static EmbeddedChannel cast(IoHandle handle) {
         if (handle instanceof EmbeddedChannel) {
@@ -118,7 +118,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    public void execute(Runnable task) {
+    public synchronized void execute(Runnable task) {
         requireNonNull(task, "command");
         tasks.add(task);
         if (!running) {
@@ -126,7 +126,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         }
     }
 
-    void runTasks() {
+    synchronized void runTasks() {
         boolean wasRunning = running;
         try {
             for (;;) {
@@ -145,11 +145,11 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         }
     }
 
-    boolean hasPendingNormalTasks() {
+    synchronized boolean hasPendingNormalTasks() {
         return !tasks.isEmpty();
     }
 
-    long runScheduledTasks() {
+    synchronized long runScheduledTasks() {
         long time = getCurrentTimeNanos();
         boolean wasRunning = running;
         try {
@@ -169,11 +169,11 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         }
     }
 
-    long nextScheduledTask() {
+    synchronized long nextScheduledTask() {
         return nextScheduledTaskNano();
     }
 
-    void cancelScheduled() {
+    synchronized void cancelScheduled() {
         running = true;
         try {
             cancelScheduledTasks();
@@ -183,14 +183,14 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    protected long getCurrentTimeNanos() {
+    protected synchronized long getCurrentTimeNanos() {
         if (timeFrozen) {
             return frozenTimestamp;
         }
         return System.nanoTime() - startTime;
     }
 
-    void advanceTimeBy(long nanos) {
+    synchronized void advanceTimeBy(long nanos) {
         if (timeFrozen) {
             frozenTimestamp += nanos;
         } else {
@@ -199,14 +199,14 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         }
     }
 
-    void freezeTime() {
+    synchronized void freezeTime() {
         if (!timeFrozen) {
             frozenTimestamp = getCurrentTimeNanos();
             timeFrozen = true;
         }
     }
 
-    void unfreezeTime() {
+    synchronized void unfreezeTime() {
         if (timeFrozen) {
             // we want getCurrentTimeNanos to continue right where frozenTimestamp left off:
             // getCurrentTimeNanos = nanoTime - startTime = frozenTimestamp
@@ -247,7 +247,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    public boolean inEventLoop(Thread thread) {
+    public synchronized boolean inEventLoop(Thread thread) {
         return running;
     }
 

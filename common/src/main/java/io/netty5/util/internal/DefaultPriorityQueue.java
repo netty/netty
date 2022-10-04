@@ -19,7 +19,7 @@ import java.util.AbstractQueue;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.concurrent.locks.StampedLock;
+import java.util.NoSuchElementException;
 
 import static io.netty5.util.internal.PriorityQueueNode.INDEX_NOT_IN_QUEUE;
 import static java.util.Objects.requireNonNull;
@@ -27,266 +27,213 @@ import static java.util.Objects.requireNonNull;
 /**
  * A priority queue which uses natural ordering of elements. Elements are also required to be of type
  * {@link PriorityQueueNode} for the purpose of maintaining the index in the priority queue.
- * <p>
- * This priority queue is thread-safe, and uses locking internally.
- *
  * @param <T> The object that is maintained in the queue.
  */
 public final class DefaultPriorityQueue<T extends PriorityQueueNode> extends AbstractQueue<T>
                                                                      implements PriorityQueue<T> {
     private static final PriorityQueueNode[] EMPTY_ARRAY = new PriorityQueueNode[0];
     private final Comparator<T> comparator;
-    private final StampedLock lock;
     private T[] queue;
     private int size;
 
-    @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
+    @SuppressWarnings("unchecked")
     public DefaultPriorityQueue(Comparator<T> comparator, int initialSize) {
         this.comparator = requireNonNull(comparator, "comparator");
-        lock = new StampedLock();
         queue = (T[]) (initialSize != 0 ? new PriorityQueueNode[initialSize] : EMPTY_ARRAY);
     }
 
     @Override
     public int size() {
-        long stamp = lock.readLock();
-        try {
-            return size;
-        } finally {
-            lock.unlockRead(stamp);
-        }
+        return size;
     }
 
     @Override
     public boolean isEmpty() {
-        long stamp = lock.readLock();
-        try {
-            return size == 0;
-        } finally {
-            lock.unlockRead(stamp);
-        }
+        return size == 0;
     }
 
     @Override
     public boolean contains(Object o) {
-        long stamp = lock.readLock();
-        try {
-            if (!(o instanceof PriorityQueueNode)) {
-                return false;
-            }
-            PriorityQueueNode node = (PriorityQueueNode) o;
-            return contains(node, node.priorityQueueIndex(this));
-        } finally {
-            lock.unlockRead(stamp);
+        if (!(o instanceof PriorityQueueNode)) {
+            return false;
         }
+        PriorityQueueNode node = (PriorityQueueNode) o;
+        return contains(node, node.priorityQueueIndex(this));
     }
 
     @Override
     public boolean containsTyped(T node) {
-        long stamp = lock.readLock();
-        try {
-            return contains(node, node.priorityQueueIndex(this));
-        } finally {
-            lock.unlockRead(stamp);
-        }
+        return contains(node, node.priorityQueueIndex(this));
     }
 
     @Override
     public void clear() {
-        long stamp = lock.writeLock();
-        try {
-            for (int i = 0; i < size; ++i) {
-                T node = queue[i];
-                if (node != null) {
-                    node.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);
-                    queue[i] = null;
-                }
+        for (int i = 0; i < size; ++i) {
+            T node = queue[i];
+            if (node != null) {
+                node.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);
+                queue[i] = null;
             }
-            size = 0;
-        } finally {
-            lock.unlockWrite(stamp);
         }
+        size = 0;
     }
 
     @Override
     public void clearIgnoringIndexes() {
-        long stamp = lock.writeLock();
-        try {
-            size = 0;
-        } finally {
-            lock.unlockWrite(stamp);
-        }
+        size = 0;
     }
 
     @Override
     public boolean offer(T e) {
-        long stamp = lock.writeLock();
-        try {
-            if (e.priorityQueueIndex(this) != INDEX_NOT_IN_QUEUE) {
-                throw new IllegalArgumentException("e.priorityQueueIndex(): " + e.priorityQueueIndex(this) +
-                        " (expected: " + INDEX_NOT_IN_QUEUE + ") + e: " + e);
-            }
-
-            // Check that the array capacity is enough to hold values by doubling capacity.
-            int length = queue.length;
-            if (size >= length) {
-                // Use a policy which allows for a 0 initial capacity. Same policy as JDK's priority queue, double when
-                // "small", then grow by 50% when "large".
-                queue = Arrays.copyOf(queue, length + (length < 64 ? length + 2 : length >>> 1));
-            }
-
-            bubbleUp(size++, e);
-            return true;
-        } finally {
-            lock.unlockWrite(stamp);
+        if (e.priorityQueueIndex(this) != INDEX_NOT_IN_QUEUE) {
+            throw new IllegalArgumentException("e.priorityQueueIndex(): " + e.priorityQueueIndex(this) +
+                    " (expected: " + INDEX_NOT_IN_QUEUE + ") + e: " + e);
         }
+
+        // Check that the array capacity is enough to hold values by doubling capacity.
+        if (size >= queue.length) {
+            // Use a policy which allows for a 0 initial capacity. Same policy as JDK's priority queue, double when
+            // "small", then grow by 50% when "large".
+            queue = Arrays.copyOf(queue, queue.length + ((queue.length < 64) ?
+                                                         (queue.length + 2) :
+                                                         (queue.length >>> 1)));
+        }
+
+        bubbleUp(size++, e);
+        return true;
     }
 
     @Override
     public T poll() {
-        long stamp = lock.writeLock();
-        try {
-            if (size == 0) {
-                return null;
-            }
-            T result = queue[0];
-            result.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);
-
-            T last = queue[--size];
-            queue[size] = null;
-            if (size != 0) { // Make sure we don't add the last element back.
-                bubbleDown(0, last);
-            }
-
-            return result;
-        } finally {
-            lock.unlockWrite(stamp);
+        if (size == 0) {
+            return null;
         }
+        T result = queue[0];
+        result.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);
+
+        T last = queue[--size];
+        queue[size] = null;
+        if (size != 0) { // Make sure we don't add the last element back.
+            bubbleDown(0, last);
+        }
+
+        return result;
     }
 
     @Override
     public T peek() {
-        long stamp = lock.readLock();
-        try {
-            return size == 0 ? null : queue[0];
-        } finally {
-            lock.unlockRead(stamp);
-        }
+        return (size == 0) ? null : queue[0];
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public boolean remove(Object o) {
-        long stamp = lock.writeLock();
+        final T node;
         try {
-            final T node;
-            try {
-                node = (T) o;
-            } catch (ClassCastException e) {
-                return false;
-            }
-            return removeTyped(node);
-        } finally {
-            lock.unlockWrite(stamp);
+            node = (T) o;
+        } catch (ClassCastException e) {
+            return false;
         }
+        return removeTyped(node);
     }
 
     @Override
     public boolean removeTyped(T node) {
-        long stamp = lock.writeLock();
-        try {
-            int i = node.priorityQueueIndex(this);
-            if (!contains(node, i)) {
-                return false;
-            }
-
-            node.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);
-            if (--size == 0 || size == i) {
-                // If there are no node left, or this is the last node in the array just remove and return.
-                queue[i] = null;
-                return true;
-            }
-
-            // Move the last element where node currently lives in the array.
-            T moved = queue[i] = queue[size];
-            queue[size] = null;
-            // priorityQueueIndex will be updated below in bubbleUp or bubbleDown
-
-            // Make sure the moved node still preserves the min-heap properties.
-            if (comparator.compare(node, moved) < 0) {
-                bubbleDown(i, moved);
-            } else {
-                bubbleUp(i, moved);
-            }
-            return true;
-        } finally {
-            lock.unlockWrite(stamp);
+        int i = node.priorityQueueIndex(this);
+        if (!contains(node, i)) {
+            return false;
         }
+
+        node.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);
+        if (--size == 0 || size == i) {
+            // If there are no node left, or this is the last node in the array just remove and return.
+            queue[i] = null;
+            return true;
+        }
+
+        // Move the last element where node currently lives in the array.
+        T moved = queue[i] = queue[size];
+        queue[size] = null;
+        // priorityQueueIndex will be updated below in bubbleUp or bubbleDown
+
+        // Make sure the moved node still preserves the min-heap properties.
+        if (comparator.compare(node, moved) < 0) {
+            bubbleDown(i, moved);
+        } else {
+            bubbleUp(i, moved);
+        }
+        return true;
     }
 
     @Override
     public void priorityChanged(T node) {
-        long stamp = lock.writeLock();
-        try {
-            int i = node.priorityQueueIndex(this);
-            if (!contains(node, i)) {
-                return;
-            }
+        int i = node.priorityQueueIndex(this);
+        if (!contains(node, i)) {
+            return;
+        }
 
-            // Preserve the min-heap property by comparing the new priority with parents/children in the heap.
-            if (i == 0) {
-                bubbleDown(i, node);
+        // Preserve the min-heap property by comparing the new priority with parents/children in the heap.
+        if (i == 0) {
+            bubbleDown(i, node);
+        } else {
+            // Get the parent to see if min-heap properties are violated.
+            int iParent = (i - 1) >>> 1;
+            T parent = queue[iParent];
+            if (comparator.compare(node, parent) < 0) {
+                bubbleUp(i, node);
             } else {
-                // Get the parent to see if min-heap properties are violated.
-                int iParent = i - 1 >>> 1;
-                T parent = queue[iParent];
-                if (comparator.compare(node, parent) < 0) {
-                    bubbleUp(i, node);
-                } else {
-                    bubbleDown(i, node);
-                }
+                bubbleDown(i, node);
             }
-        } finally {
-            lock.unlockWrite(stamp);
         }
     }
 
     @Override
     public Object[] toArray() {
-        long stamp = lock.readLock();
-        try {
-            return Arrays.copyOf(queue, size);
-        } finally {
-            lock.unlockRead(stamp);
-        }
+        return Arrays.copyOf(queue, size);
     }
 
-    @SuppressWarnings({"unchecked", "SuspiciousArrayCast", "SuspiciousSystemArraycopy"})
+    @SuppressWarnings("unchecked")
     @Override
     public <X> X[] toArray(X[] a) {
-        long stamp = lock.readLock();
-        try {
-            if (a.length < size) {
-                return (X[]) Arrays.copyOf(queue, size, a.getClass());
-            }
-            System.arraycopy(queue, 0, a, 0, size);
-            if (a.length > size) {
-                a[size] = null;
-            }
-            return a;
-        } finally {
-            lock.unlockRead(stamp);
+        if (a.length < size) {
+            return (X[]) Arrays.copyOf(queue, size, a.getClass());
         }
+        System.arraycopy(queue, 0, a, 0, size);
+        if (a.length > size) {
+            a[size] = null;
+        }
+        return a;
     }
 
     /**
-     * This priority queue does not support iteration.
-     *
-     * @throws UnsupportedOperationException iteration is not supported.
+     * This iterator does not return elements in any particular order.
      */
     @Override
     public Iterator<T> iterator() {
-        throw new UnsupportedOperationException();
+        return new PriorityQueueIterator();
+    }
+
+    private final class PriorityQueueIterator implements Iterator<T> {
+        private int index;
+
+        @Override
+        public boolean hasNext() {
+            return index < size;
+        }
+
+        @Override
+        public T next() {
+            if (index >= size) {
+                throw new NoSuchElementException();
+            }
+
+            return queue[index++];
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("remove");
+        }
     }
 
     private boolean contains(PriorityQueueNode node, int i) {
@@ -326,7 +273,7 @@ public final class DefaultPriorityQueue<T extends PriorityQueueNode> extends Abs
 
     private void bubbleUp(int k, T node) {
         while (k > 0) {
-            int iParent = k - 1 >>> 1;
+            int iParent = (k - 1) >>> 1;
             T parent = queue[iParent];
 
             // If the bubbleUp node is less than the parent, then we have found a spot to insert and still maintain

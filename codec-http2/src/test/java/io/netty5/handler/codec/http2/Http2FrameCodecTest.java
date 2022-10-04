@@ -41,7 +41,6 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ReflectionUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
@@ -70,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
@@ -635,7 +635,9 @@ public class Http2FrameCodecTest {
                }
                );
         Future<Void> f = channel.writeAndFlush(new DefaultHttp2DataFrame(bb(100).send()).stream(stream));
-        assertTrue(f.isSuccess());
+        if (!f.asStage().await(5, TimeUnit.SECONDS) || !f.isSuccess()) {
+            fail("Expected data-frame future to have succeeded: " + f, f.cause());
+        }
 
         listenerExecuted.asFuture().asStage().sync();
         assertTrue(listenerExecuted.isSuccess());
