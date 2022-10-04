@@ -56,7 +56,7 @@ class DefaultHttpSetCookieTest {
         assertThat(new DefaultHttpSetCookie(
                 "foo", "bar", "/", "servicetalk.io", null, 1L, SameSite.None, true, false, true)
         ).hasSameHashCodeAs(new DefaultHttpSetCookie(
-                        "foo", "bar", "/", "ServiceTalk.io", null, 2L, SameSite.Lax, false, true, false));
+                "foo", "bar", "/", "ServiceTalk.io", null, 2L, SameSite.Lax, false, true, false));
     }
 
     @Test
@@ -73,24 +73,24 @@ class DefaultHttpSetCookieTest {
 
         // Path is case-sensitive:
         assertThat(new DefaultHttpSetCookie("foo", "bar", "/path", "servicetalk.io",
-                        null, 1L, SameSite.None, true, false, true)
+                null, 1L, SameSite.None, true, false, true)
         ).isNotEqualTo(new DefaultHttpSetCookie("foo", "bar", "/Path", "servicetalk.io",
-                                                null, 1L, SameSite.None, true, false, true));
+                null, 1L, SameSite.None, true, false, true));
 
         assertThat(new DefaultHttpSetCookie("foo", "bar", "/path", "servicetalk.io",
-                        null, 1L, SameSite.None, true, false, true).hashCode()
+                null, 1L, SameSite.None, true, false, true).hashCode()
         ).isNotEqualTo(new DefaultHttpSetCookie("foo", "bar", "/pathh", "servicetalk.io",
-                                                null, 1L, SameSite.None, true, false, true).hashCode());
+                null, 1L, SameSite.None, true, false, true).hashCode());
 
         // Domain doesn't match:
         assertThat(new DefaultHttpSetCookie("foo", "bar", "/path", "servicetalk.io",
-                        null, 1L, SameSite.None, true, false, true)
+                null, 1L, SameSite.None, true, false, true)
         ).isNotEqualTo(new DefaultHttpSetCookie("foo", "bar", "/path", "docs.servicetalk.io",
-                                                null, 1L, SameSite.None, true, false, true));
+                null, 1L, SameSite.None, true, false, true));
 
         assertThat(new DefaultHttpSetCookie("foo", "bar", "/path", "servicetalk.io",
-                        null, 1L, SameSite.None, true, false, true).hashCode()
+                null, 1L, SameSite.None, true, false, true).hashCode()
         ).isNotEqualTo(new DefaultHttpSetCookie("foo", "bar", "/path", "docs.servicetalk.io",
-                                                null, 1L, SameSite.None, true, false, true).hashCode());
+                null, 1L, SameSite.None, true, false, true).hashCode());
     }
 }

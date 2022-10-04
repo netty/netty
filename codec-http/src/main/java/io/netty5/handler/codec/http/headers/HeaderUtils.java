@@ -32,7 +32,9 @@ package io.netty5.handler.codec.http.headers;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.util.AsciiString;
+import io.netty5.util.internal.SystemPropertyUtil;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -61,8 +63,28 @@ public final class HeaderUtils {
     public static final BiFunction<? super CharSequence, ? super CharSequence, CharSequence> DEFAULT_HEADER_FILTER =
             (k, v) -> "<filtered>";
 
+    /**
+     * Whether cookie parsing should be strictly spec compliant with
+     * <a href="https://www.rfc-editor.org/rfc/rfc6265">RFC6265</a> ({@code true}), or allow some deviations that are
+     * commonly observed in practice and allowed by the obsolete
+     * <a href="https://www.rfc-editor.org/rfc/rfc2965">RFC2965</a>/
+     * <a href="https://www.rfc-editor.org/rfc/rfc2109">RFC2109</a> ({@code false}, the default).
+     */
+    // not final for testing
+    private static boolean cookieParsingStrictRfc6265 = SystemPropertyUtil.getBoolean(
+            "io.netty5.handler.codec.http.headers.cookieParsingStrictRfc6265", false);
+
     private HeaderUtils() {
         // no instances
+    }
+
+    static boolean cookieParsingStrictRfc6265() {
+        return cookieParsingStrictRfc6265;
+    }
+
+    @VisibleForTesting
+    static void cookieParsingStrictRfc6265(boolean value) {
+        cookieParsingStrictRfc6265 = value;
     }
 
     static String toString(final HttpHeaders headers,
@@ -448,14 +470,33 @@ public final class HeaderUtils {
          */
         private HttpCookiePair findNext(CharSequence cookieHeaderValue) {
             int semiIndex = nextCookieDelimiter(cookieHeaderValue, nextNextStart);
-            HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(cookieHeaderValue, nextNextStart, semiIndex);
+            int nameLength = indexOf(cookieHeaderValue, '=', nextNextStart) - nextNextStart;
+            if (nameLength < 0) {
+                throw new IllegalArgumentException("no cookie value found after index " + nextNextStart +
+                        (next == null ? " (there was no previous cookie)" :
+                                " (found after parsing the '" + next.name() + "' cookie)"));
+            }
+            HttpCookiePair next = DefaultHttpCookiePair.parseCookiePair(
+                    cookieHeaderValue, nextNextStart, nameLength, semiIndex);
             if (semiIndex > 0) {
                 if (cookieHeaderValue.length() - 2 <= semiIndex) {
-                    advanceCookieHeaderValue();
-                    nextNextStart = 0;
-                } else {
-                    // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                    if (cookieParsingStrictRfc6265()) {
+                        throw new IllegalArgumentException("cookie '" + next.name() +
+                                "': cookie is not allowed to end with ;");
+                    } else {
+                        advanceCookieHeaderValue();
+                        nextNextStart = 0;
+                    }
+                } else if (cookieParsingStrictRfc6265()) {
+                    // Skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                    if (cookieHeaderValue.charAt(semiIndex + 1) != ' ') {
+                        throw new IllegalArgumentException("cookie '" + next.name() +
+                                "': a space is required after ; in cookie attribute-value lists");
+                    }
                     nextNextStart = semiIndex + 2;
+                } else {
+                    // Older cookie spec delimit with just semicolon. See https://www.rfc-editor.org/rfc/rfc2965
+                    nextNextStart = semiIndex + (cookieHeaderValue.charAt(semiIndex + 1) == ' ' ? 2 : 1);
                 }
             } else {
                 advanceCookieHeaderValue();

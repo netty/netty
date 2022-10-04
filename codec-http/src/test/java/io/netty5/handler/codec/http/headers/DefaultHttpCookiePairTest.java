@@ -32,6 +32,7 @@ package io.netty5.handler.codec.http.headers;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 
+import static io.netty5.handler.codec.http.headers.HttpHeaders.newHeaders;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -106,19 +107,37 @@ class DefaultHttpCookiePairTest {
     }
 
     @Test
-    public void testAddOneInvalidCookie() {
-        HttpHeaders headers = HttpHeaders.newHeaders();
+    void testAddOneInvalidCookie() {
+        HttpHeaders headers = newHeaders();
         assertThrows(HeaderValidationException.class, () -> {
             headers.addCookie(new DefaultHttpCookiePair("foo", "value-with-ctrl-char\u0000"));
         });
     }
 
     @Test
-    public void testAddTwoCookiesWithLastInvalid() {
-        HttpHeaders headers = HttpHeaders.newHeaders();
+    void testAddTwoCookiesWithLastInvalid() {
+        HttpHeaders headers = newHeaders();
+        headers.addCookie(new DefaultHttpCookiePair("valid", "foo"));
         assertThrows(HeaderValidationException.class, () -> {
-            headers.addCookie(new DefaultHttpCookiePair("valid", "foo"));
             headers.addCookie(new DefaultHttpCookiePair("invalid", "value-with-ctrl-char\u0000"));
         });
+    }
+
+    @Test
+    void cookiesWithExtraTrailingSemiColonAndTwoSpaces() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("cookie", "a=v1; b=v2; lastCookie=v3;  ");
+        Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getCookies().forEach(c -> { }));
+        assertThat(e).hasMessageContaining("no cookie value found after")
+                .hasMessageContaining("lastCookie");
+    }
+
+    @Test
+    void delimiterAndSpacesButNoCookie() {
+        final HttpHeaders headers = newHeaders();
+        headers.add("cookie", ";  ");
+        Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getCookies().forEach(c -> { }));
+        assertThat(e).hasMessageContaining("no cookie value found after")
+                .hasMessageContaining("no previous cookie");
     }
 }

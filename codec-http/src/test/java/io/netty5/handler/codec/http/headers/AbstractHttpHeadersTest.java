@@ -925,11 +925,20 @@ public abstract class AbstractHttpHeadersTest {
     }
 
     @Test
-    void throwIfNoSpaceBeforeCookieAttributeValue() {
+    void mustTolerateNoSpaceBeforeCookieAttributeValue() {
         final HttpHeaders headers = HttpHeaders.newHeaders();
         headers.add("set-cookie", "first=12345;Extension");
         headers.add("set-cookie", "second=12345;Expires=Mon, 22 Aug 2022 20:12:35 GMT");
-        throwIfNoSpaceBeforeCookieAttributeValue(headers);
+        tolerateNoSpaceBeforeCookieAttributeValue(headers);
+    }
+
+    private static void tolerateNoSpaceBeforeCookieAttributeValue(HttpHeaders headers) {
+        HttpSetCookie first = headers.getSetCookie("first");
+        assertEquals("12345", first.value());
+
+        HttpSetCookie second = headers.getSetCookie("second");
+        assertEquals("12345", second.value());
+        assertEquals("Mon, 22 Aug 2022 20:12:35 GMT", second.expires());
     }
 
     @Test
@@ -949,15 +958,5 @@ public abstract class AbstractHttpHeadersTest {
         HttpSetCookie setCookie = headers.getSetCookie("cook");
         assertThat(setCookie.name()).isEqualToIgnoringCase("cook");
         assertThat(setCookie.value()).isEqualToIgnoringCase("=");
-    }
-
-    private static void throwIfNoSpaceBeforeCookieAttributeValue(HttpHeaders headers) {
-        Exception exception;
-
-        exception = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("first"));
-        MatcherAssert.assertThat(exception.getMessage(), containsString("space is required after ;"));
-
-        exception = assertThrows(IllegalArgumentException.class, () -> headers.getSetCookie("second"));
-        MatcherAssert.assertThat(exception.getMessage(), containsString("space is required after ;"));
     }
 }
