@@ -38,7 +38,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     private static final RunnableScheduledFutureNode<?>[]
             EMPTY_RUNNABLE_SCHEDULED_FUTURE_NODES = new RunnableScheduledFutureNode<?>[0];
 
-    private DefaultPriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue;
+    private PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue;
 
     protected AbstractScheduledEventExecutor() {
     }
@@ -135,7 +135,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     protected final RunnableScheduledFuture<?> pollScheduledTask(long nanoTime) {
         assert inEventLoop();
 
-        DefaultPriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (scheduledTaskQueue == null) {
             return null;
         }
@@ -144,19 +144,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             return null;
         }
         if (scheduledTask.deadlineNanos() <= nanoTime) {
-            RunnableScheduledFutureNode<?> polled = scheduledTaskQueue.poll();
-            if (polled == scheduledTask) {
-                return scheduledTask;
-            }
-            if (polled == null) {
-                return null;
-            }
-            if (polled.deadlineNanos() <= nanoTime) {
-                return polled;
-            } else {
-                // We didn't want this task after all.
-                scheduledTaskQueue.offer(polled);
-            }
+            scheduledTaskQueue.remove();
+            return scheduledTask;
         }
         return null;
     }
