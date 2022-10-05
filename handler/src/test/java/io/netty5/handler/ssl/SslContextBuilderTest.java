@@ -27,6 +27,7 @@ import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.ByteArrayInputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
@@ -64,6 +65,17 @@ public class SslContextBuilderTest {
     public void testClientContextOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
         testClientContext(SslProvider.OPENSSL);
+    }
+
+    @Test
+    public void testCombinedPemFileClientContextJdk() throws Exception {
+        testServerContextWithCombinedCertAndKeyInPem(SslProvider.JDK);
+    }
+
+    @Test
+    public void testCombinedPemFileClientContextOpenssl() throws Exception {
+        OpenSsl.ensureAvailability();
+        testServerContextWithCombinedCertAndKeyInPem(SslProvider.OPENSSL);
     }
 
     @Test
@@ -158,11 +170,11 @@ public class SslContextBuilderTest {
             }
         } catch (IllegalArgumentException e) {
             assumeFalse("Input stream not contain valid certificates.".equals(e.getMessage())
-                            && e.getCause() != null
-                            && "java.io.IOException: Unknown named curve: 1.3.132.0.39".equals(
-                                    e.getCause().getMessage()),
-                    "Cannot test that SslProvider rejects certificates with curve " +
-                            "1.3.132.0.39 because the key manager does not know the curve either.");
+                        && e.getCause() != null
+                        && "java.io.IOException: Unknown named curve: 1.3.132.0.39".equals(
+                                e.getCause().getMessage()),
+                        "Cannot test that SslProvider rejects certificates with curve " +
+                        "1.3.132.0.39 because the key manager does not know the curve either.");
             throw e;
         }
         assertThrows(SSLException.class, new Executable() {
@@ -171,6 +183,40 @@ public class SslContextBuilderTest {
                 builder.sslProvider(SslProvider.OPENSSL).build();
             }
         });
+    }
+
+    private void testServerContextWithCombinedCertAndKeyInPem(SslProvider provider) throws SSLException {
+        String pem = "-----BEGIN CERTIFICATE-----\n" +
+                     "MIIB1jCCAX0CCQDq4PSOirh7MDAJBgcqhkjOPQQBMHIxCzAJBgNVBAYTAlVTMQsw\n" +
+                     "CQYDVQQIDAJDQTEMMAoGA1UEBwwDRm9vMQwwCgYDVQQKDANCYXIxDDAKBgNVBAsM\n" +
+                     "A0JhejEQMA4GA1UEAwwHQmFyLmNvbTEaMBgGCSqGSIb3DQEJARYLZm9vQGJhci5j\n" +
+                     "b20wHhcNMjIxMDAyMTYzODAyWhcNMjIxMjAxMTYzODAyWjB2MQswCQYDVQQGEwJV\n" +
+                     "UzELMAkGA1UECAwCQ0ExDDAKBgNVBAcMA0ZvbzEMMAoGA1UECgwDQmFyMQwwCgYD\n" +
+                     "VQQLDANiYXoxFDASBgNVBAMMC2Jhci5iYXIuYmF6MRowGAYJKoZIhvcNAQkBFgtm\n" +
+                     "b29AYmFyLmNvbTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABHiEmjPEqQbqXYMB\n" +
+                     "nAPOv24rJf6MhTwHB0QC1suZ9q9XFUkalnqGryqf/emHs81RsXWKz4sCsbIJkmHz\n" +
+                     "H8HYhmkwCQYHKoZIzj0EAQNIADBFAiBCgzxZ5qviemPdejt2WazSgwNJTbirzoQa\n" +
+                     "FMv2XFTTCwIhANS3fZ8BulbYkdRWVEFwm2FGotqLfC60JA/gg/brlWSP\n" +
+                     "-----END CERTIFICATE-----\n" +
+                     "-----BEGIN EC PRIVATE KEY-----\n" +
+                     "MHcCAQEEIF8RlaD0JX8u2Lryq1+AbYfDaTBPJnPSA8+N2L12YuuUoAoGCCqGSM49\n" +
+                     "AwEHoUQDQgAEeISaM8SpBupdgwGcA86/bisl/oyFPAcHRALWy5n2r1cVSRqWeoav\n" +
+                     "Kp/96YezzVGxdYrPiwKxsgmSYfMfwdiGaQ==\n" +
+                     "-----END EC PRIVATE KEY-----";
+
+        ByteArrayInputStream certStream = new ByteArrayInputStream(pem.getBytes(StandardCharsets.US_ASCII));
+        ByteArrayInputStream keyStream = new ByteArrayInputStream(pem.getBytes(StandardCharsets.US_ASCII));
+
+        SslContext context = SslContextBuilder.forServer(certStream, keyStream, null)
+                                              .sslProvider(provider)
+                                              .clientAuth(ClientAuth.OPTIONAL)
+                                              .build();
+
+        SSLEngine engine = context.newEngine(offHeapAllocator());
+        assertTrue(engine.getWantClientAuth());
+        assertFalse(engine.getNeedClientAuth());
+        engine.closeInbound();
+        engine.closeOutbound();
     }
 
     @Test
