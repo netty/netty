@@ -49,6 +49,9 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     private final Queue<Runnable> tasks = new ArrayDeque<>(2);
     boolean running;
+    // Used to detect concurrent accesses:
+    private Thread holder;
+    private int holderRefs;
 
     private static EmbeddedChannel cast(IoHandle handle) {
         if (handle instanceof EmbeddedChannel) {
@@ -120,13 +123,19 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     @Override
     public void execute(Runnable task) {
         requireNonNull(task, "command");
-        tasks.add(task);
-        if (!running) {
-            runTasks();
+        begin();
+        try {
+            tasks.add(task);
+            if (!running) {
+                runTasks();
+            }
+        } finally {
+            end();
         }
     }
 
     void runTasks() {
+        begin();
         boolean wasRunning = running;
         try {
             for (;;) {
@@ -142,14 +151,21 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
             if (!wasRunning) {
                 running = false;
             }
+            end();
         }
     }
 
     boolean hasPendingNormalTasks() {
-        return !tasks.isEmpty();
+        begin();
+        try {
+            return !tasks.isEmpty();
+        } finally {
+            end();
+        }
     }
 
     long runScheduledTasks() {
+        begin();
         long time = getCurrentTimeNanos();
         boolean wasRunning = running;
         try {
@@ -166,53 +182,84 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
             if (!wasRunning) {
                 running = false;
             }
+            end();
         }
     }
 
     long nextScheduledTask() {
-        return nextScheduledTaskNano();
+        begin();
+        try {
+            return nextScheduledTaskNano();
+        } finally {
+            end();
+        }
     }
 
     void cancelScheduled() {
-        running = true;
+        begin();
         try {
-            cancelScheduledTasks();
+            running = true;
+            try {
+                cancelScheduledTasks();
+            } finally {
+                running = false;
+            }
         } finally {
-            running = false;
+            end();
         }
     }
 
     @Override
     protected long getCurrentTimeNanos() {
-        if (timeFrozen) {
-            return frozenTimestamp;
+        begin();
+        try {
+            if (timeFrozen) {
+                return frozenTimestamp;
+            }
+            return System.nanoTime() - startTime;
+        } finally {
+            end();
         }
-        return System.nanoTime() - startTime;
     }
 
     void advanceTimeBy(long nanos) {
-        if (timeFrozen) {
-            frozenTimestamp += nanos;
-        } else {
-            // startTime is subtracted from nanoTime, so increasing the startTime will advance getCurrentTimeNanos
-            startTime -= nanos;
+        begin();
+        try {
+            if (timeFrozen) {
+                frozenTimestamp += nanos;
+            } else {
+                // startTime is subtracted from nanoTime, so increasing the startTime will advance getCurrentTimeNanos
+                startTime -= nanos;
+            }
+        } finally {
+            end();
         }
     }
 
     void freezeTime() {
-        if (!timeFrozen) {
-            frozenTimestamp = getCurrentTimeNanos();
-            timeFrozen = true;
+        begin();
+        try {
+            if (!timeFrozen) {
+                frozenTimestamp = getCurrentTimeNanos();
+                timeFrozen = true;
+            }
+        } finally {
+            end();
         }
     }
 
     void unfreezeTime() {
-        if (timeFrozen) {
-            // we want getCurrentTimeNanos to continue right where frozenTimestamp left off:
-            // getCurrentTimeNanos = nanoTime - startTime = frozenTimestamp
-            // then solve for startTime
-            startTime = System.nanoTime() - frozenTimestamp;
-            timeFrozen = false;
+        begin();
+        try {
+            if (timeFrozen) {
+                // we want getCurrentTimeNanos to continue right where frozenTimestamp left off:
+                // getCurrentTimeNanos = nanoTime - startTime = frozenTimestamp
+                // then solve for startTime
+                startTime = System.nanoTime() - frozenTimestamp;
+                timeFrozen = false;
+            }
+        } finally {
+            end();
         }
     }
 
@@ -248,11 +295,55 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     @Override
     public boolean inEventLoop(Thread thread) {
-        return running;
+        return isRunning();
+    }
+
+    boolean isRunning() {
+        begin();
+        try {
+            return running;
+        } finally {
+            end();
+        }
     }
 
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
         return EmbeddedChannel.class.isAssignableFrom(handleType);
+    }
+
+    private void begin() {
+        Thread thisThread = Thread.currentThread();
+        Thread currThread = holder;
+        if (currThread == null) {
+            holder = thisThread;
+            holderRefs = 1;
+            return;
+        }
+        if (currThread == thisThread) {
+            holderRefs++;
+            return;
+        }
+        throw overlappingAccessException(thisThread, currThread);
+    }
+
+    private void end() {
+        Thread thisThread = Thread.currentThread();
+        Thread currThread = holder;
+        int refs = holderRefs;
+        if (thisThread != currThread || refs == 0) {
+            throw overlappingAccessException(thisThread, currThread);
+        }
+        refs--;
+        if (refs == 0) {
+            holder = null;
+        }
+        holderRefs = refs;
+    }
+
+    private static IllegalStateException overlappingAccessException(Thread thisThread, Thread currThread) {
+        return new IllegalStateException(
+                "Concurrent access by multiple threads to the EmbeddedEventLoop is not allowed. " +
+                        "This thread " + thisThread + ", and " + currThread + ", had overlapping accesses.");
     }
 }

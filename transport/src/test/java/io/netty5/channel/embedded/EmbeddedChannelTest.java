@@ -33,16 +33,20 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -561,6 +565,25 @@ public class EmbeddedChannelTest {
         channel.pipeline().fireChannelExceptionCaught(new IllegalStateException());
 
         assertTrue(inactive.get());
+    }
+
+    @Test
+    void multiThreadedAccessToEventLoopMustThrow() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.executor().execute(() -> {
+            FutureTask<Void> task = new FutureTask<>(() -> {
+                channel.executor().execute(() -> {
+                });
+                return null;
+            });
+            Thread thread = new Thread(task);
+            thread.setDaemon(true);
+            thread.start();
+            ExecutionException ee = assertThrows(ExecutionException.class, () -> task.get());
+            assertThat(ee)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Concurrent access");
+        });
     }
 
     private static final class EventOutboundHandler implements ChannelHandler {
