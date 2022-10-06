@@ -65,6 +65,14 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
+    public <V> Future<V> newSucceededFuture(V result) {
+        // Always return a new future instance, instead of using the shared one from AbstractEventExecutor.
+        // We do not know how widely shared the ImmediateEventExecutor instance is, and we cannot know if,
+        // in tests for instance, our callers can tolerate running each other's listeners.
+        return DefaultPromise.newSuccessfulPromise(this, result).asFuture();
+    }
+
+    @Override
     public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
