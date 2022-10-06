@@ -17,6 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty5.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
@@ -95,6 +96,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      * Exposed for testing only! Default values used in the initial settings frame are overridden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
+    @VisibleForTesting
     DefaultHttp2HeadersDecoder(boolean validateHeaders, boolean validateHeaderValues, HpackDecoder hpackDecoder) {
         this.hpackDecoder = requireNonNull(hpackDecoder, "hpackDecoder");
         this.validateHeaders = validateHeaders;

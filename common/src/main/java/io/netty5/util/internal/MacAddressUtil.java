@@ -19,6 +19,7 @@ package io.netty5.util.internal;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -207,6 +208,7 @@ public final class MacAddressUtil {
      * @return positive - current is better, 0 - cannot tell from MAC addr, negative - candidate is better.
      */
     // visible for testing
+    @VisibleForTesting
     static int compareAddresses(byte[] current, byte[] candidate) {
         if (candidate == null || candidate.length < EUI48_MAC_ADDRESS_LENGTH) {
             return 1;

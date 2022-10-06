@@ -21,6 +21,7 @@ import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.TestOnly;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -57,6 +58,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  * <em>optional</em> dependency of Netty.
  * </p>
  */
+@TestOnly
 public final class SelfSignedCertificate {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SelfSignedCertificate.class);

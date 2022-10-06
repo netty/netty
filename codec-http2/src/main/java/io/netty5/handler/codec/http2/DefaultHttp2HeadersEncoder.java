@@ -19,6 +19,7 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty5.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
@@ -57,6 +58,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
      * Exposed Used for testing only! Default values used in the initial settings frame are overridden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
+    @VisibleForTesting
     DefaultHttp2HeadersEncoder(SensitivityDetector sensitivityDetector, HpackEncoder hpackEncoder) {
         this.sensitivityDetector = requireNonNull(sensitivityDetector, "sensitiveDetector");
         this.hpackEncoder = requireNonNull(hpackEncoder, "hpackEncoder");

@@ -17,6 +17,7 @@ package io.netty5.util.internal;
 
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
@@ -870,11 +871,13 @@ final class PlatformDependent0 {
     }
 
     // Package-private for testing only
+    @VisibleForTesting
     static int majorVersionFromJavaSpecificationVersion() {
         return majorVersion(SystemPropertyUtil.get("java.specification.version", "11"));
     }
 
     // Package-private for testing only
+    @VisibleForTesting
     static int majorVersion(final String javaSpecVersion) {
         final String[] components = javaSpecVersion.split("\\.");
         final int[] version = new int[components.length];

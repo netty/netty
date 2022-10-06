@@ -36,6 +36,8 @@ import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
+import org.jetbrains.annotations.TestOnly;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
@@ -112,6 +114,7 @@ final class HpackDecoder {
      * Exposed Used for testing only! Default values used in the initial settings frame are overridden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
+    @VisibleForTesting
     HpackDecoder(long maxHeaderListSize, int maxHeaderTableSize) {
         this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
 
@@ -350,6 +353,7 @@ final class HpackDecoder {
     /**
      * Return the number of header fields in the dynamic table. Exposed for testing.
      */
+    @TestOnly
     int length() {
         return hpackDynamicTable.length();
     }
@@ -357,6 +361,7 @@ final class HpackDecoder {
     /**
      * Return the size of the dynamic table. Exposed for testing.
      */
+    @TestOnly
     long size() {
         return hpackDynamicTable.size();
     }
@@ -364,6 +369,7 @@ final class HpackDecoder {
     /**
      * Return the header field at the given index. Exposed for testing.
      */
+    @TestOnly
     HpackHeaderField getHeaderField(int index) {
         return hpackDynamicTable.getEntry(index + 1);
     }
@@ -434,6 +440,7 @@ final class HpackDecoder {
      * <p>
      * Visible for testing only!
      */
+    @VisibleForTesting
     static int decodeULE128(Buffer in, int result) throws Http2Exception {
         final int readerIndex = in.readerOffset();
         final long v = decodeULE128(in, (long) result);
@@ -454,6 +461,7 @@ final class HpackDecoder {
      * <p>
      * Visible for testing only!
      */
+    @VisibleForTesting
     static long decodeULE128(Buffer in, long result) throws Http2Exception {
         assert result <= 0x7f && result >= 0;
         final boolean resultStartedAtZero = result == 0;

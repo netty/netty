@@ -21,6 +21,7 @@ import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -357,6 +358,7 @@ public final class NetUtil {
     }
 
     // visible for tests
+    @VisibleForTesting
     static byte[] validIpV4ToBytes(String ip) {
         int i;
         return new byte[] {
@@ -705,6 +707,7 @@ public final class NetUtil {
      * @return byte array representation of the {@code ip} or {@code null} if not a valid IP address.
      */
      // visible for test
+    @VisibleForTesting
     static byte[] getIPv6ByName(CharSequence ip, boolean ipv4Mapped) {
         final byte[] bytes = new byte[IPV6_BYTE_COUNT];
         final int ipLength = ip.length();

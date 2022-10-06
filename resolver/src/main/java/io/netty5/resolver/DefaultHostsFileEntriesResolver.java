@@ -20,6 +20,7 @@ import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.net.InetAddress;
 import java.nio.charset.Charset;
@@ -59,6 +60,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     }
 
     // for testing purpose only
+    @VisibleForTesting
     DefaultHostsFileEntriesResolver(HostsFileEntriesProvider.Parser hostsFileParser, long refreshInterval) {
         this.hostsFileParser = hostsFileParser;
         this.refreshInterval = ObjectUtil.checkPositiveOrZero(refreshInterval, "refreshInterval");
@@ -119,6 +121,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     }
 
     // package-private for testing purposes
+    @VisibleForTesting
     String normalize(String inetHost) {
         return inetHost.toLowerCase(Locale.ENGLISH);
     }

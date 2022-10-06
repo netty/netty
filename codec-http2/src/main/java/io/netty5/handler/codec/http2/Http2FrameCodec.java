@@ -35,6 +35,7 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.TestOnly;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
@@ -207,6 +208,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      * <p>
      * This is package-private for testing only.
      */
+    @TestOnly
     int numInitializingStreams() {
         return frameStreamToInitializeMap.size();
     }

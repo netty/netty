@@ -36,6 +36,8 @@ import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
+import org.jetbrains.annotations.TestOnly;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -335,6 +337,7 @@ final class HpackEncoder {
     /**
      * Return the number of header fields in the dynamic table. Exposed for testing.
      */
+    @VisibleForTesting
     int length() {
         return size == 0 ? 0 : head.after.index - head.before.index + 1;
     }
@@ -342,6 +345,7 @@ final class HpackEncoder {
     /**
      * Return the size of the dynamic table. Exposed for testing.
      */
+    @TestOnly
     long size() {
         return size;
     }
@@ -349,6 +353,7 @@ final class HpackEncoder {
     /**
      * Return the header field at the given index. Exposed for testing.
      */
+    @TestOnly
     HpackHeaderField getHeaderField(int index) {
         HeaderEntry entry = head;
         while (index-- >= 0) {

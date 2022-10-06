@@ -27,6 +27,7 @@ import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.queues.unpadded.SpscLinkedUnpaddedQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -197,7 +198,7 @@ public final class PlatformDependent {
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
     }
 
-    static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
+    private static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
                                            final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final File file = new File(osReleaseFileName);
@@ -240,6 +241,10 @@ public final class PlatformDependent {
         }
     }
 
+    /**
+     * Package private for testing purposes only!
+     */
+    @VisibleForTesting
     static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
         // empty: -Dio.netty.osClassifiers (no distro specific classifiers for native libs)
         // single ID: -Dio.netty.osClassifiers=ubuntu
@@ -1388,6 +1393,7 @@ public final class PlatformDependent {
     /**
      * Package private for testing purposes only!
      */
+    @VisibleForTesting
     static int hashCodeAsciiSafe(byte[] bytes, int startPos, int length) {
         int hash = HASH_CODE_ASCII_SEED;
         final int remainingBytes = length & 7;

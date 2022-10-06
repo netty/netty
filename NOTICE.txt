@@ -246,3 +246,11 @@ reactive web services, which can be obtained at:
     * license/LICENSE.servicetalk.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://github.com/apple/servicetalk
+
+This product optionally depends on 'annotations', A set of Java annotations which can be used in JVM-based
+languages written by JetBrains, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.annotations.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/JetBrains/java-annotations
