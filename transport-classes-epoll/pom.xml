@@ -51,6 +51,12 @@
       <artifactId>netty5-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- Annotations for IDE integration and analysis -->
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
 

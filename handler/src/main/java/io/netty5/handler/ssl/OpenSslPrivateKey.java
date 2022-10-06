@@ -19,6 +19,7 @@ import io.netty.internal.tcnative.SSL;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.IllegalReferenceCountException;
 import io.netty5.util.internal.EmptyArrays;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import javax.security.auth.Destroyable;
 import java.security.PrivateKey;
@@ -119,9 +120,11 @@ final class OpenSslPrivateKey extends AbstractReferenceCounted implements Privat
     }
 
     // Package-private for unit-test only
+    @VisibleForTesting
     final class OpenSslPrivateKeyMaterial extends AbstractReferenceCounted implements OpenSslKeyMaterial {
 
         // Package-private for unit-test only
+        @VisibleForTesting
         long certificateChain;
         private final X509Certificate[] x509CertificateChain;
 

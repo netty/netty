@@ -17,6 +17,7 @@ package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.TestOnly;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -162,6 +163,7 @@ public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
      *
      * @return The task queue of this executor.
      */
+    @TestOnly
     BlockingQueue<Runnable> getQueue() {
         return executor.getQueue();
     }

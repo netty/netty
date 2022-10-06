@@ -23,6 +23,8 @@ import io.netty5.util.internal.PriorityQueue;
 import io.netty5.util.internal.PriorityQueueNode;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.TestOnly;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -65,6 +67,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
      *
      * Visible only for testing!
      */
+    @VisibleForTesting
     static final int INITIAL_CHILDREN_MAP_SIZE =
             max(1, SystemPropertyUtil.getInt("io.netty5.http2.childrenMapSize", 2));
     /**
@@ -353,6 +356,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     /**
      * For testing only!
      */
+    @TestOnly
     boolean isChild(int childId, int parentId, short weight) {
         State parent = state(parentId);
         State child;
@@ -363,6 +367,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     /**
      * For testing only!
      */
+    @TestOnly
     int numChildren(int streamId) {
         State state = state(streamId);
         return state == null ? 0 : state.children.size();

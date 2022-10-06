@@ -20,6 +20,7 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Async.Execute;
 import org.jetbrains.annotations.Async.Schedule;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -58,6 +59,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     // can trigger the creation of a thread from arbitrary thread groups; for this reason, the thread factory must not
     // be sticky about its thread group
     // visible for testing
+    @VisibleForTesting
     final ThreadFactory threadFactory;
     private final TaskRunner taskRunner = new TaskRunner();
     private final AtomicBoolean started = new AtomicBoolean();

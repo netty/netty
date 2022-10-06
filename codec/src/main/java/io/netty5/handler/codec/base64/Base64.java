@@ -22,6 +22,7 @@ package io.netty5.handler.codec.base64;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.ByteProcessor;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
@@ -169,6 +170,7 @@ public final class Base64 {
     }
 
     // package-private for testing
+    @VisibleForTesting
     static int encodedBufferSize(int len, boolean breakLines) {
         // Cast len to long to prevent overflow
         long len43 = ((long) len << 2) / 3;
@@ -255,6 +257,7 @@ public final class Base64 {
     }
 
     // package-private for testing
+    @VisibleForTesting
     static int decodedBufferSize(int len) {
         return len - (len >>> 2);
     }

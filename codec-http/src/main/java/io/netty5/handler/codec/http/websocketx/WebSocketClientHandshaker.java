@@ -38,6 +38,7 @@ import io.netty5.util.NetUtil;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import org.jetbrains.annotations.TestOnly;
 
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
@@ -59,7 +60,7 @@ public abstract class WebSocketClientHandshaker {
 
     private volatile boolean handshakeComplete;
 
-    private volatile long forceCloseTimeoutMillis = DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS;
+    private volatile long forceCloseTimeoutMillis;
 
     private volatile int forceCloseInit;
 
@@ -212,7 +213,8 @@ public abstract class WebSocketClientHandshaker {
      * Flag to indicate if the closing handshake was initiated because of timeout.
      * For testing only.
      */
-    protected boolean isForceCloseComplete() {
+    @TestOnly
+    boolean isForceCloseComplete() {
         return forceCloseComplete;
     }
 

@@ -36,6 +36,7 @@ import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -579,6 +580,7 @@ public final class HttpConversionUtil {
     }
 
     // package-private for testing only
+    @VisibleForTesting
     static void setHttp2Authority(CharSequence authority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {

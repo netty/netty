@@ -17,6 +17,7 @@ package io.netty5.buffer;
 
 import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
+import org.jetbrains.annotations.TestOnly;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -257,6 +258,7 @@ public final class BufferInputStream extends InputStream implements DataInput {
      *
      * @return The internal buffer instance.
      */
+    @TestOnly
     Buffer buffer() {
         return buffer;
     }

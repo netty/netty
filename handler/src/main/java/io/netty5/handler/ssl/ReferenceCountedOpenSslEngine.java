@@ -34,6 +34,8 @@ import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.TestOnly;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.ExtendedSSLSession;
@@ -612,6 +614,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     /**
      * Visible only for testing!
      */
+    @TestOnly
     final synchronized int maxWrapOverhead() {
         return maxWrapOverhead;
     }
@@ -619,6 +622,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     /**
      * Visible only for testing!
      */
+    @VisibleForTesting
     final synchronized int maxEncryptedPacketLength() {
         return maxEncryptedPacketLength0();
     }

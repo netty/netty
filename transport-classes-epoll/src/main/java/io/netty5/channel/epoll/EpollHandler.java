@@ -31,6 +31,7 @@ import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -104,6 +105,7 @@ public class EpollHandler implements IoHandler {
     }
 
     // Package-private for tests.
+    @VisibleForTesting
     EpollHandler(int maxEvents, SelectStrategy strategy) {
         selectStrategy = strategy;
         if (maxEvents == 0) {
@@ -387,6 +389,7 @@ public class EpollHandler implements IoHandler {
     /**
      * Visible only for testing!
      */
+    @VisibleForTesting
     void handleLoopException(Throwable t) {
         logger.warn("Unexpected exception in the selector loop.", t);
 

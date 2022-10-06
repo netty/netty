@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.util.concurrent.TimeUnit;
 
@@ -308,6 +309,7 @@ public class IdleStateHandler implements ChannelHandler {
     /**
      * This method is visible for testing!
      */
+    @VisibleForTesting
     long ticksInNanos() {
         return System.nanoTime();
     }
@@ -315,6 +317,7 @@ public class IdleStateHandler implements ChannelHandler {
     /**
      * This method is visible for testing!
      */
+    @VisibleForTesting
     Future<?> schedule(ChannelHandlerContext ctx, Runnable task, long delay, TimeUnit unit) {
         return ctx.executor().schedule(task, delay, unit);
     }

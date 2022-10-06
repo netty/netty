@@ -20,6 +20,7 @@ import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty5.handler.codec.dns.DnsCodecUtil.addressNumber;
 
@@ -129,6 +130,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     }
 
     // Package-Private for testing
+    @VisibleForTesting
     static int calculateEcsAddressLength(int sourcePrefixLength, int lowOrderBitsToPreserve) {
         return (sourcePrefixLength >>> 3) + (lowOrderBitsToPreserve != 0 ? 1 : 0);
     }

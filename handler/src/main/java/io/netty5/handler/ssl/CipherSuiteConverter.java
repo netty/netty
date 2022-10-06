@@ -18,6 +18,7 @@ package io.netty5.handler.ssl;
 import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.TestOnly;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -122,6 +123,7 @@ public final class CipherSuiteConverter {
     /**
      * Clears the cache for testing purpose.
      */
+    @TestOnly
     static void clearCache() {
         j2o.clear();
         o2j.clear();

@@ -16,6 +16,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.util.internal.UnstableApi;
+import org.jetbrains.annotations.TestOnly;
 
 import static java.util.Objects.requireNonNull;
 
@@ -61,6 +62,7 @@ public class Http2FrameCodecBuilder extends
     }
 
     // For testing only.
+    @TestOnly
     Http2FrameCodecBuilder frameWriter(Http2FrameWriter frameWriter) {
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
         return this;

@@ -40,6 +40,7 @@ import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.ThrowableUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -281,6 +282,7 @@ abstract class DnsResolveContext<T> {
     // guards against loops in the cache but early return once a loop is detected.
     //
     // Visible for testing only
+    @VisibleForTesting
     static String cnameResolveFromCache(DnsCnameCache cnameCache, String name) throws UnknownHostException {
         String first = cnameCache.get(hostnameWithDot(name));
         if (first == null) {

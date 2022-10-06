@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.util.internal.ObjectUtil;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * Enforce a limit on the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed
@@ -50,6 +51,7 @@ final class Http2EmptyDataFrameConnectionDecoder extends DecoratingHttp2Connecti
     }
 
     // Package-private for testing
+    @VisibleForTesting
     Http2FrameListener frameListener0() {
         return super.frameListener();
     }

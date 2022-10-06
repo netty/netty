@@ -53,6 +53,12 @@
       <artifactId>netty5-codec</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- Annotations for IDE integration and analysis -->
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.directory.server</groupId>

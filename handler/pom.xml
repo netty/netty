@@ -74,6 +74,12 @@
       <classifier>${tcnative.classifier}</classifier>
       <optional>true</optional>
     </dependency>
+    <!-- Annotations for IDE integration and analysis -->
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>

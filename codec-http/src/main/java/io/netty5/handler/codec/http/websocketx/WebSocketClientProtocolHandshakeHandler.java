@@ -20,6 +20,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import org.jetbrains.annotations.TestOnly;
 
 import java.util.concurrent.TimeUnit;
 
@@ -119,6 +120,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
      *
      * @return current handshake future
      */
+    @TestOnly
     Future<Void> getHandshakeFuture() {
         return handshakePromise.asFuture();
     }
