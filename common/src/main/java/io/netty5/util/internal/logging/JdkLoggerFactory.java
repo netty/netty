@@ -23,15 +23,11 @@ import java.util.logging.Logger;
  * <a href="https://docs.oracle.com/javase/7/docs/technotes/guides/logging/">java.util.logging</a>
  * logger.
  */
-public class JdkLoggerFactory extends InternalLoggerFactory {
+public final class JdkLoggerFactory extends InternalLoggerFactory {
 
     public static final InternalLoggerFactory INSTANCE = new JdkLoggerFactory();
 
-    /**
-     * @deprecated Use {@link #INSTANCE} instead.
-     */
-    @Deprecated
-    public JdkLoggerFactory() {
+    private JdkLoggerFactory() {
     }
 
     @Override
