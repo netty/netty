@@ -26,19 +26,14 @@ import org.slf4j.spi.LocationAwareLogger;
  * Logger factory which creates a <a href="https://www.slf4j.org/">SLF4J</a>
  * logger.
  */
-public class Slf4JLoggerFactory extends InternalLoggerFactory {
+public final class Slf4JLoggerFactory extends InternalLoggerFactory {
 
-    @SuppressWarnings("deprecation")
     public static final InternalLoggerFactory INSTANCE = new Slf4JLoggerFactory();
 
-    /**
-     * @deprecated Use {@link #INSTANCE} instead.
-     */
-    @Deprecated
-    public Slf4JLoggerFactory() {
+    private Slf4JLoggerFactory() {
     }
 
-    Slf4JLoggerFactory(boolean failIfNOP) {
+    private Slf4JLoggerFactory(boolean failIfNOP) {
         assert failIfNOP; // Should be always called with true.
         if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
             throw new NoClassDefFoundError("NOPLoggerFactory not supported");
