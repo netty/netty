@@ -23,8 +23,12 @@ import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -115,6 +119,28 @@ public class ChannelOutboundBufferTest {
                 assertTrue(buffer.isEmpty());
                 assertFalse(buffer.remove());
             }
+        });
+    }
+
+    @Test
+    void consumingAllFlushedMustNotLeaveAnyFlushedMessagesBehind() throws Exception {
+        testChannelOutboundBuffer((buffer, executor) -> {
+            Promise<Void> p1 = executor.newPromise();
+            Promise<Void> p2 = executor.newPromise();
+            buffer.addMessage(1, 1, p1);
+            buffer.addMessage(2, 1, p2);
+            buffer.addFlush();
+            List<Map.Entry<Integer, Promise<Void>>> list = new ArrayList<>();
+            buffer.consumeEachFlushedMessage((m, p) -> {
+                assertFalse(p.isCancellable());
+                list.add(Map.entry((Integer) m, p));
+                return true;
+            });
+            assertThat(list).containsExactly(
+                    Map.entry(1, p1),
+                    Map.entry(2, p2));
+            assertThat(buffer.size()).isZero();
+            assertTrue(buffer.isEmpty());
         });
     }
 

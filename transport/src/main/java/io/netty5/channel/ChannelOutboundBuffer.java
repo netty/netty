@@ -25,6 +25,7 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -231,6 +232,7 @@ final class ChannelOutboundBuffer {
 
         return true;
     }
+
     private void removeEntry(Entry e) {
         assert executor.inEventLoop();
 
@@ -360,6 +362,27 @@ final class ChannelOutboundBuffer {
             }
             entry = entry.next;
         } while (isFlushedEntry(entry));
+    }
+
+    void consumeEachFlushedMessage(BiPredicate<Object, Promise<Void>> processor) {
+        assert executor.inEventLoop();
+
+        requireNonNull(processor, "processor");
+
+        Entry entry = flushedEntry;
+        if (entry == null) {
+            return;
+        }
+
+        boolean keepGoing = true;
+        do {
+            if (!entry.cancelled) {
+                keepGoing = processor.test(entry.msg, entry.promise);
+                decrementPendingOutboundBytes(entry.pendingSize);
+            }
+            removeEntry(entry);
+            entry = entry.recycleAndGetNext();
+        } while (keepGoing && isFlushedEntry(entry));
     }
 
     private boolean isFlushedEntry(Entry e) {
