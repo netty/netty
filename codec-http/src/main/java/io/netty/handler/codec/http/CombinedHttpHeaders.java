@@ -38,7 +38,8 @@ import static io.netty.util.internal.StringUtil.unescapeCsvFields;
  */
 public class CombinedHttpHeaders extends DefaultHttpHeaders {
     public CombinedHttpHeaders(boolean validate) {
-        super(new CombinedHttpHeadersImpl(CASE_INSENSITIVE_HASHER, valueConverter(validate), nameValidator(validate)));
+        super(new CombinedHttpHeadersImpl(CASE_INSENSITIVE_HASHER, valueConverter(), nameValidator(validate),
+                valueValidator(validate)));
     }
 
     @Override
@@ -87,9 +88,10 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         }
 
         CombinedHttpHeadersImpl(HashingStrategy<CharSequence> nameHashingStrategy,
-                ValueConverter<CharSequence> valueConverter,
-                DefaultHeaders.NameValidator<CharSequence> nameValidator) {
-            super(nameHashingStrategy, valueConverter, nameValidator);
+                                ValueConverter<CharSequence> valueConverter,
+                                NameValidator<CharSequence> nameValidator,
+                                ValueValidator<CharSequence> valueValidator) {
+            super(nameHashingStrategy, valueConverter, nameValidator, 16, valueValidator);
         }
 
         @Override

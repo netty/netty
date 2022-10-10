@@ -1,0 +1,100 @@
+[
+  {
+    "name": "io.netty.handler.codec.memcache.AbstractMemcacheObjectAggregator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.AbstractMemcacheObjectAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.AbstractMemcacheObjectDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.AbstractMemcacheObjectDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.AbstractMemcacheObjectEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.AbstractMemcacheObjectEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.AbstractBinaryMemcacheDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.AbstractBinaryMemcacheDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.AbstractBinaryMemcacheEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.AbstractBinaryMemcacheEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec$Decoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec$Decoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec$Encoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec$Encoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.memcache.binary.BinaryMemcacheServerCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.memcache.binary.BinaryMemcacheServerCodec"
+    },
+    "queryAllPublicMethods": true
+  }
+]

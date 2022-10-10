@@ -20,10 +20,12 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.UUID;
 
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -34,9 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Test DeleteFileOnExitHook
  */
+@Isolated("The DeleteFileOnExitHook has static shared mutable, " +
+        "and can interferre with other tests that use DiskAttribute")
 public class DeleteFileOnExitHookTest {
     private static final HttpRequest REQUEST = new DefaultHttpRequest(HTTP_1_1, POST, "/form");
-    private static final String HOOK_TEST_TMP = "target/DeleteFileOnExitHookTest/tmp";
+    private static final String HOOK_TEST_TMP = "target/DeleteFileOnExitHookTest-" + UUID.randomUUID()  + "/tmp";
     private FileUpload fu;
 
     @BeforeEach

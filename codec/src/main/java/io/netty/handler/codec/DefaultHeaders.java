@@ -52,6 +52,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     private final byte hashMask;
     private final ValueConverter<V> valueConverter;
     private final NameValidator<K> nameValidator;
+    private final ValueValidator<V> valueValidator;
     private final HashingStrategy<K> hashingStrategy;
     int size;
 
@@ -68,6 +69,22 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             @Override
             public void validateName(Object name) {
                 checkNotNull(name, "name");
+            }
+        };
+    }
+
+    public interface ValueValidator<V> {
+        /**
+         * Validate the given value. If the validation fails, then an implementation specific runtime exception may be
+         * thrown.
+         *
+         * @param value The value to validate.
+         */
+        void validate(V value);
+
+        ValueValidator<?> NO_VALIDATION = new ValueValidator<Object>() {
+            @Override
+            public void validate(Object value) {
             }
         };
     }
@@ -102,10 +119,27 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
      */
     @SuppressWarnings("unchecked")
     public DefaultHeaders(HashingStrategy<K> nameHashingStrategy,
-            ValueConverter<V> valueConverter, NameValidator<K> nameValidator, int arraySizeHint) {
+                          ValueConverter<V> valueConverter, NameValidator<K> nameValidator, int arraySizeHint) {
+        this(nameHashingStrategy, valueConverter, nameValidator, arraySizeHint,
+                (ValueValidator<V>) ValueValidator.NO_VALIDATION);
+    }
+
+    /**
+     * Create a new instance.
+     * @param nameHashingStrategy Used to hash and equality compare names.
+     * @param valueConverter Used to convert values to/from native types.
+     * @param nameValidator Used to validate name elements.
+     * @param arraySizeHint A hint as to how large the hash data structure should be.
+     * The next positive power of two will be used. An upper bound may be enforced.
+     * @param valueValidator The validation strategy for entry values.
+     */
+    @SuppressWarnings("unchecked")
+    public DefaultHeaders(HashingStrategy<K> nameHashingStrategy, ValueConverter<V> valueConverter,
+                          NameValidator<K> nameValidator, int arraySizeHint, ValueValidator<V> valueValidator) {
         this.valueConverter = checkNotNull(valueConverter, "valueConverter");
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
         hashingStrategy = checkNotNull(nameHashingStrategy, "nameHashingStrategy");
+        this.valueValidator = checkNotNull(valueValidator, "valueValidator");
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
         entries = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
@@ -292,7 +326,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T add(K name, V value) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, true, name);
+        validateValue(valueValidator, name, value);
         checkNotNull(value, "value");
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -302,10 +337,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T add(K name, Iterable<? extends V> values) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, true, name);
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
         for (V v: values) {
+            validateValue(valueValidator, name, v);
             add0(h, i, name, v);
         }
         return thisT();
@@ -313,10 +349,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T add(K name, V... values) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, true, name);
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
         for (V v: values) {
+            validateValue(valueValidator, name, v);
             add0(h, i, name, v);
         }
         return thisT();
@@ -427,7 +464,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T set(K name, V value) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, false, name);
+        validateValue(valueValidator, name, value);
         checkNotNull(value, "value");
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -438,7 +476,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T set(K name, Iterable<? extends V> values) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, false, name);
         checkNotNull(values, "values");
 
         int h = hashingStrategy.hashCode(name);
@@ -449,6 +487,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
+            validateValue(valueValidator, name, v);
             add0(h, i, name, v);
         }
 
@@ -457,7 +496,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T set(K name, V... values) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, false, name);
         checkNotNull(values, "values");
 
         int h = hashingStrategy.hashCode(name);
@@ -468,6 +507,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
+            validateValue(valueValidator, name, v);
             add0(h, i, name, v);
         }
 
@@ -482,7 +522,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T setObject(K name, Iterable<?> values) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, false, name);
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -500,7 +540,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T setObject(K name, Object... values) {
-        nameValidator.validateName(name);
+        validateName(nameValidator, false, name);
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -956,12 +996,36 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         return HeadersUtils.toString(getClass(), iterator(), size());
     }
 
+    /**
+     * Call out to the given {@link NameValidator} to validate the given name.
+     *
+     * @param validator the validator to use
+     * @param forAdd {@code true } if this validation is for adding to the headers, or {@code false} if this is for
+     * setting (overwriting) the given header.
+     * @param name the name to validate.
+     */
+    protected void validateName(NameValidator<K> validator, boolean forAdd, K name) {
+        validator.validateName(name);
+    }
+
+    protected void validateValue(ValueValidator<V> validator, K name, V value) {
+        validator.validate(value);
+    }
+
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {
         return new HeaderEntry<K, V>(h, name, value, next, head);
     }
 
     protected ValueConverter<V> valueConverter() {
         return valueConverter;
+    }
+
+    protected NameValidator<K> nameValidator() {
+        return nameValidator;
+    }
+
+    protected ValueValidator<V> valueValidator() {
+        return valueValidator;
     }
 
     private int index(int hash) {
@@ -1203,7 +1267,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         return copy;
     }
 
-    private final class HeaderIterator implements Iterator<Map.Entry<K, V>> {
+    private final class HeaderIterator implements Iterator<Entry<K, V>> {
         private HeaderEntry<K, V> current = head;
 
         @Override
@@ -1280,7 +1344,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         }
     }
 
-    protected static class HeaderEntry<K, V> implements Map.Entry<K, V> {
+    protected static class HeaderEntry<K, V> implements Entry<K, V> {
         protected final int hash;
         protected final K key;
         protected V value;
@@ -1361,7 +1425,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (!(o instanceof Map.Entry)) {
                 return false;
             }
-            Map.Entry<?, ?> other = (Map.Entry<?, ?>) o;
+            Entry<?, ?> other = (Entry<?, ?>) o;
             return (getKey() == null ? other.getKey() == null : getKey().equals(other.getKey()))  &&
                    (getValue() == null ? other.getValue() == null : getValue().equals(other.getValue()));
         }

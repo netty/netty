@@ -1,0 +1,58 @@
+[
+  {
+    "name": "io.netty.handler.codec.dns.DatagramDnsQueryDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.DatagramDnsQueryDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.dns.DatagramDnsQueryEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.DatagramDnsQueryEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.dns.DatagramDnsResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.DatagramDnsResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.dns.DatagramDnsResponseEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.DatagramDnsResponseEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.dns.TcpDnsQueryDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.TcpDnsQueryDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.dns.TcpDnsQueryEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.TcpDnsQueryEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.dns.TcpDnsResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.TcpDnsResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.dns.TcpDnsResponseEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.dns.TcpDnsResponseEncoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

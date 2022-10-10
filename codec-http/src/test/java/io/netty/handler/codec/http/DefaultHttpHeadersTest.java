@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -80,11 +81,11 @@ public class DefaultHttpHeadersTest {
     @Test
     public void keysShouldBeCaseInsensitiveInHeadersEquals() {
         DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
-        headers1.add(of("name1"), Arrays.asList("value1", "value2", "value3"));
+        headers1.add(of("name1"), asList("value1", "value2", "value3"));
         headers1.add(of("nAmE2"), of("value4"));
 
         DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
-        headers2.add(of("naMe1"), Arrays.asList("value1", "value2", "value3"));
+        headers2.add(of("naMe1"), asList("value1", "value2", "value3"));
         headers2.add(of("NAME2"), of("value4"));
 
         assertEquals(headers1, headers1);
@@ -259,7 +260,7 @@ public class DefaultHttpHeadersTest {
                 .add(HttpHeaderNames.CONTENT_LENGTH, 10)
                 .names();
 
-        String[] namesArray = nettyHeaders.toArray(new String[0]);
+        String[] namesArray = nettyHeaders.toArray(EmptyArrays.EMPTY_STRINGS);
         assertArrayEquals(namesArray, new String[] { HttpHeaderNames.CONTENT_LENGTH.toString() });
     }
 
