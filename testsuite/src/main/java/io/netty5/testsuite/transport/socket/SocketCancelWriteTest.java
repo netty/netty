@@ -98,7 +98,9 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         }
         assertEquals(0, ch.counter.get());
         assertNull(ch.received);
-        assertEquals(preferredAllocator().copyOf(new byte[] { 'b', 'c', 'e' }), sh.received);
+        try (Buffer buffer = preferredAllocator().copyOf(new byte[] { 'b', 'c', 'e' })) {
+            assertEquals(buffer, sh.received);
+        }
         Resource.dispose(sh.received);
     }
 

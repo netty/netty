@@ -315,31 +315,32 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         // Wait for the handshake to complete before we flush anything. SslHandler should flush non-application data.
         clientHandshakeFuture.asStage().sync();
         clientHandshakeEventLatch.await();
-        Buffer dataBuffer = bufferAllocator.copyOf(data);
-
-        clientChannel.writeAndFlush(dataBuffer.readSplit(FIRST_MESSAGE_SIZE));
-        clientSendCounter.set(FIRST_MESSAGE_SIZE);
-
-        boolean needsRenegotiation = renegotiation.type == RenegotiationType.CLIENT_INITIATED;
         Future<Channel> renegoFuture = null;
-        while (clientSendCounter.get() < data.length) {
-            int clientSendCounterVal = clientSendCounter.get();
-            int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
-            Buffer buf = dataBuffer.readSplit(length);
-            if (useCompositeBuffer) {
-                buf = bufferAllocator.compose(buf.send());
-            }
+        try (Buffer dataBuffer = bufferAllocator.copyOf(data)) {
 
-            Future<Void> future = clientChannel.writeAndFlush(buf);
-            clientSendCounter.set(clientSendCounterVal += length);
-            future.asStage().sync();
+            clientChannel.writeAndFlush(dataBuffer.readSplit(FIRST_MESSAGE_SIZE));
+            clientSendCounter.set(FIRST_MESSAGE_SIZE);
 
-            if (needsRenegotiation && clientSendCounterVal >= data.length / 2) {
-                needsRenegotiation = false;
-                clientSslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
-                renegoFuture = clientSslHandler.renegotiate();
-                logStats("CLIENT RENEGOTIATES");
-                assertThat(renegoFuture, is(not(sameInstance(clientHandshakeFuture))));
+            boolean needsRenegotiation = renegotiation.type == RenegotiationType.CLIENT_INITIATED;
+            while (clientSendCounter.get() < data.length) {
+                int clientSendCounterVal = clientSendCounter.get();
+                int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
+                Buffer buf = dataBuffer.readSplit(length);
+                if (useCompositeBuffer) {
+                    buf = bufferAllocator.compose(buf.send());
+                }
+
+                Future<Void> future = clientChannel.writeAndFlush(buf);
+                clientSendCounter.set(clientSendCounterVal += length);
+                future.asStage().sync();
+
+                if (needsRenegotiation && clientSendCounterVal >= data.length / 2) {
+                    needsRenegotiation = false;
+                    clientSslHandler.engine().setEnabledCipherSuites(new String[]{renegotiation.cipherSuite});
+                    renegoFuture = clientSslHandler.renegotiate();
+                    logStats("CLIENT RENEGOTIATES");
+                    assertThat(renegoFuture, is(not(sameInstance(clientHandshakeFuture))));
+                }
             }
         }
 
