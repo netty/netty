@@ -116,38 +116,6 @@ public abstract class Recycler<T> {
         this(maxCapacityPerThread, RATIO, DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD);
     }
 
-    /**
-     * @deprecated Use one of the following instead:
-     * {@link #Recycler()}, {@link #Recycler(int)}, {@link #Recycler(int, int, int)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unused") // Parameters we can't remove due to compatibility.
-    protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor) {
-        this(maxCapacityPerThread, RATIO, DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD);
-    }
-
-    /**
-     * @deprecated Use one of the following instead:
-     * {@link #Recycler()}, {@link #Recycler(int)}, {@link #Recycler(int, int, int)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unused") // Parameters we can't remove due to compatibility.
-    protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
-                       int ratio, int maxDelayedQueuesPerThread) {
-        this(maxCapacityPerThread, ratio, DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD);
-    }
-
-    /**
-     * @deprecated Use one of the following instead:
-     * {@link #Recycler()}, {@link #Recycler(int)}, {@link #Recycler(int, int, int)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unused") // Parameters we can't remove due to compatibility.
-    protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
-                       int ratio, int maxDelayedQueuesPerThread, int delayedQueueRatio) {
-        this(maxCapacityPerThread, ratio, DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD);
-    }
-
     protected Recycler(int maxCapacityPerThread, int ratio, int chunkSize) {
         interval = max(0, ratio);
         if (maxCapacityPerThread <= 0) {
@@ -180,19 +148,6 @@ public abstract class Recycler<T> {
         }
 
         return obj;
-    }
-
-    /**
-     * @deprecated use {@link Handle#recycle(Object)}.
-     */
-    @Deprecated
-    public final boolean recycle(T o, Handle<T> handle) {
-        if (handle == NOOP_HANDLE) {
-            return false;
-        }
-
-        handle.recycle(o);
-        return true;
     }
 
     final int threadLocalSize() {
