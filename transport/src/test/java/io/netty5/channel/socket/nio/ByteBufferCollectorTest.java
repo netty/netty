@@ -56,29 +56,30 @@ public class ByteBufferCollectorTest {
     @Test
     public void testNioBuffersSingleBacked() {
         ByteBufferCollector collector = newCollector();
-        TestBuffer buffer = new TestBuffer();
-        Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII);
+        try (TestBuffer buffer = new TestBuffer()) {
+            Buffer buf = BufferAllocator.onHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII);
 
-        // Still empty as not flushed.
-        assertEmpty(collector, buffer);
+            // Still empty as not flushed.
+            assertEmpty(collector, buffer);
 
-        buffer.add(buf);
-        collector.prepare(Integer.MAX_VALUE, Long.MAX_VALUE);
-        buffer.forEach(collector);
-        ByteBuffer[] buffers = collector.nioBuffers();
+            buffer.add(buf);
+            collector.prepare(Integer.MAX_VALUE, Long.MAX_VALUE);
+            buffer.forEach(collector);
+            ByteBuffer[] buffers = collector.nioBuffers();
 
-        assertNotNull(buffers);
-        assertEquals(1, collector.nioBufferCount(), "Should still be 0 as not flushed yet");
-        for (int i = 0; i < collector.nioBufferCount(); i++) {
-            if (i == 0) {
-                assertEquals(1, buf.countReadableComponents());
-                try (var iteration = buf.forEachComponent()) {
-                    var component = iteration.firstReadable();
-                    assertEquals(buffers[0], component.readableBuffer());
-                    assertNull(component.nextReadable(), "Expected buffer to only have a single component.");
+            assertNotNull(buffers);
+            assertEquals(1, collector.nioBufferCount(), "Should still be 0 as not flushed yet");
+            for (int i = 0; i < collector.nioBufferCount(); i++) {
+                if (i == 0) {
+                    assertEquals(1, buf.countReadableComponents());
+                    try (var iteration = buf.forEachComponent()) {
+                        var component = iteration.firstReadable();
+                        assertEquals(buffers[0], component.readableBuffer());
+                        assertNull(component.nextReadable(), "Expected buffer to only have a single component.");
+                    }
+                } else {
+                    assertNull(buffers[i]);
                 }
-            } else {
-                assertNull(buffers[i]);
             }
         }
     }
@@ -89,7 +90,8 @@ public class ByteBufferCollectorTest {
         TestBuffer buffer = new TestBuffer();
         assertEmpty(collector, buffer);
 
-        try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII)) {
+        try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII);
+             buffer) {
             for (int i = 0; i < 64; i++) {
                 buffer.add(buf.copy());
             }
@@ -116,7 +118,8 @@ public class ByteBufferCollectorTest {
         TestBuffer buffer = new TestBuffer();
         assertEmpty(collector, buffer);
 
-        try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII)) {
+        try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII);
+             buffer) {
             var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
             CompositeBuffer comp = BufferAllocator.offHeapUnpooled().compose(sends);
             buffer.add(comp);
@@ -145,7 +148,8 @@ public class ByteBufferCollectorTest {
         ByteBufferCollector collector = newCollector();
         TestBuffer buffer = new TestBuffer();
 
-        try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII)) {
+        try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII);
+             buffer) {
             assertEquals(4, buf.readableBytes());
             var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
             CompositeBuffer comp = BufferAllocator.offHeapUnpooled().compose(sends);
@@ -176,13 +180,32 @@ public class ByteBufferCollectorTest {
         return collector;
     }
 
-    private static final class TestBuffer extends ArrayList<Object> {
+    private static final class TestBuffer extends ArrayList<Buffer> implements AutoCloseable {
 
         void forEach(Predicate<Object> function) {
-            for (Object o: this) {
-                if (!function.test(o)) {
+            for (Buffer b: this) {
+                if (!function.test(b)) {
                     return;
                 }
+            }
+        }
+
+        @Override
+        public void close() {
+            RuntimeException re = null;
+            for (Buffer b : this) {
+                try {
+                    b.close();
+                } catch (RuntimeException e) {
+                    if (re == null) {
+                        re = e;
+                    } else {
+                        re.addSuppressed(e);
+                    }
+                }
+            }
+            if (re != null) {
+                throw re;
             }
         }
     }
