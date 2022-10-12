@@ -16,6 +16,8 @@
 package io.netty5.channel;
 
 import io.netty5.util.concurrent.EventExecutor;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
@@ -25,6 +27,7 @@ import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -231,6 +234,7 @@ final class ChannelOutboundBuffer {
 
         return true;
     }
+
     private void removeEntry(Entry e) {
         assert executor.inEventLoop();
 
@@ -362,6 +366,28 @@ final class ChannelOutboundBuffer {
         } while (isFlushedEntry(entry));
     }
 
+    void consumeEachFlushedMessage(BiPredicate<Object, Promise<Void>> processor) {
+        assert executor.inEventLoop();
+
+        requireNonNull(processor, "processor");
+
+        Entry entry = flushedEntry;
+        if (entry == null) {
+            return;
+        }
+
+        boolean keepGoing = true;
+        do {
+            if (!entry.cancelled) {
+                Promise<Void> promise = entry.promise;
+                promise.asFuture().addListener(new DecrementPendingBytes(this, entry.pendingSize));
+                keepGoing = processor.test(entry.msg, promise);
+            }
+            removeEntry(entry);
+            entry = entry.recycleAndGetNext();
+        } while (keepGoing && isFlushedEntry(entry));
+    }
+
     private boolean isFlushedEntry(Entry e) {
         return e != null && e != unflushedEntry;
     }
@@ -416,6 +442,25 @@ final class ChannelOutboundBuffer {
             Entry next = this.next;
             recycle();
             return next;
+        }
+    }
+
+    private static final class DecrementPendingBytes implements FutureListener<Void> {
+        private final ChannelOutboundBuffer channelOutboundBuffer;
+        private final int pendingSize;
+
+        DecrementPendingBytes(ChannelOutboundBuffer channelOutboundBuffer, int pendingSize) {
+            this.channelOutboundBuffer = channelOutboundBuffer;
+            this.pendingSize = pendingSize;
+        }
+
+        @Override
+        public void operationComplete(Future<? extends Void> future) throws Exception {
+            // Assert the single-writer property holds when we update the pending bytes.
+            assert future.executor() == channelOutboundBuffer.executor;
+            assert channelOutboundBuffer.executor.inEventLoop();
+
+            channelOutboundBuffer.decrementPendingOutboundBytes(pendingSize);
         }
     }
 }

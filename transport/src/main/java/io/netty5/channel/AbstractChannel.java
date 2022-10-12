@@ -18,8 +18,8 @@ package io.netty5.channel;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.util.Resource;
 import io.netty5.util.DefaultAttributeMap;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.DefaultPromise;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -48,7 +48,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.Function;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import static io.netty5.channel.ChannelOption.ALLOW_HALF_CLOSURE;
@@ -2181,13 +2181,33 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
          * Call {@link Predicate#test(Object)} for each message that is flushed until
          * {@link Predicate#test(Object)} returns {@code false} or there are no more flushed messages.
          *
-         * @param processor                 the {@link Function} to use.
+         * @param processor                 the {@link Predicate} to use.
          * @throws IllegalStateException    if called after {@link #complete(long, long, int, boolean)}
          *                                  or {@link #complete(long, Throwable, boolean)} was called.
          */
         public void forEachFlushedMessage(Predicate<Object> processor) {
             assertEventLoop();
             outboundBuffer.forEachFlushedMessage(processor);
+        }
+
+        /**
+         * Consume (remove) and call {@link BiPredicate#test(Object, Object)} for each message that is flushed, until
+         * {@link BiPredicate#test(Object, Object)} returns {@code false}, or there are no more flushed messages.
+         * <p>
+         * This works similar to {@link #forEachFlushedMessage(Predicate)}, except that the flushed messages are
+         * removed from the write sink.
+         * <p>
+         * The responsibility of closing any buffers, releasing any resources, associated with the flushed messages
+         * falls to the given message processor.
+         * Likewise, the responsibility of completing the associated promise also falls to the message processor.
+         *
+         * @param processor the {@link BiPredicate} to use.
+         * @throws IllegalStateException    if called after {@link #complete(long, long, int, boolean)}
+         *                                  or {@link #complete(long, Throwable, boolean)} was called.
+         */
+        public void consumeEachFlushedMessage(BiPredicate<Object, Promise<Void>> processor) {
+            assertEventLoop();
+            outboundBuffer.consumeEachFlushedMessage(processor);
         }
 
         /**
