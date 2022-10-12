@@ -16,6 +16,8 @@
 package io.netty5.channel;
 
 import io.netty5.util.concurrent.EventExecutor;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
@@ -377,8 +379,9 @@ final class ChannelOutboundBuffer {
         boolean keepGoing = true;
         do {
             if (!entry.cancelled) {
-                keepGoing = processor.test(entry.msg, entry.promise);
-                decrementPendingOutboundBytes(entry.pendingSize);
+                Promise<Void> promise = entry.promise;
+                promise.asFuture().addListener(new DecrementPendingBytes(this, entry.pendingSize));
+                keepGoing = processor.test(entry.msg, promise);
             }
             removeEntry(entry);
             entry = entry.recycleAndGetNext();
@@ -439,6 +442,25 @@ final class ChannelOutboundBuffer {
             Entry next = this.next;
             recycle();
             return next;
+        }
+    }
+
+    private static final class DecrementPendingBytes implements FutureListener<Void> {
+        private final ChannelOutboundBuffer channelOutboundBuffer;
+        private final int pendingSize;
+
+        DecrementPendingBytes(ChannelOutboundBuffer channelOutboundBuffer, int pendingSize) {
+            this.channelOutboundBuffer = channelOutboundBuffer;
+            this.pendingSize = pendingSize;
+        }
+
+        @Override
+        public void operationComplete(Future<? extends Void> future) throws Exception {
+            // Assert the single-writer property holds when we update the pending bytes.
+            assert future.executor() == channelOutboundBuffer.executor;
+            assert channelOutboundBuffer.executor.inEventLoop();
+
+            channelOutboundBuffer.decrementPendingOutboundBytes(pendingSize);
         }
     }
 }

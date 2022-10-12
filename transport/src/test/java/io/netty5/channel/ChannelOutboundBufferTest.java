@@ -18,6 +18,7 @@ package io.netty5.channel;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.concurrent.EventExecutor;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
@@ -26,8 +27,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
+import static io.netty5.channel.ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -124,11 +127,13 @@ public class ChannelOutboundBufferTest {
 
     @Test
     void consumingAllFlushedMustNotLeaveAnyFlushedMessagesBehind() throws Exception {
+        AtomicReference<Future<Void>> ref = new AtomicReference<>();
         testChannelOutboundBuffer((buffer, executor) -> {
             Promise<Void> p1 = executor.newPromise();
             Promise<Void> p2 = executor.newPromise();
-            buffer.addMessage(1, 1, p1);
-            buffer.addMessage(2, 1, p2);
+            assertThat(buffer.totalPendingWriteBytes()).isZero();
+            buffer.addMessage(1, 5, p1);
+            buffer.addMessage(2, 11, p2);
             buffer.addFlush();
             List<Map.Entry<Integer, Promise<Void>>> list = new ArrayList<>();
             buffer.consumeEachFlushedMessage((m, p) -> {
@@ -136,12 +141,23 @@ public class ChannelOutboundBufferTest {
                 list.add(Map.entry((Integer) m, p));
                 return true;
             });
+            long overhead = 2L * CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD; // We added 2 entries.
+            assertThat(buffer.totalPendingWriteBytes()).isEqualTo(16 + overhead);
             assertThat(list).containsExactly(
                     Map.entry(1, p1),
                     Map.entry(2, p2));
             assertThat(buffer.size()).isZero();
             assertTrue(buffer.isEmpty());
+            for (Map.Entry<Integer, Promise<Void>> entry : list) {
+                entry.getValue().setSuccess(null);
+            }
+            ref.set(executor.submit(() -> {
+                // Delay this check until after the future listeners get to run.
+                // We rely on the executor being single-threaded and running its tasks in-order.
+                assertThat(buffer.totalPendingWriteBytes()).isZero();
+            }));
         });
+        ref.get().asStage().sync();
     }
 
     private static void release(ChannelOutboundBuffer buffer) {
