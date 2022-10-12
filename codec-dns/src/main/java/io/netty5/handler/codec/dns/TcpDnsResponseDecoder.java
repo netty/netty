@@ -59,7 +59,9 @@ public final class TcpDnsResponseDecoder extends LengthFieldBasedFrameDecoder {
             }
             SocketAddress sender = ctx.channel().remoteAddress();
             SocketAddress recipient = ctx.channel().localAddress();
-            return responseDecoder.decode(sender, recipient, ctx.bufferAllocator(), frame.split());
+            try (Buffer buffer = frame.split()) {
+                return responseDecoder.decode(sender, recipient, ctx.bufferAllocator(), buffer);
+            }
         }
     }
 }
