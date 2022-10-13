@@ -15,6 +15,8 @@
 
 package io.netty5.util.collection;
 
+import org.jetbrains.annotations.Nullable;
+
 import static io.netty5.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
 
 import java.util.AbstractCollection;
@@ -99,24 +101,27 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         maxSize = calcMaxSize(capacity);
     }
 
+    @Nullable
     private static <T> T toExternal(T value) {
         assert value != null : "null is not a legitimate internal value. Concurrent Modification?";
         return value == NULL_VALUE ? null : value;
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T toInternal(T value) {
+    private static <T> T toInternal(@Nullable T value) {
         return value == null ? (T) NULL_VALUE : value;
     }
 
+    @Nullable
     @Override
     public V get(@k@ key) {
         int index = indexOf(key);
         return index == -1 ? null : toExternal(values[index]);
     }
 
+    @Nullable
     @Override
-    public V put(@k@ key, V value) {
+    public V put(@k@ key, @Nullable V value) {
         int startIndex = hashIndex(key);
         int index = startIndex;
 
@@ -164,6 +169,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         }
     }
 
+    @Nullable
     @Override
     public V remove(@k@ key) {
         int index = indexOf(key);
@@ -199,7 +205,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
     }
 
     @Override
-    public boolean containsValue(Object value) {
+    public boolean containsValue(@Nullable Object value) {
         @SuppressWarnings("unchecked")
         V v1 = toInternal((V) value);
         for (V v2 : values) {
@@ -229,6 +235,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
                         return iter.hasNext();
                     }
 
+                    @Nullable
                     @Override
                     public V next() {
                         return iter.next().value();
@@ -268,7 +275,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }
@@ -302,16 +309,19 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         return containsKey(objectToKey(key));
     }
 
+    @Nullable
     @Override
     public V get(Object key) {
         return get(objectToKey(key));
     }
 
+    @Nullable
     @Override
-    public V put(@O@ key, V value) {
+    public V put(@O@ key, @Nullable V value) {
         return put(objectToKey(key), value);
     }
 
+    @Nullable
     @Override
     public V remove(Object key) {
         return remove(objectToKey(key));
@@ -645,13 +655,14 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
             return keys[entryIndex];
         }
 
+        @Nullable
         @Override
         public V value() {
             return toExternal(values[entryIndex]);
         }
 
         @Override
-        public void setValue(V value) {
+        public void setValue(@Nullable V value) {
             values[entryIndex] = toInternal(value);
         }
     }
@@ -700,14 +711,16 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
             return keys[entryIndex];
         }
 
+        @Nullable
         @Override
         public V getValue() {
             verifyExists();
             return toExternal(values[entryIndex]);
         }
 
+        @Nullable
         @Override
-        public V setValue(V value) {
+        public V setValue(@Nullable V value) {
             verifyExists();
             V prevValue = toExternal(values[entryIndex]);
             values[entryIndex] = toInternal(value);
