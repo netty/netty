@@ -36,6 +36,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -248,22 +249,32 @@ public class FastThreadLocalTest {
     @Test
     public void testConstructionWithIndex() throws Exception {
         int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
-        Field nextIndexField =
-                InternalThreadLocalMap.class.getDeclaredField("nextIndex");
-        nextIndexField.setAccessible(true);
-        AtomicInteger nextIndex = (AtomicInteger) nextIndexField.get(AtomicInteger.class);
-        int nextIndex_before = nextIndex.get();
+
+        java.lang.reflect.Field[] allFields = InternalThreadLocalMap.class.getDeclaredFields();
+        InternalThreadLocalMap mapObj = InternalThreadLocalMap.get();
+        AtomicInteger nextIndex = null;
+        for (java.lang.reflect.Field field : allFields) {
+            if (field.getName().equals("nextIndex")) {
+                field.setAccessible(true);
+                nextIndex = (AtomicInteger) field.get(mapObj);
+            }
+        }
+        assertNotNull(nextIndex);
+
+        int nextIndex_before = InternalThreadLocalMap.lastVariableIndex() + 1;
         try {
-            while (nextIndex.get() < ARRAY_LIST_CAPACITY_MAX_SIZE) {
-                new FastThreadLocal<Boolean>();
+            while (InternalThreadLocalMap.lastVariableIndex() + 1 < ARRAY_LIST_CAPACITY_MAX_SIZE) {
+                new FastThreadLocal<Boolean>().get();
             }
             assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
+            final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
             try {
-                new FastThreadLocal<Boolean>();
+                new FastThreadLocal<Boolean>().get();
             } catch (Throwable t) {
-                // assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1)
-                assertThat(t, is(instanceOf(IllegalStateException.class)));
+                throwable.set(t);
             }
+            // assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1)
+            assertThat(throwable.get(), is(instanceOf(IllegalStateException.class)));
             // assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE
             assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
         } finally {

@@ -42,8 +42,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(InternalThreadLocalMap.class);
     private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
             new ThreadLocal<InternalThreadLocalMap>();
-    private static final AtomicInteger nextIndex = new AtomicInteger();
-
+    private final AtomicInteger nextIndex = new AtomicInteger(1);
+    public static final int VARIABLES_TO_REMOVE_INDEX = 0;
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
     private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
     // Reference: https://hg.openjdk.java.net/jdk8/jdk8/jdk/file/tip/src/share/classes/java/util/ArrayList.java#l229
@@ -137,6 +137,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     public static int nextVariableIndex() {
+        AtomicInteger nextIndex = InternalThreadLocalMap.get().nextIndex;
         int index = nextIndex.getAndIncrement();
         if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE || index < 0) {
             nextIndex.set(ARRAY_LIST_CAPACITY_MAX_SIZE);
@@ -146,7 +147,11 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     public static int lastVariableIndex() {
-        return nextIndex.get() - 1;
+        InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.getIfSet();
+        if (null != threadLocalMap) {
+            return threadLocalMap.nextIndex.get() - 1;
+        }
+        return VARIABLES_TO_REMOVE_INDEX;
     }
 
     private InternalThreadLocalMap() {
