@@ -893,7 +893,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         int i = searchOffsets(splitOffset);
         int off = splitOffset - offsets[i];
         Buffer[] splits = Arrays.copyOf(bufs, off == 0? i : 1 + i);
-        bufs = Arrays.copyOfRange(bufs, off == bufs[i].capacity()? 1 + i : i, bufs.length);
+        bufs = Arrays.copyOfRange(bufs, off > 0 && off == bufs[i].capacity()? 1 + i : i, bufs.length);
         if (off > 0 && splits.length > 0 && off < splits[splits.length - 1].capacity()) {
             splits[splits.length - 1] = bufs[0].split(off);
         }
