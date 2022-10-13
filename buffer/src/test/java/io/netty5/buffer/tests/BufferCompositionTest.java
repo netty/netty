@@ -796,4 +796,28 @@ public class BufferCompositionTest extends BufferTestSupport {
             }
         }
     }
+
+    @Test
+    public void splitBufferLastBufferNoReadableBytes() {
+        try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
+            Buffer buffer1 = allocator.allocate(8).writeLong(0x0102030405060708L);
+            buffer1.skipReadableBytes(4);
+
+            Buffer buffer2 = allocator.allocate(8).writeLong(0x0102030405060708L);
+            buffer2.skipReadableBytes(8);
+
+            try (CompositeBuffer composite = allocator.compose(asList(buffer1.send(), buffer2.send()));
+                 Buffer split = composite.split()) {
+
+                assertEquals(8, split.capacity());
+                assertEquals(4, split.readableBytes());
+                assertEquals(0, split.writableBytes());
+
+                assertEquals(1, composite.countComponents());
+                assertEquals(0, composite.capacity());
+                assertEquals(0, composite.readableBytes());
+                assertEquals(0, composite.writableBytes());
+            }
+        }
+    }
 }
