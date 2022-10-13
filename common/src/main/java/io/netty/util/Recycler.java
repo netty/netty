@@ -241,10 +241,9 @@ public abstract class Recycler<T> {
         boolean availableToClaim() {
             if (state != STATE_AVAILABLE) {
                 return false;
-            } else {
-                state = STATE_CLAIMED;
-                return true;
             }
+            state = STATE_CLAIMED;
+            return true;
         }
 
         void toAvailable() {
