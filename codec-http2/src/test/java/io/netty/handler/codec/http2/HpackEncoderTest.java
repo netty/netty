@@ -23,7 +23,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.util.Arrays;
 import java.util.Random;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
@@ -224,7 +223,9 @@ public class HpackEncoderTest {
     }
 
     private void verifyEncodedBytes(int... expectedEncoding) {
-        byte[] actualEncoding = Arrays.copyOf(buf.array(), buf.writerIndex());
+        // We want to copy everything that was written to the buffer.
+        byte[] actualEncoding = new byte[buf.writerIndex()];
+        buf.getBytes(0, actualEncoding);
         Assertions.assertArrayEquals(toByteArray(expectedEncoding), actualEncoding);
     }
 
