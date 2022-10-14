@@ -1175,7 +1175,7 @@
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
 
-
+                <!-- Necessary changes to fix Scalability problems of SslHandler related to false-sharing within the JDK -->
                 <item>
                   <ignore>true</ignore>
                   <code>java.class.nonFinalClassInheritsFromNewClass</code>
@@ -1342,6 +1342,366 @@
                   <code>java.class.nonFinalClassInheritsFromNewClass</code>
                   <old>class io.netty.handler.codec.xml.XmlFrameDecoder</old>
                   <new>class io.netty.handler.codec.xml.XmlFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.haproxy.HAProxyMessageDecoder</old>
+                  <new>class io.netty.handler.codec.haproxy.HAProxyMessageDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.ssl.AbstractSniHandler&lt;T&gt;</old>
+                  <new>class io.netty.handler.ssl.AbstractSniHandler&lt;T&gt;</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.ssl.OptionalSslHandler</old>
+                  <new>class io.netty.handler.ssl.OptionalSslHandler</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.ssl.SniHandler</old>
+                  <new>class io.netty.handler.ssl.SniHandler</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.ssl.SslClientHelloHandler&lt;T&gt;</old>
+                  <new>class io.netty.handler.ssl.SslClientHelloHandler&lt;T&gt;</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.ssl.SslHandler</old>
+                  <new>class io.netty.handler.ssl.SslHandler</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.HttpObjectDecoder</old>
+                  <new>class io.netty.handler.codec.http.HttpObjectDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.HttpRequestDecoder</old>
+                  <new>class io.netty.handler.codec.http.HttpRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.HttpResponseDecoder</old>
+                  <new>class io.netty.handler.codec.http.HttpResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.websocketx.WebSocket00FrameDecoder</old>
+                  <new>class io.netty.handler.codec.http.websocketx.WebSocket00FrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.websocketx.WebSocket07FrameDecoder</old>
+                  <new>class io.netty.handler.codec.http.websocketx.WebSocket07FrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.websocketx.WebSocket08FrameDecoder</old>
+                  <new>class io.netty.handler.codec.http.websocketx.WebSocket08FrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder</old>
+                  <new>class io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.rtsp.RtspDecoder</old>
+                  <new>class io.netty.handler.codec.rtsp.RtspDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.rtsp.RtspObjectDecoder</old>
+                  <new>class io.netty.handler.codec.rtsp.RtspObjectDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.rtsp.RtspRequestDecoder</old>
+                  <new>class io.netty.handler.codec.rtsp.RtspRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.rtsp.RtspResponseDecoder</old>
+                  <new>class io.netty.handler.codec.rtsp.RtspResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.spdy.SpdyFrameCodec</old>
+                  <new>class io.netty.handler.codec.spdy.SpdyFrameCodec</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http2.Http2ConnectionHandler</old>
+                  <new>class io.netty.handler.codec.http2.Http2ConnectionHandler</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http2.Http2FrameCodec</old>
+                  <new>class io.netty.handler.codec.http2.Http2FrameCodec</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http2.Http2MultiplexCodec</old>
+                  <new>class io.netty.handler.codec.http2.Http2MultiplexCodec</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler</old>
+                  <new>class io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.memcache.AbstractMemcacheObjectDecoder</old>
+                  <new>class io.netty.handler.codec.memcache.AbstractMemcacheObjectDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.memcache.binary.AbstractBinaryMemcacheDecoder&lt;M extends io.netty.handler.codec.memcache.binary.BinaryMemcacheMessage&gt;</old>
+                  <new>class io.netty.handler.codec.memcache.binary.AbstractBinaryMemcacheDecoder&lt;M extends io.netty.handler.codec.memcache.binary.BinaryMemcacheMessage&gt;</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder</old>
+                  <new>class io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseDecoder</old>
+                  <new>class io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socks.SocksAuthRequestDecoder</old>
+                  <new>class io.netty.handler.codec.socks.SocksAuthRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socks.SocksAuthResponseDecoder</old>
+                  <new>class io.netty.handler.codec.socks.SocksAuthResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socks.SocksCmdRequestDecoder</old>
+                  <new>class io.netty.handler.codec.socks.SocksCmdRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socks.SocksCmdResponseDecoder</old>
+                  <new>class io.netty.handler.codec.socks.SocksCmdResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socks.SocksInitRequestDecoder</old>
+                  <new>class io.netty.handler.codec.socks.SocksInitRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socks.SocksInitResponseDecoder</old>
+                  <new>class io.netty.handler.codec.socks.SocksInitResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.SocksPortUnificationServerHandler</old>
+                  <new>class io.netty.handler.codec.socksx.SocksPortUnificationServerHandler</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v4.Socks4ClientDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v4.Socks4ClientDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v4.Socks4ServerDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v4.Socks4ServerDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder</old>
+                  <new>class io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.stomp.StompSubframeDecoder</old>
+                  <new>class io.netty.handler.codec.stomp.StompSubframeDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.xml.XmlDecoder</old>
+                  <new>class io.netty.handler.codec.xml.XmlDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.example.factorial.BigIntegerDecoder</old>
+                  <new>class io.netty.example.factorial.BigIntegerDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.example.portunification.PortUnificationServerHandler</old>
+                  <new>class io.netty.example.portunification.PortUnificationServerHandler</new>
                   <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
                   <justification>Acceptable incompatibility with very low risk which improves performance</justification>
                 </item>
