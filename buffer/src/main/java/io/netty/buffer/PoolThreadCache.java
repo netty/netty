@@ -236,15 +236,15 @@ final class PoolThreadCache {
                 heapArena.numThreadCaches.getAndDecrement();
             }
         } else {
-            //see https://github.com/netty/netty/issues/12749
-            checkCacheIsLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
-            checkCacheIsLeak(normalDirectCaches, "NormalDirectCaches");
-            checkCacheIsLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
-            checkCacheIsLeak(normalHeapCaches, "NormalHeapCaches");
+            // See https://github.com/netty/netty/issues/12749
+            checkCacheMayLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
+            checkCacheMayLeak(normalDirectCaches, "NormalDirectCaches");
+            checkCacheMayLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
+            checkCacheMayLeak(normalHeapCaches, "NormalHeapCaches");
         }
     }
 
-    private void checkCacheIsLeak(MemoryRegionCache<?>[] caches, String type) {
+    private static void checkCacheMayLeak(MemoryRegionCache<?>[] caches, String type) {
         for (MemoryRegionCache<?> cache : caches) {
             if (cache.queue.size() > 0) {
                 logger.debug("{} memory may leak.", type);
