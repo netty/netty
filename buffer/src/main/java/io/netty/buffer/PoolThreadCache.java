@@ -236,6 +236,7 @@ final class PoolThreadCache {
                 heapArena.numThreadCaches.getAndDecrement();
             }
         } else {
+            //see https://github.com/netty/netty/issues/12749
             checkCacheIsLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
             checkCacheIsLeak(normalDirectCaches, "NormalDirectCaches");
             checkCacheIsLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
