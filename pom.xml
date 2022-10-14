@@ -1085,6 +1085,7 @@
           </dependency>
         </dependencies>
         <configuration>
+          <ignoreSuggestionsFormat>xml</ignoreSuggestionsFormat>
           <analysisConfiguration>
             <revapi.filter>
               <elements>
@@ -1171,6 +1172,12 @@
                   <old>class io.netty.handler.codec.http.multipart.MixedAttribute</old>
                   <new>class io.netty.handler.codec.http.multipart.MixedAttribute</new>
                   <superClass>io.netty.handler.codec.http.multipart.AbstractMixedHttpData&lt;io.netty.handler.codec.http.multipart.Attribute&gt;</superClass>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
               </differences>
