@@ -1174,11 +1174,176 @@
                   <superClass>io.netty.handler.codec.http.multipart.AbstractMixedHttpData&lt;io.netty.handler.codec.http.multipart.Attribute&gt;</superClass>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
+
+
                 <item>
                   <ignore>true</ignore>
                   <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.ByteToMessageDecoder</old>
+                  <new>class io.netty.handler.codec.ByteToMessageDecoder</new>
                   <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
-                  <justification>Acceptable incompatibility for required change</justification>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.DelimiterBasedFrameDecoder</old>
+                  <new>class io.netty.handler.codec.DelimiterBasedFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.FixedLengthFrameDecoder</old>
+                  <new>class io.netty.handler.codec.FixedLengthFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.LengthFieldBasedFrameDecoder</old>
+                  <new>class io.netty.handler.codec.LengthFieldBasedFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.LineBasedFrameDecoder</old>
+                  <new>class io.netty.handler.codec.LineBasedFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.ReplayingDecoder&lt;S&gt;</old>
+                  <new>class io.netty.handler.codec.ReplayingDecoder&lt;S&gt;</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.Bzip2Decoder</old>
+                  <new>class io.netty.handler.codec.compression.Bzip2Decoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.FastLzFrameDecoder</old>
+                  <new>class io.netty.handler.codec.compression.FastLzFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.JZlibDecoder</old>
+                  <new>class io.netty.handler.codec.compression.JZlibDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.JdkZlibDecoder</old>
+                  <new>class io.netty.handler.codec.compression.JdkZlibDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.Lz4FrameDecoder</old>
+                  <new>class io.netty.handler.codec.compression.Lz4FrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.LzfDecoder</old>
+                  <new>class io.netty.handler.codec.compression.LzfDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.SnappyFrameDecoder</old>
+                  <new>class io.netty.handler.codec.compression.SnappyFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.SnappyFramedDecoder</old>
+                  <new>class io.netty.handler.codec.compression.SnappyFramedDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.compression.ZlibDecoder</old>
+                  <new>class io.netty.handler.codec.compression.ZlibDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>ADD YOUR EXPLANATION FOR THE NECESSITY OF THIS CHANGE</justification>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.json.JsonObjectDecoder</old>
+                  <new>class io.netty.handler.codec.json.JsonObjectDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.marshalling.CompatibleMarshallingDecoder</old>
+                  <new>class io.netty.handler.codec.marshalling.CompatibleMarshallingDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.marshalling.MarshallingDecoder</old>
+                  <new>class io.netty.handler.codec.marshalling.MarshallingDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder</old>
+                  <new>class io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.serialization.ObjectDecoder</old>
+                  <new>class io.netty.handler.codec.serialization.ObjectDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.codec.xml.XmlFrameDecoder</old>
+                  <new>class io.netty.handler.codec.xml.XmlFrameDecoder</new>
+                  <superClass>io.netty.channel.ChannelDuplexHandler</superClass>
+                  <justification>Acceptable incompatibility with very low risk which improves performance</justification>
                 </item>
               </differences>
             </revapi.differences>
