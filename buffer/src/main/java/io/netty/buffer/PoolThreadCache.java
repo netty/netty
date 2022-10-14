@@ -247,7 +247,8 @@ final class PoolThreadCache {
     private void checkCacheIsLeak(MemoryRegionCache<?>[] caches, String type) {
         for (MemoryRegionCache<?> cache : caches) {
             if (cache.queue.size() > 0) {
-                logger.warn("[] memory may leak.", type);
+                logger.debug("{} memory may leak.", type);
+                return;
             }
         }
     }
