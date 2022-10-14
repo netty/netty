@@ -179,6 +179,9 @@ final class PoolThreadCache {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     boolean add(PoolArena<?> area, PoolChunk chunk, ByteBuffer nioBuffer,
                 long handle, int normCapacity, SizeClass sizeClass) {
+        if (freed.get()) {
+            return false;
+        }
         int sizeIdx = area.size2SizeIdx(normCapacity);
         MemoryRegionCache<?> cache = cache(area, sizeIdx, sizeClass);
         if (cache == null) {
@@ -231,6 +234,19 @@ final class PoolThreadCache {
 
             if (heapArena != null) {
                 heapArena.numThreadCaches.getAndDecrement();
+            }
+        } else {
+            checkCacheIsLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
+            checkCacheIsLeak(normalDirectCaches, "NormalDirectCaches");
+            checkCacheIsLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
+            checkCacheIsLeak(normalHeapCaches, "NormalHeapCaches");
+        }
+    }
+
+    private void checkCacheIsLeak(MemoryRegionCache<?>[] caches, String type) {
+        for (MemoryRegionCache<?> cache : caches) {
+            if (cache.queue.size() > 0) {
+                logger.warn("[] memory may leak.", type);
             }
         }
     }
