@@ -225,6 +225,9 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
         PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);
         activeBytesHuge.add(chunk.chunkSize());
+        if (chunk.direct) {
+            PlatformDependent.incrementPinnedDirectMemoryCounter(chunk.chunkSize());
+        }
         buf.initUnpooled(chunk, reqCapacity);
         allocationsHuge.increment();
     }
@@ -234,6 +237,9 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
             int size = chunk.chunkSize();
             destroyChunk(chunk);
             activeBytesHuge.add(-size);
+            if (chunk.direct) {
+                PlatformDependent.decrementPinnedDirectMemoryCounter(size);
+            }
             deallocationsHuge.increment();
         } else {
             SizeClass sizeClass = sizeClass(handle);

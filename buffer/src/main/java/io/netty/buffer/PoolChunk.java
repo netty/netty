@@ -148,6 +148,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     final Object base;
     final T memory;
     final boolean unpooled;
+    final boolean direct;
 
     /**
      * store the first page and last page of each avail run
@@ -194,6 +195,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     @SuppressWarnings("unchecked")
     PoolChunk(PoolArena<T> arena, Object base, T memory, int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
         unpooled = false;
+        direct = arena instanceof PoolArena.DirectArena;
         this.arena = arena;
         this.base = base;
         this.memory = memory;
@@ -218,6 +220,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /** Creates a special chunk that is not pooled. */
     PoolChunk(PoolArena<T> arena, Object base, T memory, int size) {
         unpooled = true;
+        direct = arena instanceof PoolArena.DirectArena;
         this.arena = arena;
         this.base = base;
         this.memory = memory;
@@ -606,11 +609,17 @@ final class PoolChunk<T> implements PoolChunkMetric {
     void incrementPinnedMemory(int delta) {
         assert delta > 0;
         pinnedBytes.add(delta);
+        if (direct) {
+            PlatformDependent.incrementPinnedDirectMemoryCounter(delta);
+        }
     }
 
     void decrementPinnedMemory(int delta) {
         assert delta > 0;
         pinnedBytes.add(-delta);
+        if (direct) {
+            PlatformDependent.decrementPinnedDirectMemoryCounter(delta);
+        }
     }
 
     @Override

@@ -115,6 +115,7 @@ public final class PlatformDependent {
     private static final int ADDRESS_SIZE = addressSize0();
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
+    private static final AtomicLong PINNED_DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
     private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
     private static final Cleaner CLEANER;
@@ -162,17 +163,21 @@ public final class PlatformDependent {
         if (maxDirectMemory == 0 || !hasUnsafe() || !PlatformDependent0.hasDirectBufferNoCleanerConstructor()) {
             USE_DIRECT_BUFFER_NO_CLEANER = false;
             DIRECT_MEMORY_COUNTER = null;
+            PINNED_DIRECT_MEMORY_COUNTER = null;
         } else {
             USE_DIRECT_BUFFER_NO_CLEANER = true;
             if (maxDirectMemory < 0) {
                 maxDirectMemory = MAX_DIRECT_MEMORY;
                 if (maxDirectMemory <= 0) {
                     DIRECT_MEMORY_COUNTER = null;
+                    PINNED_DIRECT_MEMORY_COUNTER = null;
                 } else {
                     DIRECT_MEMORY_COUNTER = new AtomicLong();
+                    PINNED_DIRECT_MEMORY_COUNTER = new AtomicLong();
                 }
             } else {
                 DIRECT_MEMORY_COUNTER = new AtomicLong();
+                PINNED_DIRECT_MEMORY_COUNTER = new AtomicLong();
             }
         }
         logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
@@ -853,6 +858,18 @@ public final class PlatformDependent {
         if (DIRECT_MEMORY_COUNTER != null) {
             long usedMemory = DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
             assert usedMemory >= 0;
+        }
+    }
+
+    public static void incrementPinnedDirectMemoryCounter(int capacity) {
+        if (PINNED_DIRECT_MEMORY_COUNTER != null) {
+            PINNED_DIRECT_MEMORY_COUNTER.addAndGet(capacity);
+        }
+    }
+
+    public static void decrementPinnedDirectMemoryCounter(int capacity) {
+        if (PINNED_DIRECT_MEMORY_COUNTER != null) {
+            PINNED_DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
         }
     }
 
