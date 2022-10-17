@@ -40,6 +40,9 @@ public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<U
         Field field = PlatformDependent.class.getDeclaredField("PINNED_DIRECT_MEMORY_COUNTER");
         field.setAccessible(true);
         AtomicLong pinnedDirectMemory = (AtomicLong) field.get(null);
+        if (pinnedDirectMemory == null) {
+            return;
+        }
 
         UnpooledByteBufAllocator allocator = newUnpooledAllocator();
         ByteBuf byteBuf = allocator.directBuffer(16);
@@ -63,6 +66,9 @@ public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<U
         Field field = PlatformDependent.class.getDeclaredField("PINNED_DIRECT_MEMORY_COUNTER");
         field.setAccessible(true);
         AtomicLong pinnedDirectMemory = (AtomicLong) field.get(null);
+        if (pinnedDirectMemory == null) {
+            return;
+        }
 
         UnpooledByteBufAllocator allocator = newUnpooledAllocator();
         ByteBuf byteBuf = allocator.directBuffer(16);
@@ -84,6 +90,9 @@ public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<U
         Field field = PlatformDependent.class.getDeclaredField("PINNED_DIRECT_MEMORY_COUNTER");
         field.setAccessible(true);
         AtomicLong pinnedDirectMemory = (AtomicLong) field.get(null);
+        if (pinnedDirectMemory == null) {
+            return;
+        }
 
         UnpooledByteBufAllocator allocator = newUnpooledAllocator();
         ByteBuf byteBuf = allocator.heapBuffer(16);
