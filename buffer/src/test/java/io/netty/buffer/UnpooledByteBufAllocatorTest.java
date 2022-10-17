@@ -79,7 +79,6 @@ public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<U
         assertEquals(0, pinnedDirectMemory.get());
     }
 
-
     @Test
     public void testGlobalPinnedDirectMemoryWithHeapAllocator() throws Exception {
         Field field = PlatformDependent.class.getDeclaredField("PINNED_DIRECT_MEMORY_COUNTER");
