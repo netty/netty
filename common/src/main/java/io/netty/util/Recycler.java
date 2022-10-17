@@ -238,10 +238,9 @@ public abstract class Recycler<T> {
             this.value = value;
         }
 
-        boolean availableToClaim() {
+        void toClaimed() {
             assert state == STATE_AVAILABLE;
             state = STATE_CLAIMED;
-            return true;
         }
 
         void toAvailable() {
@@ -273,10 +272,10 @@ public abstract class Recycler<T> {
             if (handles == null) {
                 return null;
             }
-            DefaultHandle<T> handle;
-            do {
-                handle = handles.relaxedPoll();
-            } while (handle != null && !handle.availableToClaim());
+            DefaultHandle<T> handle = handles.relaxedPoll();
+            if (null != handle) {
+                handle.toClaimed();
+            }
             return handle;
         }
 
