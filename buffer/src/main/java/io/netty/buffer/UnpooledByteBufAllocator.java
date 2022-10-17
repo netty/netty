@@ -120,10 +120,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
 
     void incrementDirect(int amount) {
         metric.directCounter.add(amount);
+        PlatformDependent.incrementPinnedDirectMemoryCounter(amount);
     }
 
     void decrementDirect(int amount) {
         metric.directCounter.add(-amount);
+        PlatformDependent.decrementPinnedDirectMemoryCounter(amount);
     }
 
     void incrementHeap(int amount) {
