@@ -179,12 +179,12 @@ final class PoolThreadCache {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     boolean add(PoolArena<?> area, PoolChunk chunk, ByteBuffer nioBuffer,
                 long handle, int normCapacity, SizeClass sizeClass) {
-        if (freed.get()) {
-            return false;
-        }
         int sizeIdx = area.size2SizeIdx(normCapacity);
         MemoryRegionCache<?> cache = cache(area, sizeIdx, sizeClass);
         if (cache == null) {
+            return false;
+        }
+        if (freed.get()) {
             return false;
         }
         return cache.add(chunk, nioBuffer, handle, normCapacity);
