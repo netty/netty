@@ -15,6 +15,14 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<UnpooledByteBufAllocator> {
 
     @Override
@@ -25,5 +33,66 @@ public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<U
     @Override
     protected UnpooledByteBufAllocator newUnpooledAllocator() {
         return new UnpooledByteBufAllocator(false);
+    }
+
+    @Test
+    public void testGlobalPinnedDirectMemoryWithDirectAllocator() throws Exception {
+        Field field = PlatformDependent.class.getDeclaredField("PINNED_DIRECT_MEMORY_COUNTER");
+        field.setAccessible(true);
+        AtomicLong pinnedDirectMemory = (AtomicLong) field.get(null);
+
+        UnpooledByteBufAllocator allocator = newUnpooledAllocator();
+        ByteBuf byteBuf = allocator.directBuffer(16);
+        assertEquals(16, pinnedDirectMemory.get());
+        byteBuf.release();
+        assertEquals(0, pinnedDirectMemory.get());
+
+        byteBuf = allocator.directBuffer(16);
+        assertEquals(16, pinnedDirectMemory.get());
+
+        //test extend byteBuf
+        byteBuf = byteBuf.capacity(32);
+        assertEquals(32, pinnedDirectMemory.get());
+
+        byteBuf.release();
+        assertEquals(0, pinnedDirectMemory.get());
+    }
+
+    @Test
+    public void testGlobalPinnedDirectMemoryWithMultiDirectAllocator() throws Exception {
+        Field field = PlatformDependent.class.getDeclaredField("PINNED_DIRECT_MEMORY_COUNTER");
+        field.setAccessible(true);
+        AtomicLong pinnedDirectMemory = (AtomicLong) field.get(null);
+
+        UnpooledByteBufAllocator allocator = newUnpooledAllocator();
+        ByteBuf byteBuf = allocator.directBuffer(16);
+        assertEquals(16, pinnedDirectMemory.get());
+
+        UnpooledByteBufAllocator allocator1 = newUnpooledAllocator();
+        ByteBuf byteBuf1 = allocator1.directBuffer(16);
+        assertEquals(32, pinnedDirectMemory.get());
+
+        byteBuf.release();
+        assertEquals(16, pinnedDirectMemory.get());
+
+        byteBuf1.release();
+        assertEquals(0, pinnedDirectMemory.get());
+    }
+
+
+    @Test
+    public void testGlobalPinnedDirectMemoryWithHeapAllocator() throws Exception {
+        Field field = PlatformDependent.class.getDeclaredField("PINNED_DIRECT_MEMORY_COUNTER");
+        field.setAccessible(true);
+        AtomicLong pinnedDirectMemory = (AtomicLong) field.get(null);
+
+        UnpooledByteBufAllocator allocator = newUnpooledAllocator();
+        ByteBuf byteBuf = allocator.heapBuffer(16);
+
+        //heap memory allocation didn't increase `PINNED_DIRECT_MEMORY_COUNTER`
+        assertEquals(0, pinnedDirectMemory.get());
+
+        byteBuf.release();
+        assertEquals(0, pinnedDirectMemory.get());
     }
 }
