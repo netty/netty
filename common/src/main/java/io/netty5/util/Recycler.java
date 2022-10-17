@@ -154,6 +154,9 @@ public abstract class Recycler<T> {
         return threadLocal.get().pooledHandles.size();
     }
 
+    /**
+     * @param handle can NOT be null.
+     */
     protected abstract T newObject(Handle<T> handle);
 
     @SuppressWarnings("ClassNameSameAsAncestorName") // Can't change this due to compatibility.
