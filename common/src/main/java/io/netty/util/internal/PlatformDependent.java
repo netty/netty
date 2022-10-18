@@ -424,6 +424,14 @@ public final class PlatformDependent {
     }
 
     /**
+     * Returns the current pinned memory reserved for direct buffer allocation.
+     * This method returns -1 in case that a value is not available.
+     */
+    public static long usedPinnedDirectMemory() {
+        return PINNED_DIRECT_MEMORY_COUNTER != null ? PINNED_DIRECT_MEMORY_COUNTER.get() : -1;
+    }
+
+    /**
      * Returns the temporary directory.
      */
     public static File tmpdir() {
