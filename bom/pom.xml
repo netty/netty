@@ -74,9 +74,6 @@
         <groupId>com.commsen.maven</groupId>
         <artifactId>bom-helper-maven-plugin</artifactId>
         <version>0.4.0</version>
-        <goals>
-          <goal>resolve</goal>
-        </goals>
       </plugin>
     </plugins>
   </build>
