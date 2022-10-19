@@ -196,7 +196,8 @@ public abstract class Recycler<T> {
     }
 
     final int threadLocalSize() {
-        return threadLocal.get().pooledHandles.size();
+        LocalPool<T> localPool = threadLocal.getIfExists();
+        return localPool == null ? 0 : localPool.pooledHandles.size();
     }
 
     /**
