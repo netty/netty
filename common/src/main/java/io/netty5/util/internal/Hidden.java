@@ -157,6 +157,8 @@ class Hidden {
                     "io.netty5.util.NetUtil$SoMaxConnAction",
                     "run");
 
+            builder.allowBlockingCallsInside("io.netty5.util.internal.PlatformDependent", "createTempFile");
+
             builder.nonBlockingThreadPredicate(p -> thread ->
                     p.test(thread) || thread instanceof FastThreadLocalThread);
         }
