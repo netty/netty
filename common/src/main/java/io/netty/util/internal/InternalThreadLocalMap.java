@@ -44,6 +44,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
             new ThreadLocal<InternalThreadLocalMap>();
     private static final AtomicInteger nextIndex = new AtomicInteger();
+    // Internal use only.
     public static final int VARIABLES_TO_REMOVE_INDEX = nextVariableIndex();
 
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
