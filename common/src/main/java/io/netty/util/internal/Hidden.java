@@ -162,6 +162,7 @@ class Hidden {
                     "io.netty.util.NetUtil$SoMaxConnAction",
                     "run");
 
+            builder.allowBlockingCallsInside("io.netty.util.internal.PlatformDependent", "createTempFile");
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override
                 public Predicate<Thread> apply(final Predicate<Thread> p) {
