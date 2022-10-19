@@ -535,9 +535,9 @@
     <conscrypt.classifier />
     <bouncycastle.version>1.71.1</bouncycastle.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
-    <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
+    <logging.config>${project.basedir}/../common/src/test/resources/log4j-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
-    <log4j2.version>2.17.2</log4j2.version>
+    <log4j2.version>2.19.0</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.9.0</junit.version>
     <nativebuildtools.version>0.9.13</nativebuildtools.version>
@@ -758,10 +758,19 @@
         <artifactId>slf4j-api</artifactId>
         <version>1.7.30</version>
       </dependency>
-
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-api</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-slf4j-impl</artifactId>
         <version>${log4j2.version}</version>
       </dependency>
 
@@ -822,9 +831,10 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>1.2.3</version>
+        <!-- For async log4j2 logging -->
+        <groupId>com.lmax</groupId>
+        <artifactId>disruptor</artifactId>
+        <version>3.4.4</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -931,8 +941,23 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.lmax</groupId>
+      <artifactId>disruptor</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -1187,7 +1212,7 @@
           </excludes>
           <runOrder>random</runOrder>
           <systemPropertyVariables>
-            <logback.configurationFile>${logging.config}</logback.configurationFile>
+            <log4j2.configurationFile>${logging.config}</log4j2.configurationFile>
             <logLevel>${logging.logLevel}</logLevel>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>

@@ -15,6 +15,8 @@
  */
 package io.netty5.util.internal.logging;
 
+import org.jetbrains.annotations.TestOnly;
+
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Objects.requireNonNull;
@@ -132,8 +134,8 @@ public abstract class InternalLoggerFactory {
      *
      * @param defaultFactory a non-null implementation of {@link InternalLoggerFactory}
      */
+    @TestOnly
     public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
-        requireNonNull(defaultFactory, "defaultFactory");
         InternalLoggerFactoryHolder.HOLDER.setFactory(defaultFactory);
     }
 
@@ -154,5 +156,5 @@ public abstract class InternalLoggerFactory {
     /**
      * Creates a new logger instance with the specified name.
      */
-    protected abstract InternalLogger newInstance(String name);
+    public abstract InternalLogger newInstance(String name);
 }

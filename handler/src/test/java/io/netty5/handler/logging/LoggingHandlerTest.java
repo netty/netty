@@ -15,29 +15,34 @@
  */
 package io.netty5.handler.logging;
 
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.ErrorHandler;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.DefaultErrorHandler;
+import org.apache.logging.log4j.core.config.AppenderRef;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.mockito.ArgumentMatcher;
-import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.util.internal.StringUtil.NEWLINE;
@@ -47,11 +52,7 @@ import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.slf4j.Logger.ROOT_LOGGER_NAME;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Verifies the correct functionality of the {@link LoggingHandler}.
@@ -63,41 +64,150 @@ public class LoggingHandlerTest {
 
     private static final String LOGGER_NAME = LoggingHandler.class.getName();
 
-    private static final Logger rootLogger = (Logger) LoggerFactory.getLogger(ROOT_LOGGER_NAME);
-    private static final Logger logger = (Logger) LoggerFactory.getLogger(LOGGER_NAME);
+    private static final class TestAppender implements Appender {
+        public static final String NAME = "TestAppender";
 
-    private static final List<Appender<ILoggingEvent>> oldAppenders = new ArrayList<>();
+        private ArrayList<String> lines = new ArrayList<>();
+
+        @Override
+        public void append(LogEvent event) {
+            synchronized (lines) {
+                lines.add(event.getMessage().getFormattedMessage());
+            }
+        }
+
+        @Override
+        public String getName() {
+            return NAME;
+        }
+
+        public AppenderRef ref() {
+            return AppenderRef.createAppenderRef(getName(), null, null);
+        }
+
+        @Override
+        public Layout<? extends Serializable> getLayout() {
+            return null;
+        }
+
+        @Override
+        public boolean ignoreExceptions() {
+            return false;
+        }
+
+        @Override
+        public ErrorHandler getHandler() {
+            return new DefaultErrorHandler(this);
+        }
+
+        @Override
+        public void setHandler(ErrorHandler handler) {
+        }
+
+        @Override
+        public State getState() {
+            return State.STARTED;
+        }
+
+        @Override
+        public void initialize() {
+        }
+
+        @Override
+        public void start() {
+        }
+
+        @Override
+        public void stop() {
+        }
+
+        @Override
+        public boolean isStarted() {
+            return true;
+        }
+
+        @Override
+        public boolean isStopped() {
+            return false;
+        }
+
+        public void clear() {
+            synchronized (lines) {
+                lines.clear();
+            }
+        }
+
+        public void verify(ArgumentMatcher<String> matcher) {
+            synchronized (lines) {
+                boolean found = false;
+                for (String line : lines) {
+                    if (matcher.matches(line)) {
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    StringBuilder sb = new StringBuilder("Wanted\n\t").append(matcher).append("\nbut got");
+                    if (lines.isEmpty()) {
+                        sb.append(" nothing.");
+                    } else {
+                        for (String line : lines) {
+                            sb.append("\n\t").append(line);
+                        }
+                    }
+                    fail(sb.toString());
+                }
+            }
+        }
+
+        public void verify(ArgumentMatcher<String> matcher, int times) {
+            synchronized (lines) {
+                int count = 0;
+                for (String line : lines) {
+                    if (matcher.matches(line)) {
+                        count++;
+                    }
+                }
+                if (count != times) {
+                    StringBuilder sb = new StringBuilder("Wanted\n\t").append(matcher)
+                            .append('\n').append(times).append(" times, but got ").append(count).append(" times.");
+                    fail(sb.toString());
+                }
+            }
+        }
+    }
+
     /**
-     * Custom logback appender which gets used to match on log messages.
+     * Custom log4j appender which gets used to match on log messages.
      */
-    private Appender<ILoggingEvent> appender;
+    private static final TestAppender appender = new TestAppender();
 
     @BeforeAll
-    public static void beforeClass() {
-        for (Iterator<Appender<ILoggingEvent>> i = rootLogger.iteratorForAppenders(); i.hasNext();) {
-            Appender<ILoggingEvent> a = i.next();
-            oldAppenders.add(a);
-            rootLogger.detachAppender(a);
-        }
+    public static void setUpLogger() {
+        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        Configuration configuration = ctx.getConfiguration();
+        configuration.addAppender(appender);
+        LoggerConfig loggerConfig = LoggerConfig.newBuilder()
+                .withConfig(configuration)
+                .withLoggerName(LOGGER_NAME)
+                .withLevel(Level.DEBUG)
+                .withRefs(new AppenderRef[]{appender.ref()})
+                .build();
+        loggerConfig.addAppender(appender, null, null);
+        configuration.addLogger(LOGGER_NAME, loggerConfig);
+        ctx.updateLoggers();
     }
 
     @AfterAll
-    public static void afterClass() {
-        for (Appender<ILoggingEvent> a: oldAppenders) {
-            rootLogger.addAppender(a);
-        }
+    public static void remoteTestLogger() {
+        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        Configuration configuration = ctx.getConfiguration();
+        configuration.removeLogger(LOGGER_NAME);
+        ctx.updateLoggers();
     }
 
     @BeforeEach
-    @SuppressWarnings("unchecked")
     public void setup() {
-        appender = mock(Appender.class);
-        logger.addAppender(appender);
-    }
-
-    @AfterEach
-    public void tearDown() {
-        logger.detachAppender(appender);
+        appender.clear();
     }
 
     @Test
@@ -120,7 +230,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogChannelActive() {
         new EmbeddedChannel(new LoggingHandler());
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+ACTIVE$")));
+        appender.verify(new RegexLogMatcher(".+ACTIVE"));
     }
 
     @Test
@@ -134,35 +244,35 @@ public class LoggingHandlerTest {
         // - Mark the channel unwritable when schedule the write on the EventLoop.
         // - Mark writable when dequeue task
         // - Mark unwritable when the write is actual be fired through the pipeline and hit the ChannelOutboundBuffer.
-        verify(appender, times(3)).doAppend(argThat(new RegexLogMatcher(".+WRITABILITY CHANGED$")));
+        appender.verify(new RegexLogMatcher(".+WRITABILITY CHANGED$"), 3);
     }
 
     @Test
     public void shouldLogChannelRegistered() {
         new EmbeddedChannel(new LoggingHandler());
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+REGISTERED$")));
+        appender.verify(new RegexLogMatcher(".+REGISTERED$"));
     }
 
     @Test
     public void shouldLogChannelClose() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.close().asStage().await();
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+CLOSE$")));
+        appender.verify(new RegexLogMatcher(".+CLOSE$"));
     }
 
     @Test
     public void shouldLogChannelConnect() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.connect(new InetSocketAddress(80)).asStage().await();
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+CONNECT: 0.0.0.0/0.0.0.0:80$")));
+        appender.verify(new RegexLogMatcher(".+CONNECT: 0.0.0.0/0.0.0.0:80$"));
     }
 
     @Test
     public void shouldLogChannelConnectWithLocalAddress() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.connect(new InetSocketAddress(80), new InetSocketAddress(81)).asStage().await();
-        verify(appender).doAppend(argThat(new RegexLogMatcher(
-                "^\\[id: 0xembedded, L:embedded - R:embedded\\] CONNECT: 0.0.0.0/0.0.0.0:80, 0.0.0.0/0.0.0.0:81$")));
+        appender.verify(new RegexLogMatcher(
+                "^\\[id: 0xembedded, L:embedded - R:embedded\\] CONNECT: 0.0.0.0/0.0.0.0:80, 0.0.0.0/0.0.0.0:81$"));
     }
 
     @Test
@@ -170,21 +280,21 @@ public class LoggingHandlerTest {
         EmbeddedChannel channel = new DisconnectingEmbeddedChannel(new LoggingHandler());
         channel.connect(new InetSocketAddress(80)).asStage().await();
         channel.disconnect().asStage().await();
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+DISCONNECT$")));
+        appender.verify(new RegexLogMatcher(".+DISCONNECT$"));
     }
 
     @Test
     public void shouldLogChannelInactive() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.pipeline().fireChannelInactive();
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+INACTIVE$")));
+        appender.verify(new RegexLogMatcher(".+INACTIVE$"));
     }
 
     @Test
     public void shouldLogChannelBind() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.bind(new InetSocketAddress(80));
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+BIND: 0.0.0.0/0.0.0.0:80$")));
+        appender.verify(new RegexLogMatcher(".+BIND: 0.0.0.0/0.0.0.0:80$"));
     }
 
     @SuppressWarnings("StringOperationCanBeSimplified")
@@ -193,7 +303,7 @@ public class LoggingHandlerTest {
         String userTriggered = "iAmCustom!";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.pipeline().fireChannelInboundEvent(new String(userTriggered));
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+USER_EVENT: " + userTriggered + '$')));
+        appender.verify(new RegexLogMatcher(".+USER_EVENT: " + userTriggered + '$'));
     }
 
     @Test
@@ -202,8 +312,8 @@ public class LoggingHandlerTest {
         Throwable cause = new IllegalStateException(msg);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.pipeline().fireChannelExceptionCaught(cause);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(
-                ".+EXCEPTION: " + cause.getClass().getCanonicalName() + ": " + msg + '$')));
+        appender.verify(new RegexLogMatcher(
+                ".+EXCEPTION: " + cause.getClass().getCanonicalName() + ": " + msg));
     }
 
     @Test
@@ -211,8 +321,8 @@ public class LoggingHandlerTest {
         String msg = "hello";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeOutbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+WRITE: " + msg + '$')));
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+FLUSH$")));
+        appender.verify(new RegexLogMatcher(".+WRITE: " + msg));
+        appender.verify(new RegexLogMatcher(".+FLUSH"));
     }
 
     @Test
@@ -220,7 +330,7 @@ public class LoggingHandlerTest {
         String msg = "hello";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg + '$')));
+        appender.verify(new RegexLogMatcher(".+READ: " + msg));
 
         String handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
@@ -232,7 +342,7 @@ public class LoggingHandlerTest {
         try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
             EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
             channel.writeInbound(msg.copy());
-            verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", true)));
+            appender.verify(new RegexLogMatcher(".+READ: " + msg.readableBytes() + 'B', true));
 
             try (Buffer handledMsg = channel.readInbound()) {
                 assertEquals(msg, handledMsg);
@@ -246,7 +356,7 @@ public class LoggingHandlerTest {
         try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
             EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
             channel.writeInbound(msg.copy());
-            verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));
+            appender.verify(new RegexLogMatcher(".+READ: " + msg.readableBytes() + 'B', false));
 
             try (Buffer handledMsg = channel.readInbound()) {
                 assertEquals(msg, handledMsg);
@@ -260,7 +370,7 @@ public class LoggingHandlerTest {
         try (Buffer msg = preferredAllocator().allocate(0)) {
             EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
             channel.writeInbound(msg.copy());
-            verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$", false)));
+            appender.verify(new RegexLogMatcher(".+READ: 0B", false));
 
             Buffer handledMsg = channel.readInbound();
             assertEquals(msg, handledMsg);
@@ -273,13 +383,13 @@ public class LoggingHandlerTest {
         Buffer msg = preferredAllocator().allocate(0);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ COMPLETE$")));
+        appender.verify(new RegexLogMatcher(".+READ COMPLETE$"));
     }
 
     /**
      * A custom EasyMock matcher that matches on Logback messages.
      */
-    private static final class RegexLogMatcher implements ArgumentMatcher<ILoggingEvent> {
+    private static final class RegexLogMatcher implements ArgumentMatcher<String> {
 
         private final String expected;
         private final boolean shouldContainNewline;
@@ -295,13 +405,18 @@ public class LoggingHandlerTest {
         }
 
         @Override
+        public String toString() {
+            return "Regex[" + expected + (shouldContainNewline? "] with newlines" : "]");
+        }
+
+        @Override
         @SuppressWarnings("DynamicRegexReplaceableByCompiledPattern")
-        public boolean matches(ILoggingEvent actual) {
+        public boolean matches(String actual) {
             // Match only the first line to skip the validation of hex-dump format.
-            actualMsg = actual.getMessage().split("(?s)[\\r\\n]+")[0];
+            actualMsg = actual.split("(?s)[\\r\\n]+")[0];
             if (actualMsg.matches(expected)) {
                 // The presence of a newline implies a hex-dump was logged
-                return actual.getMessage().contains(NEWLINE) == shouldContainNewline;
+                return actual.contains(NEWLINE) == shouldContainNewline;
             }
             return false;
         }
