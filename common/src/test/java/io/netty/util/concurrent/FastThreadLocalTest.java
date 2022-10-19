@@ -333,6 +333,6 @@ public class FastThreadLocalTest {
         assertEquals(2 + originSize, FastThreadLocal.size());
 
         FastThreadLocal.removeAll();
-        assertEquals(originSize, FastThreadLocal.size());
+        assertEquals(0, FastThreadLocal.size());
     }
 }
