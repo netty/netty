@@ -16,6 +16,7 @@
 package io.netty5.util.concurrent;
 
 import java.util.Arrays;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -28,13 +29,14 @@ final class InternalThreadLocalMap {
     private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
             new ThreadLocal<>();
     private static final AtomicInteger nextIndex = new AtomicInteger();
-
     private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
     // Reference: https://hg.openjdk.java.net/jdk8/jdk8/jdk/file/tip/src/share/classes/java/util/ArrayList.java#l229
     private static final int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
     private static final int INDEXED_VARIABLE_TABLE_INITIAL_SIZE = 32;
 
     static final Object UNSET = new Object();
+    // Internal use only.
+    static final int VARIABLES_TO_REMOVE_INDEX = nextVariableIndex();
 
     /** Used by {@link FastThreadLocal} */
     private Object[] indexedVariables;
@@ -111,15 +113,13 @@ final class InternalThreadLocalMap {
 
     int size() {
         int count = 0;
-        for (Object o: indexedVariables) {
-            if (o != UNSET) {
-                count ++;
-            }
+        Object v = indexedVariable(VARIABLES_TO_REMOVE_INDEX);
+        if (v != null && v != InternalThreadLocalMap.UNSET) {
+            @SuppressWarnings("unchecked")
+            Set<FastThreadLocal<?>> variablesToRemove = (Set<FastThreadLocal<?>>) v;
+            count += variablesToRemove.size();
         }
-
-        // We should subtract 1 from the count because the first element in 'indexedVariables' is reserved
-        // by 'FastThreadLocal' to keep the list of 'FastThreadLocal's to remove on 'FastThreadLocal.removeAll()'.
-        return count - 1;
+        return count;
     }
 
     Object indexedVariable(int index) {
