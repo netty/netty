@@ -39,9 +39,10 @@ import static java.util.Objects.requireNonNull;
 
 public class DefaultPromise<V> implements Promise<V>, Future<V>,
                                           FutureCompletionStage<V>, java.util.concurrent.Future<V> {
+    public static final String REJECTED_EXECUTION_LOGGER_NAME = DefaultPromise.class.getName() + ".rejectedExecution";
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
-            InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
+            InternalLoggerFactory.getInstance(REJECTED_EXECUTION_LOGGER_NAME);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");

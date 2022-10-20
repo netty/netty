@@ -15,22 +15,21 @@
  */
 package io.netty5.channel;
 
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
 import io.netty5.channel.local.LocalChannel;
+import io.netty5.util.concurrent.DefaultPromise;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -336,14 +335,12 @@ public class SingleThreadEventLoopTest {
     public void testRegistrationAfterShutdown() throws Exception {
         loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).asStage().await();
 
-        // Disable logging temporarily.
-        Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-        List<Appender<ILoggingEvent>> appenders = new ArrayList<>();
-        for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
-            Appender<ILoggingEvent> a = i.next();
-            appenders.add(a);
-            root.detachAppender(a);
-        }
+        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        Configuration configuration = ctx.getConfiguration();
+        LoggerConfig loggerConfig = configuration.getLoggerConfig(DefaultPromise.REJECTED_EXECUTION_LOGGER_NAME);
+        Level level = loggerConfig.getLevel();
+        loggerConfig.setLevel(Level.OFF);
+        ctx.updateLoggers();
 
         try {
             Channel channel = new LocalChannel(loopA);
@@ -354,9 +351,8 @@ public class SingleThreadEventLoopTest {
             // TODO: What to do in this case ?
             //assertFalse(f.channel().isOpen());
         } finally {
-            for (Appender<ILoggingEvent> a: appenders) {
-                root.addAppender(a);
-            }
+            loggerConfig.setLevel(level);
+            ctx.updateLoggers();
         }
     }
 
@@ -367,14 +363,12 @@ public class SingleThreadEventLoopTest {
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
 
-        // Disable logging temporarily.
-        Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-        List<Appender<ILoggingEvent>> appenders = new ArrayList<>();
-        for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
-            Appender<ILoggingEvent> a = i.next();
-            appenders.add(a);
-            root.detachAppender(a);
-        }
+        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        Configuration configuration = ctx.getConfiguration();
+        LoggerConfig loggerConfig = configuration.getLoggerConfig(DefaultPromise.REJECTED_EXECUTION_LOGGER_NAME);
+        Level level = loggerConfig.getLevel();
+        loggerConfig.setLevel(Level.OFF);
+        ctx.updateLoggers();
 
         try {
             Future<Void> f = ch.register().addListener(future -> latch.countDown());
@@ -387,9 +381,8 @@ public class SingleThreadEventLoopTest {
             // TODO: What to do in this case ?
             //assertFalse(ch.isOpen());
         } finally {
-            for (Appender<ILoggingEvent> a: appenders) {
-                root.addAppender(a);
-            }
+            loggerConfig.setLevel(level);
+            ctx.updateLoggers();
         }
     }
 

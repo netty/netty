@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration>
+    <Appenders>
+        <Console name="STDOUT" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <AsyncRoot level="${sys:logLevel:-info}">
+            <AppenderRef ref="STDOUT"/>
+        </AsyncRoot>
+
+        <!-- Disable logging for apacheds to reduce noise. -->
+        <AsyncLogger name="org.apache.directory" level="off"/>
+    </Loggers>
+</Configuration>
