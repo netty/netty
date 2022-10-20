@@ -156,5 +156,5 @@ public abstract class InternalLoggerFactory {
     /**
      * Creates a new logger instance with the specified name.
      */
-    public abstract InternalLogger newInstance(String name);
+    protected abstract InternalLogger newInstance(String name);
 }
