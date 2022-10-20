@@ -114,7 +114,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 final CharSequence acceptEncoding;
                 if (code >= 100 && code < 200) {
                     // We need to not poll the encoding when response with 1xx codes as another response will follow
-                    // for the issued request. See https://github.com/netty/netty/issues/12904 and https://github.com/netty/netty/issues/4079
+                    // for the issued request.
+                    // See https://github.com/netty/netty/issues/12904 and https://github.com/netty/netty/issues/4079
                     acceptEncoding = null;
                 } else {
                     // Get the list of encodings accepted by the peer.
