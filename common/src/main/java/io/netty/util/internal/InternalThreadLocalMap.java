@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,6 +44,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
             new ThreadLocal<InternalThreadLocalMap>();
     private static final AtomicInteger nextIndex = new AtomicInteger();
+    // Internal use only.
+    public static final int VARIABLES_TO_REMOVE_INDEX = nextVariableIndex();
 
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
     private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
@@ -196,15 +199,14 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
             count ++;
         }
 
-        for (Object o: indexedVariables) {
-            if (o != UNSET) {
-                count ++;
-            }
+        Object v = indexedVariable(VARIABLES_TO_REMOVE_INDEX);
+        if (v != null && v != InternalThreadLocalMap.UNSET) {
+            @SuppressWarnings("unchecked")
+            Set<FastThreadLocal<?>> variablesToRemove = (Set<FastThreadLocal<?>>) v;
+            count += variablesToRemove.size();
         }
 
-        // We should subtract 1 from the count because the first element in 'indexedVariables' is reserved
-        // by 'FastThreadLocal' to keep the list of 'FastThreadLocal's to remove on 'FastThreadLocal.removeAll()'.
-        return count - 1;
+        return count;
     }
 
     public StringBuilder stringBuilder() {
