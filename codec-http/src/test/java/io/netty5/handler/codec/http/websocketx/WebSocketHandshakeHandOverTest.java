@@ -27,6 +27,7 @@ import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled("This test is very flaky when we run tests in parallel. Need to investigate.")
 public class WebSocketHandshakeHandOverTest {
 
     private boolean serverReceivedHandshake;

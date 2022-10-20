@@ -43,6 +43,7 @@ import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -80,6 +81,7 @@ import static org.mockito.Mockito.verify;
 /**
  * Testing the {@link HttpToHttp2ConnectionHandler} for {@link FullHttpRequest} objects into HTTP/2 frames
  */
+@Disabled("This test is very flaky when we run tests in parallel. Need to investigate.")
 public class HttpToHttp2ConnectionHandlerTest {
     private static final int WAIT_TIME_SECONDS = 10;
 
