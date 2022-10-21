@@ -119,8 +119,8 @@ public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
         }
 
         @Override
-        public int estimatedBufferCapacity() {
-            return nextReceiveBufferSize;
+        public int prepareRead() {
+            return nextReceiveBufferSize * super.prepareRead();
         }
 
         private void record(int actualReadBytes) {

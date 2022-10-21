@@ -29,10 +29,6 @@ public class MaxMessagesReadHandleFactoryTest {
             @Override
             public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
                 return new MaxMessageReadHandle(maxMessagesPerRead) {
-                    @Override
-                    public int estimatedBufferCapacity() {
-                        return 0;
-                    }
                 };
             }
         };

@@ -1987,7 +1987,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             if (readBufferAllocator == null) {
                 readBufferAllocator = DefaultChannelPipeline.DEFAULT_READ_BUFFER_ALLOCATOR;
             }
-            return readBufferAllocator.allocate(readBufferAllocator(), readHandle.estimatedBufferCapacity());
+            int capacity = readHandle.prepareRead();
+            if (capacity <= 0) {
+                return null;
+            }
+            return readBufferAllocator.allocate(readBufferAllocator(), capacity);
         }
 
         private void complete() {
@@ -2018,12 +2022,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
 
         private void readSomething() {
+            // Complete the read handle, allowing channelReadComplete to schedule more reads.
+            readHandle.readComplete();
             // Check if something was read as in this case we wall need to call the *ReadComplete methods.
             if (readSomething) {
                 readSomething = false;
                 pipeline().fireChannelReadComplete();
             }
-            readHandle.readComplete();
         }
 
         void readLoop() {

@@ -49,23 +49,34 @@ public abstract class MaxMessagesReadHandleFactory implements ReadHandleFactory 
      */
     protected abstract static class MaxMessageReadHandle implements ReadHandle {
         private final int maxMessagesPerRead;
-        private int totalMessages;
+        private int messagesPrepared;
+        private int messagesCompleted;
 
         protected MaxMessageReadHandle(int maxMessagesPerRead) {
             this.maxMessagesPerRead = checkPositive(maxMessagesPerRead, "maxMessagesPerRead");
         }
 
+        /**
+         * @return 1 if more messages can be prepared,
+         * or 0 if the maximum number of messages have already been prepared.
+         */
+        @Override
+        public int prepareRead() {
+            return messagesPrepared++ < maxMessagesPerRead? 1 : 0;
+        }
+
         @Override
         public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
             if (numMessagesRead > 0) {
-                totalMessages += numMessagesRead;
+                messagesCompleted += numMessagesRead;
             }
-            return totalMessages < maxMessagesPerRead;
+            return messagesCompleted < maxMessagesPerRead;
         }
 
         @Override
         public void readComplete() {
-            totalMessages = 0;
+            messagesPrepared = 0;
+            messagesCompleted = 0;
         }
     }
 }

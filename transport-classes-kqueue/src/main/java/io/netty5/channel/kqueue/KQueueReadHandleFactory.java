@@ -46,9 +46,9 @@ public final class KQueueReadHandleFactory extends MaxMessagesReadHandleFactory 
         }
 
         @Override
-        public int estimatedBufferCapacity() {
+        public int prepareRead() {
             // bufferCapacity(...) is called with what KQueue tells us.
-            return capacity;
+            return capacity * super.prepareRead();
         }
     }
 }

@@ -19,13 +19,13 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ReadHandleFactory;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -168,7 +168,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
             return new ReadHandle() {
 
                 @Override
-                public int estimatedBufferCapacity() {
+                public int prepareRead() {
                     return 1; // only ever allocate buffers of size 1 to ensure the number of reads is controlled.
                 }
 

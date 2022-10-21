@@ -28,7 +28,7 @@ public class AdaptiveReadHandleFactoryTest {
 
     @BeforeEach
     public void setup() {
-        AdaptiveReadHandleFactory recvBufferAllocator = new AdaptiveReadHandleFactory(1, 64, 512, 1024 * 1024 * 10);
+        AdaptiveReadHandleFactory recvBufferAllocator = new AdaptiveReadHandleFactory(2, 64, 512, 1024 * 1024 * 10);
         handle = recvBufferAllocator.newHandle(mock(Channel.class));
     }
 
@@ -36,12 +36,24 @@ public class AdaptiveReadHandleFactoryTest {
     public void rampUpBeforeReadCompleteWhenLargeDataPending() {
         // Simulate that there is always more data when we attempt to read, so we should always ramp up.
         allocReadExpected(handle, 512);
+        handle.readComplete();
         allocReadExpected(handle, 8192);
+        handle.readComplete();
         allocReadExpected(handle, 131072);
+        handle.readComplete();
         allocReadExpected(handle, 2097152);
         handle.readComplete();
 
         allocReadExpected(handle, 8388608);
+    }
+
+    @Test
+    void mustNotLetMoreThanMaxMessagesBePrepared() {
+        allocReadExpected(handle, 512);
+        allocReadExpected(handle, 8192);
+        allocReadExpected(handle, 0);
+        handle.readComplete();
+        allocReadExpected(handle, 65536);
     }
 
     @Test
@@ -58,7 +70,7 @@ public class AdaptiveReadHandleFactoryTest {
     }
 
     private void computingNext(int expectedSize, int actualReadBytes) {
-        assertEquals(expectedSize, handle.estimatedBufferCapacity());
+        assertEquals(expectedSize, handle.prepareRead());
         handle.lastRead(expectedSize, actualReadBytes, 1);
         handle.readComplete();
     }
@@ -90,7 +102,7 @@ public class AdaptiveReadHandleFactoryTest {
     }
 
     private static void allocRead(ReadHandle handle, int expectedBufferSize, int lastRead) {
-        assertEquals(expectedBufferSize, handle.estimatedBufferCapacity());
+        assertEquals(expectedBufferSize, handle.prepareRead());
         handle.lastRead(expectedBufferSize, lastRead, 1);
     }
 }
