@@ -115,14 +115,15 @@
         -->
         <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
         <!-- On *nix, add ASM flags to disable executable stack -->
-        <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
+        <cmakeAsmFlags>-Wa,--noexecstack -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
+        <extraCflags>-mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
         <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
         <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis</cmakeCxxFlags>
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget}</extraLdflags>
+        <extraLdflags>-platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget} -mmacosx-version-min=${macosxDeploymentTarget}</extraLdflags>
         <extraConfigureArg>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
@@ -164,10 +165,10 @@
         <jni.classifier>osx-x86_64</jni.classifier>
         <javaModuleNameWithClassifier>osx.x86_64</javaModuleNameWithClassifier>
         <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
-        <extraCflags>-target x86_64-apple-macos10.12</extraCflags>
+        <extraCflags>-target x86_64-apple-macos10.12 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
         <extraCxxflags>-target x86_64-apple-macos10.12</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
-        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.12</cmakeAsmFlags>
+        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.12 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=x86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64</extraCmakeFlags>
         <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer  -DOPENSSL_C11_ATOMIC</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
@@ -175,7 +176,7 @@
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-arch x86_64 -platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget}</extraLdflags>
+        <extraLdflags>-arch x86_64 -platform_version,macos,${macosxDeploymentTarget},${macosxDeploymentTarget} -mmacosx-version-min=${macosxDeploymentTarget}</extraLdflags>
         <extraConfigureArg>--host=x86_64-apple-darwin</extraConfigureArg>
         <extraConfigureArg2>MACOSX_DEPLOYMENT_TARGET=${macosxDeploymentTarget}</extraConfigureArg2>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.jnilib;osname=macos;osname=macosx;processor=x86_64</bundleNativeCode>
@@ -746,6 +747,7 @@
                                 <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
                                 <!-- Lets enable frame-pointers so we can profile better -->
                                 <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
+                                <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
                               </exec>
                             </then>
                           </elseif>
@@ -757,6 +759,7 @@
                               <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
                               <!-- Lets enable frame-pointers so we can profile better -->
                               <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
+                              <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
                             </exec>
                           </else>
                         </if>
