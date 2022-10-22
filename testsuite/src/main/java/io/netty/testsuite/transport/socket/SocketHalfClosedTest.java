@@ -227,7 +227,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
-        final AtomicReference<Channel> serverConnectedChannelRef = new AtomicReference<>();
+        final AtomicReference<Channel> serverConnectedChannelRef = new AtomicReference<Channel>();
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         final CountDownLatch serverInitializedLatch = new CountDownLatch(1);
         final CountDownLatch clientReadAllDataLatch = new CountDownLatch(1);
