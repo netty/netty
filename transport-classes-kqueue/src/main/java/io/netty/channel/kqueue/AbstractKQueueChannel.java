@@ -447,9 +447,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 if (isAllowHalfClosure(config())) {
                     try {
                         socket.shutdown(true, false);
-                    } catch (IOException | NotYetConnectedException ignored) {
+                    } catch (IOException ignored) {
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
+                    } catch (NotYetConnectedException ignored) {
+                        // same as above...
                     }
                     clearReadFilter0();
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);

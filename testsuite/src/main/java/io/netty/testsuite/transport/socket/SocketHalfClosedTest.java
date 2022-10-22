@@ -212,7 +212,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
     @ParameterizedTest(name = "{displayName} [{index}] autoRead={0} serverForceClose={1}")
     @CsvSource(value = {"true,true", "true,false", "false, true", "false,false"})
-    public void testAllDataReadAfterHalfClosure(boolean autoRead, boolean serverForceClose,
+    public void testAllDataReadAfterHalfClosure(final boolean autoRead, final boolean serverForceClose,
                                                 TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -223,7 +223,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     private void testAllDataReadAfterHalfClosure(ServerBootstrap sb, Bootstrap cb,
-                                                 boolean autoRead, boolean serverForceClose) throws Throwable {
+                                                 final boolean autoRead, final boolean serverForceClose)
+            throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
         final AtomicReference<Channel> serverConnectedChannelRef = new AtomicReference<>();
@@ -252,7 +253,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     serverChannelLatch.countDown();
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
                             ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {

@@ -1098,6 +1098,10 @@
                     <match>/org\.openjdk\.jmh\..*/</match>
                   </item>
                   <item>
+                    <matcher>java-package</matcher>
+                    <match>/.*\.testsuite\..*/</match>
+                  </item>
+                  <item>
                     <matcher>java</matcher>
                     <match>@io.netty.util.internal.UnstableApi ^*;</match>
                   </item>
@@ -1131,18 +1135,6 @@
                   <regex>true</regex>
                   <package>io\.netty\..*</package>
                   <justification>They're not "external classes" if they're from a Netty package.</justification>
-                </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.field.removed</code>
-                  <classQualifiedName>io.netty.util.internal.InternalThreadLocalMap</classQualifiedName>
-                  <justification>Ignore cache padding.</justification>
-                </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.method.removed</code>
-                  <old>method java.lang.String io.netty.testsuite.util.TestUtils::testMethodName(org.junit.rules.TestName)</old>
-                  <justification>This should be test-only, and we're removing support for JUnit 4.</justification>
                 </item>
                 <!-- Necessary changes to fix #12627 -->
                 <item>

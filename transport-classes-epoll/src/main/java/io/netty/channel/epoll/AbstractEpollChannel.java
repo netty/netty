@@ -504,9 +504,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 if (isAllowHalfClosure(config())) {
                     try {
                         socket.shutdown(true, false);
-                    } catch (IOException | NotYetConnectedException ignored) {
+                    } catch (IOException ignored) {
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
+                    } catch (NotYetConnectedException ignored) {
+                        // same as above...
                     }
                     clearEpollIn0();
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
