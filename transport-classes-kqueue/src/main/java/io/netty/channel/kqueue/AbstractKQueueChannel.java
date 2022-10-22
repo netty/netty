@@ -162,7 +162,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // Make sure we unregister our filters from kqueue!
         readFilter(false);
         writeFilter(false);
-        evSet0(Native.EVFILT_SOCK, Native.EV_DELETE, 0);
+        clearRdHup();
+    }
+
+    private void clearRdHup() {
+        evSet0(Native.EVFILT_SOCK, Native.EV_DELETE_DISABLE, 0);
     }
 
     @Override
@@ -438,45 +442,43 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             }
         }
 
-        /**
-         * Shutdown the input side of the channel.
-         */
-        void shutdownInput(boolean readEOF) {
-            // We need to take special care of calling finishConnect() if readEOF is true and we not
-            // fullfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
-            // with a ClosedChannelException as a close() will happen and so the FD is closed before we
-            // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
-            // we observe the correct exception in case of a connect failure.
-            if (readEOF && connectPromise != null) {
-                finishConnect();
-            }
+        void transportInputShutdown() {
             if (!socket.isInputShutdown()) {
                 if (isAllowHalfClosure(config())) {
                     try {
                         socket.shutdown(true, false);
-                    } catch (IOException ignored) {
-                        // We attempted to shutdown and failed, which means the input has already effectively been
-                        // shutdown.
-                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
-                        return;
-                    } catch (NotYetConnectedException ignore) {
+                    } catch (IOException | NotYetConnectedException ignored) {
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
                     }
+                    clearReadFilter0();
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    close(voidPromise());
                 }
-            } else if (!readEOF) {
+            }
+            if (!inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;
                 pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
+
+            // Protocols powered by this class (TCP, UDS) do not have independent state for input/output shutdown. If
+            // we read the transport is shut down then future writes are not expected to succeed, and we shouldn't wait
+            // for future write attempts to detect full closure (as they may not happen or be delayed).
+            close(voidPromise());
         }
 
         final void readEOF() {
             // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
             final KQueueRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.readEOF();
+
+            // We need to take special care of calling finishConnect() if readEOF is true and we not
+            // fullfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
+            // with a ClosedChannelException as a close() will happen and so the FD is closed before we
+            // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
+            // we observe the correct exception in case of a connect failure.
+            if (connectPromise != null) {
+                finishConnect();
+            }
 
             if (isActive()) {
                 // If it is still active, we need to call readReady as otherwise we may miss to
@@ -485,8 +487,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 readReady(allocHandle);
             } else {
                 // Just to be safe make sure the input marked as closed.
-                shutdownInput(true);
+                transportInputShutdown();
             }
+
+            // Clear the RDHUP flag to prevent continuously getting woken up on this event.
+            clearRdHup();
         }
 
         @Override
@@ -527,11 +532,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 pipeline().fireExceptionCaught(e);
                 unsafe().close(unsafe().voidPromise());
             }
-        }
-
-        private void fireEventAndClose(Object evt) {
-            pipeline().fireUserEventTriggered(evt);
-            close(voidPromise());
         }
 
         @Override

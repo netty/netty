@@ -18,12 +18,18 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
 
 import java.util.List;
 
 public class EpollETSocketHalfClosed extends SocketHalfClosedTest {
+    @Override
+    protected boolean needReadToDetectClosure(Channel channel) {
+        return !(channel.eventLoop() instanceof EpollEventLoop);
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.socketWithoutFastOpen();

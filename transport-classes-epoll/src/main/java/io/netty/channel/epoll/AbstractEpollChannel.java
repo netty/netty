@@ -480,7 +480,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 epollInReady();
             } else {
                 // Just to be safe make sure the input marked as closed.
-                shutdownInput(true);
+                transportInputShutdown();
             }
 
             // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
@@ -499,36 +499,27 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
         }
 
-        /**
-         * Shutdown the input side of the channel.
-         */
-        void shutdownInput(boolean rdHup) {
+        void transportInputShutdown() {
             if (!socket.isInputShutdown()) {
                 if (isAllowHalfClosure(config())) {
                     try {
                         socket.shutdown(true, false);
-                    } catch (IOException ignored) {
-                        // We attempted to shutdown and failed, which means the input has already effectively been
-                        // shutdown.
-                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
-                        return;
-                    } catch (NotYetConnectedException ignore) {
+                    } catch (IOException | NotYetConnectedException ignored) {
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
                     }
-                    clearEpollIn();
+                    clearEpollIn0();
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    close(voidPromise());
                 }
-            } else if (!rdHup) {
+            }
+            if (!inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;
                 pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
-        }
 
-        private void fireEventAndClose(Object evt) {
-            pipeline().fireUserEventTriggered(evt);
+            // Protocols powered by this class (TCP, UDS) do not have independent state for input/output shutdown. If
+            // we read the transport is shut down then future writes are not expected to succeed, and we shouldn't wait
+            // for future write attempts to detect full closure (as they may not happen or be delayed).
             close(voidPromise());
         }
 

@@ -730,7 +730,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434
             if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-                shutdownInput(false);
+                transportInputShutdown();
             }
         }
 
@@ -765,7 +765,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                             boolean spliceInResult = spliceTask.spliceIn(allocHandle);
 
                             if (allocHandle.isReceivedRdHup()) {
-                                shutdownInput(true);
+                                transportInputShutdown();
                             }
                             if (spliceInResult) {
                                 // We need to check if it is still active as if not we removed all SpliceTasks in
@@ -820,7 +820,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
-                    shutdownInput(false);
+                    transportInputShutdown();
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);

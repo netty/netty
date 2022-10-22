@@ -68,16 +68,19 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      */
     protected abstract ChannelFuture shutdownInput();
 
-    private void closeOnRead(ChannelPipeline pipeline) {
-        if (isOpen()) {
+    private void transportInputShutdown(ChannelPipeline pipeline) {
+        if (!isInputShutdown()) {
             if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
                 shutdownInput();
                 pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-            } else {
-                unsafe().close(unsafe().voidPromise());
             }
-            pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
         }
+        pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+
+        // Protocols powered by this class (TCP, UDS) do not have independent state for input/output shutdown. If
+        // we read the transport is shut down then future writes are not expected to succeed, and we shouldn't wait
+        // for future write attempts to detect full closure (as they may not happen or be delayed).
+        close();
     }
 
     private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
@@ -97,7 +100,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         // If oom will close the read event, release connection.
         // See https://github.com/netty/netty/issues/10434
         if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-            closeOnRead(pipeline);
+            transportInputShutdown(pipeline);
         }
     }
 
@@ -183,7 +186,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             }
 
             if (close) {
-                closeOnRead(pipeline);
+                transportInputShutdown(pipeline);
             }
         } catch (Throwable t) {
             handleReadException(pipeline, byteBuf, t, close, allocHandle);

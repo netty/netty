@@ -17,12 +17,18 @@ package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
 
 import java.util.List;
 
 public class KQueueETSocketHalfClosedTest extends SocketHalfClosedTest {
+    @Override
+    protected boolean needReadToDetectClosure(Channel channel) {
+        return !(channel.eventLoop() instanceof KQueueEventLoop);
+    }
+
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return KQueueSocketTestPermutation.INSTANCE.socket();

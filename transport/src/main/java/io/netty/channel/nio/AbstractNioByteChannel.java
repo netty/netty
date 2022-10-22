@@ -96,18 +96,22 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     protected class NioByteUnsafe extends AbstractNioUnsafe {
 
-        private void closeOnRead(ChannelPipeline pipeline) {
+        private void transportInputShutdown(ChannelPipeline pipeline) {
             if (!isInputShutdown0()) {
                 if (isAllowHalfClosure(config())) {
                     shutdownInput();
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    close(voidPromise());
                 }
-            } else {
+            }
+            if (!inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;
                 pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
+
+            // Protocols powered by this class (TCP, UDS) do not have independent state for input/output shutdown. If
+            // we read the transport is shut down then future writes are not expected to succeed, and we shouldn't wait
+            // for future write attempts to detect full closure (as they may not happen or be delayed).
+            close(voidPromise());
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
@@ -127,7 +131,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434
             if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-                closeOnRead(pipeline);
+                transportInputShutdown(pipeline);
             }
         }
 
@@ -171,7 +175,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
-                    closeOnRead(pipeline);
+                    transportInputShutdown(pipeline);
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
