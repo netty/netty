@@ -347,7 +347,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             assertTrue(totalServerBytesWritten > clientReadCompletes.get(),
                 "too many read complete events: " + clientReadCompletes.get());
             assertTrue(clientZeroDataReadCompletes.get() <= 1, // 1 is OK to detect close.
-                "too many readComplete with no data: " + clientReadCompletes.get());
+                "too many readComplete with no data: " + clientZeroDataReadCompletes.get() + " readComplete: " +
+                        clientReadCompletes.get());
 
             serverChannelLatch.await();
             Channel serverConnectedChannel = serverConnectedChannelRef.get();

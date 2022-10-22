@@ -72,11 +72,14 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
             shutdownOutput(s);
 
             h.halfClosure.await();
+            // Transport/protocols do not support half closure on the wire, shutting down output will send a FIN
+            // on the wire and trigger closure/cleanup.
+            h.ch.closeFuture().await();
 
-            assertTrue(h.ch.isOpen());
-            assertTrue(h.ch.isActive());
+            assertFalse(h.ch.isOpen());
+            assertFalse(h.ch.isActive());
             assertTrue(h.ch.isInputShutdown());
-            assertFalse(h.ch.isOutputShutdown());
+            assertTrue(h.ch.isOutputShutdown());
 
             while (h.closure.getCount() != 1 && h.halfClosureCount.intValue() != 1) {
                 Thread.sleep(100);
