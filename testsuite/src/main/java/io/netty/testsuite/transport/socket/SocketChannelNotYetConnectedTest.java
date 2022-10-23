@@ -31,6 +31,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -59,23 +60,24 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 ch.shutdownInput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause, false);
             }
 
             try {
                 ch.shutdownOutput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause, true);
             }
         } finally {
             ch.close().syncUninterruptibly();
         }
     }
 
-    private static void checkThrowable(Throwable cause) throws Throwable {
-        // Depending on OIO / NIO both are ok
-        if (!(cause instanceof NotYetConnectedException) && !(cause instanceof SocketException)) {
+    private static void checkThrowable(Throwable cause, boolean closedChannelAllowed) throws Throwable {
+        // Depending on OIO / NIO both are ok. EPOLL may detect rdhub on the EventLoop thread which leads to
+        if (!(cause instanceof NotYetConnectedException) && !(cause instanceof SocketException) &&
+                (!closedChannelAllowed && !(cause instanceof ClosedChannelException))) {
             throw cause;
         }
     }
