@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package io.netty.serial;
+
+option java_package="io.netty.serial";
+option java_outer_classname="UserProto";
+
+message User {
+  string name = 1;
+  int32 age = 2;
+  int64 status = 3;
+}
