@@ -21,11 +21,10 @@ public class SocketThread implements Runnable {
     @Override
     public void run() {
         try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));//输入流
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream())); // 输入流
             String s = bufferedReader.readLine(); //被阻塞了
-            String clientStr = s; //读取客户端的一行数据
-            System.out.println("接收到客户端的信息：" + clientStr);
-            //写回去
+            System.out.println("接收到客户端的信息：" + s);
+            // 写回去
             BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             bufferedWriter.write("我收到了信息\n");
             bufferedWriter.flush();
