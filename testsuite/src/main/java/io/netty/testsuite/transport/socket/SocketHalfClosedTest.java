@@ -55,6 +55,10 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketHalfClosedTest extends AbstractSocketTest {
 
+    protected int maxReadCompleteWithNoDataAfterInputShutdown() {
+        return 2; // nio needs read flag to detect full closure.
+    }
+
     @Test
     @Timeout(value = 5000, unit = MILLISECONDS)
     public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(TestInfo testInfo) throws Throwable {
@@ -220,8 +224,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         testAllDataReadAfterHalfClosure(false, sb, cb);
     }
 
-    private static void testAllDataReadAfterHalfClosure(final boolean autoRead,
-                                                        ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    private void testAllDataReadAfterHalfClosure(final boolean autoRead,
+                                                 ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
         final CountDownLatch serverInitializedLatch = new CountDownLatch(1);
@@ -321,7 +325,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             // when data is actually read.
             assertTrue(totalServerBytesWritten > clientReadCompletes.get(),
                     "too many read complete events: " + clientReadCompletes.get());
-            assertTrue(clientZeroDataReadCompletes.get() <= 1, // 1 is OK to detect close.
+            assertTrue(clientZeroDataReadCompletes.get() <= maxReadCompleteWithNoDataAfterInputShutdown(),
                     "too many readComplete with no data: " + clientZeroDataReadCompletes.get() + " readComplete: " +
                             clientReadCompletes.get());
         } finally {
