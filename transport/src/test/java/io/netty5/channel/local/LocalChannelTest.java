@@ -25,10 +25,10 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.MaxMessagesReadHandleFactory;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandler;
+import io.netty5.channel.MaxMessagesReadHandleFactory;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.SimpleChannelInboundHandler;
@@ -1251,8 +1251,8 @@ public class LocalChannelTest {
         public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
             return new MaxMessageReadHandle(maxMessagesPerRead) {
                 @Override
-                public int estimatedBufferCapacity() {
-                    return 128;
+                public int prepareRead() {
+                    return 128 * super.prepareRead();
                 }
 
                 @Override

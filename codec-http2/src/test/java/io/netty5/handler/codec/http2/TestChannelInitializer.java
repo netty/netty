@@ -56,7 +56,7 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
                 private int totalNumMessagesRead;
 
                 @Override
-                public int estimatedBufferCapacity() {
+                public int prepareRead() {
                     return 1; // only ever allocate buffers of size 1 to ensure the number of reads is controlled.
                 }
 

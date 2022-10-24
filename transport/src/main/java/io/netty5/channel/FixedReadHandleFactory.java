@@ -33,8 +33,8 @@ public class FixedReadHandleFactory extends MaxMessagesReadHandleFactory {
         }
 
         @Override
-        public int estimatedBufferCapacity() {
-            return bufferSize;
+        public int prepareRead() {
+            return bufferSize * super.prepareRead();
         }
     }
 

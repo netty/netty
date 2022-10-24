@@ -31,8 +31,8 @@ public final class ServerChannelReadHandleFactory extends MaxMessagesReadHandleF
     public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
         return new MaxMessageReadHandle(maxMessagesPerRead) {
             @Override
-            public int estimatedBufferCapacity() {
-                return 128;
+            public int prepareRead() {
+                return 128 * super.prepareRead();
             }
         };
     }

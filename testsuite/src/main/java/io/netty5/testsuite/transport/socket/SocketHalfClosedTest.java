@@ -18,16 +18,16 @@ package io.netty5.testsuite.transport.socket;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.Buffer;
-import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.SimpleChannelInboundHandler;
+import io.netty5.util.Resource;
 import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -598,22 +598,25 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         public ReadHandle newHandle(Channel channel) {
             return new ReadHandle() {
                 private int totalNumMessagesRead;
+                private int totalNumMessagesPrep;
 
                 @Override
-                public int estimatedBufferCapacity() {
-                    return 1; // only ever allocate buffers of size 1 to ensure the number of reads is controlled.
+                public int prepareRead() {
+                    // only ever allocate buffers of size 1 to ensure the number of reads is controlled.
+                    return totalNumMessagesPrep++ < numReads ? 1 : 0;
                 }
 
                 @Override
                 public boolean lastRead(int attemptedBytesRead, int actualBytesRead, int numMessagesRead) {
                     if (numMessagesRead > 0) {
-                        this.totalNumMessagesRead += numMessagesRead;
+                        totalNumMessagesRead += numMessagesRead;
                     }
                     return totalNumMessagesRead < numReads;
                 }
 
                 @Override
                 public void readComplete() {
+                    totalNumMessagesPrep = 0;
                     totalNumMessagesRead = 0;
                 }
             };

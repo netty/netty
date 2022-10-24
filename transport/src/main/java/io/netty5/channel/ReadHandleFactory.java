@@ -34,8 +34,14 @@ public interface ReadHandleFactory {
         /**
          * Guess the capacity for the next receive buffer that is probably large enough to read all inbound data and
          * small enough not to waste its space.
+         * <p>
+         * This also assumes that the given read is about to happen, and may later be paired with a
+         * {@link #lastRead(int, int, int)} call.
+         * <p>
+         * The implementation can return zero, if no reads should be prepared until after the next
+         * {@link #readComplete()} call.
          */
-        int estimatedBufferCapacity();
+        int prepareRead();
 
         /**
          * Notify the {@link ReadHandle} of the last read operation and its result.
