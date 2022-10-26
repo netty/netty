@@ -24,6 +24,11 @@ import java.util.List;
 
 public class EpollSocketHalfClosed extends SocketHalfClosedTest {
     @Override
+    protected int maxReadCompleteWithNoDataAfterInputShutdown() {
+        return 1;
+    }
+
+    @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.socketWithoutFastOpen();
     }

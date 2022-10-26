@@ -24,6 +24,11 @@ import java.util.List;
 
 public class KQueueETSocketHalfClosedTest extends SocketHalfClosedTest {
     @Override
+    protected int maxReadCompleteWithNoDataAfterInputShutdown() {
+        return 1;
+    }
+
+    @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return KQueueSocketTestPermutation.INSTANCE.socket();
     }
