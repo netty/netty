@@ -284,8 +284,8 @@ public abstract class Recycler<T> {
         }
 
         void release(DefaultHandle<T> handle) {
-            MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
             handle.toAvailable();
+            MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
             if (handles != null) {
                 handles.relaxedOffer(handle);
             }
