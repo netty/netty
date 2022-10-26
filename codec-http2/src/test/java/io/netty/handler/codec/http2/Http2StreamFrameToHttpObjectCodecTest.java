@@ -708,6 +708,38 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertFalse(ch.finish());
     }
 
+    /**
+     *    An informational response using a 1xx status code other than 101 is
+     *    transmitted as a HEADERS frame, followed by zero or more CONTINUATION
+     *    frames.
+     *    Trailing header fields are sent as a header block after both the
+     *    request or response header block and all the DATA frames have been
+     *    sent.  The HEADERS frame starting the trailers header block has the
+     *    END_STREAM flag set.
+     */
+    @Test
+    public void decode103EarlyHintsHttp2HeadersAsFullHttpResponse() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.scheme(HttpScheme.HTTP.name());
+        headers.status(HttpResponseStatus.EARLY_HINTS.codeAsText());
+        headers.set("key", "value");
+
+        assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, false)));
+
+        final FullHttpResponse response = ch.readInbound();
+        try {
+            assertThat(response.status(), is(HttpResponseStatus.EARLY_HINTS));
+            assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
+            assertThat(response.headers().get("key"), is("value"));
+        } finally {
+            response.release();
+        }
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
     @Test
     public void testDecodeResponseHeaders() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
