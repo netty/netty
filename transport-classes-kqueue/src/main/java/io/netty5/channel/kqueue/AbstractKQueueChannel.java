@@ -234,9 +234,13 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         writeFilter(false);
 
         if (registration != null) {
-            evSet0(registration, Native.EVFILT_SOCK, Native.EV_DELETE, 0);
+            clearRdHup0();
             registration = null;
         }
+    }
+
+    private void clearRdHup0() {
+        evSet0(registration, Native.EVFILT_SOCK, Native.EV_DELETE_DISABLE, Native.NOTE_RDHUP);
     }
 
     /**
@@ -385,6 +389,9 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     final void readEOF() {
         // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
         eof = true;
+
+        // Clear the RDHUP flag to prevent continuously getting woken up on this event.
+        clearRdHup0();
 
         if (isActive()) {
             // If it is still active, we need to call read() as otherwise we may miss to
