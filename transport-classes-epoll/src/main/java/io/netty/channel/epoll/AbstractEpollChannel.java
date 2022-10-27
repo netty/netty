@@ -67,7 +67,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private Future<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
-    private volatile SocketAddress local;
+    protected volatile SocketAddress local;
     private volatile SocketAddress remote;
 
     protected int flags = Native.EPOLLET;
@@ -341,7 +341,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.
      */
-    protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
+    protected int doReadBytes(ByteBuf byteBuf) throws Exception {
         int writerIndex = byteBuf.writerIndex();
         int localReadAmount;
         unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
@@ -357,7 +357,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return localReadAmount;
     }
 
-    protected final int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
+    protected int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         if (buf.hasMemoryAddress()) {
             int localFlushedAmount = socket.sendAddress(buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
             if (localFlushedAmount > 0) {
@@ -381,7 +381,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      * Write bytes to the socket, with or without a remote address.
      * Used for datagram and TCP client fast open writes.
      */
-    final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
+    long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
         if (data.hasMemoryAddress()) {
