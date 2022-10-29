@@ -8,13 +8,13 @@ import java.io.InputStream;
  * @author lxcecho 909231497@qq.com
  * @since 9:49 29-10-2022
  */
-public class EchoRequest {
+public class BIORequest {
 
     private String method;
 
     private String url;
 
-    public EchoRequest(InputStream in) {
+    public BIORequest(InputStream in) {
         try {
             // 拿到 HTTP 协议内容
             String content = "";

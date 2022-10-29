@@ -1,8 +1,8 @@
 package io.netty.bio.tomcat;
 
-import io.netty.bio.tomcat.http.EchoRequest;
-import io.netty.bio.tomcat.http.EchoResponse;
-import io.netty.bio.tomcat.http.EchoServlet;
+import io.netty.bio.tomcat.http.BIORequest;
+import io.netty.bio.tomcat.http.BIOResponse;
+import io.netty.bio.tomcat.http.BIOServlet;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -17,13 +17,13 @@ import java.util.Properties;
  * @author lxcecho 909231497@qq.com
  * @since 9:46 29-10-2022
  */
-public class EchoTomcat {
+public class BIOTomcat {
 
     private int port = 8090;
 
     private ServerSocket serverSocket;
 
-    private Map<String, EchoServlet> servletMaps = new HashMap<>();
+    private Map<String, BIOServlet> servletMaps = new HashMap<>();
 
     private Properties webXml = new Properties();
 
@@ -45,7 +45,7 @@ public class EchoTomcat {
         // 加载 web.xml 文件,同时初始化 ServletMaps 对象
         try {
             String WEB_INF = this.getClass().getResource("/").getPath();
-            FileInputStream fis = new FileInputStream(WEB_INF + "web.properties");
+            FileInputStream fis = new FileInputStream(WEB_INF + "web_bio.properties");
 
             webXml.load(fis);
 
@@ -57,7 +57,7 @@ public class EchoTomcat {
                     String url = webXml.getProperty(key);
                     String className = webXml.getProperty(servletName + ".className");
                     // 单实例，多线程
-                    EchoServlet obj = (EchoServlet) Class.forName(className).newInstance();
+                    BIOServlet obj = (BIOServlet) Class.forName(className).newInstance();
                     servletMaps.put(url, obj);
                 }
             }
@@ -91,8 +91,8 @@ public class EchoTomcat {
         OutputStream os = socket.getOutputStream();
 
         // 7、Request(InputStream) / Response(OutputStream)
-        EchoRequest request = new EchoRequest(is);
-        EchoResponse response = new EchoResponse(os);
+        BIORequest request = new BIORequest(is);
+        BIOResponse response = new BIOResponse(os);
 
         // 5、从协议内容中拿到URL，把相应的 Servlet 用反射进行实例化
         String url = request.getUrl();
@@ -112,7 +112,7 @@ public class EchoTomcat {
     }
 
     public static void main(String[] args) {
-        new EchoTomcat().start();
+        new BIOTomcat().start();
     }
 
 }

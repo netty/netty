@@ -6,11 +6,11 @@ import java.io.OutputStream;
  * @author lxcecho 909231497@qq.com
  * @since 9:48 29-10-2022
  */
-public class EchoResponse {
+public class BIOResponse {
 
     private OutputStream out;
 
-    public EchoResponse(OutputStream out) {
+    public BIOResponse(OutputStream out) {
         this.out = out;
     }
 
