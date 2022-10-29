@@ -32,7 +32,7 @@ public class SocketThread implements Runnable {
             bufferedReader.close();
             bufferedWriter.close();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 }
