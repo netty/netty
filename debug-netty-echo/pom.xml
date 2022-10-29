@@ -13,15 +13,8 @@
     <dependencies>
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty-transport</artifactId>
+            <artifactId>netty-all</artifactId>
             <version>4.1.80.Final-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-            <version>4.1.80.Final-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
 
         <!--序列化工具包-->

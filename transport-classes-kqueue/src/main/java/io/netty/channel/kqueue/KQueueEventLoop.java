@@ -42,6 +42,10 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import static java.lang.Math.min;
 
 /**
+ * 下面这个两个类，有可能代码编译过程中出现找不到对象的包，需要将 netty-common 重新 clean install 一下
+ *  import io.netty.util.collection.IntObjectHashMap;
+ *  import io.netty.util.collection.IntObjectMap;
+ *
  * {@link EventLoop} which uses kqueue under the covers. Only works on BSD!
  */
 final class KQueueEventLoop extends SingleThreadEventLoop {
