@@ -16,6 +16,8 @@
 package io.netty.channel;
 
 /**
+ * Inbound 类似事件回调，即响应请求的事件
+ *
  * {@link ChannelHandler} which adds callbacks for state changes. This allows the user
  * to hook in to state changes easily.
  */

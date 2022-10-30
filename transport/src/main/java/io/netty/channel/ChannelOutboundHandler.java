@@ -18,6 +18,8 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 /**
+ * Ountbound 类似主动触发，即发起请求的事件
+ *
  * {@link ChannelHandler} which will get notified for IO-outbound-operations.
  */
 public interface ChannelOutboundHandler extends ChannelHandler {
