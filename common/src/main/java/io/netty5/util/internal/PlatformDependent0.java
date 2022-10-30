@@ -331,7 +331,7 @@ final class PlatformDependent0 {
                     try {
                         return MethodHandles.lookup().findVirtual(finalInternalUnsafe.getClass(),
                                 "allocateUninitializedArray",
-                                MethodType.methodType(byte[].class, Class.class, int.class))
+                                MethodType.methodType(Object.class, Class.class, int.class))
                                 .bindTo(finalInternalUnsafe);
                     } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
                         return e;
@@ -341,7 +341,7 @@ final class PlatformDependent0 {
                 if (maybeException instanceof MethodHandle) {
                     try {
                         MethodHandle m = (MethodHandle) maybeException;
-                        byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
+                        byte[] bytes = (byte[]) m.invoke(byte.class, 8);
                         assert bytes.length == 8;
                         allocateArrayHandle = m;
                     } catch (Throwable e) {
