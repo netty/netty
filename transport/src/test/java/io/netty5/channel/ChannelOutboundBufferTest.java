@@ -160,6 +160,23 @@ public class ChannelOutboundBufferTest {
         ref.get().asStage().sync();
     }
 
+    @Test
+    void notConsumingAnyFlushedMustLeaveAllMessageIntact() throws Exception {
+        testChannelOutboundBuffer((buffer, executor) -> {
+            Promise<Void> p1 = executor.newPromise();
+            Promise<Void> p2 = executor.newPromise();
+            assertThat(buffer.totalPendingWriteBytes()).isZero();
+            buffer.addMessage(1, 5, p1);
+            buffer.addMessage(2, 11, p2);
+            buffer.addFlush();
+            buffer.consumeEachFlushedMessage((m, p) -> false); // Don't consume anything.
+            long overhead = 2L * CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD; // We added 2 entries.
+            assertThat(buffer.totalPendingWriteBytes()).isEqualTo(16 + overhead);
+            assertThat(buffer.size()).isEqualTo(2);
+            assertFalse(buffer.isEmpty());
+        });
+    }
+
     private static void release(ChannelOutboundBuffer buffer) {
         while (!buffer.isEmpty()) {
             assertTrue(buffer.remove());
