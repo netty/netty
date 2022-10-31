@@ -673,7 +673,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             contentLength = HttpUtil.normalizeAndGetContentLength(contentLengthFields,
                     isHttp10OrEarlier, allowDuplicateContentLengths);
             if (contentLength != -1) {
-                headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+                String lengthValue = contentLengthFields.get(0).trim();
+                if (contentLengthFields.size() > 1 || // don't unnecessarily re-order headers
+                        !lengthValue.equals(Long.toString(contentLength))) {
+                    headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+                }
             }
         }
 
