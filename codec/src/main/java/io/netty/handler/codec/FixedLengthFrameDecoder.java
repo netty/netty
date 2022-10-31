@@ -37,9 +37,14 @@ import java.util.List;
  * | ABC | DEF | GHI |
  * +-----+-----+-----+
  * </pre>
+ *
+ * 固定长度解码器：按照指定长度对消息自动解码
  */
 public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
 
+    /**
+     * 长度大小
+     */
     private final int frameLength;
 
     /**
@@ -54,8 +59,10 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
 
     @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        // 通过 ByteBuf 去解码，解码到对象之后添加到 Out 上
         Object decoded = decode(ctx, in);
         if (decoded != null) {
+            // 将解析的 ByteBuf 添加到对象里面
             out.add(decoded);
         }
     }
@@ -70,9 +77,11 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
      */
     protected Object decode(
             @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        // 字节是否小于这个固定长度
         if (in.readableBytes() < frameLength) {
             return null;
         } else {
+            // 当前累加器中截取这个长度的数值
             return in.readRetainedSlice(frameLength);
         }
     }

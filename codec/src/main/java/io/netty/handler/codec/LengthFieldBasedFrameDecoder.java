@@ -185,6 +185,8 @@ import io.netty.channel.ChannelHandlerContext;
  * +------+--------+------+----------------+      +------+----------------+
  * </pre>
  * @see LengthFieldPrepender
+ *
+ * 通用解码器：将整包消息解码为最终的业务对象
  */
 public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
 
