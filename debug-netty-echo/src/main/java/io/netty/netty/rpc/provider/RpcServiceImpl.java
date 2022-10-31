@@ -1,7 +1,6 @@
-package io.netty.rpc.provider;
+package io.netty.netty.rpc.provider;
 
-import io.netty.rpc.api.IRpcHelloService;
-import io.netty.rpc.api.IRpcService;
+import io.netty.netty.rpc.api.IRpcService;
 
 /**
  * @author lxcecho 909231497@qq.com

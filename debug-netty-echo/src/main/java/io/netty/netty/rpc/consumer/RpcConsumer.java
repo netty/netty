@@ -1,8 +1,8 @@
-package io.netty.rpc.consumer;
+package io.netty.netty.rpc.consumer;
 
-import io.netty.rpc.api.IRpcHelloService;
-import io.netty.rpc.api.IRpcService;
-import io.netty.rpc.consumer.proxy.RpcProxy;
+import io.netty.netty.rpc.api.IRpcHelloService;
+import io.netty.netty.rpc.api.IRpcService;
+import io.netty.netty.rpc.consumer.proxy.RpcProxy;
 
 /**
  * @author lxcecho 909231497@qq.com

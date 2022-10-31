@@ -1,4 +1,4 @@
-package io.netty.rpc.protocol;
+package io.netty.netty.rpc.protocol;
 
 import lombok.Builder;
 import lombok.Getter;

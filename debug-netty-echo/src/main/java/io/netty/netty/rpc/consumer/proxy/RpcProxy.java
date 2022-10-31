@@ -1,4 +1,4 @@
-package io.netty.rpc.consumer.proxy;
+package io.netty.netty.rpc.consumer.proxy;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -12,7 +12,7 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import io.netty.rpc.protocol.InvokerProtocol;
+import io.netty.netty.rpc.protocol.InvokerProtocol;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;

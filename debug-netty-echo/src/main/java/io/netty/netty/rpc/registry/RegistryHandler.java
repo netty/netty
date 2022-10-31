@@ -1,8 +1,8 @@
-package io.netty.rpc.registry;
+package io.netty.netty.rpc.registry;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.rpc.protocol.InvokerProtocol;
+import io.netty.netty.rpc.protocol.InvokerProtocol;
 
 import java.io.File;
 import java.lang.reflect.Method;

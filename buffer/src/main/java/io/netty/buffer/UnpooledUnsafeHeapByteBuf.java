@@ -18,6 +18,8 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 
 /**
+ * 非池化的 Unsafe 堆内缓冲区
+ *
  * Big endian Java heap buffer implementation. It is recommended to use
  * {@link UnpooledByteBufAllocator#heapBuffer(int, int)}, {@link Unpooled#buffer(int)} and
  * {@link Unpooled#wrappedBuffer(byte[])} instead of calling the constructor explicitly.

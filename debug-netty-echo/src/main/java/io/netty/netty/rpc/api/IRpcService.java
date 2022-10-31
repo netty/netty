@@ -1,4 +1,4 @@
-package io.netty.rpc.api;
+package io.netty.netty.rpc.api;
 
 /**
  * @author lxcecho 909231497@qq.com

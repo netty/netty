@@ -1,4 +1,4 @@
-package io.netty.rpc.consumer.proxy;
+package io.netty.netty.rpc.consumer.proxy;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;

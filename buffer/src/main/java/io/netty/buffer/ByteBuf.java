@@ -988,6 +988,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract ByteBuf setBoolean(int index, boolean value);
 
     /**
+     * 将 Byte 数据写入指定位置，不移动 writerIndex
+     *
      * Sets the specified byte at the specified absolute {@code index} in this
      * buffer.  The 24 high-order bits of the specified value are ignored.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
@@ -1360,6 +1362,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract boolean readBoolean();
 
     /**
+     * 从当前 readerIndex 指针开始往后读 1 字节的数据并移动 readerIndex，将数据存储单位转化为 Byte
+     *
      * Gets a byte at the current {@code readerIndex} and increases
      * the {@code readerIndex} by {@code 1} in this buffer.
      *
@@ -1369,6 +1373,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract byte  readByte();
 
     /**
+     * 读取一个无符号的 Byte 数据
+     *
      * Gets an unsigned byte at the current {@code readerIndex} and increases
      * the {@code readerIndex} by {@code 1} in this buffer.
      *
@@ -1378,6 +1384,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract short readUnsignedByte();
 
     /**
+     * 2 字节
      * Gets a 16-bit short integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 2} in this buffer.
      *
@@ -1771,6 +1778,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract ByteBuf writeBoolean(boolean value);
 
     /**
+     * 从当前 writeIndex 指针开始往后写 1 字节的数据并移动 writerIndex
      * Sets the specified byte at the current {@code writerIndex}
      * and increases the {@code writerIndex} by {@code 1} in this buffer.
      * The 24 high-order bits of the specified value are ignored.

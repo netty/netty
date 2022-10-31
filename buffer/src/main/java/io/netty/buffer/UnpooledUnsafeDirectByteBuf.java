@@ -23,6 +23,8 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 /**
+ * 非池化的 Unsafe 直接（堆外）缓冲区
+ *
  * A NIO {@link ByteBuffer} based buffer. It is recommended to use
  * {@link UnpooledByteBufAllocator#directBuffer(int, int)}, {@link Unpooled#directBuffer(int)} and
  * {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the constructor explicitly.}
