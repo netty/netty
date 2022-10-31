@@ -322,17 +322,15 @@ public final class IovArray implements Predicate<Object> {
         if (ADDRESS_SIZE == 8) {
             if (PlatformDependent.hasUnsafe()) {
                 return PlatformDependent.getLong(memoryAddress + off);
-            } else {
-                return memory.getLong(off);
             }
-        } else {
-            assert ADDRESS_SIZE == 4;
-            if (PlatformDependent.hasUnsafe()) {
-                return PlatformDependent.getInt(memoryAddress + off);
-            } else {
-                return memory.getInt(off);
-            }
+            return memory.getLong(off);
         }
+        assert ADDRESS_SIZE == 4;
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.getInt(memoryAddress + off);
+        }
+        return memory.getInt(off);
+    }
     }
 
     private static int idx(int index) {
