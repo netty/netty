@@ -31,7 +31,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -54,11 +53,6 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
     static {
         random.nextBytes(data);
-    }
-
-    @AfterAll
-    public static void compressHeapDumps() throws Exception {
-        TestUtils.compressHeapDumps();
     }
 
     @Test
