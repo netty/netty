@@ -331,7 +331,6 @@ public final class IovArray implements Predicate<Object> {
         }
         return memory.getInt(off);
     }
-    }
 
     private static int idx(int index) {
         return IOV_SIZE * index;
