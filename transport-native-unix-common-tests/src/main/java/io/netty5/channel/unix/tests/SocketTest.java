@@ -16,19 +16,27 @@
 package io.netty5.channel.unix.tests;
 
 import io.netty5.channel.unix.Buffer;
+import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Socket;
+import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.util.internal.PlatformDependent.addressSize;
+import static io.netty5.util.internal.PlatformDependent.getLong;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class SocketTest<T extends Socket> {
     protected T socket;
@@ -132,5 +140,105 @@ public abstract class SocketTest<T extends Socket> {
 
     protected int optname() {
         throw new TestAbortedException("Not supported");
+    }
+
+    /**
+     * This is a nested test because we cannot test {@link IovArray} without
+     * concrete native bindings.
+     */
+    @Nested
+    class IovArrayTest {
+        @BeforeEach
+        void requireUnsafe() {
+            // We need this to check the contents of the native memory.
+            assumeTrue(PlatformDependent.hasUnsafe());
+            assumeTrue(Long.BYTES == addressSize());
+        }
+
+        @Test
+        void addingAndCompletingBuffers() {
+            IovArray iovs = new IovArray();
+            try (var writable = offHeapAllocator().allocate(32).writeLong(0x0102030405060708L);
+                 var readable = writable.readSplit(16)) {
+                iovs.addReadable(readable);
+                assertThat(iovs.count()).isEqualTo(1);
+                assertThat(iovs.size()).isEqualTo(8);
+
+                iovs.addWritable(writable);
+                assertThat(iovs.count()).isEqualTo(2);
+                assertThat(iovs.size()).isEqualTo(24);
+
+                long addr = iovs.memoryAddress(0);
+                try (var itr = readable.forEachComponent()) {
+                    assertThat(getLong(addr)).isEqualTo(itr.first().readableNativeAddress());
+                    assertThat(getLong(addr + addressSize())).isEqualTo(Long.BYTES);
+                }
+                addr = iovs.memoryAddress(1);
+                try (var itr = writable.forEachComponent()) {
+                    assertThat(getLong(addr)).isEqualTo(itr.first().writableNativeAddress());
+                    assertThat(getLong(addr + addressSize())).isEqualTo(2 * Long.BYTES);
+                }
+
+                assertFalse(iovs.completeBytes(4));
+
+                assertThat(iovs.count()).isEqualTo(2);
+                assertThat(iovs.size()).isEqualTo(20);
+                addr = iovs.memoryAddress(0);
+                try (var itr = readable.forEachComponent()) {
+                    assertThat(getLong(addr)).isEqualTo(itr.first().readableNativeAddress() + 4);
+                    assertThat(getLong(addr + addressSize())).isEqualTo(Long.BYTES - 4);
+                }
+                addr = iovs.memoryAddress(1);
+                try (var itr = writable.forEachComponent()) {
+                    assertThat(getLong(addr)).isEqualTo(itr.first().writableNativeAddress());
+                    assertThat(getLong(addr + addressSize())).isEqualTo(2 * Long.BYTES);
+                }
+
+                assertFalse(iovs.completeBytes(4));
+
+                assertThat(iovs.count()).isEqualTo(1);
+                assertThat(iovs.size()).isEqualTo(16);
+                addr = iovs.memoryAddress(0);
+                try (var itr = writable.forEachComponent()) {
+                    assertThat(getLong(addr)).isEqualTo(itr.first().writableNativeAddress());
+                    assertThat(getLong(addr + addressSize())).isEqualTo(2 * Long.BYTES);
+                }
+
+                assertFalse(iovs.completeBytes(8));
+
+                assertThat(iovs.count()).isEqualTo(1);
+                assertThat(iovs.size()).isEqualTo(8);
+                addr = iovs.memoryAddress(0);
+                try (var itr = writable.forEachComponent()) {
+                    assertThat(getLong(addr)).isEqualTo(itr.first().writableNativeAddress() + 8);
+                    assertThat(getLong(addr + addressSize())).isEqualTo(Long.BYTES);
+                }
+
+                assertTrue(iovs.completeBytes(8));
+
+                assertThat(iovs.count()).isZero();
+                assertThat(iovs.size()).isZero();
+
+                iovs.addReadable(readable);
+                iovs.addWritable(writable);
+                assertThat(iovs.count()).isEqualTo(2);
+                assertThat(iovs.size()).isEqualTo(24);
+
+                assertFalse(iovs.completeBytes(12));
+
+                assertThat(iovs.count()).isEqualTo(1);
+                assertThat(iovs.size()).isEqualTo(12);
+                addr = iovs.memoryAddress(0);
+                try (var itr = writable.forEachComponent()) {
+                    assertThat(getLong(addr)).isEqualTo(itr.first().writableNativeAddress() + 4);
+                    assertThat(getLong(addr + addressSize())).isEqualTo(12);
+                }
+
+                assertTrue(iovs.completeBytes(12));
+
+                assertThat(iovs.count()).isZero();
+                assertThat(iovs.size()).isZero();
+            }
+        }
     }
 }

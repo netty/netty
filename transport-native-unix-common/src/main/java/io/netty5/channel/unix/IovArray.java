@@ -93,7 +93,7 @@ public final class IovArray implements Predicate<Object> {
         size = 0;
     }
 
-    private boolean add(long memoryAddress, long addr, int len) {
+    private boolean add(long addr, int len) {
         assert addr != 0;
 
         // If there is at least 1 entry then we enforce the maximum bytes. We want to accept at least one entry so we
@@ -109,69 +109,75 @@ public final class IovArray implements Predicate<Object> {
             // - https://linux.die.net//man/2/writev
             return false;
         }
-        final int baseOffset = idx(count);
-        final int lengthOffset = baseOffset + ADDRESS_SIZE;
+
+        putAddr(count, addr);
+        putLen(count, len);
 
         size += len;
         ++count;
 
-        if (ADDRESS_SIZE == 8) {
-            // 64bit
-            if (PlatformDependent.hasUnsafe()) {
-                PlatformDependent.putLong(baseOffset + memoryAddress, addr);
-                PlatformDependent.putLong(lengthOffset + memoryAddress, len);
-            } else {
-                memory.putLong(baseOffset, addr);
-                memory.putLong(lengthOffset, len);
-            }
-        } else {
-            assert ADDRESS_SIZE == 4;
-            if (PlatformDependent.hasUnsafe()) {
-                PlatformDependent.putInt(baseOffset + memoryAddress, (int) addr);
-                PlatformDependent.putInt(lengthOffset + memoryAddress, len);
-            } else {
-                memory.putInt(baseOffset, (int) addr);
-                memory.putInt(lengthOffset, len);
-            }
-        }
         return true;
     }
 
     /**
-     * Return the number of messages that have been completely written for the given total number of bytes.
+     * Update the iovec array to reflect that the given number of bytes have completed their IO successfully.
+     * <p>
+     * The iovec array is updated such that the first iovecs in the array are completed first.
+     * A partially completed iovec will have its address and left updated to reference the remaining bytes of its
+     * buffer.
+     * And all incomplete iovecs will be moved down the array, so that index 0 continues to reference the first
+     * incomplete iovec.
+     * <p>
+     * If the given number of bytes is equal to the size of this iovec array, then this method has the same effect as
+     * calling {@link #clear()}.
+     * <p>
+     * If the given number of bytes is greater than the size of this iovec array, then an {@link IllegalStateException}
+     * is thrown.
      *
-     * @param index         the start index.
-     * @param totalBytes    the total number of bytes
-     * @return              the number of messages that are totally written for the given number of total bytes.
+     * @param bytes the number of bytes completed by the most recent IO.
+     * @return {@code true} if all iovecs were fully completed, otherwise {@code false} if there is still more IO
+     * left to be done.
      */
-    public int writtenMessages(int index, long totalBytes) {
-        if (index == 0 && totalBytes == size) {
-            // If the number of total bytes match the size we know that we wrote all, no need to iterate.
-            return count;
+    public boolean completeBytes(int bytes) {
+        if (bytes > size) {
+            throw new IllegalStateException("Recent IO moved " + bytes + " bytes, " +
+                    "but this ioved array only keeps track of " + size + " bytes.");
         }
-        int num = 0;
-        for (; index < count && totalBytes > 0; num++) {
-            final int baseOffset = idx(index);
-            final int lengthOffset = baseOffset + ADDRESS_SIZE;
-            final long len;
-            if (ADDRESS_SIZE == 8) {
-                // 64bit
-                if (PlatformDependent.hasUnsafe()) {
-                    len = PlatformDependent.getLong(lengthOffset + memoryAddress);
-                } else {
-                    len = memory.getLong(lengthOffset);
-                }
+        if (bytes == size) {
+            clear();
+            return true;
+        }
+        int leftToComplete = bytes;
+        int completed = 0;
+        for (int i = 0; i < count; i++) {
+            final int len = getLen(i);
+            final boolean currentIsComplete;
+            if (len <= leftToComplete) {
+                completed++;
+                leftToComplete -= len;
+                currentIsComplete = true;
             } else {
-                assert ADDRESS_SIZE == 4;
-                if (PlatformDependent.hasUnsafe()) {
-                    len = PlatformDependent.getInt(lengthOffset + memoryAddress);
-                } else {
-                    len = memory.getInt(lengthOffset);
-                }
+                putAddr(i, getAddr(i) + leftToComplete);
+                putLen(i, len - leftToComplete);
+                leftToComplete = 0;
+                currentIsComplete = false;
             }
-            totalBytes -= len;
+            if (leftToComplete == 0) {
+                // Move incomplete iovecs to the beginning.
+                if (currentIsComplete || i > 0) {
+                    for (int w = 0, r = i  + (currentIsComplete? 1 : 0); r < count; w++, r++) {
+                        putAddr(w, getAddr(r));
+                        putLen(w, getLen(r));
+                    }
+                }
+                break;
+            }
         }
-        return num;
+
+        count -= completed;
+        size -= bytes;
+
+        return false;
     }
 
     /**
@@ -189,11 +195,11 @@ public final class IovArray implements Predicate<Object> {
     }
 
     /**
-     * Set the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(long, long, int)} or
+     * Set the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(long, int)} or
      * {@link #test(Object)}.
      * <p>
      * This will not impact the existing state of the {@link IovArray}, and only applies to subsequent calls to
-     * {@link #add(long, long, int)} or {@link #test(Object)}.
+     * {@link #add(long, int)} or {@link #test(Object)}.
      * <p>
      * In order to ensure some progress is made at least one {@link Buffer} will be accepted even if it's size exceeds
      * this value.
@@ -255,7 +261,7 @@ public final class IovArray implements Predicate<Object> {
         }
         long nativeAddress = component.readableNativeAddress();
         assert nativeAddress != 0;
-        return add(memoryAddress, nativeAddress, byteCount);
+        return add(nativeAddress, byteCount);
     }
 
     public boolean addWritable(Buffer buffer) {
@@ -276,7 +282,54 @@ public final class IovArray implements Predicate<Object> {
         }
         long nativeAddress = component.writableNativeAddress();
         assert nativeAddress != 0;
-        return add(memoryAddress, nativeAddress, byteCount);
+        return add(nativeAddress, byteCount);
+    }
+
+    private void putAddr(int index, long addr) {
+        put(idx(index), addr);
+    }
+
+    private void putLen(int index, int len) {
+        put(idx(index) + ADDRESS_SIZE, len);
+    }
+
+    private long getAddr(int index) {
+        return get(idx(index));
+    }
+
+    private int getLen(int index) {
+        return Math.toIntExact(get(idx(index) + ADDRESS_SIZE));
+    }
+
+    private void put(int off, long val) {
+        if (ADDRESS_SIZE == 8) {
+            if (PlatformDependent.hasUnsafe()) {
+                PlatformDependent.putLong(memoryAddress + off, val);
+            } else {
+                memory.putLong(off, val);
+            }
+        } else {
+            assert ADDRESS_SIZE == 4;
+            if (PlatformDependent.hasUnsafe()) {
+                PlatformDependent.putInt(memoryAddress + off, (int) val);
+            } else {
+                memory.putInt(off, (int) val);
+            }
+        }
+    }
+
+    private long get(int off) {
+        if (ADDRESS_SIZE == 8) {
+            if (PlatformDependent.hasUnsafe()) {
+                return PlatformDependent.getLong(memoryAddress + off);
+            }
+            return memory.getLong(off);
+        }
+        assert ADDRESS_SIZE == 4;
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.getInt(memoryAddress + off);
+        }
+        return memory.getInt(off);
     }
 
     private static int idx(int index) {
