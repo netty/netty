@@ -72,7 +72,7 @@ public final class DnsServerAddressStreamProviders {
                         + "'io.netty:netty-resolver-dns-native-macos'", MACOS_PROVIDER_CLASS_NAME);
             } catch (Throwable cause) {
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Unable to load {}, fallback to system defaults. This may result in "
+                    LOGGER.error("Unable to load {}, fallback to system defaults. This may result in "
                             + "incorrect DNS resolutions on MacOS. Check whether you have a dependency on "
                             + "'io.netty:netty-resolver-dns-native-macos'", MACOS_PROVIDER_CLASS_NAME, cause);
                 } else {
