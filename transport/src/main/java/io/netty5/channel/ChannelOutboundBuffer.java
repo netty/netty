@@ -376,16 +376,17 @@ final class ChannelOutboundBuffer {
             return;
         }
 
-        boolean keepGoing = true;
         do {
             if (!entry.cancelled) {
                 Promise<Void> promise = entry.promise;
+                if (!processor.test(entry.msg, promise)) {
+                    return;
+                }
                 promise.asFuture().addListener(new DecrementPendingBytes(this, entry.pendingSize));
-                keepGoing = processor.test(entry.msg, promise);
             }
             removeEntry(entry);
             entry = entry.recycleAndGetNext();
-        } while (keepGoing && isFlushedEntry(entry));
+        } while (isFlushedEntry(entry));
     }
 
     private boolean isFlushedEntry(Entry e) {
