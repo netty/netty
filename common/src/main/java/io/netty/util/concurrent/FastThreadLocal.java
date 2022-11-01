@@ -125,6 +125,7 @@ public class FastThreadLocal<V> {
     private final int index;
 
     public FastThreadLocal() {
+        // index 指的是 FastThreadLocal 对象的一个下标，每创建一个 FasThreadLocal 都会有一个唯一的自增下标
         index = InternalThreadLocalMap.nextVariableIndex();
     }
 
@@ -134,6 +135,7 @@ public class FastThreadLocal<V> {
     @SuppressWarnings("unchecked")
     public final V get() {
         InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
+        // 获取当前 index 下标的 Object，即获取每个 FastThreadLocal 对象绑定的线程共享对象
         Object v = threadLocalMap.indexedVariable(index);
         if (v != InternalThreadLocalMap.UNSET) {
             return (V) v;

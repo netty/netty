@@ -99,6 +99,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public static InternalThreadLocalMap get() {
         Thread thread = Thread.currentThread();
+        // 通常 NioEventLoop 线程都是 FastThreadLocalThread
         if (thread instanceof FastThreadLocalThread) {
             return fastGet((FastThreadLocalThread) thread);
         } else {
@@ -137,6 +138,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     public static int nextVariableIndex() {
+        // 原子自增
         int index = nextIndex.getAndIncrement();
         if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE || index < 0) {
             nextIndex.set(ARRAY_LIST_CAPACITY_MAX_SIZE);
@@ -154,7 +156,9 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     private static Object[] newIndexedVariableTable() {
+        // 长度为 32 的对象数组
         Object[] array = new Object[INDEXED_VARIABLE_TABLE_INITIAL_SIZE];
+        // 将数组中的每一个队形设置为 UNSET（是一个 Object 对象，表示该下标的值没有被设置）
         Arrays.fill(array, UNSET);
         return array;
     }
