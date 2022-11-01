@@ -32,6 +32,7 @@ public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T
     private final Class<?> concreteType;
     @SuppressWarnings("unused")
     private volatile boolean received; // Accessed via VarHandle
+    private T copy;
 
     public SendFromOwned(Owned<T> outgoing, Drop<T> drop, Class<?> concreteType) {
         this.outgoing = outgoing;
@@ -43,14 +44,19 @@ public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T
     @Override
     public I receive() {
         gateReception();
-        var copy = outgoing.transferOwnership(drop);
+        copy = outgoing.transferOwnership(drop);
         drop.attach(copy);
         return (I) copy;
     }
 
     private void gateReception() {
         if ((boolean) RECEIVED.getAndSet(this, true)) {
-            throw new IllegalStateException("This object has already been received.");
+            IllegalStateException exception = new IllegalStateException("This object has already been received.");
+            T obj = copy;
+            if (obj != null) {
+                obj.attachTrace(exception);
+            }
+            throw exception;
         }
     }
 
@@ -62,7 +68,7 @@ public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T
     @Override
     public void close() {
         if (!(boolean) RECEIVED.getAndSet(this, true)) {
-            var copy = outgoing.transferOwnership(drop);
+            copy = outgoing.transferOwnership(drop);
             drop.attach(copy);
             copy.close();
         }
