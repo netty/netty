@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=0"
+          name="viewport">
+    <title>echo_joy 在线聊天室</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <script type="text/javascript" src="/js/lib/jquery.min.js"></script>
+    <script type="text/javascript" src="/js/lib/jquery.snowfall.js"></script>
+    <script type="text/javascript" src="/js/chat.util.js"></script>
+</head>
+
+<body>
+<div id="loginbox">
+    <div style="width:300px;margin:200px auto;">
+        欢迎进入 echo_joy WebSocket 聊天室
+        <br/>
+        <br/>
+        <input type="text" style="width:180px;" placeholder="进入前，请先输入昵称" id="nickname" name="nickname"/>
+        <input type="button" style="width:50px;" value="进入" onclick="CHAT.login();"/>
+        <div id="error-msg" style="color:red;"></div>
+    </div>
+</div>
+<div id="chatbox" style="display: none;">
+    <div style="background:#3d3d3d;height: 28px; width: 100%;font-size:12px;position: fixed;top: 0px;z-index: 999;">
+        <div style="line-height: 28px;color:#fff;">
+            <span style="text-align:left;margin-left:10px;">echo_joy 聊天室</span>
+            <span style="float:right; margin-right:10px;">
+                	<span>当前在线<span id="onlinecount">0</span>人</span> |
+	                <span id="shownikcname">匿名</span> |
+	                <a href="javascript:;" onclick="CHAT.logout()" style="color:#fff;">退出</a>
+                </span>
+        </div>
+    </div>
+    <div id="doc">
+        <div id="chat">
+            <div id="message" class="message">
+                <div id="onlinemsg"
+                     style="background:#EFEFF4; font-size:12px; margin-top:40px; margin-left:10px; color:#666;">
+                </div>
+            </div>
+            <form onsubmit="return false;">
+                <div class="tool-box">
+                    <div class="face-box" id="face-box"></div>
+                    <span class="face" onclick="CHAT.openFace()" title="选择表情"></span>
+                    <!--
+                        <span class="img" id="tool-img-btn" title="发送图片"></span>
+                        <span class="file" id="tool-file-btn" title="上传文件"></span>
+                     -->
+                    <span class="flower" onclick="CHAT.sendFlower()" title="送鲜花"></span>
+                </div>
+                <div class="input-box">
+                    <div class="input" contenteditable="true" id="send-message"></div>
+                    <div class="action">
+                        <input class="button" type="button" id="mjr_send" onclick="CHAT.sendText()" value="发送"/>
+                    </div>
+                </div>
+                <div class="copyright">EchoJoy&copy;版权所有</div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>
