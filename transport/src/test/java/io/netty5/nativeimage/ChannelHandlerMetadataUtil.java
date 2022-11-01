@@ -25,6 +25,7 @@ import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -43,10 +44,8 @@ import java.util.stream.Stream;
 /**
  * Generates native-image reflection metadata for subtypes of {@link io.netty5.channel.ChannelHandler}.
  * <p>
- * To use, create a JUnit test in the desired Netty module and invoke {@link #generateMetadata(String, String...)} with:
- * 1. The relative path to the native-image handler reflection metadata file in the Netty module.
- * This path is relative to the root of the target Netty module.
- * 2. A list of packages present in the target Netty module that may contain subtypes of the ChannelHandler.
+ * To use, create a JUnit test in the desired Netty module and invoke {@link #generateMetadata(String, String...)} with
+ * a list of packages present in the target Netty module that may contain subtypes of the ChannelHandler.
  * <p>
  * See {@link NativeImageHandlerMetadataTest}
  */
@@ -60,7 +59,10 @@ public final class ChannelHandlerMetadataUtil {
     private ChannelHandlerMetadataUtil() {
     }
 
-    public static void generateMetadata(String resourcePath, String... packageNames) {
+    public static void generateMetadata(String... packageNames) {
+        String projectGroupId = System.getProperty("nativeImage.handlerMetadataGroupId");
+        String projectArtifactId = System.getProperty("nativeimage.handlerMetadataArtifactId");
+
         Set<Class<? extends ChannelHandler>> subtypes = findChannelHandlerSubclasses(packageNames);
 
         if (Arrays.asList(packageNames).contains("io.netty5.channel")) {
@@ -72,7 +74,9 @@ public final class ChannelHandlerMetadataUtil {
                 .map(type -> new HandlerMetadata(type.getName(), new Condition(type.getName()), true))
                 .collect(Collectors.toSet());
 
-        String projectRelativeResourcePath = "src/main/resources/META-INF/native-image/" + resourcePath;
+        String projectRelativeResourcePath = "src/main/resources/META-INF/native-image/" + projectGroupId + "/" +
+                projectArtifactId + "/generated/handlers/reflect-config.json";
+
         Path existingMetadataPath = new File(projectRelativeResourcePath).toPath().toAbsolutePath();
         if (!Files.exists(existingMetadataPath)) {
             if (handlerMetadata.size() == 0) {
@@ -88,13 +92,12 @@ public final class ChannelHandlerMetadataUtil {
             Assertions.fail(message);
         }
 
-        String existingMetadataJson = "";
+        List<HandlerMetadata> existingMetadata = null;
         try {
-            existingMetadataJson = Files.readString(existingMetadataPath);
+            existingMetadata = gson.fromJson(new FileReader(existingMetadataPath.toFile()), HANDLER_METADATA_LIST_TYPE);
         } catch (IOException e) {
             Assertions.fail("Failed to open the native-image metadata file at: " + existingMetadataPath, e);
         }
-        List<HandlerMetadata> existingMetadata = gson.fromJson(existingMetadataJson, HANDLER_METADATA_LIST_TYPE);
 
         Set<HandlerMetadata> newMetadata = new HashSet<>(handlerMetadata);
         newMetadata.removeAll(existingMetadata);

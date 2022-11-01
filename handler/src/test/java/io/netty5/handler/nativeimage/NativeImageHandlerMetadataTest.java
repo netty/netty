@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "handler-handlers/reflect-config.json",
-                "io.netty5.handler");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty5.handler");
     }
 
 }
