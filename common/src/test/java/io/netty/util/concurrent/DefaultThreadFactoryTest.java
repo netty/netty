@@ -274,7 +274,6 @@ public class DefaultThreadFactoryTest {
         final AtomicReference<ThreadGroup> firstCaptured = new AtomicReference<ThreadGroup>();
 
         final ThreadGroup group = new ThreadGroup("first");
-        assertFalse(group.isDestroyed());
         final Thread first = new Thread(group, new Runnable() {
             @Override
             public void run() {
@@ -285,9 +284,6 @@ public class DefaultThreadFactoryTest {
         });
         first.start();
         first.join();
-        // Destroy the group now
-        group.destroy();
-        assertTrue(group.isDestroyed());
         assertEquals(group, firstCaptured.get());
 
         ThreadGroup currentThreadGroup = Thread.currentThread().getThreadGroup();
