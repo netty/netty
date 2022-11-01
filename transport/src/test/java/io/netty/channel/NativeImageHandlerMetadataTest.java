@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "transport-handlers/reflect-config.json",
-                "io.netty.bootstrap", "io.netty.channel");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty.bootstrap", "io.netty.channel");
     }
 
 }

@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "memcache-handlers/reflect-config.json",
-                "io.netty.handler.codec.memcache");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty.handler.codec.memcache");
     }
 
 }

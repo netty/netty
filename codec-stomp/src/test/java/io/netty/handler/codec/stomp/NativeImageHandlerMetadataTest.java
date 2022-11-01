@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "stomp-handlers/reflect-config.json",
-                "io.netty.handler.codec.stomp");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty.handler.codec.stomp");
     }
 
 }

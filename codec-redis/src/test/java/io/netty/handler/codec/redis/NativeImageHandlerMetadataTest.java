@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "codec-redis-handlers/reflect-config.json",
-                "io.netty.handler.codec.redis");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty.handler.codec.redis");
     }
 
 }
