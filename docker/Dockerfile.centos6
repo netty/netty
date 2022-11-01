@@ -26,7 +26,7 @@ RUN mkdir -p /var/cache/yum/x86_64/6/centos-sclo-rh/ && \
     yum install devtoolset-7 -y
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://get.sdkman.io" | bash
+RUN curl -s  "https://get.sdkman.io" | bash
 
 ARG java_version=11.0.12-zulu
 ENV JAVA_VERSION $java_version
