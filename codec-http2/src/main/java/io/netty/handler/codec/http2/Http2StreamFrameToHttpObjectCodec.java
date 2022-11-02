@@ -37,6 +37,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -155,14 +156,19 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         // Http2HeadersFrame should not be marked as endStream=true
         if (obj instanceof HttpResponse) {
             final HttpResponse res = (HttpResponse) obj;
-            if (isInformationalResponseHeaderFrame(res.status().code())) {
+            final HttpResponseStatus status = res.status();
+            final int code = status.code();
+            final HttpStatusClass statusClass = status.codeClass();
+            // An informational response using a 1xx status code other than 101 is
+            // transmitted as a HEADERS frame
+            if (statusClass == HttpStatusClass.INFORMATIONAL && code != 101) {
                 if (res instanceof FullHttpResponse) {
                     final Http2Headers headers = toHttp2Headers(ctx, res);
                     out.add(new DefaultHttp2HeadersFrame(headers, false));
                     return;
                 } else {
                     throw new EncoderException(
-                            res.status() + " must be a FullHttpResponse");
+                            status + " must be a FullHttpResponse");
                 }
             }
         }
@@ -262,13 +268,5 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                 && char2 >= '0' && char2 <= '9' && char2 != '1';
         }
         return false;
-    }
-
-    /**
-     *    An informational response using a 1xx status code other than 101 is
-     *    transmitted as a HEADERS frame
-     */
-    private static boolean isInformationalResponseHeaderFrame(int status) {
-        return status >= 100 && status < 200 && status != 101;
     }
 }

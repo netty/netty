@@ -111,8 +111,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 final HttpResponse res = (HttpResponse) msg;
                 final int code = res.status().code();
+                final HttpStatusClass codeClass = res.status().codeClass();
                 final CharSequence acceptEncoding;
-                if (code >= 100 && code < 200) {
+                if (codeClass == HttpStatusClass.INFORMATIONAL) {
                     // We need to not poll the encoding when response with 1xx codes as another response will follow
                     // for the issued request.
                     // See https://github.com/netty/netty/issues/12904 and https://github.com/netty/netty/issues/4079

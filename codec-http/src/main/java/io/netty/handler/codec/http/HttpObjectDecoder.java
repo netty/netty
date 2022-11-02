@@ -522,14 +522,16 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
-            int code = res.status().code();
+            final HttpResponseStatus status = res.status();
+            final int code = status.code();
+            final HttpStatusClass statusClass = status.codeClass();
 
             // Correctly handle return codes of 1xx.
             //
             // See:
             //     - https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
-            if (code >= 100 && code < 200) {
+            if (statusClass == HttpStatusClass.INFORMATIONAL) {
                 // One exception: Hixie 76 websocket handshake response
                 return !(code == 101 && !res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT)
                          && res.headers().contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true));
