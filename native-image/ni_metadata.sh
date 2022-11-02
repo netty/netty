@@ -6,10 +6,10 @@
 # At the time of writing, the only condition supported by native-image is `whenTypeReachable`: a metadata entry is only included if the condition type is reachable during the image build.
 #
 # This script executes the netty build and attaches the native-image-agent to the test execution.
-# Once all of the tests are executed, the metadata generated accross all of the runs is merged and placed into the `common` module.
+# Once all of the tests are executed, the metadata generated across all of the runs is merged and placed into the `common` module.
 # As the metadata is conditional, it should not impact the footprint of native-images that do not use all of netty's functionality.
 
-SCRIPT_PATH="$(dirname $(realpath -s $0))"
+SCRIPT_PATH="$(dirname $BASH_SOURCE)"
 # This filter tells the native-image-agent which classes belong to netty. Only these classes will be used as conditions for the generated metadata.
 USER_CODE_FILTER="${SCRIPT_PATH}/netty-filter.json"
 # This filter tells the native-image-agent which classes to filter out from conditions and metadata entries themselves.
@@ -28,7 +28,7 @@ mkdir -p "${COLLECTED_CONFIG_PATH}" "${MERGED_CONFIG_PATH}"
 
 # Execute the netty build.
 cd "${SCRIPT_PATH}/.."
-mvn -DfailIfNoTests=false -Dtest=\!EpollDatagramMulticastIpv6WithIpv4AddrTest,\!ShadingIT,\!FlowControlHandlerTest,\!CloseNotifyTest,\!Http2MultiplexTransportTest -Dit.test=\!ShadingIT -DskipHttp2Testsuite=true -DargLine.javaProperties="-Dio.netty.tryReflectionSetAccessible=true -agentlib:native-image-agent=config-output-dir=${COLLECTED_CONFIG_PATH}/{pid},experimental-conditional-config-part" package
+./mvnw -DfailIfNoTests=false -Dtest=\!EpollDatagramMulticastIpv6WithIpv4AddrTest,\!ShadingIT,\!FlowControlHandlerTest,\!CloseNotifyTest,\!Http2MultiplexTransportTest -Dit.test=\!ShadingIT -DskipHttp2Testsuite=true -DargLine.javaProperties="-Dio.netty.tryReflectionSetAccessible=true -agentlib:native-image-agent=config-output-dir=${COLLECTED_CONFIG_PATH}/{pid},experimental-conditional-config-part" package
 
 # Merge all of the generated metadata.
 NI_CONFIG_INPUT_ARGS=""
