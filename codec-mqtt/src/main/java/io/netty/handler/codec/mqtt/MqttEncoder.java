@@ -38,6 +38,8 @@ import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_CLIENT_ID_LEN
  * as described here <a href="https://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html">MQTTV3.1</a>
  * or v5.0 as described here <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html">MQTTv5.0</a> -
  * depending on the version specified in the first CONNECT message that goes through the channel.
+ *
+ * 单例模式应用：饿汉式单例
  */
 @ChannelHandler.Sharable
 public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {

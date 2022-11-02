@@ -83,6 +83,8 @@ import io.netty.util.concurrent.EventExecutor;
  * {@link ChannelPipeline} to find out more about inbound and outbound operations,
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
+ *
+ * 责任链模式应用：上下文组件，可获得用户需要的数据
  */
 public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker, ChannelOutboundInvoker {
 
@@ -114,6 +116,10 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
      * {@link EventLoop}.
      */
     boolean isRemoved();
+
+    /**
+     * fireXxx() 终止责任链的方法，可终止传播事件
+     */
 
     @Override
     ChannelHandlerContext fireChannelRegistered();

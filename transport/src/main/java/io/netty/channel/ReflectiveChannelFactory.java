@@ -23,6 +23,8 @@ import java.lang.reflect.Constructor;
 
 /**
  * A {@link ChannelFactory} that instantiates a new {@link Channel} by invoking its default constructor reflectively.
+ *
+ * 工厂模式应用
  */
 public class ReflectiveChannelFactory<T extends Channel> implements ChannelFactory<T> {
 
