@@ -49,6 +49,12 @@
             <version>1.4.4</version>
         </dependency>
 
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
+
         <!--序列化工具包-->
         <!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java -->
         <dependency>
