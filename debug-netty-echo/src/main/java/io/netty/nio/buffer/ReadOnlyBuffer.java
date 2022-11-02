@@ -37,4 +37,27 @@ public class ReadOnlyBuffer {
 
     }
 
+    private static void m() {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(64);
+
+        for (int i = 0; i < 64; i++) {
+            byteBuffer.put((byte) i);
+        }
+
+        // 读取
+        byteBuffer.flip();
+
+        // 得到一个只读 Buffer
+        ByteBuffer readOnlyBuffer = byteBuffer.asReadOnlyBuffer();
+        System.out.println(readOnlyBuffer.getClass());
+
+        // 读取
+        while (readOnlyBuffer.hasRemaining()){
+            System.out.print(readOnlyBuffer.get()+" ");
+        }
+        System.out.println();
+
+        readOnlyBuffer.put((byte) 100);// 抛出 ReadOnlyBufferException 异常
+    }
+
 }
