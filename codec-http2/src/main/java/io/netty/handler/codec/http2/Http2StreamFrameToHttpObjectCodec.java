@@ -167,8 +167,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                     out.add(new DefaultHttp2HeadersFrame(headers, false));
                     return;
                 } else {
-                    throw new EncoderException(
-                            status + " must be a FullHttpResponse");
+                    throw new EncoderException(status + " must be a FullHttpResponse");
                 }
             }
         }
