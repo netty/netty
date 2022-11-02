@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>=Hello</title>
+</head>
+<body>
+<script>
+    var socket;
+    // 判断当前浏览器是否支持 websocket
+    if (window.WebSocket) {
+        // go on
+        socket = new WebSocket("ws://localhost/hello");
+        // 相当于 channelRead0，ev 收到服务器端回送的消息
+        socket.onmessage = function (ev) {
+            var rt = document.getElementById("responseText");
+            rt.value = rt.value + "\n" + ev.data;
+        }
+
+        // 相当于连接开启（感知到连接开启）
+        socket.onopen = function (ev) {
+            var rt = document.getElementById("responseText");
+            rt.value = rt.value + "\n连接开启了";
+        }
+
+        // 相当于连接关闭（感知到连接关闭）
+        socket.onclose = function (ev) {
+            var rt = document.getElementById("responseText");
+            rt.value = rt.value + "\n连接关闭了";
+        }
+    } else {
+        alert("当前浏览器不支持 websocket~")
+    }
+
+    // 发送消息到服务器
+    function send(message) {
+        if (!window.socket) {
+            // 先判断 socket 是否创建好
+            return;
+        }
+        if (socket.readyState == WebSocket.OPEN) {
+            // 通过 socket 发送消息
+            socket.send(message);
+        } else {
+            alert("连接没有开启~")
+        }
+    }
+</script>
+
+<form onsubmit="return false">
+    <textarea name="message" style="height: 300px;width: 300px"></textarea>
+    <input type="button" value="发生消息" onclick="send(this.form.message.value)">
+    <textarea name="responseText" style="height: 300px;width: 300px"></textarea>
+    <input type="button" value="清空内容" onclick="document.getElementById('responseText').value=''">
+</form>
+</body>
+</html>
