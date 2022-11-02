@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "handler-proxy-handlers/reflect-config.json",
-                "io.netty.handler.proxy");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty.handler.proxy");
     }
 
 }

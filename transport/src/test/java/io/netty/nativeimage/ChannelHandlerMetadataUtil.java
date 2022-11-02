@@ -41,10 +41,8 @@ import java.util.Set;
 /**
  * Generates native-image reflection metadata for subtypes of {@link io.netty.channel.ChannelHandler}.
  * <p>
- * To use, create a JUnit test in the desired Netty module and invoke {@link #generateMetadata(String, String...)} with:
- * 1. The relative path to the native-image handler reflection metadata file in the Netty module.
- * This path is relative to the root of the target Netty module.
- * 2. A list of packages present in the target Netty module that may contain subtypes of the ChannelHandler.
+ * To use, create a JUnit test in the desired Netty module and invoke {@link #generateMetadata(String...)} with a list
+ * of packages present in the target Netty module that may contain subtypes of the ChannelHandler.
  * <p>
  * See {@link NativeImageHandlerMetadataTest}
  */
@@ -58,7 +56,10 @@ public final class ChannelHandlerMetadataUtil {
     private ChannelHandlerMetadataUtil() {
     }
 
-    public static void generateMetadata(String resourcePath, String... packageNames) {
+    public static void generateMetadata(String... packageNames) {
+        String projectGroupId = System.getProperty("nativeImage.handlerMetadataGroupId");
+        String projectArtifactId = System.getProperty("nativeimage.handlerMetadataArtifactId");
+
         Set<Class<? extends ChannelHandler>> subtypes = findChannelHandlerSubclasses(packageNames);
 
         if (Arrays.asList(packageNames).contains("io.netty.channel")) {
@@ -71,7 +72,8 @@ public final class ChannelHandlerMetadataUtil {
             handlerMetadata.add(new HandlerMetadata(subtype.getName(), new Condition(subtype.getName()), true));
         }
 
-        String projectRelativeResourcePath = "src/main/resources/META-INF/native-image/" + resourcePath;
+        String projectRelativeResourcePath = "src/main/resources/META-INF/native-image/" + projectGroupId + "/" +
+                projectArtifactId + "/generated/handlers/reflect-config.json";
         File existingMetadataFile = new File(projectRelativeResourcePath);
         String existingMetadataPath = existingMetadataFile.getAbsolutePath();
         if (!existingMetadataFile.exists()) {
