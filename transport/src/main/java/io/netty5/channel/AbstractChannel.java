@@ -1081,9 +1081,31 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             }
 
             WriteSink writeSink = writeSink();
-            writeSink.writeLoop(outboundBuffer);
+            writeSink.prepareWriteLoop(outboundBuffer);
+            writeLoop(writeSink);
         } finally {
             inWriteFlushed = false;
+        }
+    }
+
+    /**
+     * Drive the write-loop on the given {@link WriteSink}.
+     * <p>
+     * This method must make repeated calls to {@link WriteSink#writeLoopStep()},
+     * and call {@link WriteSink#writeLoopEnd()} when finished.
+     * <p>
+     * These calls must be made from the event-loop thread.
+     *
+     * @param writeSink The write-sink controlling the internal write-state.
+     */
+    protected void writeLoop(WriteSink writeSink) {
+        try {
+            boolean moreToDo;
+            do {
+                moreToDo = writeSink.writeLoopStep();
+            } while (moreToDo);
+        } finally {
+            writeSink.writeLoopEnd();
         }
     }
 
@@ -2104,25 +2126,48 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             this.writeHandle = writeHandle;
         }
 
-        void writeLoop(ChannelOutboundBuffer outboundBuffer) {
+        /**
+         * Prepare for a write-loop with the given outbound buffer.
+         *
+         * @param outboundBuffer the buffer of messages to write.
+         */
+        void prepareWriteLoop(ChannelOutboundBuffer outboundBuffer) {
             assertEventLoop();
             this.outboundBuffer = outboundBuffer;
+        }
+
+        /**
+         * Drive an iteration of the write-loop.
+         * <p>
+         * This will call out to {@link #doWriteNow(WriteSink)}, and return {@code true} if there is potentially
+         * more work to do, i.e. more iterations of the write loop we can complete.
+         *
+         * @return {@code true} if there is more work to do, or {@code false} if the write-loop should stop.
+         */
+        public boolean writeLoopStep() {
             try {
-                try {
-                    // We checked before is the outboundBuffer is empty so let's use a do-while loop.
-                    do {
-                        doWriteNow(writeSink);
-                    } while (continueWriting() && !outboundBuffer.isEmpty());
-                } catch (Throwable t) {
-                    handleWriteError(t);
-                } finally {
-                    try {
-                        writeLoopComplete(outboundBuffer.isEmpty());
-                    } catch (Throwable cause) {
-                        // Something is really seriously wrong!
-                        closeWithErrorFromWriteFlushed(cause);
-                    }
-                }
+                doWriteNow(this);
+                return continueWriting() && !outboundBuffer.isEmpty();
+            } catch (Throwable t) {
+                handleWriteError(t);
+            }
+            return false;
+        }
+
+        /**
+         * Notify that we have finished some iterations of the write-loop, i.e. we have made calls to
+         * {@link #writeLoopStep()}.
+         * <p>
+         * This will call out to {@link #writeLoopComplete(boolean)},
+         * {@link WriteHandleFactory.WriteHandle#writeComplete()},
+         * and update the {@linkplain #isWritable() channel writability} if needed.
+         */
+        public void writeLoopEnd() {
+            try {
+                writeLoopComplete(outboundBuffer.isEmpty());
+            } catch (Throwable cause) {
+                // Something is really seriously wrong!
+                closeWithErrorFromWriteFlushed(cause);
             } finally {
                 writeHandle.writeComplete();
 
