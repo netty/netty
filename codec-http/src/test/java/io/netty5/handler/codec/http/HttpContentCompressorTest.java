@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -495,6 +496,86 @@ public class HttpContentCompressorTest {
         assertEquals(DecoderResult.success(), res.decoderResult());
         assertThat((Object) ch.readOutbound()).isNull();
         res.close();
+    }
+
+    @Test
+    public void testMultiple1xxInformationalResponse() throws Exception {
+        FullHttpRequest request = newRequest();
+        HttpUtil.set100ContinueExpected(request, true);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        ch.writeInbound(request);
+
+        FullHttpResponse continueResponse = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, preferredAllocator().allocate(0));
+        ch.writeOutbound(continueResponse);
+
+        FullHttpResponse earlyHintsResponse = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, preferredAllocator().allocate(0));
+        earlyHintsResponse.trailingHeaders().set("X-Test", "Netty");
+        ch.writeOutbound(earlyHintsResponse);
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
+        res.trailingHeaders().set("X-Test", "Netty");
+        ch.writeOutbound(res);
+
+        try (FullHttpResponse o = ch.readOutbound()) {
+            assertEquals(continueResponse, o);
+        }
+        try (FullHttpResponse o = ch.readOutbound()) {
+            assertEquals(earlyHintsResponse, o);
+        }
+
+        try (FullHttpResponse o = ch.readOutbound()) {
+            assertNull(o.headers().get(HttpHeaderNames.TRANSFER_ENCODING));
+
+            // Content encoding shouldn't be modified.
+            assertNull(o.headers().get(HttpHeaderNames.CONTENT_ENCODING));
+            assertEquals(0, o.payload().readableBytes());
+            assertEquals("", o.payload().toString(StandardCharsets.US_ASCII));
+            assertEquals("Netty", o.trailingHeaders().get("X-Test"));
+            assertEquals(DecoderResult.success(), o.decoderResult());
+        }
+
+        assertNull(ch.readOutbound());
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void test103EarlyHintsResponse() throws Exception {
+        FullHttpRequest request = newRequest();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        ch.writeInbound(request);
+
+        FullHttpResponse earlyHintsResponse = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, preferredAllocator().allocate(0));
+        earlyHintsResponse.trailingHeaders().set("X-Test", "Netty");
+        ch.writeOutbound(earlyHintsResponse);
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, preferredAllocator().allocate(0));
+        res.trailingHeaders().set("X-Test", "Netty");
+        ch.writeOutbound(res);
+
+        try (FullHttpResponse o = ch.readOutbound()) {
+            assertEquals(earlyHintsResponse, o);
+        }
+
+        try (FullHttpResponse o = ch.readOutbound()) {
+            assertNull(o.headers().get(HttpHeaderNames.TRANSFER_ENCODING));
+
+            // Content encoding shouldn't be modified.
+            assertNull(o.headers().get(HttpHeaderNames.CONTENT_ENCODING));
+            assertEquals(0, o.payload().readableBytes());
+            assertEquals("", o.payload().toString(StandardCharsets.US_ASCII));
+            assertEquals("Netty", res.trailingHeaders().get("X-Test"));
+            assertEquals(DecoderResult.success(), res.decoderResult());
+        }
+
+        assertNull(ch.readOutbound());
+        assertTrue(ch.finishAndReleaseAll());
     }
 
     @Test

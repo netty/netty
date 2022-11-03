@@ -478,12 +478,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
-            int code = res.status().code();
+            final HttpResponseStatus status = res.status();
+            final int code = status.code();
+            final HttpStatusClass statusClass = status.codeClass();
+
             // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include
             // a message body. All other responses do include a message body,
             // although the body might be of zero length.
             // https://httpwg.org/specs/rfc7230.html#message.body
-            if (code >= 100 && code < 200) {
+            if (statusClass == HttpStatusClass.INFORMATIONAL) {
                 return true;
             }
 
