@@ -122,7 +122,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     @Override
     public void execute(Runnable task) {
-        requireNonNull(task, "command");
+        requireNonNull(task, "task");
         begin();
         try {
             tasks.add(task);
