@@ -1092,7 +1092,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * Drive the write-loop on the given {@link WriteSink}.
      * <p>
      * This method must make repeated calls to {@link WriteSink#writeLoopStep()},
-     * and call {@link WriteSink#writeLoopEnd()} when finished.
+     * ideally for as long as {@link WriteSink#writeLoopContinue()} returns {@code true},
+     * and then call {@link WriteSink#writeLoopEnd()} when finished.
      * <p>
      * These calls must be made from the event-loop thread.
      *
@@ -1100,10 +1101,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      */
     protected void writeLoop(WriteSink writeSink) {
         try {
-            boolean moreToDo;
             do {
-                moreToDo = writeSink.writeLoopStep();
-            } while (moreToDo);
+                writeSink.writeLoopStep();
+            } while (writeSink.writeLoopContinue());
         } finally {
             writeSink.writeLoopEnd();
         }
@@ -2139,19 +2139,28 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         /**
          * Drive an iteration of the write-loop.
          * <p>
-         * This will call out to {@link #doWriteNow(WriteSink)}, and return {@code true} if there is potentially
-         * more work to do, i.e. more iterations of the write loop we can complete.
-         *
-         * @return {@code true} if there is more work to do, or {@code false} if the write-loop should stop.
+         * This will call out to {@link #doWriteNow(WriteSink)} to make process on the write-loop.
+         * This in turn will make a call back to {@link #complete(long, long, int, boolean)}
+         * or {@link #complete(long, Throwable, boolean)}, after which the loop driver can call
+         * {@link #writeLoopContinue()} to check if more loop iterations are needed.
          */
-        public boolean writeLoopStep() {
+        public void writeLoopStep() {
             try {
                 doWriteNow(this);
-                return continueWriting() && !outboundBuffer.isEmpty();
+
             } catch (Throwable t) {
                 handleWriteError(t);
             }
-            return false;
+        }
+
+        /**
+         * Check to see if more write-loop iterations are needed, or if it is time to call {@link #writeLoopEnd()}.
+         *
+         * @return {@code true} if we can make more calls to {@link #writeLoopStep()}, or {@code false} if its time
+         * to call {@link #writeLoopEnd()}.
+         */
+        public boolean writeLoopContinue() {
+            return continueWriting() && !outboundBuffer.isEmpty();
         }
 
         /**
