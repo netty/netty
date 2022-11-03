@@ -804,7 +804,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelHandlerContext read(ReadBufferAllocator readBufferAllocator) {
-        requireNonNull(readBufferAllocator, "");
+        requireNonNull(readBufferAllocator, "readBufferAllocator");
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             findAndInvokeRead(readBufferAllocator);

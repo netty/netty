@@ -104,7 +104,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
 
     @Override
     public void execute(Runnable task) {
-        requireNonNull(task, "command");
+        requireNonNull(task, "task");
         if (!RUNNING.get()) {
             RUNNING.set(true);
             try {

@@ -77,7 +77,7 @@ public final class ThreadExecutorMap {
      * when called from within the {@link Runnable} during execution.
      */
     public static ThreadFactory apply(final ThreadFactory threadFactory, final EventExecutor eventExecutor) {
-        Objects.requireNonNull(threadFactory, "command");
+        Objects.requireNonNull(threadFactory, "threadFactory");
         Objects.requireNonNull(eventExecutor, "eventExecutor");
         return r -> threadFactory.newThread(apply(r, eventExecutor));
     }
