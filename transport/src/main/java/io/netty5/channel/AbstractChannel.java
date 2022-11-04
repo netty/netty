@@ -1104,6 +1104,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             do {
                 writeSink.writeLoopStep();
             } while (writeSink.writeLoopContinue());
+        } catch (Throwable throwable) {
+            handleWriteError(throwable);
         } finally {
             writeSink.writeLoopEnd();
         }
@@ -2144,13 +2146,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
          * or {@link #complete(long, Throwable, boolean)}, after which the loop driver can call
          * {@link #writeLoopContinue()} to check if more loop iterations are needed.
          */
-        public void writeLoopStep() {
-            try {
-                doWriteNow(this);
-
-            } catch (Throwable t) {
-                handleWriteError(t);
-            }
+        public void writeLoopStep() throws Throwable {
+            doWriteNow(this);
         }
 
         /**
