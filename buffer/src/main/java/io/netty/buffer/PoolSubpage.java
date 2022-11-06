@@ -66,7 +66,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
 
         doNotDestroy = true;
-        if (elemSize != 0) {
+        if (elemSize >>> LOG2_QUANTUM != 0) {
             maxNumElems = numAvail = runSize / elemSize;
             nextAvail = 0;
             bitmapLength = maxNumElems >>> 6;
