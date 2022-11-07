@@ -23,7 +23,6 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 
 import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEAGAIN;
@@ -36,6 +35,7 @@ import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoE
 import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
 import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEALREADY;
 import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errorECONNREFUSED;
+import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEHOSTUNREACH;
 import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEISCONN;
 import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errorENETUNREACH;
 import static io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.strError;
@@ -58,12 +58,13 @@ public final class Errors {
     public static final int ERROR_EISCONN_NEGATIVE = -errorEISCONN();
     public static final int ERROR_EALREADY_NEGATIVE = -errorEALREADY();
     public static final int ERROR_ENETUNREACH_NEGATIVE = -errorENETUNREACH();
+    public static final int ERROR_EHOSTUNREACH_NEGATIVE = -errorEHOSTUNREACH();
 
     /**
      * Holds the mappings for errno codes to String messages.
      * This eliminates the need to call back into JNI to get the right String message on an exception
      * and thus is faster.
-     *
+     * <p>
      * The array length of 512 should be more then enough because errno.h only holds < 200 codes.
      */
     private static final String[] ERRORS = new String[512];
