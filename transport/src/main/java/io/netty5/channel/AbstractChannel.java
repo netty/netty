@@ -1138,7 +1138,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         close(newPromise(), t, newClosedChannelException(t, "writeFlushed()"));
     }
 
-    private void handleWriteError(Throwable t) {
+    protected void handleWriteError(Throwable t) {
         assertEventLoop();
 
         if (t instanceof IOException && isAutoClose()) {
