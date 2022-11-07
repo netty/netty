@@ -595,7 +595,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         close(promise, closedChannelException, closedChannelException);
     }
 
-    protected void updateWritabilityIfNeeded(boolean notify, boolean notifyLater) {
+    protected final void updateWritabilityIfNeeded(boolean notify, boolean notifyLater) {
         long totalPending = totalPending();
 
         if (totalPending > writeBufferWaterMark.high()) {
