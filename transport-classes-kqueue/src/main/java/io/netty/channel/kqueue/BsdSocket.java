@@ -44,7 +44,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 final class BsdSocket extends Socket {
     private static final String TUN_DEVICE_PREFIX = "utun";
     private static final IllegalArgumentException TUN_ILLEGAL_NAME_EXCEPTION =
-            new IllegalArgumentException("Device name must be 'utun<index>' or null.");
+            new IllegalArgumentException("Tun name must be 'utun<number>' or null.");
 
     // These limits are just based on observations. I couldn't find anything in header files which formally
     // define these limits.
@@ -279,12 +279,12 @@ final class BsdSocket extends Socket {
         if (socketAddress instanceof TunAddress) {
             TunAddress addr = (TunAddress) socketAddress;
 
-            // TUN devices on BSD systems must be named "utunN" were only N is passed to the OS
-            final int index;
+            // TUN devices on BSD systems must be named "utun<number>" were only <number> is passed to the OS
+            final int number;
             if (addr.ifName() != null) {
                 if (addr.ifName().startsWith(TUN_DEVICE_PREFIX)) {
                     try {
-                        index = Integer.parseInt(addr.ifName().substring(TUN_DEVICE_PREFIX.length()));
+                        number = Integer.parseInt(addr.ifName().substring(TUN_DEVICE_PREFIX.length()));
                     } catch (final NumberFormatException e) {
                         throw TUN_ILLEGAL_NAME_EXCEPTION;
                     }
@@ -292,9 +292,9 @@ final class BsdSocket extends Socket {
                     throw TUN_ILLEGAL_NAME_EXCEPTION;
                 }
             } else {
-                index = 0;
+                number = 0;
             }
-            int res = bindTun(intValue(), index);
+            int res = bindTun(intValue(), number);
             if (res < 0) {
                 throw newIOException("bind", res);
             }
@@ -303,7 +303,7 @@ final class BsdSocket extends Socket {
         }
     }
 
-    public static native int bindTun(int fd, int index);
+    public static native int bindTun(int fd, int number);
 
     public SocketAddress localAddressTun() {
         return new TunAddress(localAddressTun(intValue()));

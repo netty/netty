@@ -161,7 +161,7 @@ static jint netty_kqueue_bsdsocket_newSocketTunFd(JNIEnv* env, jclass clazz) {
 #endif
 }
 
-static jint netty_kqueue_bsdsocket_bindTun(JNIEnv* env, jclass clazz, jint fd, jint index) {
+static jint netty_kqueue_bsdsocket_bindTun(JNIEnv* env, jclass clazz, jint fd, jint number) {
     // mark as tun device
     struct ctl_info ctlInfo;
     memset(&ctlInfo, 0, sizeof(ctlInfo));
@@ -180,7 +180,7 @@ static jint netty_kqueue_bsdsocket_bindTun(JNIEnv* env, jclass clazz, jint fd, j
     address.sc_len = sizeof(address);
     address.sc_family = AF_SYSTEM;
     address.ss_sysaddr = AF_SYS_CONTROL;
-    address.sc_unit = index;
+    address.sc_unit = number + 1; // 1 -> utun0, etc.
     if (connect(fd, (struct sockaddr*) &address, sizeof(address)) == -1) {
         netty_unix_errors_throwIOException(env, "connect() failed");
         return -1;
