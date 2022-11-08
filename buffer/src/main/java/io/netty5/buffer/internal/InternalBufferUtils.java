@@ -64,6 +64,7 @@ public interface InternalBufferUtils {
     };
     MethodHandle BB_SLICE_OFFSETS = getByteBufferSliceOffsetsMethodHandle();
     MethodHandle BB_PUT_OFFSETS = getByteBufferPutOffsetsMethodHandle();
+    MethodHandle BB_PUT_ARRAY_OFFSETS = getByteBufferPutArrayOffsetsMethodHandle();
     /**
      * The maximum buffer size we support is the maximum array length generally supported by JVMs,
      * because on-heap buffers will be backed by byte-arrays.
@@ -86,6 +87,18 @@ public interface InternalBufferUtils {
             Lookup lookup = MethodHandles.lookup();
             MethodType type = MethodType.methodType(
                     ByteBuffer.class, int.class, ByteBuffer.class, int.class, int.class);
+            return lookup.findVirtual(ByteBuffer.class, "put", type);
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("JavaLangInvokeHandleSignature")
+    static MethodHandle getByteBufferPutArrayOffsetsMethodHandle() {
+        try {
+            Lookup lookup = MethodHandles.lookup();
+            MethodType type = MethodType.methodType(
+                    ByteBuffer.class, int.class, byte[].class, int.class, int.class);
             return lookup.findVirtual(ByteBuffer.class, "put", type);
         } catch (Exception ignore) {
             return null;
@@ -226,6 +239,32 @@ public interface InternalBufferUtils {
 
     private static void bbputFallback(ByteBuffer dest, int destPos, ByteBuffer src, int srcPos, int length) {
         dest.position(destPos).put(bbslice(src, srcPos, length));
+    }
+
+    /**
+     * The ByteBuffer put-with-array-offset-and-length method is not available in Java 11.
+     */
+    static void bbput(ByteBuffer dest, int destPos, byte[] src, int srcPos, int length) {
+        if (BB_PUT_ARRAY_OFFSETS != null) {
+            bbputJdk16(dest, destPos, src, srcPos, length);
+        } else {
+            bbputFallback(dest, destPos, src, srcPos, length);
+        }
+    }
+
+    private static void bbputJdk16(ByteBuffer dest, int destPos, byte[] src, int srcPos, int length) {
+        try {
+            @SuppressWarnings("unused") // We need to cast the return type in order to invokeExact.
+            ByteBuffer ignore = (ByteBuffer) BB_PUT_ARRAY_OFFSETS.invokeExact(dest, destPos, src, srcPos, length);
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Throwable throwable) {
+            throw new LinkageError("Unexpected exception from ByteBuffer.put(int,byte[],int,int).", throwable);
+        }
+    }
+
+    private static void bbputFallback(ByteBuffer dest, int destPos, byte[] src, int srcPos, int length) {
+        dest.position(destPos).put(src, srcPos, length);
     }
 
     static void setMemory(ByteBuffer buffer, int length, byte value) {

@@ -37,6 +37,7 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
 
 import static io.netty5.buffer.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.internal.InternalBufferUtils.bbput;
@@ -269,6 +270,45 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         }
 
         InternalBufferUtils.copyToViaReverseLoop(this, srcPos, dest, destPos, length);
+    }
+
+    @Override
+    public Buffer writeBytes(byte[] source, int srcPos, int length) {
+        if (source.length < srcPos + length) {
+            throw new ArrayIndexOutOfBoundsException(
+                    "Access at index " + srcPos + " of length " + length +
+                    " is outsidethe bounds of array with length " + source.length);
+        }
+
+        checkWrite(woff, length, true);
+
+        if (hasWritableArray()) {
+            System.arraycopy(source, srcPos, writableArray(), writableArrayOffset(), length);
+        } else {
+            InternalBufferUtils.bbput(wmem, woff, source, srcPos, length);
+        }
+
+        skipWritableBytes(length);
+
+        return this;
+    }
+
+    @Override
+    public Buffer writeBytes(ByteBuffer source) {
+        final int length = source.remaining();
+
+        checkWrite(woff, length, true);
+
+        if (hasWritableArray()) {
+            source.get(writableArray(), writableArrayOffset(), length);
+        } else {
+            InternalBufferUtils.bbput(wmem, woff, source, source.position(), length);
+            source.position(source.position() + length);
+        }
+
+        skipWritableBytes(length);
+
+        return this;
     }
 
     @Override
