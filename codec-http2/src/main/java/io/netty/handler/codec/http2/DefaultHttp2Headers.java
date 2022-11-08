@@ -172,6 +172,12 @@ public class DefaultHttp2Headers
     }
 
     @Override
+    protected void validateValue(ValueValidator<CharSequence> validator, CharSequence name, CharSequence value) {
+        // This method has a noop override for backward compatibility, see https://github.com/netty/netty/pull/12975
+        super.validateValue(validator, name, value);
+    }
+
+    @Override
     public Http2Headers clear() {
         firstNonPseudo = head;
         return super.clear();
