@@ -111,4 +111,18 @@ public class FastThreadLocalThread extends Thread {
         return thread instanceof FastThreadLocalThread &&
                 ((FastThreadLocalThread) thread).willCleanupFastThreadLocals();
     }
+
+    /**
+     * Query whether this thread is allowed to perform blocking calls or not.
+     * {@link FastThreadLocalThread}s are often used in event-loops, where blocking calls are forbidden in order to
+     * prevent event-loop stalls, so this method returns {@code false} by default.
+     * <p>
+     * Subclasses of {@link FastThreadLocalThread} can override this method if they are not meant to be used for
+     * running event-loops.
+     *
+     * @return {@code false}, unless overriden by a subclass.
+     */
+    public boolean permitBlockingCalls() {
+        return false;
+    }
 }

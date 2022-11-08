@@ -190,6 +190,23 @@ public class NettyBlockHoundIntegrationTest {
     }
 
     @Test
+    void permittingBlockingCallsInFastThreadLocalThreadSubclass() throws Exception {
+        final FutureTask<Void> future = new FutureTask<>(() -> {
+            Thread.sleep(0);
+            return null;
+        });
+        FastThreadLocalThread thread = new FastThreadLocalThread(future) {
+            @Override
+            public boolean permitBlockingCalls() {
+                return true; // The Thread.sleep(0) call should not be flagged because we allow blocking calls.
+            }
+        };
+        thread.start();
+        future.get(5, TimeUnit.SECONDS);
+        thread.join();
+    }
+
+    @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testHashedWheelTimerStartStop() throws Exception {
         HashedWheelTimer timer = new HashedWheelTimer();
