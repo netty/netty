@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.channel.socket.InternetProtocolFamily.IPv4;
 import static io.netty.channel.socket.Tun4Packet.INET4_FLAGS_DONT_FRAGMENT_MASK;
 import static io.netty.channel.socket.Tun4Packet.INET4_FLAGS_MORE_FRAGMENTS_MASK;
 import static io.netty.channel.socket.Tun4Packet.INET4_TYPE_OF_SERVICE_DELAY_MASK;
@@ -96,7 +97,7 @@ public class Tun4PacketTest {
 
     @Test
     void testVersion() {
-        assertEquals(4, packet.version());
+        assertEquals(IPv4, packet.version());
     }
 
     @Test

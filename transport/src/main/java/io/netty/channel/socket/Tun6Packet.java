@@ -21,6 +21,8 @@ import io.netty.util.internal.StringUtil;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
 
+import static io.netty.channel.socket.InternetProtocolFamily.IPv6;
+
 /**
  * IPv6-based {@link TunPacket}.
  */
@@ -47,8 +49,8 @@ public class Tun6Packet extends TunPacket {
     }
 
     @Override
-    public int version() {
-        return content().getUnsignedByte(INET6_VERSION_AND_TRAFFIC_CLASS) >> 4;
+    public InternetProtocolFamily version() {
+        return IPv6;
     }
 
     public int trafficClass() {

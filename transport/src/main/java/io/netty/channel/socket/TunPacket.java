@@ -34,7 +34,7 @@ public abstract class TunPacket extends DefaultByteBufHolder {
     /**
      * Returns the IP version.
      */
-    public abstract int version();
+    public abstract InternetProtocolFamily version();
 
     /**
      * Returns the source address.

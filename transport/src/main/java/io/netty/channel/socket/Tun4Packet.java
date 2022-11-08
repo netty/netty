@@ -21,6 +21,8 @@ import io.netty.util.internal.StringUtil;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 
+import static io.netty.channel.socket.InternetProtocolFamily.IPv4;
+
 /**
  * IPv4-based {@link TunPacket}.
  */
@@ -63,8 +65,8 @@ public class Tun4Packet extends TunPacket {
     }
 
     @Override
-    public int version() {
-        return content().getUnsignedByte(INET4_VERSION_AND_INTERNET_HEADER_LENGTH) >> 4;
+    public InternetProtocolFamily version() {
+        return IPv4;
     }
 
     public int internetHeaderLength() {

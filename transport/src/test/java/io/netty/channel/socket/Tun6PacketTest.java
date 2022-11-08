@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.channel.socket.InternetProtocolFamily.IPv6;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -89,7 +90,7 @@ public class Tun6PacketTest {
 
     @Test
     void testVersion() {
-        assertEquals(6, packet.version());
+        assertEquals(IPv6, packet.version());
     }
 
     @Test
