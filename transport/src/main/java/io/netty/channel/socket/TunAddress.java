@@ -35,8 +35,6 @@ public class TunAddress extends SocketAddress {
 
     /**
      * Returns the name of the tun device.
-     *
-     * @return the name of the tun device
      */
     public String ifName() {
         return ifName;

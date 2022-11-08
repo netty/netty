@@ -33,22 +33,16 @@ public abstract class TunPacket extends DefaultByteBufHolder {
 
     /**
      * Returns the IP version.
-     *
-     * @return the IP version.
      */
     public abstract int version();
 
     /**
      * Returns the source address.
-     *
-     * @return the source address.
      */
     public abstract InetAddress sourceAddress();
 
     /**
      * Returns the destination address.
-     *
-     * @return the destination address.
      */
     public abstract InetAddress destinationAddress();
 }
