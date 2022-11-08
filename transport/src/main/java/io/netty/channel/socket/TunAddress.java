@@ -42,10 +42,6 @@ public class TunAddress extends SocketAddress {
 
     @Override
     public String toString() {
-        if (ifName == null) {
-            return "";
-        } else {
-            return ifName;
-        }
+        return "Tun Interface: " + ifName;
     }
 }

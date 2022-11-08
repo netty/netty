@@ -105,7 +105,7 @@ public final class TunEchoDevice {
                     });
             Channel ch = b.bind(new TunAddress(NAME)).syncUninterruptibly().channel();
 
-            String name = ch.localAddress().toString();
+            String name = ((TunAddress) ch.localAddress()).ifName();
             System.out.println("TUN device created: " + name);
 
             if (PlatformDependent.isOsx()) {
