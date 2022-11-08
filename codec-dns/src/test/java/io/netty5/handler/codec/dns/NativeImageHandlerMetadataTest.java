@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "codec-dns-handlers/reflect-config.json",
-                "io.netty5.handler.codec.dns");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty5.handler.codec.dns");
     }
 
 }
