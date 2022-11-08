@@ -64,6 +64,9 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                     }
                 }
             }
+            if (re != null) {
+            	throw re;
+            }
         }
 
         @Override
