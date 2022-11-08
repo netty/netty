@@ -25,10 +25,19 @@ public class TunAddress extends SocketAddress {
     private static final long serialVersionUID = -584786182484350484L;
     private final String ifName;
 
+    /**
+     * Creates a new instance.
+     * <p>
+     * If {@code ifName} is {@code null} the platform will select a free name when passed to
+     * {@link io.netty.channel.Channel#bind(SocketAddress)}.
+     */
     public TunAddress(String ifName) {
         this.ifName = ifName;
     }
 
+    /**
+     * Creates a new instance with {@code null} as {@link #ifName()}.
+     */
     public TunAddress() {
         this(null);
     }
