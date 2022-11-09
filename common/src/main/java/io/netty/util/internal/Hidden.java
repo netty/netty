@@ -170,7 +170,9 @@ class Hidden {
                         @Override
                         @SuppressJava6Requirement(reason = "Predicate#test")
                         public boolean test(Thread thread) {
-                            return p.test(thread) || thread instanceof FastThreadLocalThread;
+                            return p.test(thread) ||
+                                    thread instanceof FastThreadLocalThread &&
+                                            !((FastThreadLocalThread) thread).permitBlockingCalls();
                         }
                     };
                 }
