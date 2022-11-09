@@ -43,8 +43,8 @@ import static java.util.Objects.requireNonNull;
 public interface InternalBufferUtils {
     LongAdder MEM_USAGE_NATIVE = new LongAdder();
 
-    static Cleaner nextCleaner() {
-        return CleanerPool.INSTANCE.nextCleaner();
+    static Cleaner getCleaner() {
+        return CleanerPool.INSTANCE.getCleaner();
     }
 
     Drop<Buffer> NO_OP_DROP = new Drop<>() {

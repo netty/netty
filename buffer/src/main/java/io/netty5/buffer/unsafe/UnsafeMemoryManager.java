@@ -65,7 +65,7 @@ public final class UnsafeMemoryManager implements MemoryManager {
         final long address;
         final UnsafeMemory memory;
         final int size32 = Math.toIntExact(size);
-        Cleaner cleaner = InternalBufferUtils.nextCleaner();
+        Cleaner cleaner = InternalBufferUtils.getCleaner();
         Drop<Buffer> drop = InternalBufferUtils.NO_OP_DROP;
         if (allocationType == StandardAllocationTypes.OFF_HEAP) {
             base = null;
