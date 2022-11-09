@@ -26,7 +26,7 @@ public class TestServer {
             // TestServerInitializer 在 Channel 被注册时，就会创建调用
             serverBootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
-                    .handler(null) // 该handler 对应 bossGroup,childHandler 对应 workerGroup
+                    /*.handler(null) */// 该 handler 对应 bossGroup，childHandler 对应 workerGroup
                     .childHandler(new TestServerInitializer());
             // 绑定一个端口并且同步，生成一个 ChannelFuture 对象
             ChannelFuture channelFuture = serverBootstrap.bind(6669).sync();

@@ -11,12 +11,12 @@ import io.netty.util.CharsetUtil;
 import java.net.URI;
 
 /**
+ * 说明：
+ * 1. SimpleChannelInboundHandler 是 ChannelInboundHandlerAdapter
+ * 2. HttpObject 客户端和服务端相互通讯的数据被封装成 HttpObject
+ *
  * @author lxcecho 909231497@qq.com
  * @since 08.10.2021
- * <p>
- * 说明：
- * 1.SimpleChannelInboundHandler 是 ChannelInboundHandlerAdapter
- * 2.HttpObject 客户端和服务端相互通讯的数据被封装成 HttpObject
  */
 public class TestHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
     /*@Override
@@ -40,7 +40,7 @@ public class TestHttpServerHandler extends SimpleChannelInboundHandler<HttpObjec
     }*/
 
     /**
-     * 读取客户端数据
+     * 4 读取客户端数据
      *
      * @param channelHandlerContext
      * @param httpObject
@@ -49,17 +49,18 @@ public class TestHttpServerHandler extends SimpleChannelInboundHandler<HttpObjec
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, HttpObject httpObject) throws Exception {
         System.out.println("对应的 channel = " + channelHandlerContext.channel()
-                + " pipeline = " + channelHandlerContext.pipeline()
-                + " 通过pipeline获取channel = " + channelHandlerContext.pipeline().channel());
+                + "\npipeline = " + channelHandlerContext.pipeline()
+                + "\n通过pipeline获取channel = " + channelHandlerContext.pipeline().channel());
 
         System.out.println("当前ctx的handler = " + channelHandlerContext.handler());
 
-        //判断 msg 是不是 httpRequest 请求
+        System.out.println("httpObject 类型：" + httpObject.getClass());
+
+        // 判断 msg 是不是 httpRequest 请求
         if (httpObject instanceof HttpRequest) {
             System.out.println("ctx 类型：" + channelHandlerContext.getClass());
             System.out.println("pipeline hashCode：" + channelHandlerContext.pipeline().hashCode()
-                    + " TestHttpServerHandler hash:" + this.hashCode());
-            System.out.println("httpObject 类型：" + httpObject.getClass());
+                    + "\nTestHttpServerHandler hash:" + this.hashCode());
             System.out.println("客户端地址：" + channelHandlerContext.channel().remoteAddress());
 
             HttpRequest httpRequest = (HttpRequest) httpObject;
@@ -82,5 +83,75 @@ public class TestHttpServerHandler extends SimpleChannelInboundHandler<HttpObjec
         }
     }
 
+    /**
+     * 3 活动状态——上线
+     *
+     * @param ctx
+     * @throws Exception
+     */
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelActive");
+        super.channelActive(ctx);
+    }
 
+    /**
+     * 2 注册
+     *
+     * @param ctx
+     * @throws Exception
+     */
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelRegistered");
+        super.channelRegistered(ctx);
+    }
+
+    /**
+     * 5 非活跃状态——下线
+     *
+     * @param ctx
+     * @throws Exception
+     */
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelInactive");
+        super.channelInactive(ctx);
+    }
+
+    /**
+     * 6 注销
+     *
+     * @param ctx
+     * @throws Exception
+     */
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelUnregistered");
+        super.channelUnregistered(ctx);
+    }
+
+    /**
+     * 1 添加
+     *
+     * @param ctx
+     * @throws Exception
+     */
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("handlerAdded");
+        super.handlerAdded(ctx);
+    }
+
+    /**
+     * 7 移除
+     *
+     * @param ctx
+     * @throws Exception
+     */
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("handlerRemoved");
+        super.handlerRemoved(ctx);
+    }
 }
