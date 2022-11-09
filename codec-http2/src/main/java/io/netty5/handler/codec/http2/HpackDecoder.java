@@ -33,6 +33,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.headers.HeaderValidationException;
+import io.netty5.handler.codec.http.headers.HttpHeaderValidationUtil;
 import io.netty5.handler.codec.http2.HpackUtil.IndexType;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
@@ -535,7 +536,7 @@ final class HpackDecoder {
             try {
                 headers.add(name, value);
                 if (validateHeaders) {
-                    previousType = validateHeader(streamId, name, previousType);
+                    previousType = validateHeader(streamId, name, value, previousType);
                 }
             } catch (HeaderValidationException ex) {
                 validationException = streamError(streamId, PROTOCOL_ERROR, ex,
@@ -545,8 +546,8 @@ final class HpackDecoder {
             }
         }
 
-        private static HeaderType validateHeader(int streamId, AsciiString name, HeaderType previousHeaderType)
-                throws Http2Exception {
+        private static HeaderType validateHeader(int streamId, AsciiString name, AsciiString value,
+                HeaderType previousHeaderType) throws Http2Exception {
             if (hasPseudoHeaderFormat(name)) {
                 if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                     throw streamError(streamId, PROTOCOL_ERROR,
@@ -559,6 +560,14 @@ final class HpackDecoder {
                     throw streamError(streamId, PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
                 }
                 return currentHeaderType;
+            }
+            if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Illegal connection-specific header '%s' encountered.", name);
+            }
+            if (HttpHeaderValidationUtil.isTeNotTrailers(name, value)) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
             }
 
             return HeaderType.REGULAR_HEADER;
