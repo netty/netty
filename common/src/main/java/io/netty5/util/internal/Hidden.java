@@ -160,7 +160,9 @@ class Hidden {
             builder.allowBlockingCallsInside("io.netty5.util.internal.PlatformDependent", "createTempFile");
 
             builder.nonBlockingThreadPredicate(p -> thread ->
-                    p.test(thread) || thread instanceof FastThreadLocalThread);
+                    p.test(thread) ||
+                            thread instanceof FastThreadLocalThread &&
+                                    !((FastThreadLocalThread) thread).permitBlockingCalls());
         }
     }
 }
