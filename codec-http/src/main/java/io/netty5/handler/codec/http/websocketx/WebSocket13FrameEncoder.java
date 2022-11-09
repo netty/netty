@@ -100,7 +100,6 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final Buffer data = msg.binaryData();
-        byte[] mask;
 
         byte opcode;
         if (msg instanceof TextWebSocketFrame) {
@@ -172,28 +171,17 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskPayload) {
-                mask = new byte[4];
-                ThreadLocalRandom.current().nextBytes(mask);
-                buf.writeBytes(mask);
+                int mask = ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+                buf.writeInt(mask);
 
                 int counter = 0;
                 int i = data.readerOffset();
                 int end = data.writerOffset();
 
-                // Remark: & 0xFF is necessary because Java will do signed expansion from
-                // byte to int which we don't want.
-                int intMask = (mask[0] & 0xFF) << 24
-                              | (mask[1] & 0xFF) << 16
-                              | (mask[2] & 0xFF) << 8
-                              | mask[3] & 0xFF;
-
-                for (; i + 3 < end; i += 4) {
-                    int intData = data.getInt(i);
-                    buf.writeInt(intData ^ intMask);
-                }
+                int maskOffset = 0;
                 for (; i < end; i++) {
                     byte byteData = data.getByte(i);
-                    buf.writeByte((byte) (byteData ^ mask[counter++ % 4]));
+                    buf.writeByte((byte) (byteData ^ byteAtIndex(mask, maskOffset++ & 3)));
                 }
                 out.add(buf);
             } else {
@@ -212,5 +200,9 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
             }
             throw t;
         }
+    }
+
+    private static int byteAtIndex(int mask, int index) {
+        return (mask >> 8 * (3 - index)) & 0xFF;
     }
 }
