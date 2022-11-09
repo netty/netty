@@ -20,6 +20,8 @@ import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Map.Entry;
 
@@ -188,6 +190,15 @@ public class DefaultHttp2HeadersTest {
         assertEquals(of("101"), headers.status());
         assertEquals(of("github.com"), headers.authority());
         assertEquals(of("http"), headers.scheme());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] name={0} value={1}")
+    @CsvSource(value = {"upgrade,protocol1", "connection,close", "keep-alive,timeout=5", "proxy-connection,close",
+            "transfer-encoding,chunked", "te,something-else"})
+    void possibleToAddConnectionHeaders(String name, String value) {
+        Http2Headers headers = newHeaders();
+        headers.add(name, value);
+        assertTrue(headers.contains(name, value));
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {

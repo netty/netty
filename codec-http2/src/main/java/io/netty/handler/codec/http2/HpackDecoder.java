@@ -32,6 +32,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
 
@@ -375,8 +376,8 @@ final class HpackDecoder {
         hpackDynamicTable.setCapacity(dynamicTableSize);
     }
 
-    private static HeaderType validateHeader(int streamId, AsciiString name, HeaderType previousHeaderType)
-            throws Http2Exception {
+    private static HeaderType validateHeader(int streamId, AsciiString name, CharSequence value,
+            HeaderType previousHeaderType) throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                 throw streamError(streamId, PROTOCOL_ERROR,
@@ -390,42 +391,15 @@ final class HpackDecoder {
             }
             return currentHeaderType;
         }
+        if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
+            throw streamError(streamId, PROTOCOL_ERROR, "Illegal connection-specific header '%s' encountered.", name);
+        }
+        if (HttpHeaderValidationUtil.isTeNotTrailers(name, value)) {
+            throw streamError(streamId, PROTOCOL_ERROR,
+                    "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+        }
 
         return HeaderType.REGULAR_HEADER;
-    }
-
-    private static boolean contains(Http2Headers headers, AsciiString name) {
-        if (headers == EmptyHttp2Headers.INSTANCE) {
-            return false;
-        }
-        if (headers instanceof DefaultHttp2Headers || headers instanceof ReadOnlyHttp2Headers) {
-            return headers.contains(name);
-        }
-        // We can't be sure the Http2Headers implementation support contains on pseudo-headers,
-        // so we have to use the direct accessors instead.
-        if (Http2Headers.PseudoHeaderName.METHOD.value().equals(name)) {
-            return headers.method() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.SCHEME.value().equals(name)) {
-            return headers.scheme() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.AUTHORITY.value().equals(name)) {
-            return headers.authority() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.PATH.value().equals(name)) {
-            return headers.path() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.STATUS.value().equals(name)) {
-            return headers.status() != null;
-        }
-        // Note: We don't check PROTOCOL because the API presents no alternative way to access it.
-        return false;
-    }
-
-    private static Http2Exception illegalHeaderValue(int streamId, AsciiString name, int illegalByte, int index) {
-        return streamError(streamId, PROTOCOL_ERROR,
-                "Illegal header value given for header '%s': illegal byte 0x%X at index %s.",
-                name, illegalByte, index);
     }
 
     private AsciiString readName(int index) throws Http2Exception {
@@ -578,7 +552,7 @@ final class HpackDecoder {
             try {
                 headers.add(name, value);
                 if (validateHeaders) {
-                    previousType = validateHeader(streamId, name, previousType);
+                    previousType = validateHeader(streamId, name, value, previousType);
                 }
             } catch (IllegalArgumentException ex) {
                 validationException = streamError(streamId, PROTOCOL_ERROR, ex,
