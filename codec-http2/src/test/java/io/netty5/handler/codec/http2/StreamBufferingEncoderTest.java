@@ -221,14 +221,13 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
-        try (Buffer empty = empty()) {
-            encoder.writeData(ctx, 3, empty, 0, false);
-            writeVerifyWriteHeaders(times(1), 3);
-            // data is cached in pendingStream.frames
-            encoder.writeData(ctx, 5, empty, 0, false);
-            verify(writer, never())
-                    .writeData(eq(ctx), eq(5), any(Buffer.class), eq(0), eq(false));
-        }
+        Buffer empty = empty(); // Will be closed with the encoder.
+        encoder.writeData(ctx, 3, empty, 0, false);
+        writeVerifyWriteHeaders(times(1), 3);
+        // data is cached in pendingStream.frames
+        encoder.writeData(ctx, 5, empty, 0, false);
+        verify(writer, never())
+                .writeData(eq(ctx), eq(5), any(Buffer.class), eq(0), eq(false));
     }
 
     @Test
