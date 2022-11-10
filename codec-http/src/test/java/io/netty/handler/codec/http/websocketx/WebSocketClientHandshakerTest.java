@@ -43,7 +43,6 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
@@ -52,10 +51,10 @@ import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS
 import static io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker13.WEBSOCKET_13_ACCEPT_GUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -216,15 +215,9 @@ public abstract class WebSocketClientHandshakerTest {
         final ChannelFuture handshakeFuture = handshaker.handshake(channel);
 
         assertFalse(handshakeFuture.isSuccess());
-        Throwable exception = assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                throw handshakeFuture.cause();
-            }
-        });
-
+        assertInstanceOf(IllegalArgumentException.class, handshakeFuture.cause());
         assertEquals("Cannot generate the 'host' header value, webSocketURI should contain host" +
-                     " or passed through customHeaders", exception.getMessage());
+                     " or passed through customHeaders", handshakeFuture.cause().getMessage());
         assertFalse(channel.finish());
     }
 
@@ -238,16 +231,10 @@ public abstract class WebSocketClientHandshakerTest {
         final ChannelFuture handshakeFuture = handshaker.handshake(channel);
 
         assertFalse(handshakeFuture.isSuccess());
-        Throwable exception = assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                throw handshakeFuture.cause();
-            }
-        });
-
+        assertInstanceOf(IllegalArgumentException.class, handshakeFuture.cause());
         assertEquals("Cannot generate the '" + getOriginHeaderName() + "' header value," +
                      " webSocketURI should contain host or disable generateOriginHeader" +
-                     " or pass value through customHeaders", exception.getMessage());
+                     " or pass value through customHeaders", handshakeFuture.cause().getMessage());
         assertFalse(channel.finish());
     }
 
