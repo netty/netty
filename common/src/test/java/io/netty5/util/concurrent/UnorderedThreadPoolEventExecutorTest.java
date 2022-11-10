@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,10 +35,23 @@ public class UnorderedThreadPoolEventExecutorTest {
         UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
 
         try {
+            // Having the first task wait on an exchanger allow us to make sure that the lister on the second task
+            // is not added *after* the promise completes. We need to do this to prevent a race where the second task
+            // and listener are completed before the DefaultPromise.NotifyListeners task get to run, which means our
+            // queue inspection might observe this task after the CountDownLatch opens.
+            Exchanger<Void> exchanger = new Exchanger<>();
             final CountDownLatch latch = new CountDownLatch(3);
             Runnable task = latch::countDown;
-            executor.execute(task);
+            executor.execute(() -> {
+                try {
+                    exchanger.exchange(null);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                latch.countDown();
+            });
             Future<?> future = executor.submit(task).addListener((FutureListener<Object>) future1 -> latch.countDown());
+            exchanger.exchange(null);
             latch.await();
             future.asStage().sync();
 
