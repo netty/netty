@@ -17,6 +17,8 @@ package io.netty.example.tun;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -36,8 +38,10 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 
 import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
+import static io.netty.channel.epoll.EpollTunChannelOption.IFF_MULTI_QUEUE;
 import static io.netty.channel.kqueue.KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS;
 import static io.netty.channel.socket.TunChannelOption.TUN_MTU;
 
@@ -61,10 +65,13 @@ import static io.netty.channel.socket.TunChannelOption.TUN_MTU;
  * </pre>
  */
 public final class TunEchoDevice {
+    private static final Echo4Handler ECHO_4_HANDLER = new Echo4Handler();
+    private static final Echo6Handler ECHO_6_HANDLER = new Echo6Handler();
     static final String NAME = System.getProperty("name", null);
     static final InetAddress ADDRESS;
     static final int NETMASK = Integer.parseInt(System.getProperty("netmask", "24"));
     static final int MTU = Integer.parseInt(System.getProperty("mtu", "1500"));
+    static final int QUEUES = Integer.parseInt(System.getProperty("queues", "1"));
 
     static {
         try {
@@ -78,10 +85,13 @@ public final class TunEchoDevice {
         EventLoopGroup group;
         Class<? extends Channel> channelClass;
         if (KQueue.isAvailable()) {
+            if (QUEUES > 0) {
+                throw new RuntimeException("Parallel reading and writing is only supported with epoll");
+            }
             group = new KQueueEventLoopGroup(1);
             channelClass = KQueueTunChannel.class;
         } else if (Epoll.isAvailable()) {
-            group = new EpollEventLoopGroup(1);
+            group = new EpollEventLoopGroup(QUEUES);
             channelClass = EpollTunChannel.class;
         } else {
             throw new RuntimeException("Unsupported platform: Neither kqueue nor epoll are available");
@@ -93,41 +103,62 @@ public final class TunEchoDevice {
                     .channel(channelClass)
                     .option(TUN_MTU, MTU)
                     .option(RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(MTU)) // used by epoll
+                    .option(IFF_MULTI_QUEUE, QUEUES > 1) // used by epoll
                     .option(RCV_ALLOC_TRANSPORT_PROVIDES_GUESS, true) // used by kqueue
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
                             ChannelPipeline p = ch.pipeline();
 
-                            p.addLast(new Echo4Handler());
-                            p.addLast(new Echo6Handler());
+                            p.addLast(ECHO_4_HANDLER);
+                            p.addLast(ECHO_6_HANDLER);
                         }
                     });
-            Channel ch = b.bind(new TunAddress(NAME)).syncUninterruptibly().channel();
+            TunAddress address = new TunAddress(NAME);
+            final CountDownLatch latch = new CountDownLatch(QUEUES);
+            for (int i = 0; i < QUEUES; i++) {
+                Channel ch = b.bind(address).syncUninterruptibly().channel();
+                ch.closeFuture().addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(final ChannelFuture future) {
+                        latch.countDown();
+                        if (future.cause() != null) {
+                            future.cause().printStackTrace();
+                        }
+                    }
+                });
+                System.out.println("TUN device created: " + ch.localAddress());
 
-            String name = ((TunAddress) ch.localAddress()).ifName();
-            System.out.println("TUN device created: " + name);
+                if (i == 0) {
+                    // reuse tun address for any further devices
+                    address = (TunAddress) ch.localAddress();
 
-            if (PlatformDependent.isOsx()) {
-                if (ADDRESS instanceof Inet6Address) {
-                    exec("/sbin/ifconfig", name, "inet6", "add", ADDRESS.getHostAddress() + "/" + NETMASK);
-                    exec("/sbin/route", "add", "-inet6", ADDRESS.getHostAddress(), "-iface", name);
-                } else {
-                    exec("/sbin/ifconfig", name, "add", ADDRESS.getHostAddress(), ADDRESS.getHostAddress());
-                    exec("/sbin/route", "add", "-net", ADDRESS.getHostAddress() + '/' + NETMASK, "-iface", name);
+                    String name = address.ifName();
+                    System.out.println("TUN device created: " + name);
+
+                    if (PlatformDependent.isOsx()) {
+                        if (ADDRESS instanceof Inet6Address) {
+                            exec("/sbin/ifconfig", name, "inet6", "add", ADDRESS.getHostAddress() + "/" + NETMASK);
+                            exec("/sbin/route", "add", "-inet6", ADDRESS.getHostAddress(), "-iface", name);
+                        } else {
+                            exec("/sbin/ifconfig", name, "add", ADDRESS.getHostAddress(), ADDRESS.getHostAddress());
+                            exec("/sbin/route", "add", "-net", ADDRESS.getHostAddress() + '/' + NETMASK, "-iface",
+                                    name);
+                        }
+                    } else if (!PlatformDependent.isWindows()) {
+                        String version = ADDRESS instanceof Inet6Address ? "-6" : "-4";
+                        exec("/sbin/ip", version, "addr", "add", ADDRESS.getHostAddress() + '/' + NETMASK, "dev",
+                                name);
+                        exec("/sbin/ip", "link", "set", "dev", name, "up");
+                    }
+
+                    System.out.println("Address and netmask assigned: " + ADDRESS.getHostAddress() + '/' + NETMASK);
+                    System.out.println("All IP packets addressed to this subnet "
+                            + (PlatformDependent.isOsx() ? "" : "(except for " + ADDRESS.getHostAddress() + ") ")
+                            + "should now be echoed back.");
                 }
-            } else if (!PlatformDependent.isWindows()) {
-                String version = ADDRESS instanceof Inet6Address ? "-6" : "-4";
-                exec("/sbin/ip", version, "addr", "add", ADDRESS.getHostAddress() + '/' + NETMASK, "dev", name);
-                exec("/sbin/ip", "link", "set", "dev", name, "up");
             }
-
-            System.out.println("Address and netmask assigned: " + ADDRESS.getHostAddress() + '/' + NETMASK);
-            System.out.println("All IP packets addressed to this subnet "
-                    + (PlatformDependent.isOsx() ? "" : "(except for " + ADDRESS.getHostAddress() + ") ")
-                    + "should now be echoed back.");
-
-            ch.closeFuture().syncUninterruptibly();
+            latch.await();
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {

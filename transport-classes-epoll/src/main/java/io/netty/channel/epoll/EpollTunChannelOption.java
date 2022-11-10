@@ -13,25 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket;
+package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.TunChannelOption;
 
 /**
- * Provides {@link ChannelOption}s for {@link TunChannel}s.
+ * Provides {@link ChannelOption}s for {@link EpollTunChannel}s.
  */
-public class TunChannelOption<T> extends ChannelOption<T> {
+public final class EpollTunChannelOption<T> extends TunChannelOption<T> {
     /**
-     * Defines MTU for the created tun device.
+     * Enables/Disables the IFF_MULTI_QUEUE flag.
      * <p>
-     * Increasing the MTU may also require you to adjust {@link #RCVBUF_ALLOCATOR}.
-     * It is necessary, that the {@link #RCVBUF_ALLOCATOR} always yields buffers that can hold a complete IP packet.
-     * <p>
-     * If kqueue is used, buffers capacity must be at least 4 bytes greater than the MTU.
+     * If enabled, multiple {@link EpollTunChannel}s can be assigned to the same device to parallelize
+     * packet sending or receiving.
      */
-    public static final ChannelOption<Integer> TUN_MTU = valueOf("TUN_MTU");
-
-    protected TunChannelOption() {
-        super(null);
-    }
+    public static final ChannelOption<Boolean> IFF_MULTI_QUEUE = valueOf("IFF_MULTI_QUEUE");
 }

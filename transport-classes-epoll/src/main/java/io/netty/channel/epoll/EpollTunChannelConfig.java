@@ -19,14 +19,32 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.socket.TunChannelConfig;
+import io.netty.channel.socket.TunChannelOption;
 
+import static io.netty.channel.epoll.EpollTunChannelOption.IFF_MULTI_QUEUE;
 import static io.netty.channel.socket.TunChannelOption.TUN_MTU;
 
 /**
  * A {@link ChannelConfig} for a {@link EpollTunChannel}.
+ *
+ * <h3>Available options</h3>
+ * <p>
+ * In addition to the options provided by {@link ChannelConfig}, {@link TunChannelConfig} allows the
+ * following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@link EpollTunChannelOption#TUN_MTU}</td><td>{@link #setMtu(int)}</td>
+ * </tr><tr>
+ * <td>{@link EpollTunChannelOption#IFF_MULTI_QUEUE}</td><td>{@link #setMultiqueue(boolean)}</td>
+ * </tr>
+ * </table>
  */
 public class EpollTunChannelConfig extends EpollChannelConfig implements TunChannelConfig {
     private int mtu;
+    private boolean multiqueue;
 
     EpollTunChannelConfig(AbstractEpollChannel channel) {
         super(channel, new FixedRecvByteBufAllocator(2048));
@@ -38,6 +56,9 @@ public class EpollTunChannelConfig extends EpollChannelConfig implements TunChan
         if (option == TUN_MTU) {
             return (T) Integer.valueOf(getMtu());
         }
+        if (option == IFF_MULTI_QUEUE) {
+            return (T) Boolean.valueOf(isMultiqueue());
+        }
         return super.getOption(option);
     }
 
@@ -46,6 +67,8 @@ public class EpollTunChannelConfig extends EpollChannelConfig implements TunChan
         if (!super.setOption(option, value)) {
             if (option == TUN_MTU) {
                 setMtu((Integer) value);
+            } else if (option == IFF_MULTI_QUEUE) {
+                setMultiqueue((Boolean) value);
             } else {
                 return false;
             }
@@ -64,6 +87,15 @@ public class EpollTunChannelConfig extends EpollChannelConfig implements TunChan
             throw new IllegalArgumentException("mtu must be non-negative.");
         }
         this.mtu = mtu;
+        return this;
+    }
+
+    public boolean isMultiqueue() {
+        return multiqueue;
+    }
+
+    public TunChannelConfig setMultiqueue(boolean multiqueue) {
+        this.multiqueue = multiqueue;
         return this;
     }
 }

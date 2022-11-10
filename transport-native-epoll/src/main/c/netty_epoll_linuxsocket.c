@@ -22,6 +22,7 @@
 #define _GNU_SOURCE
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -638,7 +639,7 @@ static jint netty_epoll_linuxsocket_openTunFd(JNIEnv* env) {
     return open("/dev/net/tun", O_RDWR | O_NONBLOCK);
 }
 
-static jstring netty_epoll_linuxsocket_bindTun(JNIEnv* env, jclass clazz, jint fd, jstring name) {
+static jstring netty_epoll_linuxsocket_bindTun(JNIEnv* env, jclass clazz, jint fd, jstring name, jboolean multiqueue) {
     // mark as tun device
     struct ifreq ifr;
     memset(&ifr, 0, sizeof(ifr));
@@ -647,6 +648,9 @@ static jstring netty_epoll_linuxsocket_bindTun(JNIEnv* env, jclass clazz, jint f
         const char* f_name = (*env)->GetStringUTFChars(env, name, 0);
         strncpy(ifr.ifr_name, f_name, IFNAMSIZ);
         (*env)->ReleaseStringUTFChars(env, name, f_name);
+    }
+    if (multiqueue) {
+        ifr.ifr_flags |= IFF_MULTI_QUEUE;
     }
 
     if (ioctl(fd, TUNSETIFF, &ifr) == -1) {
@@ -766,7 +770,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "isUdpGro", "(I)I", (void *) netty_epoll_linuxsocket_isUdpGro },
   { "setUdpGro", "(II)V", (void *) netty_epoll_linuxsocket_setUdpGro },
   { "newSocketTunFd", "()I", (void *) netty_epoll_linuxsocket_openTunFd },
-  { "bindTun", "(ILjava/lang/String;)Ljava/lang/String;", (void *) netty_epoll_linuxsocket_bindTun },
+  { "bindTun", "(ILjava/lang/String;Z)Ljava/lang/String;", (void *) netty_epoll_linuxsocket_bindTun },
   { "getMtu0", "(Ljava/lang/String;)I", (void *) netty_epoll_linuxsocket_getMtu },
   { "setMtu0", "(Ljava/lang/String;I)I", (void *) netty_epoll_linuxsocket_setMtu }
 

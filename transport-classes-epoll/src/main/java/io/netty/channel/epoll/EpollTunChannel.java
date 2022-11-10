@@ -36,6 +36,7 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
+import static io.netty.channel.epoll.EpollTunChannelOption.IFF_MULTI_QUEUE;
 import static io.netty.channel.epoll.LinuxSocket.newSocketTun;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.socket.TunChannelOption.TUN_MTU;
@@ -238,7 +239,8 @@ public class EpollTunChannel extends AbstractEpollChannel implements TunChannel 
     @Override
     protected void doBind(SocketAddress local) throws Exception {
         // TUN device must be bound before adding to EpollEventLoop
-        this.local = socket.bindTun(local);
+        final boolean multiqueue = config.getOption(IFF_MULTI_QUEUE);
+        this.local = socket.bindTun(local, multiqueue);
         super.doRegister();
         active = true;
 
