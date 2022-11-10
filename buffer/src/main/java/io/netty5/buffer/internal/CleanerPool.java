@@ -172,13 +172,13 @@ final class CleanerPool {
 
         @Override
         protected Cleaner initialValue() {
-            if (! EVENT_LOOP_USE_POOL && ThreadExecutorMap.currentExecutor() != null) {
+            if (!EVENT_LOOP_USE_POOL && ThreadExecutorMap.currentExecutor() != null) {
                 // Allocate one dedicated cleaner for the caller event-loop thread
                 return createCleaner();
-            } else {
-                // Return one of the shared cleaners from the shared cleaner pool.
-                return CleanersPool.cleaners[(counter.getAndIncrement() & 0x7F_FF_FF_FF) % POOL_SIZE];
             }
+
+            // Return one of the shared cleaners from the shared cleaner pool.
+            return CleanersPool.cleaners[(counter.getAndIncrement() & 0x7F_FF_FF_FF) % POOL_SIZE];
         }
     }
 
