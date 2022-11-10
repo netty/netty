@@ -404,6 +404,22 @@ public class HpackDecoderTest {
     }
 
     @Test
+    public void testDynamicTableSizeUpdateAfterTheBeginingOfTheBlock() throws Http2Exception {
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode("8120");
+            }
+        });
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode("813FE11F");
+            }
+        });
+    }
+
+    @Test
     public void testLiteralWithIncrementalIndexingWithEmptyName() throws Http2Exception {
         decode("400005" + hex("value"));
         verify(mockHeaders, times(1)).add(EMPTY_STRING, of("value"));
