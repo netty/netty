@@ -94,7 +94,8 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             clientConfig.performMasking(),
             clientConfig.allowMaskMismatch(),
             clientConfig.forceCloseTimeoutMillis(),
-            clientConfig.absoluteUpgradeUrl()
+            clientConfig.absoluteUpgradeUrl(),
+            clientConfig.generateOriginHeader()
         );
         this.clientConfig = clientConfig;
     }
