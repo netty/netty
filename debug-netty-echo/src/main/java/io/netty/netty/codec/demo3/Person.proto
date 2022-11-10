@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package io.netty.netty.codec.demo3;
+
+option optimize_for = SPEED;
+option java_package = "io.netty.netty.codec.demo3";
+option java_outer_classname = "PersonInfo";
+
+message Person {
+
+  string name = 1;
+
+  int32 age = 2;
+
+  string address = 3;
+
+}

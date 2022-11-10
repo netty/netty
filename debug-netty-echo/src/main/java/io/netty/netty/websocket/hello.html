@@ -10,7 +10,7 @@
     // 判断当前浏览器是否支持 websocket
     if (window.WebSocket) {
         // go on
-        socket = new WebSocket("ws://localhost/hello");
+        socket = new WebSocket("ws://localhost:7000/hello");
         // 相当于 channelRead0，ev 收到服务器端回送的消息
         socket.onmessage = function (ev) {
             var rt = document.getElementById("responseText");
@@ -38,7 +38,7 @@
             // 先判断 socket 是否创建好
             return;
         }
-        if (socket.readyState == WebSocket.OPEN) {
+        if (socket.readyState === WebSocket.OPEN) {
             // 通过 socket 发送消息
             socket.send(message);
         } else {

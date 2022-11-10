@@ -1,8 +1,7 @@
-package io.netty.netty.websocket;
+package io.netty.netty.codec.demo3;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -10,19 +9,13 @@ import io.netty.handler.logging.LoggingHandler;
 
 /**
  * @author lxcecho 909231497@qq.com
- * @since 12.12.2021
+ * @since 23:04 10-11-2022
  */
-public class MyServer {
+public class ProtoServer {
 
-    private final int port;
-
-    public MyServer(int port) {
-        this.port = port;
-    }
-
-    public void run() {
+    public static void main(String[] args) throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup(); //8
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -30,20 +23,14 @@ public class MyServer {
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new MyServerInitializer());
+                    .childHandler(new ProtoServerInitializer());
 
-            ChannelFuture channelFuture = bootstrap.bind(port).sync();
-            channelFuture.channel().closeFuture().sync();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            ChannelFuture cf = bootstrap.bind(8090).sync();
+
+            cf.channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
     }
-
-    public static void main(String[] args) {
-        new MyServer(7000).run();
-    }
-
 }
