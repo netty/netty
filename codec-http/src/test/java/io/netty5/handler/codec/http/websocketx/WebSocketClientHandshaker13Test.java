@@ -35,10 +35,15 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
 
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
-                                                      boolean absoluteUpgradeUrl) {
+                                                      boolean absoluteUpgradeUrl, boolean generateOriginHeader) {
         return new WebSocketClientHandshaker13(uri, subprotocol, false, headers,
                                                1024, true, true, 10000,
-                                               absoluteUpgradeUrl);
+                                               absoluteUpgradeUrl, generateOriginHeader);
+    }
+
+    @Override
+    protected CharSequence getOriginHeaderName() {
+        return HttpHeaderNames.ORIGIN;
     }
 
     @Override
@@ -60,7 +65,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
     @Test
     void testWebSocketClientInvalidUpgrade() {
         var handshaker = newHandshaker(URI.create("ws://localhost:9999/ws"), null,
-                                       null, false);
+                                       null, false, true);
         var response = websocketUpgradeResponse();
         response.headers().remove(HttpHeaderNames.UPGRADE);
 
@@ -78,7 +83,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
     @Test
     void testWebSocketClientInvalidConnection() {
         var handshaker = newHandshaker(URI.create("ws://localhost:9999/ws"), null,
-                                       null, false);
+                                       null, false, true);
         var response = websocketUpgradeResponse();
         response.headers().set(HttpHeaderNames.CONNECTION, "Close");
 
@@ -96,7 +101,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
     @Test
     void testWebSocketClientInvalidNullAccept() {
         var handshaker = newHandshaker(URI.create("ws://localhost:9999/ws"), null,
-                                       null, false);
+                                       null, false, true);
         var response = websocketUpgradeResponse();
 
         final WebSocketClientHandshakeException exception;
@@ -113,7 +118,7 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTe
     @Test
     void testWebSocketClientInvalidExpectedAccept() {
         var handshaker = newHandshaker(URI.create("ws://localhost:9999/ws"), null,
-                                       null, false);
+                                       null, false, true);
         final CharSequence sentNonce;
         try (var request = handshaker.newHandshakeRequest(preferredAllocator())) {
             sentNonce = request.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
