@@ -21,12 +21,7 @@ import io.netty5.util.internal.ThreadExecutorMap;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.ref.Cleaner;
-import java.util.Optional;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
@@ -50,8 +45,6 @@ import java.util.stream.IntStream;
  *     Cleaner to be used by all event-loop/external threads (using io.netty5.cleanerpool.eventloop.usepool=true and
  *     io.netty5.cleanerpool.size=1). if set to false, it means all event-loop threads will be assigned to a dedicated
  *     Cleaner instance, so the pool won't be used in this case.</li>
- *     <li>-Dio.netty5.cleanerpool.vthread: boolean (default=false). If "true", and if the platform supports loom,
- *     then the Cleaners will be allocated using a ThreadFactory that returns virtual threads.</li>
  * </ul>
  */
 final class CleanerPool {
@@ -88,35 +81,6 @@ final class CleanerPool {
     private static final boolean EVENT_LOOP_USE_POOL = SystemPropertyUtil.getBoolean(CNF_EVENT_LOOP_USE_POOL, false);
 
     /**
-     * System property used to configure whether virtual threads should be used as cleaner daemon threads
-     * (default=false)
-     * if this property is set to true, and if the platform supports loom, then the Cleaners
-     * will be created using virtual ThreadFactory obtained from Thread.ofVirtual().factory() method.
-     */
-    private static final String CNF_USE_VTHREAD = "io.netty5.cleanerpool.vthread";
-
-    /**
-     * If platform supports loom, then use virtual threads for cleaner daemon threads.
-     * @see #CNF_USE_VTHREAD
-     */
-    private static final boolean USE_VTHREAD = SystemPropertyUtil.getBoolean(CNF_USE_VTHREAD, false);
-
-    /**
-     * Method handle used to optionally load Virtual ThreadFactory if the current platform is supporting Loom.
-     */
-    private static final MethodHandles.Lookup publicLookup = MethodHandles.publicLookup();
-
-    /**
-     * Method handle for Thread.ofVirtual() method. Null in case jvm version is < 19
-     */
-    private static final MethodHandle mhOfVirtual;
-
-    /**
-     * Method handle for java.lang.Thread.Builder.OfVirtual.factory() method. Null in case jvm version is < 19
-     */
-    private static final MethodHandle mhFactory;
-
-    /**
      * Cleaner instances shared by all external threads, and optionally by event-loop threads
      * These cleaners are wrapped in a static inner class for lazy initialization purpose.
      */
@@ -133,31 +97,6 @@ final class CleanerPool {
      * For external threads, a cleaner is always returned from the shared fixed cleaner pool in a round-robin way.
      */
     private final CleanerThreadLocal threadLocalCleaner = new CleanerThreadLocal();
-
-    /**
-     * Setup Method Handles that are used to obtain loom virtual ThreadFactory (if the platform supports it).
-     */
-    static {
-        MethodHandle mhOfVirtualTmp = null;
-        MethodHandle mhFactoryTmp = null;
-
-        if (USE_VTHREAD) {
-            try {
-                Class<?> clzOfVirtual = Class.forName("java.lang.Thread$Builder$OfVirtual");
-                mhOfVirtualTmp = publicLookup.findStatic(Thread.class, "ofVirtual",
-                        MethodType.methodType(clzOfVirtual));
-                mhFactoryTmp = publicLookup.findVirtual(clzOfVirtual, "factory",
-                        MethodType.methodType(ThreadFactory.class));
-            } catch (ClassNotFoundException e) {
-                logger.debug("Loom not supported, Cleaner will use default cleaner daemon threads.");
-            } catch (Throwable t) {
-                logger.warn("Could not create virtual thread factory, will use default cleaner daemon threads.", t);
-            }
-        }
-
-        mhOfVirtual = mhOfVirtualTmp;
-        mhFactory = mhFactoryTmp;
-    }
 
     /**
      * The singleton for the CleanerPool.
@@ -183,11 +122,9 @@ final class CleanerPool {
     }
 
     private CleanerPool() {
-        logger.debug("Instantiating CleanerPool: {}={}, {}={}, {}={}, using vthreads={}",
+        logger.debug("Instantiating CleanerPool: {}={}, {}={}",
                 CNF_EVENT_LOOP_USE_POOL, EVENT_LOOP_USE_POOL,
-                CNF_POOL_SIZE, POOL_SIZE,
-                CNF_USE_VTHREAD, USE_VTHREAD,
-                mhFactory != null);
+                CNF_POOL_SIZE, POOL_SIZE);
     }
 
     /**
@@ -198,47 +135,21 @@ final class CleanerPool {
         return threadLocalCleaner.get();
     }
 
+    /**
+     * Creates a Cleaner instance.
+     */
+    private static Cleaner createCleaner() {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Creating cleaner.");
+        }
+        return Cleaner.create();
+    }
+
     private static int getPoolSize(int defSize) {
         int poolSize = SystemPropertyUtil.getInt(CNF_POOL_SIZE, defSize);
         if (poolSize < 0) {
             throw new IllegalArgumentException(CNF_POOL_SIZE + " is negative: " + poolSize);
         }
         return poolSize == 0 ? Runtime.getRuntime().availableProcessors() : poolSize;
-    }
-
-    /**
-     * Creates a cleaner initialized with a virtual ThreadFactory if the platform supports loom,
-     * else creates a normal Cleaner with default cleaner daemon thread.
-     */
-    private static Cleaner createCleaner() {
-        Optional<ThreadFactory> virtualThreadFactory = getVirtualThreadFactory();
-
-        if (logger.isDebugEnabled()) {
-            virtualThreadFactory.ifPresentOrElse(
-                    threadFactory -> logger.debug("Creating cleaner with virtual thread factory"),
-                    () -> logger.debug("Creating cleaner with default cleaner daemon thread"));
-        }
-
-        // If Loom is supported, return a cleaner based on virtual threads, else
-        // return a normal cleaner that will use a default daemon thread.
-        Optional<Cleaner> virtualCleaner = virtualThreadFactory.map(Cleaner::create);
-        return virtualCleaner.orElse(Cleaner.create());
-    }
-
-    /**
-     * Returns an optional Virtual Thread Factory in case Loom is supported.
-     */
-    private static Optional<ThreadFactory> getVirtualThreadFactory() {
-        if (!USE_VTHREAD || mhOfVirtual == null) {
-            return Optional.empty();
-        }
-
-        try {
-            ThreadFactory threadFactory = (ThreadFactory) mhFactory.invoke(mhOfVirtual.invoke());
-            return Optional.of(threadFactory);
-        } catch (Throwable t) {
-            logger.warn("Could not create virtual thread factory, will use default cleaner daemon threads.", t);
-            return Optional.empty();
-        }
     }
 }

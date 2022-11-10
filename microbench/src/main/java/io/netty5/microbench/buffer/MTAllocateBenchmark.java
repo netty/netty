@@ -63,8 +63,6 @@ public class MTAllocateBenchmark extends AbstractMicrobenchmark {
                 "-Dio.netty5.leakDetection.level=disabled",
                 "-Dio.netty5.buffer.leakDetectionEnabled=false",
                 "-Dio.netty5.buffer.lifecycleTracingEnabled=false",
-                // in case java19+ and loom is used
-                "--enable-preview",
                 // size of the shared cleaner pool used only by external threads (0=number of available processors)
                 "-Dio.netty5.cleanerpool.size=0",
         };
