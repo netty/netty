@@ -146,7 +146,7 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
-    public void inflightFrameAfterStreamResetShouldNotMakeConnectionUnusable() throws Exception {
+    public void unknownStreamShouldGoAway() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {
             @Override
@@ -170,8 +170,8 @@ public class Http2ConnectionRoundtripTest {
                 latch.countDown();
                 return null;
             }
-        }).when(clientListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), any(Http2Headers.class),
-                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+        }).when(serverListener).onGoAwayRead(any(ChannelHandlerContext.class), any(Integer.class), any(Long.class),
+            any(ByteBuf.class));
 
         bootstrapEnv(1, 1, 2, 1);
 
@@ -184,14 +184,6 @@ public class Http2ConnectionRoundtripTest {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, weight, false, 0, false, newPromise());
                 http2Client.flush(ctx());
                 http2Client.encoder().writeRstStream(ctx(), 3, Http2Error.INTERNAL_ERROR.code(), newPromise());
-                http2Client.flush(ctx());
-            }
-        });
-
-        runInChannel(clientChannel, new Http2Runnable() {
-            @Override
-            public void run() throws Http2Exception {
-                http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, weight, false, 0, false, newPromise());
                 http2Client.flush(ctx());
             }
         });
@@ -487,6 +479,16 @@ public class Http2ConnectionRoundtripTest {
     public void headersUsingHigherValuedStreamIdPreventsUsingLowerStreamId() throws Exception {
         bootstrapEnv(1, 1, 2, 0);
 
+        final CountDownLatch clientGoAwayLatch = new CountDownLatch(1);
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                clientGoAwayLatch.countDown();
+                return null;
+            }
+        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
+
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
@@ -507,13 +509,12 @@ public class Http2ConnectionRoundtripTest {
         verify(serverListener, never()).onHeadersRead(any(ChannelHandlerContext.class), eq(3), any(Http2Headers.class),
                 anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
 
-        // Client should receive a RST_STREAM for stream 3, but there is not Http2Stream object so the listener is never
-        // notified.
+        // Client should receive a GO_AWAY frame
+        assertTrue(clientGoAwayLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
         verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                any(ByteBuf.class));
+            any(ByteBuf.class));
         verify(serverListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
-        verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                any(ByteBuf.class));
         verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
     }
 
