@@ -82,6 +82,18 @@
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
+          <artifactId>netty5-transport-native-io_uring</artifactId>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty5-transport-native-io_uring</artifactId>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty5-transport-native-kqueue</artifactId>
           <classifier>osx-x86_64</classifier>
           <scope>runtime</scope>
@@ -107,7 +119,7 @@
       </dependencies>
     </profile>
 
-    <!-- The linux profile will only include the native jar for epoll to the all jar.
+    <!-- The linux profile will only include the native jar for epoll and io_uring to the all jar.
          If you want to also include the native jar for kqueue use -Puber.
     -->
     <profile>
@@ -118,6 +130,13 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty5-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty5-transport-native-io_uring</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>runtime</scope>
@@ -268,6 +287,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty5-transport-classes-epoll</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-transport-classes-io_uring</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

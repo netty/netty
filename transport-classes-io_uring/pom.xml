@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2014 The Netty Project
+  ~ Copyright 2021 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,13 +21,13 @@
     <artifactId>netty5-parent</artifactId>
     <version>5.0.0.Alpha6-SNAPSHOT</version>
   </parent>
-  <artifactId>netty5-transport-classes-epoll</artifactId>
+  <artifactId>netty5-transport-classes-io_uring</artifactId>
 
-  <name>Netty5/Transport/Classes/Epoll</name>
+  <name>Netty5/Transport/Classes/io_uring</name>
   <packaging>jar</packaging>
 
   <properties>
-    <javaModuleName>io.netty5.transport.classes.epoll</javaModuleName>
+    <javaModuleName>io.netty5.transport.classes.io_uring</javaModuleName>
   </properties>
 
   <dependencies>
