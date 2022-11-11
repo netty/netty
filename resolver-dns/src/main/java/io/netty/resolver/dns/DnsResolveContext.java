@@ -432,6 +432,13 @@ abstract class DnsResolveContext<T> {
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
                 parent.ch.eventLoop().newPromise();
 
+        final long queryStartTimeNanos;
+        if (nameServerAddrStream instanceof DnsServerResponseTimeFeedbackAddressStream) {
+            queryStartTimeNanos = System.nanoTime();
+        } else {
+            queryStartTimeNanos = -1;
+        }
+
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
                 parent.query0(nameServerAddr, question, additionals, flush, writePromise, queryPromise);
 
@@ -443,6 +450,12 @@ abstract class DnsResolveContext<T> {
             @Override
             public void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
                 queriesInProgress.remove(future);
+                if (queryStartTimeNanos >= 0) {
+                    final DnsServerResponseTimeFeedbackAddressStream feedbackNameServerAddrStream =
+                            (DnsServerResponseTimeFeedbackAddressStream) nameServerAddrStream;
+                    feedbackNameServerAddrStream.feedbackResponseTime(nameServerAddr,
+                            System.nanoTime() - queryStartTimeNanos);
+                }
 
                 if (promise.isDone() || future.isCancelled()) {
                     queryLifecycleObserver.queryCancelled(allowedQueries);
