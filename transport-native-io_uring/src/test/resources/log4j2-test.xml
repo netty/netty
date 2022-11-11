@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%.20t] %-5level %logger{1.} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <AsyncRoot level="debug">
+            <AppenderRef ref="Console"/>
+        </AsyncRoot>
+    </Loggers>
+</Configuration>

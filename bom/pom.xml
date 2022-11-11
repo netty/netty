@@ -220,6 +220,28 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
+        <artifactId>netty5-transport-classes-io_uring</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty5-transport-native-io_uring</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty5-transport-native-io_uring</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-aarch_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty5-transport-native-io_uring</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-x86_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
         <artifactId>netty5-transport-classes-kqueue</artifactId>
         <version>${project.version}</version>
       </dependency>
