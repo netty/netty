@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.BufferUtil.writeAscii;
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
@@ -68,7 +67,7 @@ public class CloseNotifyTest {
     }
 
     @ParameterizedTest(name = "{index}: provider={0}, protocol={1}")
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     @MethodSource("data")
     public void eventsOrder(SslProvider provider, String protocol) throws Exception {
         assumeTrue(provider != SslProvider.OPENSSL || OpenSsl.isAvailable(), "OpenSSL is not available");
