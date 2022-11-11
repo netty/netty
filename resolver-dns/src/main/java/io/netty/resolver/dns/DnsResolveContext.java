@@ -450,12 +450,6 @@ abstract class DnsResolveContext<T> {
             @Override
             public void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
                 queriesInProgress.remove(future);
-                if (queryStartTimeNanos >= 0) {
-                    final DnsServerResponseTimeFeedbackAddressStream feedbackNameServerAddrStream =
-                            (DnsServerResponseTimeFeedbackAddressStream) nameServerAddrStream;
-                    feedbackNameServerAddrStream.feedbackResponseTime(nameServerAddr,
-                            System.nanoTime() - queryStartTimeNanos);
-                }
 
                 if (promise.isDone() || future.isCancelled()) {
                     queryLifecycleObserver.queryCancelled(allowedQueries);
@@ -481,6 +475,12 @@ abstract class DnsResolveContext<T> {
                               newDnsQueryLifecycleObserver(question), true, promise, queryCause);
                     }
                 } finally {
+                    if (queryStartTimeNanos >= 0) {
+                        final DnsServerResponseTimeFeedbackAddressStream feedbackNameServerAddrStream =
+                                (DnsServerResponseTimeFeedbackAddressStream) nameServerAddrStream;
+                        feedbackNameServerAddrStream.feedbackResponseTime(nameServerAddr,
+                                System.nanoTime() - queryStartTimeNanos);
+                    }
                     tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
                                        // queryLifecycleObserver has already been terminated at this point so we must
                                        // not allow it to be terminated again by tryToFinishResolve.
