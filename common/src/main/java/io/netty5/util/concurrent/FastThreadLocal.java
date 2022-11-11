@@ -159,6 +159,9 @@ public class FastThreadLocal<V> {
         V v = null;
         try {
             v = initialValue();
+            if (v == InternalThreadLocalMap.UNSET) {
+                throw new IllegalArgumentException("InternalThreadLocalMap.UNSET can not be initial value.");
+            }
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
@@ -229,9 +232,8 @@ public class FastThreadLocal<V> {
         }
 
         Object v = threadLocalMap.removeIndexedVariable(index);
-        removeFromVariablesToRemove(threadLocalMap, this);
-
         if (v != InternalThreadLocalMap.UNSET) {
+            removeFromVariablesToRemove(threadLocalMap, this);
             try {
                 onRemoval((V) v);
             } catch (Exception e) {
