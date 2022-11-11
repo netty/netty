@@ -199,6 +199,7 @@ final class HpackDecoder {
                         }
                     } else if ((b & 0x20) == 0x20) {
                         // Dynamic Table Size Update
+                        // See https://www.rfc-editor.org/rfc/rfc7541.html#section-4.2
                         throw connectionError(COMPRESSION_ERROR, "Dynamic table size update must happen " +
                             "at the beginning of the header block");
                     } else {
