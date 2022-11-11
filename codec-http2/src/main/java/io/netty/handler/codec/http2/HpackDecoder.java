@@ -126,6 +126,8 @@ final class HpackDecoder {
     void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
         Http2HeadersSink sink = new Http2HeadersSink(
                 streamId, headers, maxHeaderListSize, validateHeaders);
+        // Check for dynamic table size updates, which must occur at the beginning:
+        // https://www.rfc-editor.org/rfc/rfc7541.html#section-4.2
         decodeDynamicTableSizeUpdates(in);
         decode(in, sink);
 
