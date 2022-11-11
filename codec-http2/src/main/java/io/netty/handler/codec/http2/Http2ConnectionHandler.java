@@ -738,6 +738,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
         if (stream == null) {
             if (!outbound || connection().local().mayHaveCreatedStream(streamId)) {
+                // See https://datatracker.ietf.org/doc/html/rfc7540#section-5.1.1:
+                //
+                // An endpoint that receives an unexpected stream identifier MUST respond with a connection error
+                // of type PROTOCOL_ERROR.
                 onError(ctx, outbound, connectionError(PROTOCOL_ERROR, "Unknown stream"));
             }
         } else {
