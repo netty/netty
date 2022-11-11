@@ -58,6 +58,11 @@
 #define SO_BUSY_POLL 46
 #endif
 
+// UDP_GRO is defined in linux 5. We define this here so older kernels can compile.
+#ifndef UDP_GRO
+#define UDP_GRO 104
+#endif
+
 static jclass peerCredentialsClass = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
