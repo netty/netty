@@ -370,20 +370,21 @@ public final class EpollSocketChannel
 
     @Override
     protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
-        switch (direction) {
-            case Outbound:
-                socket.shutdown(false, true);
-                break;
-            case Inbound:
-                try {
+        requireNonNull(direction, "direction");
+        try {
+            switch (direction) {
+                case Inbound:
                     socket.shutdown(true, false);
-                } catch (NotYetConnectedException ignore) {
-                    // We attempted to shutdown and failed, which means the input has already effectively been
-                    // shutdown.
-                }
-                break;
-            default:
-                throw new AssertionError();
+                    break;
+                case Outbound:
+                    socket.shutdown(false, true);
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+        } catch (NotYetConnectedException ignore) {
+            // We attempted to shutdown and failed, which means the input has already effectively been
+            // shutdown.
         }
     }
 

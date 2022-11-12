@@ -39,11 +39,4 @@ public class IOUringSocketHalfClosedTest extends SocketHalfClosedTest {
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.socket();
     }
-
-    @Override
-    @Disabled // TODO was disabled in 4.1 code as well... figure out why?
-    @Test
-    public void testAutoCloseFalseDoesShutdownOutput(TestInfo testInfo) throws Throwable {
-        super.testAutoCloseFalseDoesShutdownOutput(testInfo);
-    }
 }

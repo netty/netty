@@ -37,11 +37,4 @@ public class IOUringSocketShutdownOutputBySelfTest extends SocketShutdownOutputB
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return IOUringSocketTestPermutation.INSTANCE.clientSocket();
     }
-
-    @Test
-    @Override
-    public void testWriteAfterShutdownOutputNoWritabilityChange(TestInfo testInfo) throws Throwable {
-        // TODO Ignore as it does not pass on QEMU atm
-        // super.testWriteAfterShutdownOutputNoWritabilityChange();
-    }
 }

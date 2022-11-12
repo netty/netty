@@ -22,7 +22,7 @@ import io.netty5.testsuite.transport.socket.SocketHalfClosedTest;
 
 import java.util.List;
 
-public class EpollSocketHalfClosed extends SocketHalfClosedTest {
+public class EpollSocketHalfClosedTest extends SocketHalfClosedTest {
     @Override
     protected int maxReadCompleteWithNoDataAfterInputShutdown() {
         return 1;

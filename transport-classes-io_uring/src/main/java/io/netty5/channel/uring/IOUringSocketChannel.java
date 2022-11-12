@@ -200,10 +200,7 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel<IOUringSe
             while (writePromises.poll()) {
                 writePromises.getPolledObject().setFailure(e);
             }
-            if (moreWritesPending) {
-                moreWritesPending = false;
-                writeFlushedNow();
-            }
+            handleWriteError(e);
         } else {
             int leftover = result;
             while (leftover > 0 || writePromises.hasNextStamp(0)) {
@@ -256,20 +253,20 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel<IOUringSe
     @Override
     protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
         requireNonNull(direction, "direction");
-        switch (direction) {
-            case Inbound:
-                try {
+        try {
+            switch (direction) {
+                case Inbound:
                     socket.shutdown(true, false);
-                } catch (NotYetConnectedException ignore) {
-                    // We attempted to shutdown and failed, which means the input has already effectively been
-                    // shutdown.
-                }
-                break;
-            case Outbound:
-                socket.shutdown(false, true);
-                break;
-            default:
-                throw new AssertionError("unhandled direction: " + direction);
+                    break;
+                case Outbound:
+                    socket.shutdown(false, true);
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+        } catch (NotYetConnectedException ignore) {
+            // We attempted to shutdown and failed, which means the input has already effectively been
+            // shutdown.
         }
     }
 
