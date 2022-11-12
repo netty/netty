@@ -16,7 +16,7 @@ public class ProtoServerInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ch.pipeline()
                 .addLast(new ProtobufVarint32FrameDecoder())
-                .addLast(new ProtobufDecoder(PersonInfo.Person.getDefaultInstance()))
+                .addLast(new ProtobufDecoder(DataInfo.MyMessage.getDefaultInstance()))
                 .addLast(new ProtobufVarint32LengthFieldPrepender())
                 .addLast(new ProtobufEncoder())
                 .addLast(new ProtoServerHandler());

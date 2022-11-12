@@ -4,14 +4,34 @@ package io.netty.netty.codec.demo3;
 
 option optimize_for = SPEED;
 option java_package = "io.netty.netty.codec.demo3";
-option java_outer_classname = "PersonInfo";
+option java_outer_classname = "DataInfo";
+
+message MyMessage {
+  enum DataType {
+    PersonType = 0;
+    DogType = 1;
+    CatType = 2;
+  }
+  DataType dataType = 1;
+  oneof dataBody {
+    Person person = 2;
+    Dog dog = 3;
+    Cat cat = 4;
+  }
+}
 
 message Person {
-
   string name = 1;
-
   int32 age = 2;
-
   string address = 3;
+}
 
+message Dog {
+  string name = 1;
+  int32 age = 2;
+}
+
+message Cat {
+  string name = 1;
+  int32 age = 2;
 }
