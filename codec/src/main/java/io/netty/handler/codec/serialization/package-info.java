@@ -18,5 +18,16 @@
  * Encoder, decoder and their compatibility stream implementations which
  * transform a {@link java.io.Serializable} object into a byte buffer and
  * vice versa.
+ * <p>
+ * <strong>Security:</strong> serialization can be a security liability,
+ * and should not be used without defining a list of classes that are
+ * allowed to be desirialized. Such a list can be specified with the
+ * <tt>jdk.serialFilter</tt> system property, for instance.
+ * See the <a href="https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html">
+ * serialization filtering</a> article for more information.
+ *
+ * @deprecated This package has been deprecated with no replacement,
+ * because serialization can be a security liability
  */
+@Deprecated
 package io.netty.handler.codec.serialization;
