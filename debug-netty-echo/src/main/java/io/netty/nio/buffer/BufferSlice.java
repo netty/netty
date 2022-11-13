@@ -3,7 +3,7 @@ package io.netty.nio.buffer;
 import java.nio.ByteBuffer;
 
 /**
- * 缓冲区分片
+ * 缓冲区分片：Slice Buffer 与原有的 Buffer 共享相同的底层数组
  *
  * @author lxcecho 909231497@qq.com
  * @since 22:29 28-10-2022

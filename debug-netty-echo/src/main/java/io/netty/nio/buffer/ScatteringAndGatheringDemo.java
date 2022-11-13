@@ -7,13 +7,13 @@ import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 
 /**
+ * 前面我们讲的读写操作，都是通过一个 Buffer 完成的，NIO 还支持 通过多个 Buffer (即 Buffer 数组) 完成读写操作，
+ * 即
+ *  Scattering：将数据写入到 Buffer 时，可以采用 Buffer 数组，依次写入【分散】；
+ *  Gathering：从 Buffer 读取数据时，可以采用 Buffer 数组，依次读。
+ *
  * @author lxcecho 909231497@qq.com
  * @since 2021/2/20
- * <p>
- * 前面我们讲的读写操作，都是通过一个Buffer 完成的，NIO 还支持 通过多个Buffer (即 Buffer 数组) 完成读写操作，
- * 即
- * Scattering：将数据写入到 Buffer 时，可以采用 Buffer 数组，依次写入【分散】；
- * Gathering：从 Buffer 读取数据时，可以采用 Buffer 数组，依次读。
  */
 public class ScatteringAndGatheringDemo {
     public static void main(String[] args) throws Exception {
