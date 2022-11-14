@@ -2,8 +2,12 @@ package io.netty.nio.charset;
 
 import org.junit.Test;
 
+import java.io.File;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
@@ -66,6 +70,40 @@ public class CharsetTest {
         for (Map.Entry<String, Charset> entry : set) {
             System.out.println(entry.getKey() + " = " + entry.getValue());
         }
+    }
+
+    @Test
+    public void testFileCharSet() throws Exception {
+        String inputFilePath = "input.txt";
+        String outputFilePath = "output.txt";
+
+        RandomAccessFile inputFile = new RandomAccessFile(inputFilePath, "r");
+        RandomAccessFile outputFile = new RandomAccessFile(outputFilePath, "rw");
+
+        long inputLength = new File(inputFilePath).length();
+
+        FileChannel inputFileChannel = inputFile.getChannel();
+        FileChannel outputFileChannel = outputFile.getChannel();
+
+        MappedByteBuffer inputData = inputFileChannel.map(FileChannel.MapMode.READ_ONLY, 0, inputLength);
+
+        /*System.out.println("=======================");
+        Charset.availableCharsets().forEach((k, v) -> {
+            System.out.println(k + ": " + v);
+        });
+        System.out.println("=======================");*/
+
+        Charset charset = Charset.forName("utf-8");
+        CharsetDecoder charsetDecoder = charset.newDecoder();
+        CharsetEncoder charsetEncoder = charset.newEncoder();
+
+        CharBuffer charBuffer = charsetDecoder.decode(inputData);
+        ByteBuffer outputData = charsetEncoder.encode(charBuffer);
+
+        outputFileChannel.write(outputData);
+
+        inputFile.close();
+        outputFile.close();
     }
 
 }
