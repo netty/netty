@@ -16,8 +16,8 @@
 package io.netty5.buffer.internal;
 
 import io.netty5.util.concurrent.FastThreadLocal;
+import io.netty5.util.concurrent.FastThreadLocalThread;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.ThreadExecutorMap;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 /**
- * Cleaner allocation strategy used to assign cleaners to event-loop and external threads.
+ * Cleaner allocation strategy used to assign cleaners to event-loops and external threads.
  * The default policy is used:
  * <ul>
  *     <li>for event-loop threads, by default a fast-thread-local shared-nothing Cleaner instance is allocated and used
@@ -41,7 +41,7 @@ import java.util.stream.IntStream;
  *     <li>-Dio.netty5.cleanerpool.size: integer value (default=1). Size of the shared Cleaner pool. This pool is
  *     used for external (non-event-loop) threads. "0" means all available processors are used as the pool size.</li>
  *     <li>-Dio.netty5.cleanerpool.eventloop.usepool: boolean (default=false). If set to true, all event-loop threads
- *     will use the shared threadpool, like external threads. This can be useful if we need to revert to a singleton
+ *     will use the shared cleaner pool, like external threads. This can be useful if we need to revert to a singleton
  *     Cleaner to be used by all event-loop/external threads (using io.netty5.cleanerpool.eventloop.usepool=true and
  *     io.netty5.cleanerpool.size=1). if set to false, it means all event-loop threads will be assigned to a dedicated
  *     Cleaner instance, so the pool won't be used in this case.</li>
@@ -84,9 +84,9 @@ final class CleanerPool {
      * Cleaner instances shared by all external threads, and optionally by event-loop threads
      * These cleaners are wrapped in a static inner class for lazy initialization purpose.
      */
-    private static class CleanersPool {
+    private static final class CleanersPool {
         static final Cleaner[] cleaners = IntStream.range(0, POOL_SIZE)
-                .mapToObj(i -> createCleaner()).toArray(Cleaner[]::new);
+                .mapToObj(i -> Cleaner.create()).toArray(Cleaner[]::new);
     }
 
     /**
@@ -106,18 +106,25 @@ final class CleanerPool {
     /**
      * The FastThreadLocal used to map a Cleaner instance to Event Loop threads.
      */
-    private static class CleanerThreadLocal extends FastThreadLocal<Cleaner> {
+    private static final class CleanerThreadLocal extends FastThreadLocal<Cleaner> {
         private static final AtomicInteger counter = new AtomicInteger();
 
         @Override
         protected Cleaner initialValue() {
-            if (!EVENT_LOOP_USE_POOL && ThreadExecutorMap.currentExecutor() != null) {
+            if (!EVENT_LOOP_USE_POOL && Thread.currentThread() instanceof FastThreadLocalThread) {
                 // Allocate one dedicated cleaner for the caller event-loop thread
-                return createCleaner();
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Creating new cleaner instance.");
+                }
+                return Cleaner.create();
             }
 
             // Return one of the shared cleaners from the shared cleaner pool.
-            return CleanersPool.cleaners[(counter.getAndIncrement() & 0x7F_FF_FF_FF) % POOL_SIZE];
+            Cleaner cleaner = CleanersPool.cleaners[(counter.getAndIncrement() & 0x7F_FF_FF_FF) % POOL_SIZE];
+            if (logger.isDebugEnabled()) {
+                logger.debug("Reusing cleaner {} from the shared pool.", System.identityHashCode(cleaner));
+            }
+            return cleaner;
         }
     }
 
@@ -133,16 +140,6 @@ final class CleanerPool {
      */
     Cleaner getCleaner() {
         return threadLocalCleaner.get();
-    }
-
-    /**
-     * Creates a Cleaner instance.
-     */
-    private static Cleaner createCleaner() {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Creating cleaner.");
-        }
-        return Cleaner.create();
     }
 
     private static int getPoolSize(int defSize) {
