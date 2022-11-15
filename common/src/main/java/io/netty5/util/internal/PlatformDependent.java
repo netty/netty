@@ -1445,6 +1445,13 @@ public final class PlatformDependent {
         return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
     }
 
+    public static File createTempDirectory(String prefix, File directory) throws IOException {
+        if (directory == null) {
+            return Files.createTempDirectory(prefix).toFile();
+        }
+        return Files.createTempDirectory(directory.toPath(), prefix).toFile();
+    }
+
     /**
      * Adds only those classifier strings to <tt>dest</tt> which are present in <tt>allowed</tt>.
      *
