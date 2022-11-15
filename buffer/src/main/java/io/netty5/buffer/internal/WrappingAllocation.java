@@ -38,4 +38,9 @@ public final class WrappingAllocation implements AllocationType {
     public boolean isDirect() {
         return false;
     }
+
+    @Override
+    public String toString() {
+        return "WrappingAllocation(byte[" + array.length + "])";
+    }
 }
