@@ -616,4 +616,10 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
 
         return buf.toString();
     }
+
+    @Override
+    public String toString() {
+        return "PooledBufferAllocator@" + Integer.toHexString(System.identityHashCode(this)) +
+                "(" + allocationType + (closed ? ", closed)" : ")");
+    }
 }

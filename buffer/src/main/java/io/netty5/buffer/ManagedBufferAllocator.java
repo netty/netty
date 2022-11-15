@@ -87,4 +87,9 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     public BufferAllocator getAllocator() {
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "BufferAllocator(" + allocationType + (closed ? ", closed)" : ")");
+    }
 }
