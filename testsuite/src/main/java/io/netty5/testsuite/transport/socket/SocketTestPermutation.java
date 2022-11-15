@@ -213,17 +213,22 @@ public class SocketTestPermutation {
      * Separate class so we only initialize this field if we really need it.
      */
     private static final class DomainSocketDirectory {
-        public static final int MAX_PATH_LEN = 128;
-        public static final AtomicInteger COUNTER = new AtomicInteger();
-        public static final File DIR;
+        private static final int MAX_PATH_LEN = 128;
+        private static final AtomicInteger COUNTER = new AtomicInteger();
+        private static final File DIR;
 
         static {
             try {
                 int maxLen = MAX_PATH_LEN - File.separator.length() - 2 * Integer.BYTES;
                 File file = null;
+                int maxTries = 128;
                 do {
+                    if (maxTries-- == 0) {
+                        throw new ExceptionInInitializerError(
+                                "Unable to create a temporary directory with path length <= " + maxLen);
+                    }
                     if (file != null && !file.delete()) {
-                        throw new IOException("failed to delete: " + file);
+                        throw new IOException("Failed to delete: " + file);
                     }
                     file = PlatformDependent.createTempDirectory("NETTY-UDS", null).getAbsoluteFile();
                 } while (file.toString().length() > maxLen);
