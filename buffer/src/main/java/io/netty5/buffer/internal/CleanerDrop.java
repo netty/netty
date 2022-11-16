@@ -56,7 +56,7 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
             Drop<T> drop, MemoryManager manager, boolean detectLeaks) {
         CleanerDrop<T> cleanerDrop = new CleanerDrop<>();
         GatedRunner<T> runner = new GatedRunner<>(drop, manager, detectLeaks);
-        cleanerDrop.cleanable = InternalBufferUtils.CLEANER.register(cleanerDrop, runner);
+        cleanerDrop.cleanable = InternalBufferUtils.getCleaner().register(cleanerDrop, runner);
         cleanerDrop.runner = runner;
         return cleanerDrop;
     }
