@@ -19,15 +19,27 @@ import java.net.InetSocketAddress;
 
 /**
  * An infinite stream of DNS server addresses, that requests feedback to be returned to it.
+ *
+ * If query is successful timing information is provided, else a failure notification is given.
  */
-public interface DnsServerResponseTimeFeedbackAddressStream extends DnsServerAddressStream {
+public interface DnsServerResponseFeedbackAddressStream extends DnsServerAddressStream {
 
     /**
-     * A way to provide timing feedback to the {@link DnsServerAddressStream} so that {@link #next()} can be tuned
+     * A way to provide timing feedback to {@link DnsServerAddressStream} so that {@link #next()} can be tuned
      * to return the best performing DNS server address
+     *
+     * NOTE: This is called regardless of the RCode returned by the DNS server
      *
      * @param address The address returned by {@link #next()} that feedback needs to be applied to
      * @param queryResponseTimeNanos The response time of a query against the given DNS server
      */
-    void feedbackResponseTime(InetSocketAddress address, long queryResponseTimeNanos);
+    void feedbackSuccess(InetSocketAddress address, long queryResponseTimeNanos);
+
+    /**
+     * A way to provide failure feedback to {@link DnsServerAddressStream} so that {@link #next()} cab be tuned
+     * to return the best performing DNS server address
+     *
+     * @param address The address returned by {@link #next()} that feedback needs to be applied to
+     */
+    void feedbackFailure(InetSocketAddress address);
 }

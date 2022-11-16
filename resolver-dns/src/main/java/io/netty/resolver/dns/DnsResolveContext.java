@@ -433,7 +433,7 @@ abstract class DnsResolveContext<T> {
                 parent.ch.eventLoop().newPromise();
 
         final long queryStartTimeNanos;
-        if (nameServerAddrStream instanceof DnsServerResponseTimeFeedbackAddressStream) {
+        if (nameServerAddrStream instanceof DnsServerResponseFeedbackAddressStream) {
             queryStartTimeNanos = System.nanoTime();
         } else {
             queryStartTimeNanos = -1;
@@ -466,21 +466,26 @@ abstract class DnsResolveContext<T> {
                 final Throwable queryCause = future.cause();
                 try {
                     if (queryCause == null) {
+                        if (queryStartTimeNanos >= 0) {
+                            final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
+                                    (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
+                            feedbackNameServerAddrStream.feedbackSuccess(nameServerAddr,
+                                    System.nanoTime() - queryStartTimeNanos);
+                        }
                         onResponse(nameServerAddrStream, nameServerAddrStreamIndex, question, future.getNow(),
                                    queryLifecycleObserver, promise);
                     } else {
                         // Server did not respond or I/O error occurred; try again.
+                        if (queryStartTimeNanos >= 0) {
+                            final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
+                                    (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
+                            feedbackNameServerAddrStream.feedbackFailure(nameServerAddr);
+                        }
                         queryLifecycleObserver.queryFailed(queryCause);
                         query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
                               newDnsQueryLifecycleObserver(question), true, promise, queryCause);
                     }
                 } finally {
-                    if (queryStartTimeNanos >= 0) {
-                        final DnsServerResponseTimeFeedbackAddressStream feedbackNameServerAddrStream =
-                                (DnsServerResponseTimeFeedbackAddressStream) nameServerAddrStream;
-                        feedbackNameServerAddrStream.feedbackResponseTime(nameServerAddr,
-                                System.nanoTime() - queryStartTimeNanos);
-                    }
                     tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
                                        // queryLifecycleObserver has already been terminated at this point so we must
                                        // not allow it to be terminated again by tryToFinishResolve.
