@@ -135,9 +135,6 @@ public class ChunkedWriteHandler implements ChannelHandler {
         if (ctx.channel().isWritable()) {
             // channel is writable again try to continue flushing
             doFlush(ctx);
-        } else {
-            // channel is not writable, try making more room with a flush
-            ctx.flush();
         }
         ctx.fireChannelWritabilityChanged();
     }
