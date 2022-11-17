@@ -197,6 +197,23 @@
       </properties>
     </profile>
     <profile>
+      <id>java20</id>
+      <activation>
+        <jdk>20</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
+      </properties>
+    </profile>
+    <profile>
       <id>java19</id>
       <activation>
         <jdk>19</jdk>
@@ -208,11 +225,6 @@
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
-        <!-- This is the minimum supported by Java18+ -->
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
@@ -230,11 +242,6 @@
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
-        <!-- This is the minimum supported by Java18+ -->
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
@@ -252,9 +259,6 @@
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- This is the minimum supported by Java12+ -->
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -273,9 +277,6 @@
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- This is the minimum supported by Java12+ -->
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -294,9 +295,6 @@
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- This is the minimum supported by Java12+ -->
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -335,7 +333,6 @@
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
-
     <!-- JDK12 -->
     <profile>
       <id>java12</id>
@@ -353,7 +350,6 @@
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
-
     <!-- JDK11 -->
     <profile>
       <id>java11</id>
