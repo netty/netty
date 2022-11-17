@@ -79,7 +79,7 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
      *
      * <p>This method is <em>thread-safe</em>.
      */
-    public final Http2FrameStream newStream(int streamId) {
+    public Http2FrameStream newStream(int streamId) {
         Http2FrameCodec codec = frameCodec;
         if (codec == null) {
             throw new IllegalStateException(StringUtil.simpleClassName(Http2FrameCodec.class) + " not found." +
