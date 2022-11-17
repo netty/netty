@@ -185,8 +185,10 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     int end = data.writerIndex();
 
                     if (srcOrder == dstOrder) {
-                        // Use the optimized path only when byte orders match
-                        long longMask = mask | (long) mask << 32;
+                        // Use the optimized path only when byte orders match.
+                        // Avoid sign extension on widening primitive conversion
+                        long longMask = (long) mask & 0xFFFFFFFFL;
+                        longMask |= longMask << 32;
 
                         // If the byte order of our buffers it little endian we have to bring our mask
                         // into the same format, because getInt() and writeInt() will use a reversed byte order
