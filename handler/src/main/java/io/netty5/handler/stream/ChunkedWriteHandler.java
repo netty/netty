@@ -16,11 +16,11 @@
 package io.netty5.handler.stream;
 
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
@@ -135,6 +135,9 @@ public class ChunkedWriteHandler implements ChannelHandler {
         if (ctx.channel().isWritable()) {
             // channel is writable again try to continue flushing
             doFlush(ctx);
+        } else {
+            // channel is not writable, try making more room with a flush
+            ctx.flush();
         }
         ctx.fireChannelWritabilityChanged();
     }
