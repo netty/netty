@@ -433,10 +433,13 @@ abstract class DnsResolveContext<T> {
                 parent.ch.eventLoop().newPromise();
 
         final long queryStartTimeNanos;
+        final boolean isFeedbackAddressStream;
         if (nameServerAddrStream instanceof DnsServerResponseFeedbackAddressStream) {
             queryStartTimeNanos = System.nanoTime();
+            isFeedbackAddressStream = true;
         } else {
             queryStartTimeNanos = -1;
+            isFeedbackAddressStream = false;
         }
 
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
@@ -466,7 +469,7 @@ abstract class DnsResolveContext<T> {
                 final Throwable queryCause = future.cause();
                 try {
                     if (queryCause == null) {
-                        if (queryStartTimeNanos >= 0) {
+                        if (isFeedbackAddressStream) {
                             final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
                                     (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
                             feedbackNameServerAddrStream.feedbackSuccess(nameServerAddr,
@@ -476,7 +479,7 @@ abstract class DnsResolveContext<T> {
                                    queryLifecycleObserver, promise);
                     } else {
                         // Server did not respond or I/O error occurred; try again.
-                        if (queryStartTimeNanos >= 0) {
+                        if (isFeedbackAddressStream) {
                             final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
                                     (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
                             feedbackNameServerAddrStream.feedbackFailure(nameServerAddr);
