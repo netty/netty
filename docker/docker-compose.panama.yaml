@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:panama
+    build:
+      dockerfile: Dockerfile.panama_foreign
+
+  build:
+    image: netty:panama
+
+  build-leak:
+    image: netty:panama
+
+  build-boringssl-static:
+    image: netty:panama
+
+  build-leak-boringssl-static:
+    image: netty:panama
+
+  build-unsafe-buffer:
+    image: netty:panama
+
+  stage-snapshot:
+    image: netty:panama
+
+  stage-release:
+    image: netty:panama
+
+  deploy:
+    image: netty:panama
+
+  shell:
+    image: netty:panama

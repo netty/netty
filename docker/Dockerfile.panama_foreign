@@ -1,0 +1,28 @@
+FROM centos:7.6.1810
+
+# Install requirements
+RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
+
+# Downloading and installing SDKMAN!
+RUN curl -s  "https://get.sdkman.io" | bash
+
+ENV BOOTSTRAP_JAVA 19.0.1-zulu
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $BOOTSTRAP_JAVA && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+ENV JAVA_HOME="/root/.sdkman/candidates/java/current"
+
+# Build panama-foreign openjdk
+WORKDIR /root/build
+RUN git clone --depth 1 --branch foreign-memaccess+abi https://github.com/openjdk/panama-foreign.git panama-foreign
+WORKDIR /root/build/panama-foreign
+RUN chmod +x configure
+RUN ./configure --with-debug-level=fastdebug \
+                --with-vendor-name=netty-build \
+                --enable-warnings-as-errors=no
+RUN make images && mv build/linux-*-server-fastdebug/images/jdk /root/jdk && rm -fr *
+ENV JAVA_HOME="/root/jdk"

@@ -1,0 +1,382 @@
+= A Propsed new Buffer API for Netty
+:toc:
+
+In the Netty team, we have been working a new buffer API, in preparation for Netty 5.
+In this document, we wish to introduce you to the main changes in this new API, the reasons behind them, and the principles guiding us.
+The new API is not yet done, and is still subject to change (especially in response to the feedback we’ll receive here), but we believe that we are far enough along that we have something tangible to show.
+We hope that you will use this opportunity to see how the new API might work for your use cases, and provide feedback.
+There are many tensions to balance, when designing an API that is going to see such wide-spread use, and it’s important that we don’t lock anyone out of upgrading, by accidentally making their use case unreasonably hard to implement, or cause it to have an unacceptable performance hit.
+
+== How we got here
+
+The existing Netty ByteBuf API has been around for a long time, and grown organically over the years.
+The API surface has become large, with multiple ways of doing the same things, with varying degree of consistency.
+None of the APIs and implementations were designed to make use of anything introduced after Java 6.
+Take, reference counting, for example.
+It could not be implemented in a way that takes advantage of the try-with-resources clause that was introduced in Java 7.
+We have also ended up with a proliferation of buffer implementation classes, and a tall class hierarchy.
+Both aspects of this makes it harder for the JIT compiler to optimise integrating code, and adds overhead.
+The large number of features spread across many implementations, also makes the API surface harder to test thoroughly.
+It makes it harder to ensure consistent behaviour across all implementations and combinations.
+Backwards compatibility has prevented us from cleaning this up.
+Until now, that is, with Netty 5 in the works.
+
+The Java platform is also not standing still.
+The OpenJDK project is on a long quest to deprecate and replace APIs and technologies that compromise the safety and security of the Java platform.
+This work includes building replacements for sun.misc.Unsafe, and JNI.
+Many use cases of Unsafe already have replacements, mostly in the form of VarHandles, but also a few other APIs.
+However, working with native memory, in a way that guarantees deterministic deallocation, remains an unsolved problem.
+
+To address this, JDK 14 included a new incubating API for memory management, called MemorySegment (https://openjdk.java.net/jeps/370).
+This API is evolving as part of the panama-foreign project, which aims to provide credible replacements to not only the native memory management APIs in Unsafe, but also to the C interoperability features of JNI.
+
+We have been collaborating with the panama-foreign project, providing feedback to their API designs, and championing our use cases.
+Our new buffer API is being designed with a future in mind, where access to Unsafe and JNI, is no longer possible.
+This is, however, not the implementation we are going to provide at first.
+The APIs from panama-foreign are still not finished, and likely won’t be in time for the release of JDK 17.
+With this in mind, Netty 5 will baseline on Java 11.
+
+== Where we are going
+
+The design of the new buffer API is guided by a number of principles, that together will make it intuitive, consistent, and fit for purpose:
+
+* _Safe memory handling._
+The buffer API we design should not, on its own, allow anyone to segfault the JVM, or corrupt memory.
+This is also a strong requirement for the MemorySegment API.
+Alignment on this point means the API we design must support MemorySegment API safety requirements.
+
+* _Misuse resistance._
+As much as is possible, we should make it difficult or impossible to use the buffer API in ways that are wrong and dangerous.
+When we cannot prevent misuse, we should make it easier to use the API in a correct way, than a wrong way.
+One way in which this manifest itself, is to ensure that reference counting can always be coded as a series of, potentially nested, try-with-resources clauses.
+
+* _Simple things should be easy; complex things should be possible._
+Sane defaults and intuitive names should cater to the most common use cases.
+At the same time, we cannot simplify to the point of restricting expressiveness.
+We aim to strike a balance that does not obstruct advanced uses.
+
+* _Intuitive API._
+The API should, as much as possible, be intuitive to use relative to the existing ByteBuf API and concepts.
+The mental model of how it works should be simple, with as few hidden states as possible.
+Any hidden magic should remain hidden, rather than leak through the abstractions.
+
+* _High performance._
+Lastly, the API must permit fast and efficient implementations.
+People already have a certain expectation for the performance of Netty, that we cannot violate.
+If the new API is to replace the existing one, it must be able to match it in performance.
+
+Hopefully you’ll be able to see these principles reflected in the new API.
+
+== Changes and points of interest
+
+In this section we’ll outline the major changes, and most prominent points of interest in the new API.
+
+=== Reference counting
+
+Buffers are now `AutoCloseable` and can be used in try-with-resources clauses.
+Every allocation and acquire call on a buffer (any `Resource` object, really) must be paired with a `close()`, and every `receive()` call on a `Send` must also be paired with a `close()`.
+
+While reference counting is a useful thing for tracking resource life-cycles internally, it is not itself exposed in the public API.
+Instead, the public API effectively has a boolean open/closed state.
+This simplifies the API a great deal; buffers are created, and in the end they are closed.
+The code in between needs to be arranged such that it just avoids ever holding on to buffers that might be closed.
+
+[source,java]
+----
+try (Buffer buf = allocator.allocate(8)) {
+    // Access the buffer.
+} // buf is deallocated here.
+----
+
+The change of the open/closed state is not thread-safe, because the buffers themselves - their contents and their offsets - are not thread-safe.
+This is a deviation from how ByteBuf works, where the updates are atomic, and the reference count checks on memory accesses are “optimistic” in that they permit data races to occur.
+This codifies that buffers cannot be modified by more than one thread at a time, and that buffers should be shared via safe publication.
+Using the `send()` mechanism helps with the thread-safe transfer of buffer ownership.
+A buffers contents can still be access from multiple threads via the `get*` methods.
+However, the buffer should be effectively read-only while it is exposed like that, as accesses would otherwise be racy.
+
+If these simple rules and patterns are followed strictly, then memory leaks should not occur.
+
+=== Cleaner attached by default
+
+To avoid memory leaks due to bugs, like forgetting to close a buffer, buffers in the new API will always have a Cleaner attached.
+If the buffer instance gets garbage collected without being closed properly, then the Cleaner thread will eventually reclaim the memory.
+This works for both pooled and unpooled buffers, and in the case of the former, the Cleaner will return the leaked memory to the pool.
+
+Note, however, that the buffers are still reference counted, because this has more predictable memory usage - especially when using off-heap buffers.
+Off-heap (or direct) buffers can give the GC an inaccurate picture of memory usage, which in turn can lead to abrupt bouts of poor performance when the system is under load.
+The cleaner is a fall back that will likely also be used as part of leak detection.
+
+=== Slices are gone
+
+The existing ByteBuf API has a number of methods that allow multiple buffers to share access to the same memory.
+It turns out that this capability is at the heart of why reference counting is a necessary part of the ByteBuf API.
+By removing the various `slice()` and `duplicate()` methods, along with the `retain()`/`release()` family of methods, we also remove the ability for buffers to share memory.
+This allows us to simplify the reference counting concept to a simple boolean open/closed state.
+Buffers are created, and at the end of their life, they are closed, which releases their memory back to where it came from.
+
+=== Buffer interface
+
+The abstract `ByteBuf` class, and its hierarchy of various buffer implementations, are all replaced by a single interface: `Buffer`.
+The 14 public `ByteBuf` and derived classes, plus numerous other non-public implementations, will be removed from the Netty API surface.
+Internally, the number of implementations will also be significantly reduced.
+
+See https://github.com/netty/netty-incubator-buffer-api/blob/main/src/main/java/io/netty/buffer/api/Buffer.java and https://github.com/netty/netty-incubator-buffer-api/blob/main/src/main/java/io/netty/buffer/api/BufferAccessors.java
+
+In our current prototype code, we only have two implementations: one based on `MemorySegment`, and a generic `CompositeBuffer` that composes other `Buffer` instances into one larger `Buffer` instance.
+None of these implementations are public; only the interface is.
+It is our aim to keep it that way, and to keep the number of concrete implementations very small, when we build an implementation that supports Java 11.
+
+All of our tests are also written in terms of the interface, and are parameterised over the implementations in various states.
+This gives us high confidence that all implementations behave exactly the same.
+
+=== Allocator interface
+
+The `BufferAllocator` replaces the `ByteBufAllocator`.
+The difference is that the `Allocator` “just allocates” `Buffer` instances, and leaves the details of what that means up to the implementation.
+This means that if the buffers are pooled or not, are off-heap or on-heap, are decisions to consider when picking an `Allocator` implementation.
+
+See https://github.com/netty/netty-incubator-buffer-api/blob/main/src/main/java/io/netty/buffer/api/BufferAllocator.java
+
+In the `ByteBufAllocator` API, the implementation of the allocator made decisions about whether the buffers were pooled or not, and also if there was a preference for the buffers to be on- or off-heap, but the `ByteBufAllocator` API also has methods for explicitly allocating either on- or off-heap.
+
+This API surface is much reduced in the new `BufferAllocator` API.
+The `BufferAllocator` implementation decision is making a choice on the on-/off-heap, and pooled/unpooled axis.
+These choices are made available as a family of static factory methods on the `BufferAllocator` interface, so they’re easy to find.
+Once you got an `BufferAllocator` instance, you can only allocate buffers.
+
+[source,java]
+----
+try (BufferAllocator allocator = BufferAllocator.heap();
+    Buffer buf = allocator.allocate(8)) {
+    // Access the buffer.
+}
+----
+
+=== ByteCursor
+
+The `ByteProcessor` is not going away, but we are introducing a new concept for processing the data in a buffer, called the `ByteCursor`.
+A cursor is similar to an `Iterator`, except the `hasNext()` (checking if there is a next element) and `next()` (moving to that next element) methods are combined into one, and there is a separate method for obtaining the newly acquired element.
+
+See https://github.com/netty/netty-incubator-buffer-api/blob/main/src/main/java/io/netty/buffer/api/ByteCursor.java
+
+This API style turns out to be generally easier for the JIT compiler to optimise (https://github.com/netty/netty-incubator-buffer-api/pull/11), without much deviation from the familiar `Iterator` pattern.
+This also allows external iteration, where it is generally easier to decide when to stop iterating, than it is inside a `ByteProcessor` callback method.
+By moving to external iteration, it also becomes possible for integrating code to process bytes in bulk, by iterating 8 bytes at a time, as longs, instead of being forced to process them one at a time as in the `ByteProcessor`.
+
+Here’s an example where `ByteCursor` is used to copy the readable bytes from one buffer to another.
+Note that the byte order of the destination is temporarily set to big endian, because the `ByteCursor.getLong()` method always returns the value in big endian format:
+
+[source,java]
+----
+var order = dest.order();
+dest.order(BIG_ENDIAN);
+try {
+    var cursor = src.openCursor();
+    while (cursor.readLong())
+        dest.writeLong(cursor.getLong()); // Bulk move.
+    while (cursor.readByte())
+        dest.writeByte(cursor.getByte()); // Tail move.
+} finally {
+    dest.order(order);
+}
+----
+
+The `Buffer` interface also has `copyTo()` methods that can accomplish the same in fewer lines, and potentially faster as well.
+The above is just for illustration purpose.
+
+=== Composite buffers
+
+In our existing API, `CompositeByteBuf` is a publicly exposed class, part of the API surface.
+In our new API, composite buffers mostly hide behind the `Buffer` interface, and all methods on `Buffer` have been designed such that they work equally well on both composite and non-composite buffers.
+This is to avoid the pains currently observed where we code that branches on whether a buffer is composite or not, and do one thing or another based on this information.
+Being able to unify these code paths will help with maintainability.
+
+There are, however, some methods of composite buffers that don't make sense on non-composite buffers.
+One such method is extending a composite buffer with more components.
+For this reason, the `CompositeBuffer` class is still public, such that these composite buffer specific methods have a natural home.
+
+Buffers need to know their allocators, in order to implement `ensureWritable()`, and the same is true for composite buffers.
+That’s why the method to compose buffers takes a `BufferAllocator` as a first argument:
+
+[source,java]
+----
+try (Buffer x = allocator.allocate(128);
+     Buffer y = allocator.allocate(128)) {
+    return CompositeBuffer.compose(allocator, x.send(), y.send());
+}
+----
+
+The static `compose()` method will create a composite buffer, even when only given a single buffer, or no buffers.
+
+The composite buffer takes ownership of each of its constituent component buffers, via the `Send<Buffer>` arguments.
+This guarantees that the composite cannot be brought into a state that is invalid, through direct manipulation of its components.
+
+Although there is in principle is no need for integrating code to know whether a buffer is composite, it is still possible to query, in case it is helpful for some optimisations.
+This is done with the `countComponents()`, `countReadableComponents()`, and `countWritableComponents()` family of methods.
+These methods exist on the `Buffer` interface, so non-composite buffers have them too, and will pretend to have a single component, namely themselves.
+If it is important to know with certainly, if a buffer is composite or not, then the static `CompositeBuffer.isComposite()` method can be used.
+
+If you know that a buffer is composite, and the composite buffer is owned, then it’s possible to extend the composite buffer with more components, using the `CompositeBuffer.extendWith()` method.
+
+Composite buffers can be nested, but they will flatten themselves internally.
+That is, you can pass composite buffers to the `CompositeBuffer.compose()` method, and the resulting composite buffer will appear to contain all their data just as if the components had been non-composite.
+However, the new composite buffer will end up with the flattened concatenation of all constituent components.
+This means the number of indirections will not increase in the new buffer.
+
+=== Iterating components
+
+The `forEachReadable()` and `forEachWritable()` methods iterate a buffers readable and writable areas, respectively.
+A composite buffer can have multiple such areas, while a non-composite buffer will at most have one of each.
+This uses internal iteration, where a `ReadableComponent` or a `WritableComponent` is passed to the component processor, which will probably be a lambda expression in the common case.
+By using internal iteration, we are able to completely hide any sort of nesting of the buffer implementations.
+link
+
+The `ReadableComponent` and `WritableComponent` objects expose a restricted set of methods.
+Their primary purpose is to support interfacing the buffer with system calls and the like.
+A component will always be able to make a `ByteBuffer` available, and it may optionally expose an array or a native pointer.
+
+Similar to how `ByteProcessor` works today, the component processor is allowed to stop the iteration early by returning false.
+The `forEachReadable()` and `forEachWritable()` methods return the number of components processed, and if the iteration was stopped early, this number will have a negative sign.
+
+These `ReadableComponent` and `WritableComponent` objects, and the way they expose memory, replace the `internalNioBuffer()` and `nioBuffer*()` family of methods.
+The component objects themselves are only valid within the callback method, but the `ByteBuffer` they expose can be used until an ownership-requiring method is called on the buffer.
+As a rule of thumb, the byte buffers should be used and discarded within the same method scope as the call to the `forEachReadable()` or `forEachWritable()` method.
+
+=== Capacity and max capacity
+
+`ByteBuf` has separate `capacity()` and `maxCapacity()` concepts, and allows one to freely change the capacity of the buffer.
+In the new API we are making things a little more strict.
+The concept of a buffer having loosely defined capacity is going away.
+
+There will only be a `capacity()`, no `maxCapacity()`.
+The capacity can only be increased by calling `ensureWritable()`, or alternatively in the case of a composite buffer, by calling `CompositeBuffer.extendWith()`.
+
+There is only one `ensureWritable()` method.
+It works similar to the `ByteBuf.ensureWritable(size, true)` where the “true” means it is allowed to allocate new backing memory.
+Since it may change the size of the buffer, and its allocated memory, the `ensureWritable()` method requires ownership.
+
+Capacity is no longer increased automatically by the various `write*()` methods.
+If you run out of memory, an exception will be thrown.
+
+This means that where you previously could do something like this:
+
+[source,java]
+----
+byte[] toWrite = ...;
+buf.write(toWrite);
+----
+
+You now have to do something like this:
+
+[source,java]
+----
+byte[] toWrite = ...;
+buf.ensureWritable(toWrite.length);
+buf.write(toWrite);
+----
+
+The `maxWritableBytes()` and `maxFastWritableBytes()` methods are replaced by a single `writableBytes()` method.
+Likewise, the `discardReadBytes()` and `discardSomeReadBytes()` are both replaced by a single `compact()` method, which will require ownership to call.
+
+=== No more marker indexes
+
+Marker indexes, and the `mark`/`resetReader`/`WriterIndex()` family of methods are going away, with no replacement planned.
+
+=== No more ReplayingDecoder
+
+The `ReplayingDecoder` is relying on a complicated exception-based protocol, in order to simulate continuations and create the illusion of infinitely readable buffers.
+This is being removed with no replacement planned.
+
+=== Byte order
+
+In the new API, the `Buffer.order(ByteOrder)` method will change the byte order for accessors on the existing buffer instance.
+In the old API, `ByteBuf.order(ByteOrder)` returned a new buffer instance that presented a view of the original buffer using the given byte order.
+
+Since the old API forced allocation and wrapping of the buffer to occur, it incurred some overhead.
+To cope with that, the `get`/`set`/`read`/`write*LE()` family of methods where introduced.
+These, however, have inconsistent behaviour depending on the buffer implementation.
+
+In the new API, there are no more little-endian specific accessor methods.
+If a particular byte order is desired, then this should be set on the buffer.
+Since the new API changes the state of the buffer instead of wrapping it, it is a cheap operation to do.
+
+=== Indexes vs. offsets
+
+The `readerIndex` and `writerIndex` are now called `readerOffset` and `writerOffset`.
+This is to make the naming more consistent and precise.
+An “index” implies access to memory at a multiple of the element size, like indexes into a long-array for instance,while “offset” is a difference in bytes from some base address.
+
+The MemorySegment APIs that are being developed in the OpenJDK project will use the same terminology, and making these name changes now will avoid confusion in the future.
+
+=== No more boolean accessors
+
+The `get`/`set`/`read`/`writeBoolean` accessor methods are being removed with no replacement planned.
+They have ambiguous meaning when working with buffers that are fundamentally byte-granular.
+
+=== Splitting buffers with split()
+
+With the removal of the `slice()` family of methods, we are in need of an alternative way to process a buffer in parts.
+For instance, in Netty, the `ByteToMessageDecoder` collects data into a collecting buffer, from which data frames are produced and then sent off to be processed further down a pipeline, potentially in parallel in other threads.
+
+Since slices would cause memory to be shared, they would effectively lock out all methods that require ownership.
+This would be a problem for such a collecting buffer, since it needs to grow dynamically to accommodate the largest message or frame size.
+
+To address this, the new API introduces a `Buffer.split()` (https://github.com/netty/netty-incubator-buffer-api/blob/main/src/main/java/io/netty/buffer/api/Buffer.java#L529) method.
+This method splits the ownership of a buffer in two.
+All the read and readable bytes are returned in a new, independent buffer, and the existing buffer gets truncated at the head by a corresponding amount.
+The capacities and offsets of both buffers are adjusted such that they cannot access each others memory.
+
+This way, the two regions of memory can be considered to be independent, and thus they have independent ownership.
+The two buffers still share the same underlying memory allocation, and the restrictions and mechanics ensure that this is safe to do.
+
+The memory management is handled internally with a second level of reference counting, which means that the original memory allocation is only reused or freed, when all split buffers have been closed.
+These internal details are safely managed even when slicing, sending, or expanding the split buffers with `ensureWritable()`.
+
+[source,java]
+----
+buf.writeLong(x);
+buf.writeLong(y);
+executor.submit(new Task(buf.split().send()));
+buf.ensureWritable(512);
+// ...
+----
+
+In the above example, we have written some data to the buffer, and we wish to process it in another thread while at the same time being able to write more data into our buffer.
+The `split()` call splits off the readable part of the `buf` buffer, into a new buffer with its own independent ownership, which we then send off for processing.
+Since `split()` splits the ownership of the memory, we retain ownership of the writable part of the `buf` buffer, and we are able to call `ensureWritable()` on it.
+Recall that `ensureWritable()` requires ownership, or else it will throw an exception.
+
+
+=== Transferring ownership with send()
+
+Since reference counts are meant to be managed with try-with-resources clauses, we run into trouble when a buffer’s life cycle, and the code that manages it, is no longer tree-shaped.
+For instance, if we want to send a buffer from one thread to another.
+
+The `send()` method is the solution to this.
+It deactivates the existing buffer and returns a `Send<Buffer>` object, which can then safely be shared with other threads.
+The receiving thread then calls `Send.receive()`, and gets the buffer back out.
+Because `send()` only works on owned buffers, the receiving threads are guaranteed to get their buffers in an owned state.
+
+It is important to take some care with error handling around `send()` calls.
+If the `receive()` method is not called on the `Send` object, then the memory of the buffer will not be accessible.
+In the end, the buffer might have to be reclaimed by the `Cleaner` in order to prevent leaks.
+
+The “deactivation” of the existing buffer mentioned above, means that the memory is safely shared, even if the code breaks protocol and tries to access their buffer instance after the `send()` call.
+When this happens, and exception will be thrown to the offending thread.
+
+[source,java]
+----
+var send = buf.send();
+executor.submit(() -> {
+    try (Buf received = send.receive()) {
+        // process received buffer...
+    }
+});
+----
+
+In the above, the `buf.send()` call creates a `Send<Buffer>` object, and deactivates the `buf` instance, making its memory inaccessible.
+A `Buffer` instance is a view onto some memory, but it is not the memory itself.
+When the receiving thread calls `send.receive()`, it gets a new `Buffer` instance back.
+This new `received` buffer instance is backed by the same memory that the `buf` instance used.
+The small amount of object allocation is a necessary part of the safety properties of the `send()` mechanism.
