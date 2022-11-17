@@ -40,6 +40,7 @@ import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
 
 /**
@@ -180,6 +181,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      */
     DefaultHttp2FrameStream newStream() {
         return new DefaultHttp2FrameStream();
+    }
+
+    DefaultHttp2FrameStream newStream(int streamId) {
+        DefaultHttp2FrameStream defaultHttp2FrameStream = new DefaultHttp2FrameStream();
+        defaultHttp2FrameStream.id = checkPositive(streamId, "Stream ID");
+        return defaultHttp2FrameStream;
     }
 
     /**
@@ -451,7 +458,18 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private boolean initializeNewStream(ChannelHandlerContext ctx, DefaultHttp2FrameStream http2FrameStream,
                                         ChannelPromise promise) {
         final Http2Connection connection = connection();
-        final int streamId = connection.local().incrementAndGetNextStreamId();
+        final int streamId;
+
+        // If Http2FrameStream ID is defined then we will try to use it.
+        // Else, we will allocate it from Endpoint.
+        if (http2FrameStream.id > 0 && connection.local() instanceof DefaultHttp2Connection.DefaultEndpoint) {
+            ((DefaultHttp2Connection.DefaultEndpoint<?>) connection.local())
+                    .setReservationStreamId(http2FrameStream.id);
+            streamId = http2FrameStream.id;
+        } else {
+            streamId = connection.local().incrementAndGetNextStreamId();
+        }
+
         if (streamId < 0) {
             promise.setFailure(new Http2NoMoreStreamIdsException());
 

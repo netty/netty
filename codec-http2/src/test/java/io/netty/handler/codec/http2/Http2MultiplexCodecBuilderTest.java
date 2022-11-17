@@ -149,6 +149,11 @@ public class Http2MultiplexCodecBuilderTest {
         return new Http2StreamChannelBootstrap(clientChannel).handler(handler).open().syncUninterruptibly().getNow();
     }
 
+    private Http2StreamChannel newOutboundStream(ChannelHandler handler, int streamId) {
+        return new Http2StreamChannelBootstrap(clientChannel).handler(handler).open(streamId)
+                .syncUninterruptibly().getNow();
+    }
+
     @Test
     public void multipleOutboundStreams() throws Exception {
         Http2StreamChannel childChannel1 = newOutboundStream(new TestChannelInitializer());
@@ -175,6 +180,39 @@ public class Http2MultiplexCodecBuilderTest {
 
         assertEquals(3, childChannel2.stream().id());
         assertEquals(5, childChannel1.stream().id());
+
+        childChannel1.close();
+        childChannel2.close();
+
+        serverLastInboundHandler.checkException();
+    }
+
+    @Test
+    public void multipleOutboundStreamsWithCustomStreamID() throws Exception {
+        Http2StreamChannel childChannel1 = newOutboundStream(new TestChannelInitializer(), 9951);
+        assertTrue(childChannel1.isActive());
+        assertTrue(isStreamIdValid(childChannel1.stream().id()));
+        Http2StreamChannel childChannel2 = newOutboundStream(new TestChannelInitializer(), 8787);
+        assertTrue(childChannel2.isActive());
+        assertTrue(isStreamIdValid(childChannel2.stream().id()));
+
+        Http2Headers headers1 = new DefaultHttp2Headers();
+        Http2Headers headers2 = new DefaultHttp2Headers();
+        // Test that streams can be made active (headers sent) in different order than the corresponding channels
+        // have been created.
+        childChannel2.writeAndFlush(new DefaultHttp2HeadersFrame(headers2));
+        childChannel1.writeAndFlush(new DefaultHttp2HeadersFrame(headers1));
+
+        Http2HeadersFrame headersFrame2 = serverLastInboundHandler.blockingReadInbound();
+        assertNotNull(headersFrame2);
+        assertEquals(8787, headersFrame2.stream().id());
+
+        Http2HeadersFrame headersFrame1 = serverLastInboundHandler.blockingReadInbound();
+        assertNotNull(headersFrame1);
+        assertEquals(9951, headersFrame1.stream().id());
+
+        assertEquals(8787, childChannel2.stream().id());
+        assertEquals(9951, childChannel1.stream().id());
 
         childChannel1.close();
         childChannel2.close();
