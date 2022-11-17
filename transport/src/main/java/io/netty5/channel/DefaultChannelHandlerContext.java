@@ -1031,9 +1031,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         // any pipeline events ctx.handler() will miss them because the state will not allow it.
         if (setAddComplete()) {
             handler().handlerAdded(this);
-            IllegalStateException exception = saveAndUpdatePendingBytes();
-            if (exception != null) {
-                throw exception;
+            if (handlesPendingOutboundBytes(executionMask)) {
+                long pending = pendingOutboundBytes();
+                currentPendingBytes = Math.max(0, pending);
+                if (pending > 0) {
+                    pipeline.incrementPendingOutboundBytes(pending);
+                }
             }
         }
     }
@@ -1046,8 +1049,13 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 try {
                     handler().handlerRemoved(this);
                 } finally {
-                    //noinspection ThrowableNotThrown
-                    saveAndUpdatePendingBytes(); // Don't throw exception from a finally-clause.
+                    if (handlesPendingOutboundBytes(executionMask)) {
+                        long pending = pendingOutboundBytes();
+                        currentPendingBytes = Math.max(0, pending);
+                        if (pending > 0) {
+                            pipeline.decrementPendingOutboundBytes(pending);
+                        }
+                    }
                 }
             }
         } finally {
