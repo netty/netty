@@ -89,6 +89,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     // Is null if the ChannelHandler not implements pendingOutboundBytes(...).
     private final DefaultChannelHandlerContextAwareEventExecutor executor;
     private long currentPendingBytes;
+    private int currentPendingBytesReentrancy;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances than needed.
@@ -1308,7 +1309,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
         // We only save the current pending bytes if not already done before.
         // This is important as otherwise we might run into issues in case of reentrancy.
-        if (currentPendingBytes == -1) {
+        if (currentPendingBytesReentrancy++ == 0) {
             try {
                 currentPendingBytes = pendingOutboundBytes();
             } catch (IllegalStateException e) {
@@ -1335,11 +1336,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             assert currentPendingBytes == 0;
             return;
         }
+        if (--currentPendingBytesReentrancy > 0) {
+            return;
+        }
         long current = currentPendingBytes;
         if (current == -1) {
             return;
         }
-        this.currentPendingBytes = -1;
+        currentPendingBytes = -1;
         try {
             long newPendingBytes = pendingOutboundBytes();
             long delta = current - newPendingBytes;
