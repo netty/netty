@@ -40,8 +40,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 
-import static java.util.Objects.requireNonNull;
 import static io.netty5.channel.DefaultChannelHandlerContext.safeExecute;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
