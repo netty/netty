@@ -296,8 +296,6 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         if (peer.state == State.CONNECTED) {
             if (msg instanceof ReferenceCounted) {
                 peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
-            } else if (msg instanceof ResourceSupport) {
-                peer.inboundBuffer.add(InternalBufferUtils.acquire((ResourceSupport<?, ?>) msg));
             } else if (msg instanceof Resource) {
                 peer.inboundBuffer.add(((Resource<?>) msg).send().receive());
             } else {
