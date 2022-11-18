@@ -51,6 +51,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -425,13 +426,14 @@ public class LocalChannelTest {
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(3);
         final Buffer data = allocator.apply(1024);
+        data.writeCharSequence("blabla", StandardCharsets.UTF_8);
 
         cb.group(sharedGroup)
           .channel(LocalChannel.class)
           .handler(new ChannelHandler() {
               @Override
               public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                  ctx.writeAndFlush(data);
+                  ctx.writeAndFlush(data.copy());
               }
 
               @Override
@@ -452,7 +454,7 @@ public class LocalChannelTest {
               public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                   if (data.equals(msg)) {
                       messageLatch.countDown();
-                      ctx.writeAndFlush(data);
+                      ctx.writeAndFlush(data.copy());
                       ctx.close();
                   } else {
                       ctx.fireChannelRead(msg);
@@ -468,7 +470,7 @@ public class LocalChannelTest {
 
         Channel sc = null;
         Channel cc = null;
-        try {
+        try (data) {
             // Start server
             sc = sb.bind(TEST_ADDRESS).asStage().get();
 
