@@ -37,6 +37,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -48,6 +49,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * We run this test in isolation (@{@link Isolated}), because traffic is measured with real time using
+ * {@link System#nanoTime()}. Hence, we cannot allow any other concurrently running tests to slow the system down.
+ */
+@Isolated
 @Execution(ExecutionMode.SAME_THREAD)
 public class TrafficShapingHandlerTest extends AbstractSocketTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficShapingHandlerTest.class);
