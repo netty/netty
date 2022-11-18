@@ -86,6 +86,10 @@ final class WebSocketUtil {
         return base64(sha1);
     }
 
+    static int byteAtIndex(int mask, int index) {
+        return (mask >> 8 * (3 - index)) & 0xFF;
+    }
+
     private WebSocketUtil() {
     }
 }
