@@ -101,7 +101,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
-    private byte[] maskingKey;
+    private int mask;
     private int framePayloadLen1;
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
@@ -300,10 +300,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 if (in.readableBytes() < 4) {
                     return;
                 }
-                if (maskingKey == null) {
-                    maskingKey = new byte[4];
-                }
-                in.readBytes(maskingKey);
+                mask = in.readInt();
             }
             state = State.PAYLOAD;
         case PAYLOAD:
@@ -398,19 +395,10 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
         ByteOrder order = frame.order();
 
-        // Remark: & 0xFF is necessary because Java will do signed expansion from
-        // byte to int which we don't want.
-        long longMask = (long) (maskingKey[0] & 0xff) << 24
-                        | (maskingKey[1] & 0xff) << 16
-                        | (maskingKey[2] & 0xff) << 8
-                        | (maskingKey[3] & 0xff);
+        int intMask = mask;
+        // Avoid sign extension on widening primitive conversion
+        long longMask = (long) intMask & 0xFFFFFFFFL;
         longMask |= longMask << 32;
-
-        // If the byte order of our buffers it little endian we have to bring our mask
-        // into the same format, because getInt() and writeInt() will use a reversed byte order
-        if (order == ByteOrder.LITTLE_ENDIAN) {
-            longMask = Long.reverseBytes(longMask);
-        }
 
         for (int lim = end - 7; i < lim; i += 8) {
             frame.setLong(i, frame.getLong(i) ^ longMask);
@@ -421,9 +409,13 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
             i += 4;
         }
 
+        if (order == ByteOrder.LITTLE_ENDIAN) {
+            intMask = Integer.reverseBytes(intMask);
+        }
+
         int maskOffset = 0;
         for (; i < end; i++) {
-            frame.setByte(i, frame.getByte(i) ^ maskingKey[maskOffset++ & 3]);
+            frame.setByte(i, frame.getByte(i) ^ WebSocketUtil.byteAtIndex(intMask, maskOffset++ & 3));
         }
     }
 
