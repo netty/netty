@@ -47,11 +47,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
@@ -63,6 +62,7 @@ import static io.netty5.handler.codec.http2.Http2TestUtil.of;
 import static io.netty5.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
@@ -76,14 +76,9 @@ public class InboundHttp2ToHttpAdapterTest {
     private List<FullHttpMessage> capturedRequests;
     private List<FullHttpMessage> capturedResponses;
 
-    @Mock
-    private HttpResponseListener serverListener;
-
-    @Mock
-    private HttpResponseListener clientListener;
-
-    @Mock
-    private HttpSettingsListener settingsListener;
+    private Listener<HttpObject> serverListener;
+    private Listener<HttpObject> clientListener;
+    private Listener<Http2Settings> settingsListener;
 
     private Http2ConnectionHandler serverHandler;
     private Http2ConnectionHandler clientHandler;
@@ -108,7 +103,9 @@ public class InboundHttp2ToHttpAdapterTest {
 
     @BeforeEach
     public void setup() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        serverListener = new Listener<>();
+        clientListener = new Listener<>();
+        settingsListener = new Listener<>();
     }
 
     @AfterEach
@@ -156,9 +153,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
         }
     }
@@ -186,9 +181,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
         }
     }
@@ -215,9 +208,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
         }
     }
@@ -261,9 +252,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
         }
     }
@@ -292,9 +281,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
         }
     }
@@ -320,9 +307,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
         }
     }
@@ -355,9 +340,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
         }
     }
@@ -389,19 +372,15 @@ public class InboundHttp2ToHttpAdapterTest {
                     new AsciiString("/some/path/resource2"));
             runInChannel(clientChannel, () -> {
                 clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false);
-                clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 3, (short) 123, true, 0,
-                        false);
+                clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 3, (short) 123, true, 0, false);
                 clientChannel.flush(); // Headers are queued in the flow controller and so flush them.
                 clientHandler.encoder().writeData(ctxClient(), 3, content.copy(), 0, true);
                 clientHandler.encoder().writeData(ctxClient(), 5, content2.copy(), 0, true);
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> httpObjectCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener, times(2)).messageReceived(httpObjectCaptor.capture());
-            capturedRequests = httpObjectCaptor.getAllValues();
-            assertEquals(request, capturedRequests.get(0));
-            assertEquals(request2, capturedRequests.get(1));
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
+            assertThat(capturedRequests).containsExactly(request, request2);
         }
     }
 
@@ -440,9 +419,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             });
             awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(request, capturedRequests.get(0));
 
             final Http2Headers http2Headers = Http2Headers.newHeaders().status(new AsciiString("200"));
@@ -462,9 +439,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 serverConnectedChannel.flush();
             });
             awaitResponses();
-            ArgumentCaptor<FullHttpMessage> responseCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(clientListener).messageReceived(responseCaptor.capture());
-            capturedResponses = responseCaptor.getAllValues();
+            capturedResponses = clientListener.getAll(FullHttpMessage.class);
             assertEquals(response, capturedResponses.get(0));
         }
     }
@@ -531,17 +506,13 @@ public class InboundHttp2ToHttpAdapterTest {
             });
 
             awaitResponses2();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener, times(2)).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
+            capturedRequests = serverListener.getAll(FullHttpMessage.class);
             assertEquals(2, capturedRequests.size());
 
             assertEquals(request, capturedRequests.get(0));
             assertEquals(request2, capturedRequests.get(1));
 
-            ArgumentCaptor<FullHttpMessage> responseCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(clientListener, times(2)).messageReceived(responseCaptor.capture());
-            capturedResponses = responseCaptor.getAllValues();
+            capturedResponses = clientListener.getAll(FullHttpMessage.class);
             assertEquals(2, capturedResponses.size());
             assertEquals(response, capturedResponses.get(0));
             assertEquals(response2, capturedResponses.get(1));
@@ -562,9 +533,9 @@ public class InboundHttp2ToHttpAdapterTest {
             clientChannel.flush();
         });
         assertTrue(settingsLatch.await(5, SECONDS));
-        ArgumentCaptor<Http2Settings> settingsCaptor = ArgumentCaptor.forClass(Http2Settings.class);
-        verify(settingsListener, times(2)).messageReceived(settingsCaptor.capture());
-        assertEquals(settings, settingsCaptor.getValue());
+        List<Http2Settings> settingsList = settingsListener.getAll(Http2Settings.class);
+        assertThat(settingsList).hasSizeGreaterThanOrEqualTo(2);
+        assertEquals(settings, settingsList.get(settingsList.size() - 1));
     }
 
     private void boostrapEnv(int clientLatchCount, int serverLatchCount, int settingsLatchCount) throws Exception {
@@ -718,20 +689,31 @@ public class InboundHttp2ToHttpAdapterTest {
         return serverConnectedChannel.pipeline().firstContext();
     }
 
-    private interface HttpResponseListener {
-        void messageReceived(HttpObject obj);
-    }
+    private static final class Listener<T> {
+        private final ConcurrentLinkedQueue<T> queue = new ConcurrentLinkedQueue<>();
 
-    private interface HttpSettingsListener {
-        void messageReceived(Http2Settings settings);
+        void messageReceived(T obj) {
+            queue.offer(obj);
+        }
+
+        <X> List<X> getAll(Class<X> cls) {
+            List<X> list = new ArrayList<>();
+            T obj;
+            while ((obj = queue.poll()) != null) {
+                if (cls.isInstance(obj)) {
+                    list.add(cls.cast(obj));
+                }
+            }
+            return list;
+        }
     }
 
     private static final class HttpResponseDelegator extends SimpleChannelInboundHandler<HttpObject> {
-        private final HttpResponseListener listener;
+        private final Listener<HttpObject> listener;
         private final CountDownLatch latch;
         private final CountDownLatch latch2;
 
-        HttpResponseDelegator(HttpResponseListener listener, CountDownLatch latch, CountDownLatch latch2) {
+        HttpResponseDelegator(Listener<HttpObject> listener, CountDownLatch latch, CountDownLatch latch2) {
             super(false);
             this.listener = listener;
             this.latch = latch;
@@ -747,10 +729,10 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private static final class HttpSettingsDelegator extends SimpleChannelInboundHandler<Http2Settings> {
-        private final HttpSettingsListener listener;
+        private final Listener<Http2Settings> listener;
         private final CountDownLatch latch;
 
-        HttpSettingsDelegator(HttpSettingsListener listener, CountDownLatch latch) {
+        HttpSettingsDelegator(Listener<Http2Settings> listener, CountDownLatch latch) {
             super(false);
             this.listener = listener;
             this.latch = latch;
