@@ -85,6 +85,7 @@ public class TestHttpServerHandler extends SimpleChannelInboundHandler<HttpObjec
 
     /**
      * 3 活动状态——上线
+     * 当一个新的连接已经被建立时，ChannelHandler 的 channelActive() 回调方法将会被调用
      *
      * @param ctx
      * @throws Exception

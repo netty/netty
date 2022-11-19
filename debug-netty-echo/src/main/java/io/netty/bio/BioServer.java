@@ -16,6 +16,7 @@ public class BioServer {
 
     public BioServer(int port) {
         try {
+            // 创建一个新的 ServerSocket， 用以监听指定端口上的连接请求
             serverSocket = new ServerSocket(port);
             System.out.println("BIO Server is completing on " + port);
         } catch (Exception e) {
@@ -31,8 +32,8 @@ public class BioServer {
     public void listen() throws Exception {
         // 循环监听
         while (true) {
-            // 等待客户端连接，阻塞方法
-            // Socket数据发送者在服务端的引用
+            // 等待客户端连接，阻塞方法，直到一个连接建立
+            // Socket 数据发送者在服务端的引用
             Socket socket = serverSocket.accept();
             System.out.println(socket.getPort());
 

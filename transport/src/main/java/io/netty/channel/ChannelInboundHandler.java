@@ -53,14 +53,14 @@ public interface ChannelInboundHandler extends ChannelHandler {
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Channel 可以从远端读取到数据
+     * Channel 可以从远端读取到数据，对于每个传入的消息都要调用
      *
      * Invoked when the current {@link Channel} has read a message from the peer.
      */
     void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception;
 
     /**
-     * Channel 读取数据完成
+     * Channel 读取数据完成，通知 ChannelInboudHandler 最后一次对 channel-read 的调用是当前批量读取中的最后一条消息
      *
      * Invoked when the last message read by the current read operation has been consumed by
      * {@link #channelRead(ChannelHandlerContext, Object)}.  If {@link ChannelOption#AUTO_READ} is off, no further
@@ -85,6 +85,7 @@ public interface ChannelInboundHandler extends ChannelHandler {
     void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
 
     /**
+     * 在读取操作期间，有异常抛出时会调用
      * Gets called if a {@link Throwable} was thrown.
      */
     @Override

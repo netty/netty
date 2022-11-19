@@ -48,22 +48,24 @@ public class NettyServer {
             System.out.println("....server is ready....");
 
             // 绑定一个端口并且同步，生成了一个 ChannelFuture 对象
-            // 启动服务器（并绑定端口）
+            // 异步地绑定服务器（并绑定端口）；调用 sync() 方法阻塞等待直到绑定完成
             ChannelFuture channelFuture = bootstrap.bind(6668).sync();
 
             // 给 cf 注册监听器，监控我们关心的事件
-            channelFuture.addListener(new ChannelFutureListener(){
+            channelFuture.addListener(new ChannelFutureListener(){ // 注册一个 ChannelFutureListener，以便在操作完成时获得通知
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception{
-                    if(channelFuture.isSuccess()) {
+                    // 如果是操作成功的，输出一句话
+                    if(channelFuture.isSuccess()) { // 检查操作的状态
                         System.out.println("监听端口 6668 成功");
                     } else {
+                        // 如果失败，则打印日志
                         System.out.println("监听端口 6668 失败");
                     }
                 }
             });
 
-            // 对关闭通道进行监听
+            // 对关闭通道进行监听，即获取 Channel 的 CloseFuture，并且阻塞当前线程直到它完成
             channelFuture.channel().closeFuture().sync();
         } catch (Exception e) {
             e.printStackTrace();

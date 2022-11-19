@@ -37,6 +37,7 @@ public class HttpClient {
                                     .addLast(new HttpClientHandler());
                         }
                     });
+            // 连接到远程节点，阻塞等待直到连接完成
             ChannelFuture channelFuture = bootstrap.connect(host, port).sync();
             URI uri = new URI("http://localhost:8088");
             String content = "Hello lxcecho";
