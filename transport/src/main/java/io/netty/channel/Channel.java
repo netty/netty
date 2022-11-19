@@ -28,6 +28,7 @@ import java.net.SocketAddress;
 
 
 /**
+ * 基本的 I/O 操作（bind()、connect()、read() 和 write()）依赖于底层网络传输所提供的原语。
  * A nexus to a network socket or a component which is capable of I/O
  * operations such as read, write, connect, and bind.
  * <p>

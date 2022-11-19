@@ -27,17 +27,20 @@ public class NioServer {
             // 设置为非阻塞
             serverSocketChannel.configureBlocking(false);
             serverSocketChannel.socket().bind(new InetSocketAddress(8090));
-            // 把连接事件注册到多路复用器上
+            // 把连接事件注册到多路复用器上，以接受连接
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 
             while (true) {
+                // 等待需要处理的新事件；阻塞将一直持续到下一个传入事件
                 selector.select(); // 阻塞机制
+                // 获取所有接收事件的 SelectionKey
                 Set<SelectionKey> selectionKeys = selector.selectedKeys();
                 Iterator<SelectionKey> iterator = selectionKeys.iterator();
                 while (iterator.hasNext()) {
                     SelectionKey next = iterator.next();
                     // 把对应事件移除掉，避免重复处理
                     iterator.remove();
+                    // 检查事件是否是一个新的已经就绪可以被接受的连接
                     if (next.isAcceptable()) {
                         // 连接事件
                         handleAccept(next);
