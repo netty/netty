@@ -20,6 +20,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
 /**
+ * ChannelPromise 是 ChannelFuture 的一个子类，其定义了一些可写的方法，如 setSuccess() 和 setFailure()，从而使 ChannelFuture 不可变
  * Special {@link ChannelFuture} which is writable.
  */
 public interface ChannelPromise extends ChannelFuture, Promise<Void> {

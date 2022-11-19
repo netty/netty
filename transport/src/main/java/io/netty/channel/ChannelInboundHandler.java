@@ -24,28 +24,28 @@ package io.netty.channel;
 public interface ChannelInboundHandler extends ChannelHandler {
 
     /**
-     * Channel 被注册到 EventLoop
+     * Channel 被注册到 EventLoop，并且能够处理 I/O 时被调用
      *
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
      */
     void channelRegistered(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Channel 从 EventLoop 中取消注册
+     * Channel 从 EventLoop 中取消注册，并且无法处理任何 I/O 时被调用
      *
      * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
      */
     void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Channel 处于就绪状态，可以被读写
+     * Channel 处于就绪状态时被调用；Channel 已经连接/绑定并且已经就绪，可以被读写
      *
      * The {@link Channel} of the {@link ChannelHandlerContext} is now active
      */
     void channelActive(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Channel 处于非就绪状态，Channel 可以从远端读取到数据
+     * Channel 处于非就绪状态并且不再连接它的远程节点时被调用，Channel 可以从远端读取到数据
      *
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
      * end of lifetime.
@@ -54,6 +54,7 @@ public interface ChannelInboundHandler extends ChannelHandler {
 
     /**
      * Channel 可以从远端读取到数据，对于每个传入的消息都要调用
+     * 将负责显式地释放与池化的 ByteBuf 实例相关的内存
      *
      * Invoked when the current {@link Channel} has read a message from the peer.
      */
@@ -70,14 +71,16 @@ public interface ChannelInboundHandler extends ChannelHandler {
     void channelReadComplete(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * 用户事件触发时
+     * 当 ChannelnboundHandler.fireUserEventTriggered() 方法被调用时被调用，因为一个 POJO 被传经了 ChannelPipeline
      *
      * Gets called if an user event was triggered.
      */
     void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
 
     /**
-     * Channel 的写状态发生变化
+     * 当 Channel 的可写状态发生改变时被调用。用户可以确保写操作不会完成得太快（以避免发生 OutOfMemoryError）或者可以在 Channel 变为再次可写时恢复写入。
+     * 可以通过调用 Channel 的isWritable() 方法来检测 Channel 的可写性。与可写性相关的阈值可以通过 Channel.config().setWriteHighWaterMark()
+     * 和 Channel.config().setWriteLowWater-Mark() 方法来设置
      *
      * Gets called once the writable state of a {@link Channel} changed. You can check the state with
      * {@link Channel#isWritable()}.

@@ -130,6 +130,7 @@ public final class ByteBufUtil {
     /**
      * Returns a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's readable bytes.
+     * 以十六进制的表示形式打印 ByteBuf 的内容
      */
     public static String hexDump(ByteBuf buffer) {
         return hexDump(buffer, buffer.readerIndex(), buffer.readableBytes());

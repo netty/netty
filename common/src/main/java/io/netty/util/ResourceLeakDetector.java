@@ -39,6 +39,11 @@ import static io.netty.util.internal.StringUtil.EMPTY_STRING;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.simpleClassName;
 
+/**
+ * 资源泄露检测器
+ *
+ * @param <T>
+ */
 public class ResourceLeakDetector<T> {
 
     private static final String PROP_LEVEL_OLD = "io.netty.leakDetectionLevel";
@@ -65,7 +70,7 @@ public class ResourceLeakDetector<T> {
         DISABLED,
         /**
          * Enables simplistic sampling resource leak detection which reports there is a leak or not,
-         * at the cost of small overhead (default).
+         * at the cost of small overhead (default). 默认：1%
          */
         SIMPLE,
         /**
