@@ -292,7 +292,8 @@ final class BsdSocket extends Socket {
                     throw TUN_ILLEGAL_NAME_EXCEPTION;
                 }
             } else {
-                number = 0;
+                // let platform pick device name
+                number = -1;
             }
             int res = bindTun(intValue(), number);
             if (res < 0) {
