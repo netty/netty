@@ -36,6 +36,7 @@ import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epolle
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingMultiQueue;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingRecvmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
@@ -115,6 +116,7 @@ public final class Native {
     private static final int TFO_ENABLED_CLIENT_MASK = 0x1;
     private static final int TFO_ENABLED_SERVER_MASK = 0x2;
     private static final int TCP_FASTOPEN_MODE = tcpFastopenMode();
+    public static final boolean IS_SUPPORTING_MULTI_QUEUE = isSupportingMultiQueue();
     /**
      * <a href ="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">tcp_fastopen</a> client mode enabled
      * state.

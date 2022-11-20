@@ -650,7 +650,12 @@ static jstring netty_epoll_linuxsocket_bindTun(JNIEnv* env, jclass clazz, jint f
         (*env)->ReleaseStringUTFChars(env, name, f_name);
     }
     if (multiqueue) {
+#if defined(IFF_MULTI_QUEUE)
         ifr.ifr_flags |= IFF_MULTI_QUEUE;
+#else
+        // not available on CentOS 6
+        netty_unix_errors_throwIOException(env, "netty-transport-native-epoll was built on a platform that does not support IFF_MULTI_QUEUE");
+#endif
     }
 
     if (ioctl(fd, TUNSETIFF, &ifr) == -1) {

@@ -387,7 +387,7 @@ public final class LinuxSocket extends Socket {
         return new LinuxSocket(res, false);
     }
 
-    public TunAddress bindTun(SocketAddress socketAddress, boolean multiqueue) throws IOException {
+    public TunAddress bindTun(SocketAddress socketAddress, boolean multiQueue) throws IOException {
         if (socketAddress instanceof TunAddress) {
             TunAddress addr = (TunAddress) socketAddress;
 
@@ -396,7 +396,7 @@ public final class LinuxSocket extends Socket {
                 throw TUN_ILLEGAL_NAME_EXCEPTION;
             }
 
-            String name = bindTun(intValue(), addr.ifName(), multiqueue);
+            String name = bindTun(intValue(), addr.ifName(), multiQueue);
             if (name == null) {
                 throw new IOException("bind(...) failed");
             }
@@ -474,7 +474,7 @@ public final class LinuxSocket extends Socket {
     private static native void setUdpGro(int fd, int gro) throws IOException;
 
     private static native int newSocketTunFd();
-    public static native String bindTun(int fd, String name, boolean multiqueue);
+    public static native String bindTun(int fd, String name, boolean multiQueue);
     private static native int getMtu0(String name);
     private static native int setMtu0(String name, int mtu);
 }
