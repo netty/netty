@@ -346,4 +346,15 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         return this;
     }
 
+    public boolean isAllowExtensions() {
+        return allowExtensions;
+    }
+
+    public boolean isPerformMasking() {
+        return performMasking;
+    }
+
+    public boolean isAllowMaskMismatch() {
+        return allowMaskMismatch;
+    }
 }
