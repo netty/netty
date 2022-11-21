@@ -22,6 +22,11 @@ services:
       - ~/.m2:/root/.m2
       - ..:/code
     working_dir: /code
+    # required by TunChannel
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
 
   build-leak:
     <<: *common
