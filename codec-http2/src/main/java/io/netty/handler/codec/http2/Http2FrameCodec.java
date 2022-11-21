@@ -374,7 +374,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         Http2Stream stream = connection().stream(streamId);
         // Upgraded requests are ineligible for stream control. We add the null check
         // in case the stream has been deregistered.
-        if (stream != null && streamId == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
+        if (stream != null && streamId == HTTP_UPGRADE_STREAM_ID) {
             Boolean upgraded = stream.getProperty(upgradeKey);
             if (Boolean.TRUE.equals(upgraded)) {
                 return false;
@@ -391,7 +391,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
 
         int lastStreamCreated = connection().remote().lastStreamCreated();
-        long lastStreamId = lastStreamCreated + ((long) frame.extraStreamIds()) * 2;
+        long lastStreamId = lastStreamCreated + (long) frame.extraStreamIds() * 2;
         // Check if the computation overflowed.
         if (lastStreamId > Integer.MAX_VALUE) {
             lastStreamId = Integer.MAX_VALUE;
