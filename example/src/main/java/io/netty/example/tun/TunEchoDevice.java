@@ -85,7 +85,7 @@ public final class TunEchoDevice {
         EventLoopGroup group;
         Class<? extends Channel> channelClass;
         if (KQueue.isAvailable()) {
-            if (QUEUES > 0) {
+            if (QUEUES > 1) {
                 throw new RuntimeException("Parallel reading and writing is only supported with epoll");
             }
             group = new KQueueEventLoopGroup(1);
