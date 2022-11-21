@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.net.ConnectException;
 import java.net.Socket;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty5.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
@@ -50,21 +50,20 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     private static final int UNASSIGNED_PORT = 4;
 
     @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testConnectTimeout(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testConnectTimeout);
     }
 
     public void testConnectTimeout(Bootstrap cb) throws Throwable {
-        cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
+        cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 200);
         Future<Channel> future = cb.connect(BAD_HOST, BAD_PORT);
-        assertThat(future.asStage().await(3000, TimeUnit.MILLISECONDS)).isTrue();
-        ExecutionException e = assertThrows(ExecutionException.class, future.asStage()::get);
+        CompletionException e = assertThrows(CompletionException.class, () -> future.asStage().sync());
         assertThat(e).hasCauseInstanceOf(ConnectTimeoutException.class);
     }
 
     @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testConnectRefused(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testConnectRefused);
     }
@@ -74,7 +73,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     }
 
     @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testConnectRefusedHalfClosure(TestInfo testInfo) throws Throwable {
         run(testInfo, this::testConnectRefusedHalfClosure);
     }

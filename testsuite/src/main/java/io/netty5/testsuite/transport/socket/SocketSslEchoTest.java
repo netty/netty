@@ -255,6 +255,13 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
+        final ChunkedWriteHandler serverChunkWriteHandler;
+        if (useChunkedWriteHandler) {
+            serverChunkWriteHandler = new ChunkedWriteHandler();
+        } else {
+            serverChunkWriteHandler = null;
+        }
+
         sb.childHandler(new ChannelInitializer<>() {
             @Override
             public void initChannel(Channel sch) {
@@ -270,7 +277,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
                 sch.pipeline().addLast("ssl", serverSslHandler);
                 if (useChunkedWriteHandler) {
-                    sch.pipeline().addLast(new ChunkedWriteHandler());
+                    sch.pipeline().addLast(serverChunkWriteHandler);
                 }
                 sch.pipeline().addLast("serverHandler", serverHandler);
             }

@@ -36,11 +36,9 @@ import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -160,13 +158,11 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     void testHttpResponseAndFrameInSameBuffer() throws Exception {
         testHttpResponseAndFrameInSameBuffer(false);
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     void testHttpResponseAndFrameInSameBufferCodec() throws Exception {
         testHttpResponseAndFrameInSameBuffer(true);
     }

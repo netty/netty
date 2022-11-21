@@ -26,12 +26,15 @@ import static io.netty5.buffer.internal.InternalBufferUtils.findVarHandle;
 import static java.lang.invoke.MethodHandles.lookup;
 
 public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T>> implements Send<I> {
-    private static final VarHandle RECEIVED = findVarHandle(lookup(), SendFromOwned.class, "received", boolean.class);
+    private static final VarHandle RECEIVED = findVarHandle(lookup(), SendFromOwned.class, "received", int.class);
+    private static final int STATE_RECEIVED = 1;
+    private static final int STATE_CLOSED = 2;
+
     private final Owned<T> outgoing;
     private final Drop<T> drop;
     private final Class<?> concreteType;
     @SuppressWarnings("unused")
-    private volatile boolean received; // Accessed via VarHandle
+    private volatile int received; // Accessed via VarHandle. State 0 is "unreceived"
     private T copy;
 
     public SendFromOwned(Owned<T> outgoing, Drop<T> drop, Class<?> concreteType) {
@@ -50,8 +53,10 @@ public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T
     }
 
     private void gateReception() {
-        if ((boolean) RECEIVED.getAndSet(this, true)) {
-            IllegalStateException exception = new IllegalStateException("This object has already been received.");
+        int state = (int) RECEIVED.compareAndExchange(this, 0, STATE_RECEIVED);
+        if (state != 0) {
+            IllegalStateException exception = new IllegalStateException(
+                    state == STATE_RECEIVED? "This object has already been received." : "This Send has been closed.");
             T obj = copy;
             if (obj != null) {
                 obj.attachTrace(exception);
@@ -67,7 +72,8 @@ public class SendFromOwned<I extends Resource<I>, T extends ResourceSupport<I, T
 
     @Override
     public void close() {
-        if (!(boolean) RECEIVED.getAndSet(this, true)) {
+        int state = (int) RECEIVED.compareAndExchange(this, 0, STATE_CLOSED);
+        if (state == 0) {
             copy = outgoing.transferOwnership(drop);
             drop.attach(copy);
             copy.close();

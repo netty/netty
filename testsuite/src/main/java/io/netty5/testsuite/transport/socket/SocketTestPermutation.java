@@ -42,6 +42,7 @@ import java.net.ProtocolFamily;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SocketTestPermutation {
 
@@ -203,18 +204,44 @@ public class SocketTestPermutation {
                 () -> new Bootstrap().group(nioWorkerGroup).channel(NioDatagramChannel.class)
         );
     }
+
     public static DomainSocketAddress newDomainSocketAddress() {
-        try {
-            File file;
-            do {
-                file = PlatformDependent.createTempFile("NETTY", "UDS", null);
-                if (!file.delete()) {
-                    throw new IOException("failed to delete: " + file);
-                }
-            } while (file.getAbsolutePath().length() > 128);
-            return new DomainSocketAddress(file);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
+        return new DomainSocketAddress(DomainSocketDirectory.nextSocketName());
+    }
+
+    /**
+     * Separate class so we only initialize this field if we really need it.
+     */
+    private static final class DomainSocketDirectory {
+        private static final int MAX_PATH_LEN = 128;
+        private static final AtomicInteger COUNTER = new AtomicInteger();
+        private static final File DIR;
+
+        static {
+            try {
+                int maxLen = MAX_PATH_LEN - File.separator.length() - 2 * Integer.BYTES;
+                File file = null;
+                int maxTries = 128;
+                do {
+                    if (maxTries-- == 0) {
+                        throw new ExceptionInInitializerError(
+                                "Unable to create a temporary directory with path length <= " + maxLen);
+                    }
+                    if (file != null && !file.delete()) {
+                        throw new IOException("Failed to delete: " + file);
+                    }
+                    file = PlatformDependent.createTempDirectory("NETTY-UDS", null).getAbsoluteFile();
+                } while (file.toString().length() > maxLen);
+                DIR = file;
+                file.deleteOnExit();
+            } catch (IOException e) {
+                throw new ExceptionInInitializerError(e);
+            }
+        }
+
+        static String nextSocketName() {
+            int count = COUNTER.incrementAndGet();
+            return DIR + File.separator + Integer.toHexString(count);
         }
     }
 

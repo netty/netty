@@ -51,6 +51,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -71,8 +72,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class LocalChannelTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannelTest.class);
-
-    private static final LocalAddress TEST_ADDRESS = new LocalAddress(LocalChannelTest.class);
 
     private static EventLoopGroup group1;
     private static EventLoopGroup group2;
@@ -136,6 +135,7 @@ public class LocalChannelTest {
 
     @Test
     public void testLocalAddressReuse() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         for (int i = 0; i < 2; i ++) {
             Bootstrap cb = new Bootstrap();
             ServerBootstrap sb = new ServerBootstrap();
@@ -157,7 +157,7 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).asStage().get();
+                sc = sb.bind(testAddress).asStage().get();
 
                 final CountDownLatch latch = new CountDownLatch(1);
                 // Connect to the server
@@ -175,9 +175,9 @@ public class LocalChannelTest {
                 closeChannel(sc);
                 sc.closeFuture().asStage().sync();
 
-                assertNull(LocalChannelRegistry.get(TEST_ADDRESS), String.format(
+                assertNull(LocalChannelRegistry.get(testAddress), String.format(
                         "Expected null, got channel '%s' for local address '%s'",
-                        LocalChannelRegistry.get(TEST_ADDRESS), TEST_ADDRESS));
+                        LocalChannelRegistry.get(testAddress), testAddress));
             } finally {
                 closeChannel(cc);
                 closeChannel(sc);
@@ -187,6 +187,7 @@ public class LocalChannelTest {
 
     @Test
     public void testWriteFailsFastOnClosedChannel() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -207,7 +208,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -229,6 +230,7 @@ public class LocalChannelTest {
 
     @Test
     public void testServerCloseChannelSameEventLoop() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         final CountDownLatch latch = new CountDownLatch(1);
         ServerBootstrap sb = new ServerBootstrap()
                 .group(group2)
@@ -243,7 +245,7 @@ public class LocalChannelTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             Bootstrap b = new Bootstrap()
                     .group(group2)
@@ -265,6 +267,7 @@ public class LocalChannelTest {
 
     @Test
     public void localChannelRaceCondition() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         final CountDownLatch closeLatch = new CountDownLatch(1);
         final EventLoopGroup clientGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory()) {
 
@@ -309,7 +312,7 @@ public class LocalChannelTest {
                            closeLatch.countDown();
                        }
                    }).
-                   bind(TEST_ADDRESS).asStage().get();
+                   bind(testAddress).asStage().get();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(clientGroup).
                     channel(LocalChannel.class).
@@ -331,6 +334,7 @@ public class LocalChannelTest {
 
     @Test
     public void testReRegister() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -351,7 +355,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -366,6 +370,7 @@ public class LocalChannelTest {
     @ParameterizedTest
     @MethodSource("allocators")
     public void testCloseInWritePromiseCompletePreservesOrder(IntFunction<Buffer> allocator) throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -398,7 +403,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -421,17 +426,19 @@ public class LocalChannelTest {
     @ParameterizedTest
     @MethodSource("allocators")
     public void testCloseAfterWriteInSameEventLoopPreservesOrder(IntFunction<Buffer> allocator) throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(3);
         final Buffer data = allocator.apply(1024);
+        data.writeCharSequence("blabla", StandardCharsets.UTF_8);
 
         cb.group(sharedGroup)
           .channel(LocalChannel.class)
           .handler(new ChannelHandler() {
               @Override
               public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                  ctx.writeAndFlush(data);
+                  ctx.writeAndFlush(data.copy());
               }
 
               @Override
@@ -452,7 +459,7 @@ public class LocalChannelTest {
               public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                   if (data.equals(msg)) {
                       messageLatch.countDown();
-                      ctx.writeAndFlush(data);
+                      ctx.writeAndFlush(data.copy());
                       ctx.close();
                   } else {
                       ctx.fireChannelRead(msg);
@@ -468,9 +475,9 @@ public class LocalChannelTest {
 
         Channel sc = null;
         Channel cc = null;
-        try {
+        try (data) {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -485,6 +492,7 @@ public class LocalChannelTest {
     @ParameterizedTest
     @MethodSource("allocators")
     public void testWriteInWritePromiseCompletePreservesOrder(IntFunction<Buffer> allocator) throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -514,7 +522,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -537,6 +545,7 @@ public class LocalChannelTest {
     @MethodSource("allocators")
     public void testPeerWriteInWritePromiseCompleteDifferentEventLoopPreservesOrder(IntFunction<Buffer> allocator)
             throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -584,7 +593,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -610,6 +619,7 @@ public class LocalChannelTest {
     @MethodSource("allocators")
     public void testPeerWriteInWritePromiseCompleteSameEventLoopPreservesOrder(IntFunction<Buffer> allocator)
             throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -657,7 +667,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -682,6 +692,7 @@ public class LocalChannelTest {
     @ParameterizedTest
     @MethodSource("allocators")
     public void testWriteWhilePeerIsClosedReleaseObjectAndFailPromise(IntFunction<Buffer> allocator) throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch serverMessageLatch = new CountDownLatch(1);
@@ -722,7 +733,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = cb.connect(sc.localAddress()).asStage().get();
@@ -776,6 +787,7 @@ public class LocalChannelTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testConnectFutureBeforeChannelActive() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -796,7 +808,7 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             cc = cb.register().asStage().get();
 
@@ -877,6 +889,7 @@ public class LocalChannelTest {
 
     @Test
     public void testNotLeakBuffersWhenCloseByRemotePeer() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -921,7 +934,7 @@ public class LocalChannelTest {
         LocalChannel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
 
             // Connect to the server
             cc = (LocalChannel) cb.connect(sc.localAddress()).asStage().get();
@@ -957,6 +970,7 @@ public class LocalChannelTest {
     }
 
     private static void testAutoReadDisabled(EventLoopGroup serverGroup, EventLoopGroup clientGroup) throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         final CountDownLatch latch = new CountDownLatch(100);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
@@ -999,8 +1013,8 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
-            cc = cb.connect(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
+            cc = cb.connect(testAddress).asStage().get();
 
             latch.await();
         } finally {
@@ -1035,6 +1049,7 @@ public class LocalChannelTest {
 
     private static void testMaxMessagesPerReadRespected(
             EventLoopGroup serverGroup, EventLoopGroup clientGroup, final boolean autoRead) throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         final CountDownLatch countDownLatch = new CountDownLatch(5);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
@@ -1060,8 +1075,8 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
-            cc = cb.connect(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
+            cc = cb.connect(testAddress).asStage().get();
 
             countDownLatch.await();
         } finally {
@@ -1096,6 +1111,7 @@ public class LocalChannelTest {
 
     private static void testServerMaxMessagesPerReadRespected(
             EventLoopGroup serverGroup, EventLoopGroup clientGroup, final boolean autoRead) throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         final CountDownLatch countDownLatch = new CountDownLatch(5);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
@@ -1125,10 +1141,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
             for (int i = 0; i < 5; i++) {
                 try {
-                    cc = cb.connect(TEST_ADDRESS).asStage().get();
+                    cc = cb.connect(testAddress).asStage().get();
                 } finally {
                     closeChannel(cc);
                 }
@@ -1196,6 +1212,7 @@ public class LocalChannelTest {
 
     @Test
     public void testReadCompleteCalledOnHandle() throws Exception {
+        LocalAddress testAddress = new LocalAddress(LocalChannelTest.class);
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -1226,9 +1243,9 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).asStage().get();
+            sc = sb.bind(testAddress).asStage().get();
             try {
-                cc = cb.connect(TEST_ADDRESS).asStage().get();
+                cc = cb.connect(testAddress).asStage().get();
                 cc.writeAndFlush("msg").asStage().get();
             } finally {
                 closeChannel(cc);

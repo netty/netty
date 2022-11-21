@@ -33,7 +33,9 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty5.channel.ChannelHandlerMask.MASK_BIND;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_ACTIVE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_EXCEPTION_CAUGHT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INACTIVE;
+import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INBOUND_EVENT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_READ_COMPLETE;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_REGISTERED;
@@ -44,15 +46,13 @@ import static io.netty5.channel.ChannelHandlerMask.MASK_CLOSE;
 import static io.netty5.channel.ChannelHandlerMask.MASK_CONNECT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_DEREGISTER;
 import static io.netty5.channel.ChannelHandlerMask.MASK_DISCONNECT;
-import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_EXCEPTION_CAUGHT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_FLUSH;
+import static io.netty5.channel.ChannelHandlerMask.MASK_PENDING_OUTBOUND_BYTES;
 import static io.netty5.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty5.channel.ChannelHandlerMask.MASK_REGISTER;
-import static io.netty5.channel.ChannelHandlerMask.MASK_SHUTDOWN;
-import static io.netty5.channel.ChannelHandlerMask.MASK_CHANNEL_INBOUND_EVENT;
 import static io.netty5.channel.ChannelHandlerMask.MASK_SEND_OUTBOUND_EVENT;
+import static io.netty5.channel.ChannelHandlerMask.MASK_SHUTDOWN;
 import static io.netty5.channel.ChannelHandlerMask.MASK_WRITE;
-import static io.netty5.channel.ChannelHandlerMask.MASK_PENDING_OUTBOUND_BYTES;
 import static io.netty5.channel.ChannelHandlerMask.mask;
 import static java.util.Objects.requireNonNull;
 
@@ -1033,7 +1033,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             handler().handlerAdded(this);
             if (handlesPendingOutboundBytes(executionMask)) {
                 long pending = pendingOutboundBytes();
-                currentPendingBytes = -1;
+                currentPendingBytes = Math.max(0, pending);
                 if (pending > 0) {
                     pipeline.incrementPendingOutboundBytes(pending);
                 }
@@ -1051,7 +1051,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 } finally {
                     if (handlesPendingOutboundBytes(executionMask)) {
                         long pending = pendingOutboundBytes();
-                        currentPendingBytes = -1;
+                        currentPendingBytes = Math.max(0, pending);
                         if (pending > 0) {
                             pipeline.decrementPendingOutboundBytes(pending);
                         }
@@ -1302,20 +1302,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private IllegalStateException saveCurrentPendingBytesIfNeeded() {
-        if (!handlesPendingOutboundBytes(executionMask)) {
-            assert currentPendingBytes == 0;
-            return null;
-        }
-        // We only save the current pending bytes if not already done before.
-        // This is important as otherwise we might run into issues in case of reentrancy.
-        if (currentPendingBytes == -1) {
-            try {
-                currentPendingBytes = pendingOutboundBytes();
-            } catch (IllegalStateException e) {
-                return e;
-            }
-        }
-        return null;
+        return saveAndUpdatePendingBytes();
     }
 
     private long pendingOutboundBytes() {
@@ -1330,30 +1317,34 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return pending;
     }
 
-    private void updatePendingBytesIfNeeded() {
+    private IllegalStateException saveAndUpdatePendingBytes() {
         if (!handlesPendingOutboundBytes(executionMask)) {
             assert currentPendingBytes == 0;
-            return;
+            return null;
         }
-        long current = currentPendingBytes;
-        if (current == -1) {
-            return;
+        long prev = currentPendingBytes;
+        long delta = (currentPendingBytes = pendingOutboundBytes()) - prev;
+
+        if (delta == 0) {
+            // No changes
+            return null;
         }
-        this.currentPendingBytes = -1;
         try {
-            long newPendingBytes = pendingOutboundBytes();
-            long delta = current - newPendingBytes;
-            if (delta == 0) {
-                // No changes
-                return;
-            }
             if (delta > 0) {
-                pipeline.decrementPendingOutboundBytes(delta);
+                pipeline.incrementPendingOutboundBytes(delta);
             } else {
-                pipeline.incrementPendingOutboundBytes(-delta);
+                pipeline.decrementPendingOutboundBytes(-delta);
             }
         } catch (IllegalStateException e) {
-            logger.error(e);
+            return e;
+        }
+        return null;
+    }
+
+    private void updatePendingBytesIfNeeded() {
+        IllegalStateException exception = saveAndUpdatePendingBytes();
+        if (exception != null) {
+            logger.error(exception);
         }
     }
 
