@@ -90,7 +90,9 @@ class SimpleConcurrencyLimitTest {
         try {
             new SimpleConcurrencyLimit(0);
             fail();
-        } catch (IllegalArgumentException expected) {}
+        } catch (IllegalArgumentException expected) {
+            // Expected
+        }
     }
 
     @Nullable
