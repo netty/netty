@@ -174,14 +174,13 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 int mask = ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
                 buf.writeInt(mask);
 
-                int counter = 0;
                 int i = data.readerOffset();
                 int end = data.writerOffset();
 
                 int maskOffset = 0;
                 for (; i < end; i++) {
                     byte byteData = data.getByte(i);
-                    buf.writeByte((byte) (byteData ^ byteAtIndex(mask, maskOffset++ & 3)));
+                    buf.writeByte((byte) (byteData ^ WebSocketUtil.byteAtIndex(mask, maskOffset++ & 3)));
                 }
                 out.add(buf);
             } else {
@@ -200,9 +199,5 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
             }
             throw t;
         }
-    }
-
-    private static int byteAtIndex(int mask, int index) {
-        return (mask >> 8 * (3 - index)) & 0xFF;
     }
 }

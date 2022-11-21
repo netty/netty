@@ -82,7 +82,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
-    private byte[] maskingKey;
+    private int mask;
     private int framePayloadLen1;
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
@@ -289,10 +289,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
                 if (in.readableBytes() < 4) {
                     return;
                 }
-                if (maskingKey == null) {
-                    maskingKey = new byte[4];
-                }
-                in.readBytes(maskingKey, 0, maskingKey.length);
+                mask = in.readInt();
             }
             state = State.PAYLOAD;
         }
@@ -392,20 +389,15 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
         int len = frame.readableBytes();
         int index = 0;
 
-        // Remark: & 0xFF is necessary because Java will do signed expansion from
-        // byte to int which we don't want.
-        int intMask = (maskingKey[0] & 0xFF) << 24
-                      | (maskingKey[1] & 0xFF) << 16
-                      | (maskingKey[2] & 0xFF) << 8
-                      | maskingKey[3] & 0xFF;
-
+        int intMask = mask;
         for (; index + 3 < len; index += Integer.BYTES) {
             int off = base + index;
             frame.setInt(off, frame.getInt(off) ^ intMask);
         }
+        int maskOffset = 0;
         for (; index < len; index++) {
             int off = base + index;
-            frame.setByte(off, (byte) (frame.getByte(off) ^ maskingKey[index % 4]));
+            frame.setByte(off, (byte) (frame.getByte(off) ^ WebSocketUtil.byteAtIndex(intMask, maskOffset++ & 3)));
         }
     }
 
