@@ -167,8 +167,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
      * @param subprotocol
      *            Sub protocol request sent to the server.
      * @param allowExtensions
@@ -330,5 +328,17 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     private static String createNonce() {
         var nonce = WebSocketUtil.randomBytes(16);
         return WebSocketUtil.base64(nonce);
+    }
+
+    public boolean isAllowExtensions() {
+        return allowExtensions;
+    }
+
+    public boolean isPerformMasking() {
+        return performMasking;
+    }
+
+    public boolean isAllowMaskMismatch() {
+        return allowMaskMismatch;
     }
 }
