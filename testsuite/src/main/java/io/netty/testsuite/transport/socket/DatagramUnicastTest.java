@@ -269,12 +269,12 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                     }
                 });
             }
-        }).bind(newSocketAddress()).sync().channel();
+        }).bind(serverAddress).sync().channel();
 
         Channel cc = cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true).
                 handler(new ChannelInboundHandlerAdapter()).register().sync().channel();
         try {
-            InetSocketAddress goodHost = (InetSocketAddress) sc.localAddress();
+            InetSocketAddress goodHost = sendToAddress((InetSocketAddress) sc.localAddress());
             InetSocketAddress unresolvedHost = new InetSocketAddress("NOT_A_REAL_ADDRESS", goodHost.getPort());
 
             assertFalse(goodHost.isUnresolved());
