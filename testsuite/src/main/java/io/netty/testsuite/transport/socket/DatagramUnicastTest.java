@@ -255,6 +255,10 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     public void testSendToUnresolvableAddress(Bootstrap sb, Bootstrap cb) throws Throwable {
+        SocketAddress serverAddress = newSocketAddress();
+        if (!(serverAddress instanceof InetSocketAddress)) {
+            return;
+        }
         Channel sc = sb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
