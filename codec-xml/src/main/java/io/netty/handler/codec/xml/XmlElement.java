@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.xml;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
