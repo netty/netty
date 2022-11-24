@@ -28,7 +28,7 @@ public abstract class XmlElement {
     private final String namespace;
     private final String prefix;
 
-    private final List<XmlNamespace> namespaces = new LinkedList<XmlNamespace>();
+    private final List<XmlNamespace> namespaces = new ArrayList<XmlNamespace>();
 
     protected XmlElement(String name, String namespace, String prefix) {
         this.name = name;
