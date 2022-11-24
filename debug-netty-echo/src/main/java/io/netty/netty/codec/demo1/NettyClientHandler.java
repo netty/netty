@@ -7,18 +7,18 @@ import io.netty.util.CharsetUtil;
 
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
-    //当通道就绪就会触发该方法
+    // 当通道就绪就会触发该方法
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
 
-        //发生一个Student 对象到服务器
+        // 发生一个 Student 对象到服务器
 
         StudentPOJO.Student student = StudentPOJO.Student.newBuilder().setId(4).setName("智多星 吴用").build();
-        //Teacher , Member ,Message
+        // Teacher , Member ,Message
         ctx.writeAndFlush(student);
     }
 
-    //当通道有读取事件时，会触发
+    // 当通道有读取事件时，会触发
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 

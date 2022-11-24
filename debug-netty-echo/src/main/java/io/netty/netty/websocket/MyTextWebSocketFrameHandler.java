@@ -7,6 +7,8 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.time.LocalDateTime;
 
 /**
+ * 这里 TextWebSocketFrame 类型，表示一个文本帧(frame)
+ *
  * @author lxcecho 909231497@qq.com
  * @since 12.12.2021
  */

@@ -18,14 +18,14 @@ public class MyClientHandler extends SimpleChannelInboundHandler<Long> {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         System.out.println("MyClientHandler 发送数据");
-        //ctx.writeAndFlush(Unpooled.copiedBuffer(""))
+        // ctx.writeAndFlush(Unpooled.copiedBuffer(""))
         ctx.writeAndFlush(123456L); //发送的是一个long
 
-        //分析
-        //1. "abcdabcdabcdabcd" 是 16个字节
-        //2. 该处理器的前一个handler 是  MyLongToByteEncoder
-        //3. MyLongToByteEncoder 父类  MessageToByteEncoder
-        //4. 父类  MessageToByteEncoder
+        // 分析
+        // 1. "abcdabcdabcdabcd" 是 16个字节
+        // 2. 该处理器的前一个handler 是  MyLongToByteEncoder
+        // 3. MyLongToByteEncoder 父类  MessageToByteEncoder
+        // 4. 父类  MessageToByteEncoder
         /*
 
          public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

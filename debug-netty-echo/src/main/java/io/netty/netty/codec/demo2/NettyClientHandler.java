@@ -9,18 +9,18 @@ import java.util.Random;
 
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
-    //当通道就绪就会触发该方法
+    // 当通道就绪就会触发该方法
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
 
-        //随机的发送Student 或者 Workder 对象
+        // 随机的发送 Student 或者 Workder 对象
         int random = new Random().nextInt(3);
         MyDataInfo.MyMessage myMessage = null;
 
-        if (0 == random) { //发送Student 对象
+        if (0 == random) { // 发送 Student 对象
 
             myMessage = MyDataInfo.MyMessage.newBuilder().setDataType(MyDataInfo.MyMessage.DataType.StudentType).setStudent(MyDataInfo.Student.newBuilder().setId(5).setName("玉麒麟 卢俊义").build()).build();
-        } else { // 发送一个Worker 对象
+        } else { // 发送一个 Worker 对象
 
             myMessage = MyDataInfo.MyMessage.newBuilder().setDataType(MyDataInfo.MyMessage.DataType.WorkerType).setWorker(MyDataInfo.Worker.newBuilder().setAge(20).setName("老李").build()).build();
         }
@@ -28,7 +28,7 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
         ctx.writeAndFlush(myMessage);
     }
 
-    //当通道有读取事件时，会触发
+    // 当通道有读取事件时，会触发
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 

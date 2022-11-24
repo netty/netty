@@ -10,30 +10,44 @@ import java.util.Iterator;
 import java.util.Scanner;
 
 /**
- * @author lxcecho 909231497@qq.com
- * @since 29.05.2021
- * <p>
  * 1 连接服务器
  * 2 发送消息
  * 3 接受服务器消息
+ *
+ * @author lxcecho 909231497@qq.com
+ * @since 29.05.2021
  */
 public class GroupChatClient {
 
+    // 定义相关属性
+
+    /**
+     * 服务器 IP
+     */
     private final String HOST = "127.0.0.1";
+
+    /**
+     * 服务器端口
+     */
     private final int PORT = 6667;
+
     private Selector selector;
 
     private SocketChannel socketChannel;
 
     private String username;
 
+    // Constructor for initializing
     public GroupChatClient() {
         try {
             selector = Selector.open();
+            // 连接服务器
             socketChannel = SocketChannel.open(new InetSocketAddress(HOST, PORT));
             // 设置非阻塞
             socketChannel.configureBlocking(false);
+            // 将 Channel 注册到 Selector
             socketChannel.register(selector, SelectionKey.OP_READ);
+            // 得到 username
             username = socketChannel.getLocalAddress().toString().substring(1);
             System.out.println(username + " is ok ...");
         } catch (IOException e) {
@@ -89,8 +103,10 @@ public class GroupChatClient {
     }
 
     public static void main(String[] args) {
+        // 启动客户端
         GroupChatClient groupChatClient = new GroupChatClient();
 
+        // 启动一个线程，每个 3s，读取从服务器发送数据
         new Thread() {
             @Override
             public void run() {

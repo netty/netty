@@ -40,9 +40,10 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter implements 
         // 进行wait
         wait(); // 等待channelRead 方法获取到服务器的结果后，唤醒
         System.out.println(" call2 被调用  ");
-        return  result; //服务方返回的结果
+        return result; //服务方返回的结果
 
     }
+
     // (2)
     void setPara(String para) {
         System.out.println(" setPara  ");

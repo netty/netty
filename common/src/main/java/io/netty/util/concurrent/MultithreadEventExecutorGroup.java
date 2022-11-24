@@ -63,10 +63,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     /**
      * Create a new instance.
      *
-     * @param nThreads          the number of threads that will be used by this instance.
-     * @param executor          the Executor to use, or {@code null} if the default should be used.
-     * @param chooserFactory    the {@link EventExecutorChooserFactory} to use.
-     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     * @param nThreads          the number of threads that will be used by this instance. 使用的线程数，默认为 core*2 【可追踪源码】
+     * @param executor          the Executor to use, or {@code null} if the default should be used. 执行器：如果传入 null，则采用 Netty 默认的线程工厂和 默认的执行器 ThreadPerTaskExecutor
+     * @param chooserFactory    the {@link EventExecutorChooserFactory} to use. 单例 new DefaultEventExecutorChooseFactory();
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call 在创建执行器的时候传入的固定参数
      */
     protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
                                             EventExecutorChooserFactory chooserFactory, Object... args) {
@@ -78,6 +78,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
         children = new EventExecutor[nThreads];
 
+        // 初始化线程组
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
@@ -119,6 +120,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         };
 
+        //
         for (EventExecutor e: children) {
             e.terminationFuture().addListener(terminationListener);
         }

@@ -1,4 +1,4 @@
-package io.netty.netty.groupchat;
+package io.netty.netty.groupchat.case2;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;

@@ -1,10 +1,10 @@
 package io.netty.netty.protocaltcp;
 
 /**
+ * 协议包
+ *
  * @author lxcecho 909231497@qq.com
  * @since 12.12.2021
- *
- * 协议包
  */
 public class MessageProtocol {
 

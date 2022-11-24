@@ -24,8 +24,7 @@ public class NewIoClient {
         long startTime = System.currentTimeMillis();
 
         // 在 linux 下一个 transferTo 方法就可以完成传输
-        // 在 windows 下，一次第哦啊用 transferTo 只能发送 8M，就需要分段传输文件，而且主要传输
-        // 时的位置 ---> 思考？？？
+        // 在 windows 下，一次第哦啊用 transferTo 只能发送 8M，就需要分段传输文件，而且主要传输时的位置 ---> 思考？？？
         // transferTo 底层使用到 零拷贝
         long transferCount = fileChannel.transferTo(0, fileChannel.size(), socketChannel);
 

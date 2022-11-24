@@ -20,9 +20,12 @@ public class NioClient {
 
     public static void main(String[] args) {
         try {
+            // 得到一个网络通道
             selector = Selector.open();
             SocketChannel socketChannel = SocketChannel.open();
+            // 设置非阻塞
             socketChannel.configureBlocking(false);
+            // 提供服务器端的 ip 和 端口，连接服务器
             socketChannel.connect(new InetSocketAddress(8090));
             // 将客户端连接注册到复用器上
             socketChannel.register(selector, SelectionKey.OP_CONNECT);

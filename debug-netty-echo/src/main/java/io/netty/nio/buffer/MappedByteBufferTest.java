@@ -6,12 +6,13 @@ import java.nio.channels.FileChannel;
 
 /**
  * IO 映射缓冲区：MappedByteBuffer
+ * MappedByteBuffer 可让文件直接在内存(堆外内存)修改, 操作系统不需要拷贝一次。
  * NIO 还提供了 MappedByteBuffer，可以让文件直接在内存（堆外的内存）中进行修改，而如何同步到文件由 NIO 来完成。
  *
  * @author lxcecho 909231497@qq.com
  * @since 23:10 28-10-2022
  */
-public class MappedBuffer {
+public class MappedByteBufferTest {
 
     public static void main(String[] args) throws Exception {
         RandomAccessFile randomAccessFile = new RandomAccessFile("2.txt", "rw");
