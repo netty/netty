@@ -42,6 +42,7 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
 
@@ -296,10 +297,18 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         return writtenBytes > 0;
     }
 
+    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
+        if (envelope.recipient() instanceof InetSocketAddress
+                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+            throw new UnresolvedAddressException();
+        }
+    }
+
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
+            checkUnresolved(packet);
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
@@ -313,6 +322,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            checkUnresolved(e);
+
             if (e.content() instanceof ByteBuf &&
                     (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
 
