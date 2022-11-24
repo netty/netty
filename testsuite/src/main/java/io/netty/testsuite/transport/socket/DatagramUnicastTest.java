@@ -267,7 +267,8 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             }
         }).bind(newSocketAddress()).sync().channel();
 
-        Channel cc = cb.handler(new ChannelInboundHandlerAdapter()).bind(newSocketAddress()).sync().channel();
+        Channel cc = cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true).
+                handler(new ChannelInboundHandlerAdapter()).register().sync().channel();
         try {
             InetSocketAddress goodHost = (InetSocketAddress) sc.localAddress();
             InetSocketAddress unresolvedHost = new InetSocketAddress("NOT_A_REAL_ADDRESS", goodHost.getPort());
@@ -276,8 +277,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             assertTrue(unresolvedHost.isUnresolved());
 
             String message = "hello world!";
-            assertTrue(cc.writeAndFlush(new DatagramPacket(
-                    Unpooled.copiedBuffer(message, CharsetUtil.US_ASCII), goodHost)).await().isSuccess());
+            cc.writeAndFlush(new DatagramPacket(Unpooled.copiedBuffer(message, CharsetUtil.US_ASCII), goodHost)).sync();
             assertInstanceOf(UnresolvedAddressException.class, cc.writeAndFlush(new DatagramPacket(
                     Unpooled.copiedBuffer(message, CharsetUtil.US_ASCII), unresolvedHost)).await().cause());
 
@@ -285,8 +285,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             assertTrue(cc.isOpen());
 
             // DatagramChannel should still be able to send messages outbound
-            assertTrue(cc.writeAndFlush(new DatagramPacket(
-                    Unpooled.copiedBuffer(message, CharsetUtil.US_ASCII), goodHost)).await().isSuccess());
+            cc.writeAndFlush(new DatagramPacket(Unpooled.copiedBuffer(message, CharsetUtil.US_ASCII), goodHost)).sync();
             assertInstanceOf(UnresolvedAddressException.class, cc.writeAndFlush(new DatagramPacket(
                     Unpooled.copiedBuffer(message, CharsetUtil.US_ASCII), unresolvedHost)).await().cause());
             assertTrue(cc.isOpen());
