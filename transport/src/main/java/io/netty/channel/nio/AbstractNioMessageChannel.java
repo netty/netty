@@ -65,6 +65,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
         @Override
         public void read() {
+            // 1. 检查该 EventLoop 线程是否当前线程
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();
             final ChannelPipeline pipeline = pipeline();
@@ -76,6 +77,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
+                        // 2. 执行 doReadMessages，并传入一个 List<Object> readBuf 对象，即 容器
+                        // 作用是读取 boss 线程中的 NioServerSocketChannel 接收到的请求，并把这些请求放进容器
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
@@ -91,9 +94,12 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     exception = t;
                 }
 
+                // 3. 循环容器，执行 pipeline.fireChannelRead(readBuf.get(i)); 用于处理这些接收的请求或者其他事件。
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    // 循环调用 ServerSocket 的 pipeline 的 fireChannelRead 方法，开始执行管道中 handler 的 ChannelRead 方法
+                    // 经过多次 debug，可以看到会反复执行多个 handler 的 ChannelRead，pipeline 里面有四个handler：Head、LoggingHandler、ServerBootstrapAcceptor，Tail
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();

@@ -50,6 +50,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     // purposes.
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
+    /**
+     * Conffig 对象，会在后面起很大作用
+     */
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
@@ -129,7 +132,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) {
-        // 设置 Socket 参数
+        // 设置 NioServerSocketChannel 的 TCP 参数
         setChannelOptions(channel, newOptionsArray(), logger);
         // 保存用户自定义属性
         setAttributes(channel, newAttributesArray());
@@ -210,14 +213,19 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            // 1. msg 强转成 Channel，实际上是 NioSocketChannel
             final Channel child = (Channel) msg;
 
+            // 2. 添加 NioSocketChannel 的 pipeline 的 handler，就是 main 方法中设置的 childHandler 方法里的
             child.pipeline().addLast(childHandler);
 
+            // 3. 设置 NioSocketChannel 的各种属性
             setChannelOptions(child, childOptions, logger);
             setAttributes(child, childAttrs);
 
             try {
+                // 将客户端连接注册到 worker 线程池
+                // 将 该 NioSocketChannel 注册到 childGroup 中的一个 EventLoop 上，并添加一个监听器，这个 childGroup 就是 main 方法中创建的 workerGroup
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

@@ -49,7 +49,13 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     @Override
     public T newChannel() {
         try {
-            // 反射创建对象，使用的是 NioSocketChannel 默认构造器
+            // 反射创建对象，使用的是 NioServerSocketChannel 默认构造器
+            /**
+             * 过程：
+             * 1. 通过 NIO 的 SelectorProvider 的 openServerSocketChannel 方法得到 JDK 的 channel，目的是让 Netty 包装 JDK 的 channel；
+             * 2. 创建一个唯一的 ChannelId，创建了一个 NioMessageUnsafe，用于操作消息，创建了一个 DefaultChannelPipeline 管道，是个双向链表结构，用于过滤所有的进出的消息；
+             * 3. 创建了一个 NioServerSocketChannelConfig 对象，用于对外展示一些配置；
+             */
             return constructor.newInstance();
         } catch (Throwable t) {
             throw new ChannelException("Unable to create Channel from class " + constructor.getDeclaringClass(), t);

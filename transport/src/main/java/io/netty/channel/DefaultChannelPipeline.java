@@ -195,6 +195,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return addLast(null, name, handler);
     }
 
+    /**
+     * Pipeline 的核心
+     *
+     * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
+     *                 methods
+     * @param name     the name of the handler to append
+     * @param handler  the handler to append
+     *
+     * @return
+     */
     @Override
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
@@ -202,10 +212,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // 检查是否重复添加 Handler
             checkMultiplicity(handler);
 
-            // 创建心的 DefaultChannelHandlerContext 节点
+            /**
+             * 创建新的 DefaultChannelHandlerContext【AbstractChannelHandlerContext】 节点，
+             * ChannelHandlerContext 对象是 ChannelHandler 和 ChannelPipeline 之间的关联，每当有 ChannelHandler 添加到 Pipeline 中时，都会创建 Context，
+             * Context 主要功能是管理他所关联的 Handler 和同一个 Pipeline 中的其他 Handler 之间的交互。
+             */
             newCtx = newContext(group, filterName(name, handler), handler);
 
-            // 添加新的 DefaultChannelHandler 节点到 ChannelPipeline
+            // 添加新的 DefaultChannelHandler 节点到 ChannelPipeline，即追加到 tail 节点前面
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -223,7 +237,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return this;
             }
         }
-        // 回调用户方法
+        // 同步或异步或者晚点异步的调用 callHandlerAdded0，即回调用户方法
         callHandlerAdded0(newCtx);
         return this;
     }
@@ -1351,7 +1365,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-            unsafe.bind(localAddress, promise);
+            unsafe.bind(localAddress, promise); // 要 debug 第二圈的时候才能看到
         }
 
         @Override

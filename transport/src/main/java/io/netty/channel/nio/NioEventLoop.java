@@ -740,6 +740,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * 这个方法开始调试，要分析到 AbstractNioChannel#doBeginRead 方法，当到这个方法时，针对这个客户端的连接就完成了，接下来就可以监听读事件了
+     *
+     * @param k
+     * @param ch
+     */
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
         final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
         if (!k.isValid()) {
@@ -786,6 +792,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                // ！！！断点位置
+                // 这个 unsafe 是 boss 线程中 NioServerSocketChannel 的 AbstractNioMessageChannel$NioMessageUnsafe 对象
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {

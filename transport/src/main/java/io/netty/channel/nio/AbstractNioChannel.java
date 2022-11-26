@@ -407,6 +407,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
+        // 断点打在这里！！！
+        // 在这个地方调试时，把所有其他断电去掉，然后启动服务器就会停止在这里，需要先放过这个断点，再用浏览器请求，才能看到 channelRead 的效果
+        // 执行到这里，针对这个客户端的连接就完成了，接下来就可以监听读事件了
         final SelectionKey selectionKey = this.selectionKey;
         if (!selectionKey.isValid()) {
             return;

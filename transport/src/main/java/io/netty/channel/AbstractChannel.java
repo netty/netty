@@ -490,6 +490,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
+                            // channelRead 进入到这里
                             register0(promise);
                         }
                     });
@@ -570,6 +571,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             try {
+                // ！！！这里最终的方法就是 doBind 方法，执行成功后，执行通道的 fireChannelActive 方法，告诉所有的 handler，已经成功绑定。
+                // 最终 doBind 就会追踪到 NioServerSocketChannel 的 doBind，说明 Netty 底层使用的是 NIO。
                 doBind(localAddress);
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
@@ -586,6 +589,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 });
             }
 
+            // 告诉 promise 任务成功，其可以执行监听器的方法了，到此整个启动过程已经结束。
             safeSetSuccess(promise);
         }
 
