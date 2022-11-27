@@ -7,7 +7,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	JNIEXPORT jobjectArray JNICALL Java_io_netty_resolver_dns_windows_WindowsResolverDnsServerAddressStreamProvider_adapters
+	JNIEXPORT jobjectArray JNICALL Java_io_netty_resolver_dns_windows_WindowsAdapterInfo_adapters
 	(JNIEnv*, jclass);
 
 	JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved);

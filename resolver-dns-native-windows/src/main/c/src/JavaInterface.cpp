@@ -10,7 +10,7 @@
 std::unique_ptr<NativeExceptionClass> nativeExceptionClass;
 std::unique_ptr<JavaNetworkAdapterClass> javaNetworkAdapterClass;
 
-JNIEXPORT jobjectArray JNICALL Java_io_netty_resolver_dns_windows_WindowsResolverDnsServerAddressStreamProvider_adapters(JNIEnv* env, jclass)
+JNIEXPORT jobjectArray JNICALL Java_io_netty_resolver_dns_windows_WindowsAdapterInfo_adapters(JNIEnv* env, jclass)
 {
     try {
         NetworkAdapters adapterWrapper;
