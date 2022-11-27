@@ -32,11 +32,11 @@ public final class NetworkAdapter {
         this.ipv6Index = ipv6Index;
     }
 
-    InetSocketAddress[] nameservers() {
+    public InetSocketAddress[] getNameservers() {
         return nameservers;
     }
 
-    public String[] searchDomains() {
+    public String[] getSearchDomains() {
         return searchDomains;
     }
 

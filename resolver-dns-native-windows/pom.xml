@@ -121,7 +121,7 @@
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns</artifactId>
+      <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>
