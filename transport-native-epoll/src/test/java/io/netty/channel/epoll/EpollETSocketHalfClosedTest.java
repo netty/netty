@@ -23,12 +23,7 @@ import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
 
 import java.util.List;
 
-public class EpollETSocketHalfClosed extends SocketHalfClosedTest {
-    @Override
-    public int maxReadCompleteWithNoDataAfterInputShutdown() {
-        return 1;
-    }
-
+public class EpollETSocketHalfClosedTest extends SocketHalfClosedTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.socketWithoutFastOpen();
