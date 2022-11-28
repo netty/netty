@@ -40,7 +40,8 @@ public interface DnsServerResponseFeedbackAddressStream extends DnsServerAddress
      * to return the best performing DNS server address
      *
      * @param address The address returned by {@link #next()} that feedback needs to be applied to
+     * @param failureCause The reason the DNS query failed, can be used to penalize failures differently
      * @param queryResponseTimeNanos The response time of a query against the given DNS server
      */
-    void feedbackFailure(InetSocketAddress address, long queryResponseTimeNanos);
+    void feedbackFailure(InetSocketAddress address, Throwable failureCause, long queryResponseTimeNanos);
 }

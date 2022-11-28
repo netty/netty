@@ -123,6 +123,7 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -3675,11 +3676,16 @@ public class DnsNameResolverTest {
                 return new DnsServerResponseFeedbackAddressStream() {
                     @Override
                     public void feedbackSuccess(InetSocketAddress address, long queryResponseTimeNanos) {
+                        assertThat(queryResponseTimeNanos, greaterThanOrEqualTo(0L));
                         successCalled.set(true);
                     }
 
                     @Override
-                    public void feedbackFailure(InetSocketAddress address, long queryResponseTimeNanos) {
+                    public void feedbackFailure(InetSocketAddress address,
+                                                Throwable failureCause,
+                                                long queryResponseTimeNanos) {
+                        assertThat(queryResponseTimeNanos, greaterThanOrEqualTo(0L));
+                        assertNotNull(failureCause);
                         failureCalled.set(true);
                     }
 

@@ -482,7 +482,7 @@ abstract class DnsResolveContext<T> {
                         if (isFeedbackAddressStream) {
                             final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
                                     (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
-                            feedbackNameServerAddrStream.feedbackFailure(nameServerAddr,
+                            feedbackNameServerAddrStream.feedbackFailure(nameServerAddr, queryCause,
                                     System.nanoTime() - queryStartTimeNanos);
                         }
                         queryLifecycleObserver.queryFailed(queryCause);
