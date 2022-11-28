@@ -614,7 +614,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             listener = null;
         } else if (listeners != null) {
             listeners.remove(toRemove);
-            // TODO we need ot compact it?
+            // Removal is rare, no need for compaction
             if (listeners.size() == 0) {
                 listeners = null;
             }
@@ -813,7 +813,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
             return copy;
         } else if (listener instanceof GenericProgressiveFutureListener) {
-            // TODO can we save the instanceof and just makes use of the progressiveSize?
             return listener;
         } else {
             // Only one listener was added and it's not a progressive listener.
