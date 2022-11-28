@@ -21,6 +21,7 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
@@ -30,6 +31,7 @@ import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.EmptyArrays;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.opentest4j.TestAbortedException;
@@ -42,6 +44,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.UnresolvedAddressException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
@@ -54,6 +58,7 @@ import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -207,8 +212,68 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         client.close();
     }
 
+    @Test
+    public void testSendToUnresolvableAddress(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testSendToUnresolvableAddress(bootstrap, bootstrap2);
+            }
+        });
+    }
+
+    public void testSendToUnresolvableAddress(Bootstrap sb, Bootstrap cb) throws Throwable {
+        SocketAddress serverAddress = newSocketAddress();
+        if (!(serverAddress instanceof InetSocketAddress)) {
+            return;
+        }
+        Channel sc = sb.handler(new ChannelInitializer<>() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
+                    @Override
+                    protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
+                        // Just drop
+                    }
+                });
+            }
+        }).bind(serverAddress).asStage().get();
+
+        Channel cc = cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true).
+                handler(new ChannelHandlerAdapter() { }).register().asStage().get();
+        try {
+            InetSocketAddress goodHost = sendToAddress((InetSocketAddress) sc.localAddress());
+            InetSocketAddress unresolvedHost = new InetSocketAddress("NOT_A_REAL_ADDRESS", goodHost.getPort());
+
+            assertFalse(goodHost.isUnresolved());
+            assertTrue(unresolvedHost.isUnresolved());
+
+            String message = "hello world!";
+            cc.writeAndFlush(new DatagramPacket(cc.bufferAllocator()
+                    .copyOf(message, StandardCharsets.US_ASCII), goodHost)).asStage().get();
+            assertInstanceOf(UnresolvedAddressException.class, cc.writeAndFlush(new DatagramPacket(
+                    cc.bufferAllocator().copyOf(message, StandardCharsets.US_ASCII), unresolvedHost))
+                    .asStage().await().cause());
+
+            // DatagramChannel should still be open after sending to unresolved address
+            assertTrue(cc.isOpen());
+
+            // DatagramChannel should still be able to send messages outbound
+            cc.writeAndFlush(new DatagramPacket(cc.bufferAllocator()
+                    .copyOf(message, StandardCharsets.US_ASCII), goodHost)).asStage().get();
+            assertInstanceOf(UnresolvedAddressException.class, cc.writeAndFlush(new DatagramPacket(
+                            cc.bufferAllocator().copyOf(message, StandardCharsets.US_ASCII), unresolvedHost))
+                    .asStage().await().cause());
+            assertTrue(cc.isOpen());
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
     private void testSimpleSend0(Bootstrap sb, Bootstrap cb, Buffer buf, boolean bindClient,
-                                final byte[] bytes, int count) throws Throwable {
+                                 final byte[] bytes, int count) throws Throwable {
         Channel sc = null;
         Channel cc = null;
 

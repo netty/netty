@@ -52,6 +52,7 @@ import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.Set;
 
 import static io.netty5.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
@@ -418,6 +419,13 @@ public final class KQueueDatagramChannel
         }
     }
 
+    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
+        if (envelope.recipient() instanceof InetSocketAddress
+                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+            throw new UnresolvedAddressException();
+        }
+    }
+
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
@@ -431,6 +439,8 @@ public final class KQueueDatagramChannel
                                             String expectedTypes) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
+            checkUnresolved(packet);
+
             if (recipientClass.isInstance(packet.recipient())) {
                 Buffer content = packet.content();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
@@ -442,6 +452,8 @@ public final class KQueueDatagramChannel
         } else if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            checkUnresolved(e);
+
             SocketAddress recipient = e.recipient();
             if (recipient == null || recipientClass.isInstance(recipient)) {
                 if (e.content() instanceof Buffer) {

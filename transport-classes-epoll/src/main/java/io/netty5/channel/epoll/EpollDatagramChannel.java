@@ -57,6 +57,7 @@ import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -402,6 +403,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         writeSink.complete(data.readableBytes(),  result, result > 0 ? 1: 0, result > 0);
     }
 
+    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
+        if (envelope.recipient() instanceof InetSocketAddress
+                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+            throw new UnresolvedAddressException();
+        }
+    }
+
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
@@ -418,6 +426,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                         "Unsupported message type: " + StringUtil.simpleClassName(msg) + expectedTypes);
             }
             SegmentedDatagramPacket packet = (SegmentedDatagramPacket) msg;
+            checkUnresolved(packet);
+
             if (recipientClass.isInstance(packet.recipient())) {
                 Buffer content = packet.content();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
@@ -425,6 +435,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             }
         } else if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
+            checkUnresolved(packet);
+
             if (recipientClass.isInstance(packet.recipient())) {
                 Buffer content = packet.content();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
@@ -436,6 +448,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         } else if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            checkUnresolved(e);
+
             if (recipientClass.isInstance(e.recipient())) {
                 InetSocketAddress recipient = (InetSocketAddress) e.recipient();
                 Object content = e.content();
