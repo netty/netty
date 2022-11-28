@@ -297,6 +297,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
+    @Timeout(30)
     public void testAutoCloseFalseDoesShutdownOutput(TestInfo testInfo) throws Throwable {
         // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
         assumeFalse(PlatformDependent.isWindows());
@@ -316,7 +317,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                                                              Bootstrap cb) throws Exception {
         final int expectedBytes = 100;
         final CountDownLatch serverReadExpectedLatch = new CountDownLatch(1);
-        final CountDownLatch doneLatch = new CountDownLatch(1);
+        final CountDownLatch doneLatch = new CountDownLatch(2);
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -328,9 +329,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     .childOption(ChannelOption.AUTO_CLOSE, false)
                     .childOption(ChannelOption.SO_LINGER, 0);
 
-            final SimpleChannelInboundHandler<?> leaderHandler = new AutoCloseFalseLeader(
+            final AutoCloseFalseLeader leaderHandler = new AutoCloseFalseLeader(
                     expectedBytes, serverReadExpectedLatch, doneLatch, causeRef);
-            final SimpleChannelInboundHandler<?> followerHandler = new AutoCloseFalseFollower(expectedBytes,
+            final AutoCloseFalseFollower followerHandler = new AutoCloseFalseFollower(expectedBytes,
                     serverReadExpectedLatch, doneLatch, causeRef);
             sb.childHandler(new ChannelInitializer<>() {
                 @Override
@@ -351,6 +352,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
             doneLatch.await();
             assertNull(causeRef.get());
+            assertTrue(leaderHandler.seenOutputShutdown);
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().asStage().sync();
@@ -420,7 +422,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         private final CountDownLatch doneLatch;
         private final AtomicReference<Throwable> causeRef;
         private int bytesRead;
-        private boolean seenOutputShutdown;
+        boolean seenOutputShutdown;
 
         AutoCloseFalseLeader(int expectedBytes, CountDownLatch followerCloseLatch, CountDownLatch doneLatch,
                              AtomicReference<Throwable> causeRef) {
@@ -454,10 +456,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             bytesRead += ((Buffer) msg).readableBytes();
             if (bytesRead >= expectedBytes) {
-                if (!seenOutputShutdown) {
-                    causeRef.set(new IllegalStateException(
-                            ChannelShutdownDirection.Outbound.name() + " event was not seen"));
-                }
                 doneLatch.countDown();
             }
         }
@@ -466,6 +464,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownDirection direction) throws Exception {
             if (direction == ChannelShutdownDirection.Outbound) {
                 seenOutputShutdown = true;
+                doneLatch.countDown();
             }
             super.channelShutdown(ctx, direction);
         }
