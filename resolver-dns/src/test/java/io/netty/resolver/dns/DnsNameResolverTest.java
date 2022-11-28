@@ -3679,7 +3679,7 @@ public class DnsNameResolverTest {
                     }
 
                     @Override
-                    public void feedbackFailure(InetSocketAddress address) {
+                    public void feedbackFailure(InetSocketAddress address, long queryResponseTimeNanos) {
                         failureCalled.set(true);
                     }
 

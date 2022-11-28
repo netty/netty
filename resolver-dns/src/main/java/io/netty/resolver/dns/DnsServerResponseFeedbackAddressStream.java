@@ -25,7 +25,7 @@ import java.net.InetSocketAddress;
 public interface DnsServerResponseFeedbackAddressStream extends DnsServerAddressStream {
 
     /**
-     * A way to provide timing feedback to {@link DnsServerAddressStream} so that {@link #next()} can be tuned
+     * A way to provide success feedback to {@link DnsServerAddressStream} so that {@link #next()} can be tuned
      * to return the best performing DNS server address
      *
      * NOTE: This is called regardless of the RCode returned by the DNS server
@@ -40,6 +40,7 @@ public interface DnsServerResponseFeedbackAddressStream extends DnsServerAddress
      * to return the best performing DNS server address
      *
      * @param address The address returned by {@link #next()} that feedback needs to be applied to
+     * @param queryResponseTimeNanos The response time of a query against the given DNS server
      */
-    void feedbackFailure(InetSocketAddress address);
+    void feedbackFailure(InetSocketAddress address, long queryResponseTimeNanos);
 }
