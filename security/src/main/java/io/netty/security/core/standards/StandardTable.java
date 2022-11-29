@@ -128,7 +128,6 @@ public final class StandardTable extends SafeListController<Rule> implements Tab
             Collections.sort(list);
             return list;
         }
-
     }
 
     @SuppressWarnings("ComparatorNotSerializable")

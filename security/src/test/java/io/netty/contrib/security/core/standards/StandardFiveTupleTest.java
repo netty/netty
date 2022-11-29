@@ -42,7 +42,6 @@ class StandardFiveTupleTest {
         FiveTuple fiveTuple = StandardFiveTuple.from(Protocol.UDP, 9110, 2580,
                 StaticIpAddress.of("192.168.1.2"), StaticIpAddress.of("10.10.10.10"));
 
-
         FiveTuple standardFiveTuple = StandardFiveTuple.from(Protocol.UDP, 9110, 2580,
                 StaticIpAddress.of("192.168.1.2"), StaticIpAddress.of("10.10.10.10"));
         assertEquals(0, fiveTuple.compareTo(standardFiveTuple));
