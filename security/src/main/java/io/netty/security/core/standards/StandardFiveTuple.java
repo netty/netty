@@ -33,8 +33,8 @@ public final class StandardFiveTuple implements FiveTuple {
     private StandardFiveTuple(Protocol protocol, int sourcePort, int destinationPort,
                               Address sourceIpAddress, Address destinationIpAddress) {
         this.protocol = ObjectUtil.checkNotNull(protocol, "Protocol");
-        this.sourcePort = ObjectUtil.checkInRange(sourcePort, 1, 65_535, "SourcePort");
-        this.destinationPort = ObjectUtil.checkInRange(destinationPort, 1, 65_535, "DestinationPort");
+        this.sourcePort = ObjectUtil.checkInRange(sourcePort, 1, 65535, "SourcePort");
+        this.destinationPort = ObjectUtil.checkInRange(destinationPort, 1, 65535, "DestinationPort");
         this.sourceIpAddress = ObjectUtil.checkNotNull(sourceIpAddress, "SourceIPAddress");
         this.destinationIpAddress = ObjectUtil.checkNotNull(destinationIpAddress, "DestinationIPAddress");
     }

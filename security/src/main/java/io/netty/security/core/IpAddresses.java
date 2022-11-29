@@ -155,7 +155,7 @@ public class IpAddresses extends SafeListController<Address> implements IpAddres
         public List<Address> process(List<Address> list) {
             Collections.sort(list);
             Iterator<Address> iterator = list.iterator();
-            List<Address> toKeep = new ArrayList<>();
+            List<Address> toKeep = new ArrayList<Address>();
 
             Address parentRule = iterator.hasNext() ? iterator.next() : null;
             if (parentRule != null) {

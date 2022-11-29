@@ -44,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @ChannelHandler.Sharable
 public class StandardNetworkHandler extends ChannelInboundHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(StandardNetworkHandler.class);
-    private final Map<Channel, FiveTuple> CHANNEL_TUPLE_MAP = new ConcurrentHashMap<>();
+    private final Map<Channel, FiveTuple> CHANNEL_TUPLE_MAP = new ConcurrentHashMap<Channel, FiveTuple>();
 
     private final Filter filter;
 

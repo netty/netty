@@ -27,8 +27,8 @@ public final class StandardPorts implements Ports {
     private final int end;
 
     private StandardPorts(int start, int end) {
-        this.start = ObjectUtil.checkInRange(start, 1, 65_535, "PortStart");
-        this.end = ObjectUtil.checkInRange(end, 1, 65_535, "PortEnd");
+        this.start = ObjectUtil.checkInRange(start, 1, 65535, "PortStart");
+        this.end = ObjectUtil.checkInRange(end, 1, 65535, "PortEnd");
 
         if (start > end) {
             throw new IllegalArgumentException("Port start must be smaller than Port end");

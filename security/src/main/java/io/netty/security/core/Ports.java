@@ -20,7 +20,7 @@ public interface Ports extends PortLookup, Comparable<Ports> {
     /**
      * Accept any port number
      */
-    Ports ANY_PORT = new Ports() {
+    Ports ANYPORT = new Ports() {
         @Override
         public boolean equals(Object o) {
             return getClass() == o.getClass();

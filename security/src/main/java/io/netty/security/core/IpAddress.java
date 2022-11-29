@@ -152,7 +152,7 @@ public final class IpAddress implements Address {
 
         assert blocks.length > 0 : "There must be at least one block";
 
-        List<IpAddress> ipAddresses = new ArrayList<>();
+        List<IpAddress> ipAddresses = new ArrayList<IpAddress>();
         for (IPAddress ipAddress : blocks) {
             ipAddresses.add(new IpAddress(ipAddress.toInetAddress(), ipAddress.getPrefixLength()));
         }

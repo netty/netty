@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 public final class StandardTables implements Tables {
-    private final Map<Integer, Table> TABLES = new ConcurrentSkipListMap<>();
+    private final Map<Integer, Table> TABLES = new ConcurrentSkipListMap<Integer, Table>();
 
     private StandardTables() {
         // Prevent outside initialization

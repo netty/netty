@@ -52,8 +52,8 @@ public final class StandardRuleBuilder {
     StandardRuleBuilder(boolean acceptAny) {
         // Package access only
         if (acceptAny) {
-            sourcePorts = Ports.ANY_PORT;
-            destinationPorts = Ports.ANY_PORT;
+            sourcePorts = Ports.ANYPORT;
+            destinationPorts = Ports.ANYPORT;
             sourceIpAddresses = IpAddresses.AcceptAnyIpAddresses.INSTANCE;
             destinationIpAddress = IpAddresses.AcceptAnyIpAddresses.INSTANCE;
             payloads = EMPTY_PAYLOAD;

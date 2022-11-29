@@ -39,11 +39,11 @@ public abstract class SafeListController<T> implements LockMechanism {
 
     // Main List should be accessible from Parent class
     // because Parent class will use it for operations.
-    protected final List<T> MAIN_LIST = new ArrayList<>();
+    protected final List<T> MAIN_LIST = new ArrayList<T>();
 
     // Copy List should be private because it is internally
     // used for copying elements from Main List and vice-versa.
-    private final List<T> COPY_LIST = new ArrayList<>();
+    private final List<T> COPY_LIST = new ArrayList<T>();
 
     // SortAndFilter can be null if there is no need
     // of sorting and filtering.
