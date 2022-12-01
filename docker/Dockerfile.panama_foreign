@@ -1,7 +1,10 @@
 FROM centos:7.6.1810
 
 # Install requirements
-RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
+RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel \
+    apr-devel lksctp-tools unzip zip \
+    centos-release-scl devtoolset-7 \
+    alsa-lib-devel cups-devel fontconfig-devel libXtst-devel libXt-devel libXrender-devel libXrandr-devel libXi-devel
 
 # Downloading and installing SDKMAN!
 RUN curl -s  "https://get.sdkman.io" | bash
@@ -21,8 +24,6 @@ WORKDIR /root/build
 RUN git clone --depth 1 --branch foreign-memaccess+abi https://github.com/openjdk/panama-foreign.git panama-foreign
 WORKDIR /root/build/panama-foreign
 RUN chmod +x configure
-RUN ./configure --with-debug-level=fastdebug \
-                --with-vendor-name=netty-build \
-                --enable-warnings-as-errors=no
+RUN scl enable devtoolset-7 './configure --with-debug-level=fastdebug --with-vendor-name=netty-build --enable-warnings-as-errors=no'
 RUN make images && mv build/linux-*-server-fastdebug/images/jdk /root/jdk && rm -fr *
 ENV JAVA_HOME="/root/jdk"
