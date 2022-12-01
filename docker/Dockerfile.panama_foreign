@@ -1,10 +1,13 @@
 FROM centos:7.6.1810
 
-# Install requirements
+# Install Netty requirements
 RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel \
     apr-devel lksctp-tools unzip zip \
-    centos-release-scl devtoolset-7 \
-    alsa-lib-devel cups-devel fontconfig-devel libXtst-devel libXt-devel libXrender-devel libXrandr-devel libXi-devel
+
+# Install toolchain requirements for OpenJDK (must be done as separate commands because SCL modifies yum)
+RUN yum install -y centos-release-scl
+RUN yum install -y devtoolset-7
+RUN yum install -y alsa-lib-devel cups-devel fontconfig-devel libXtst-devel libXt-devel libXrender-devel libXrandr-devel libXi-devel
 
 # Downloading and installing SDKMAN!
 RUN curl -s  "https://get.sdkman.io" | bash
