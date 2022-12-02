@@ -214,12 +214,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
     @Test
     public void testSendToUnresolvableAddress(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
-            @Override
-            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
-                testSendToUnresolvableAddress(bootstrap, bootstrap2);
-            }
-        });
+        run(testInfo, this::testSendToUnresolvableAddress);
     }
 
     public void testSendToUnresolvableAddress(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -243,7 +238,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 handler(new ChannelHandlerAdapter() { }).register().asStage().get();
         try {
             InetSocketAddress goodHost = sendToAddress((InetSocketAddress) sc.localAddress());
-            InetSocketAddress unresolvedHost = new InetSocketAddress("NOT_A_REAL_ADDRESS", goodHost.getPort());
+            InetSocketAddress unresolvedHost = new InetSocketAddress("unresolved.netty.io", goodHost.getPort());
 
             assertFalse(goodHost.isUnresolved());
             assertTrue(unresolvedHost.isUnresolved());
