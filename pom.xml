@@ -379,14 +379,6 @@
       </properties>
     </profile>
 
-    <!-- Enable MemorySegment buffer implementation. -->
-    <profile>
-      <id>memsegBuffer</id>
-      <properties>
-        <argLine.java9.extras>-Dio.netty5.tryReflectionSetAccessible=true --enable-preview -Dio.netty5.buffer.api.MemoryManager=MemorySegment</argLine.java9.extras>
-      </properties>
-    </profile>
-
     <profile>
       <id>boringssl-mac-aarch64</id>
       <activation>
