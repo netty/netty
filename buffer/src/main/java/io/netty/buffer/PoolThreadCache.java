@@ -184,6 +184,9 @@ final class PoolThreadCache {
         if (cache == null) {
             return false;
         }
+        if (freed.get()) {
+            return false;
+        }
         return cache.add(chunk, nioBuffer, handle, normCapacity);
     }
 
@@ -231,6 +234,21 @@ final class PoolThreadCache {
 
             if (heapArena != null) {
                 heapArena.numThreadCaches.getAndDecrement();
+            }
+        } else {
+            // See https://github.com/netty/netty/issues/12749
+            checkCacheMayLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
+            checkCacheMayLeak(normalDirectCaches, "NormalDirectCaches");
+            checkCacheMayLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
+            checkCacheMayLeak(normalHeapCaches, "NormalHeapCaches");
+        }
+    }
+
+    private static void checkCacheMayLeak(MemoryRegionCache<?>[] caches, String type) {
+        for (MemoryRegionCache<?> cache : caches) {
+            if (cache.queue.size() > 0) {
+                logger.debug("{} memory may leak.", type);
+                return;
             }
         }
     }

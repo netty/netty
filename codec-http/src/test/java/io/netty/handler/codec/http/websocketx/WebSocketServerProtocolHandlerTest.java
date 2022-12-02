@@ -304,15 +304,15 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
 
         // When server channel closed with explicit close-frame
         assertTrue(server.writeOutbound(new CloseWebSocketFrame(closeStatus)));
         server.close();
 
         // Then client receives provided close-frame
-        assertTrue(client.writeInbound(server.readOutbound()));
+        assertTrue(client.writeInbound(server.<ByteBuf>readOutbound()));
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = client.readInbound();
@@ -330,14 +330,14 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
 
         // When server channel closed without explicit close-frame
         server.close();
 
         // Then client receives NORMAL_CLOSURE close-frame
-        assertTrue(client.writeInbound(server.readOutbound()));
+        assertTrue(client.writeInbound(server.<ByteBuf>readOutbound()));
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = client.readInbound();
@@ -356,15 +356,15 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
 
         // When client channel closed with explicit close-frame
         assertTrue(client.writeOutbound(new CloseWebSocketFrame(closeStatus)));
         client.close();
 
         // Then client receives provided close-frame
-        assertFalse(server.writeInbound(client.readOutbound()));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 
@@ -381,14 +381,14 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel client = createClient();
         EmbeddedChannel server = createServer();
 
-        assertFalse(server.writeInbound(client.readOutbound()));
-        assertFalse(client.writeInbound(server.readOutbound()));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
 
         // When client channel closed without explicit close-frame
         client.close();
 
         // Then server receives NORMAL_CLOSURE close-frame
-        assertFalse(server.writeInbound(client.readOutbound()));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
         assertFalse(client.isOpen());
         assertFalse(server.isOpen());
 

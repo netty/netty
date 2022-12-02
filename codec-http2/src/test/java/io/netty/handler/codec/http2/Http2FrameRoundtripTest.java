@@ -118,7 +118,7 @@ public class Http2FrameRoundtripTest {
         }).when(ctx).newPromise();
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
-        reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));
+        reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, false, newTestDecoder()));
     }
 
     @AfterEach

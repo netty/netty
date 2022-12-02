@@ -25,12 +25,12 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.TestAbortedException;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -1030,7 +1030,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             } catch (SSLException e) {
                 if (e.getMessage().contains("unsupported protocol") ||
                         e.getMessage().contains("no protocols available")) {
-                    throw new AssumptionViolatedException(protocol + " not supported with cipher " + cipher, e);
+                    throw new TestAbortedException(protocol + " not supported with cipher " + cipher, e);
                 }
                 throw e;
             }

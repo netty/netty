@@ -268,6 +268,44 @@ public class Socket extends FileDescriptor {
         return recvFromAddressDomainSocket(fd, memoryAddress, pos, limit);
     }
 
+    public int recv(ByteBuffer buf, int pos, int limit) throws IOException {
+        int res = recv(intValue(), buf, pos, limit);
+        if (res > 0) {
+            return res;
+        }
+        if (res == 0) {
+            return -1;
+        }
+        return ioResult("recv", res);
+    }
+
+    public int recvAddress(long address, int pos, int limit) throws IOException {
+        int res = recvAddress(intValue(), address, pos, limit);
+        if (res > 0) {
+            return res;
+        }
+        if (res == 0) {
+            return -1;
+        }
+        return ioResult("recvAddress", res);
+    }
+
+    public int send(ByteBuffer buf, int pos, int limit) throws IOException {
+        int res = send(intValue(), buf, pos, limit);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("send", res);
+    }
+
+    public int sendAddress(long address, int pos, int limit) throws IOException {
+        int res = sendAddress(intValue(), address, pos, limit);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendAddress", res);
+    }
+
     public final int recvFd() throws IOException {
         int res = recvFd(fd);
         if (res > 0) {
@@ -596,6 +634,12 @@ public class Socket extends FileDescriptor {
 
     private static native byte[] remoteAddress(int fd);
     private static native byte[] localAddress(int fd);
+
+    private static native int send(int fd, ByteBuffer buf, int pos, int limit);
+    private static native int sendAddress(int fd, long address, int pos, int limit);
+    private static native int recv(int fd, ByteBuffer buf, int pos, int limit);
+
+    private static native int recvAddress(int fd, long address, int pos, int limit);
 
     private static native int sendTo(
             int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port,

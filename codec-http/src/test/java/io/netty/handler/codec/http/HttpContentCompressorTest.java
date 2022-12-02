@@ -604,6 +604,100 @@ public class HttpContentCompressorTest {
     }
 
     @Test
+    public void testMultiple1xxInformationalResponse() throws Exception {
+        FullHttpRequest request = newRequest();
+        HttpUtil.set100ContinueExpected(request, true);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        ch.writeInbound(request);
+
+        FullHttpResponse continueResponse = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
+        ch.writeOutbound(continueResponse);
+
+        FullHttpResponse earlyHintsResponse = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, Unpooled.EMPTY_BUFFER);
+        earlyHintsResponse.trailingHeaders().set(of("X-Test"), of("Netty"));
+        ch.writeOutbound(earlyHintsResponse);
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+        res.trailingHeaders().set(of("X-Test"), of("Netty"));
+        ch.writeOutbound(res);
+
+        Object o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertSame(continueResponse, res);
+        res.release();
+
+        o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertSame(earlyHintsResponse, res);
+        res.release();
+
+        o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is(nullValue()));
+
+        // Content encoding shouldn't be modified.
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.content().readableBytes(), is(0));
+        assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
+        assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
+        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
+        assertThat(ch.readOutbound(), is(nullValue()));
+
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void test103EarlyHintsResponse() throws Exception {
+        FullHttpRequest request = newRequest();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        ch.writeInbound(request);
+
+        FullHttpResponse earlyHintsResponse = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, Unpooled.EMPTY_BUFFER);
+        earlyHintsResponse.trailingHeaders().set(of("X-Test"), of("Netty"));
+        ch.writeOutbound(earlyHintsResponse);
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+        res.trailingHeaders().set(of("X-Test"), of("Netty"));
+        ch.writeOutbound(res);
+
+        Object o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertSame(earlyHintsResponse, res);
+        res.release();
+
+        o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is(nullValue()));
+
+        // Content encoding shouldn't be modified.
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.content().readableBytes(), is(0));
+        assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
+        assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
+        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
+        assertThat(ch.readOutbound(), is(nullValue()));
+
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
+    @Test
     public void testTooManyResponses() throws Exception {
         FullHttpRequest request = newRequest();
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());

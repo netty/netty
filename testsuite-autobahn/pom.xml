@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.80.Final-SNAPSHOT</version>
+    <version>4.1.86.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-autobahn</artifactId>

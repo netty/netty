@@ -19,11 +19,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -79,22 +84,234 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
      */
     private float trailersEncodedSizeAccumulator = 256;
 
+    private final List<Object> out = new ArrayList<Object>();
+
+    private static boolean checkContentState(int state) {
+        return state == ST_CONTENT_CHUNK || state == ST_CONTENT_NON_CHUNK || state == ST_CONTENT_ALWAYS_EMPTY;
+    }
+
     @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        try {
+            if (acceptOutboundMessage(msg)) {
+                encode(ctx, msg, out);
+                if (out.isEmpty()) {
+                    throw new EncoderException(
+                            StringUtil.simpleClassName(this) + " must produce at least one message.");
+                }
+            } else {
+                ctx.write(msg, promise);
+            }
+        } catch (EncoderException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new EncoderException(t);
+        } finally {
+            writeOutList(ctx, out, promise);
+        }
+    }
+
+    private static void writeOutList(ChannelHandlerContext ctx, List<Object> out, ChannelPromise promise) {
+        final int size = out.size();
+        try {
+            if (size == 1) {
+                ctx.write(out.get(0), promise);
+            } else if (size > 1) {
+                // Check if we can use a voidPromise for our extra writes to reduce GC-Pressure
+                // See https://github.com/netty/netty/issues/2525
+                if (promise == ctx.voidPromise()) {
+                    writeVoidPromise(ctx, out);
+                } else {
+                    writePromiseCombiner(ctx, out, promise);
+                }
+            }
+        } finally {
+            out.clear();
+        }
+    }
+
+    private static void writeVoidPromise(ChannelHandlerContext ctx, List<Object> out) {
+        final ChannelPromise voidPromise = ctx.voidPromise();
+        for (int i = 0; i < out.size(); i++) {
+            ctx.write(out.get(i), voidPromise);
+        }
+    }
+
+    private static void writePromiseCombiner(ChannelHandlerContext ctx, List<Object> out, ChannelPromise promise) {
+        final PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
+        for (int i = 0; i < out.size(); i++) {
+            combiner.add(ctx.write(out.get(i)));
+        }
+        combiner.finish(promise);
+    }
+
+    @Override
+    @SuppressWarnings("ConditionCoveredByFurtherCondition")
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-        ByteBuf buf = null;
+        // fast-path for common idiom that doesn't require class-checks
+        if (msg == Unpooled.EMPTY_BUFFER) {
+            out.add(Unpooled.EMPTY_BUFFER);
+            return;
+        }
+        // The reason why we perform instanceof checks in this order,
+        // by duplicating some code and without relying on ReferenceCountUtil::release as a generic release
+        // mechanism, is https://bugs.openjdk.org/browse/JDK-8180450.
+        // https://github.com/netty/netty/issues/12708 contains more detail re how the previous version of this
+        // code was interacting with the JIT instanceof optimizations.
+        if (msg instanceof FullHttpMessage) {
+            encodeFullHttpMessage(ctx, msg, out);
+            return;
+        }
         if (msg instanceof HttpMessage) {
+            final H m;
+            try {
+                m = (H) msg;
+            } catch (Exception rethrow) {
+                ReferenceCountUtil.release(msg);
+                throw rethrow;
+            }
+            if (m instanceof LastHttpContent) {
+                encodeHttpMessageLastContent(ctx, m, out);
+            } else if (m instanceof HttpContent) {
+                encodeHttpMessageNotLastContent(ctx, m, out);
+            } else {
+                encodeJustHttpMessage(ctx, m, out);
+            }
+        } else {
+            encodeNotHttpMessageContentTypes(ctx, msg, out);
+        }
+    }
+
+    private void encodeJustHttpMessage(ChannelHandlerContext ctx, H m, List<Object> out) throws Exception {
+        assert !(m instanceof HttpContent);
+        try {
             if (state != ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
-                        + ", state: " + state);
+                throwUnexpectedMessageTypeEx(m, state);
+            }
+            final ByteBuf buf = encodeInitHttpMessage(ctx, m);
+
+            assert checkContentState(state);
+
+            out.add(buf);
+        } finally {
+            ReferenceCountUtil.release(m);
+        }
+    }
+
+    private void encodeByteBufHttpContent(int state, ChannelHandlerContext ctx, ByteBuf buf, ByteBuf content,
+                                          HttpHeaders trailingHeaders, List<Object> out) {
+        switch (state) {
+            case ST_CONTENT_NON_CHUNK:
+                if (encodeContentNonChunk(out, buf, content)) {
+                    break;
+                }
+                // fall-through!
+            case ST_CONTENT_ALWAYS_EMPTY:
+                // We allocated a buffer so add it now.
+                out.add(buf);
+                break;
+            case ST_CONTENT_CHUNK:
+                // We allocated a buffer so add it now.
+                out.add(buf);
+                encodeChunkedHttpContent(ctx, content, trailingHeaders, out);
+                break;
+            default:
+                throw new Error();
+        }
+    }
+
+    private void encodeHttpMessageNotLastContent(ChannelHandlerContext ctx, H m, List<Object> out) throws Exception {
+        assert m instanceof HttpContent;
+        assert !(m instanceof LastHttpContent);
+        final HttpContent httpContent = (HttpContent) m;
+        try {
+            if (state != ST_INIT) {
+                throwUnexpectedMessageTypeEx(m, state);
+            }
+            final ByteBuf buf = encodeInitHttpMessage(ctx, m);
+
+            assert checkContentState(state);
+
+            encodeByteBufHttpContent(state, ctx, buf, httpContent.content(), null, out);
+        } finally {
+            httpContent.release();
+        }
+    }
+
+    private void encodeHttpMessageLastContent(ChannelHandlerContext ctx, H m, List<Object> out) throws Exception {
+        assert m instanceof LastHttpContent;
+        final LastHttpContent httpContent = (LastHttpContent) m;
+        try {
+            if (state != ST_INIT) {
+                throwUnexpectedMessageTypeEx(m, state);
+            }
+            final ByteBuf buf = encodeInitHttpMessage(ctx, m);
+
+            assert checkContentState(state);
+
+            encodeByteBufHttpContent(state, ctx, buf, httpContent.content(), httpContent.trailingHeaders(), out);
+
+            state = ST_INIT;
+        } finally {
+            httpContent.release();
+        }
+    }
+    @SuppressWarnings("ConditionCoveredByFurtherCondition")
+    private void encodeNotHttpMessageContentTypes(ChannelHandlerContext ctx, Object msg, List<Object> out) {
+        assert !(msg instanceof HttpMessage);
+        if (state == ST_INIT) {
+            try {
+                if (msg instanceof ByteBuf && bypassEncoderIfEmpty((ByteBuf) msg, out)) {
+                    return;
+                }
+                throwUnexpectedMessageTypeEx(msg, ST_INIT);
+            } finally {
+                ReferenceCountUtil.release(msg);
+            }
+        }
+        if (msg == LastHttpContent.EMPTY_LAST_CONTENT) {
+            state = encodeEmptyLastHttpContent(state, out);
+            return;
+        }
+        if (msg instanceof LastHttpContent) {
+            encodeLastHttpContent(ctx, (LastHttpContent) msg, out);
+            return;
+        }
+        if (msg instanceof HttpContent) {
+            encodeHttpContent(ctx, (HttpContent) msg, out);
+            return;
+        }
+        if (msg instanceof ByteBuf) {
+            encodeByteBufContent(ctx, (ByteBuf) msg, out);
+            return;
+        }
+        if (msg instanceof FileRegion) {
+            encodeFileRegionContent(ctx, (FileRegion) msg, out);
+            return;
+        }
+        try {
+            throwUnexpectedMessageTypeEx(msg, state);
+        } finally {
+            ReferenceCountUtil.release(msg);
+        }
+    }
+
+    private void encodeFullHttpMessage(ChannelHandlerContext ctx, Object o, List<Object> out)
+            throws Exception {
+        assert o instanceof FullHttpMessage;
+        final FullHttpMessage msg = (FullHttpMessage) o;
+        try {
+            if (state != ST_INIT) {
+                throwUnexpectedMessageTypeEx(o, state);
             }
 
-            @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
-            H m = (H) msg;
+            final H m = (H) o;
 
-            buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
-            // Encode the message.
+            final ByteBuf buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
+
             encodeInitialLine(buf, m);
-            state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
+
+            final int state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
                     HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
 
             sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
@@ -103,84 +320,199 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
 
             headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
-                                            HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
-        }
+                    HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
 
-        // Bypass the encoder in case of an empty buffer, so that the following idiom works:
-        //
-        //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-        //
-        // See https://github.com/netty/netty/issues/2983 for more information.
-        if (msg instanceof ByteBuf) {
-            final ByteBuf potentialEmptyBuf = (ByteBuf) msg;
-            if (!potentialEmptyBuf.isReadable()) {
-                out.add(potentialEmptyBuf.retain());
-                return;
+            encodeByteBufHttpContent(state, ctx, buf, msg.content(), msg.trailingHeaders(), out);
+        } finally {
+            msg.release();
+        }
+    }
+
+    private static boolean encodeContentNonChunk(List<Object> out, ByteBuf buf, ByteBuf content) {
+        final int contentLength = content.readableBytes();
+        if (contentLength > 0) {
+            if (buf.writableBytes() >= contentLength) {
+                // merge into other buffer for performance reasons
+                buf.writeBytes(content);
+                out.add(buf);
+            } else {
+                out.add(buf);
+                out.add(content.retain());
             }
+            return true;
         }
+        return false;
+    }
 
-        if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
+    private static void throwUnexpectedMessageTypeEx(Object msg, int state) {
+        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
+                + ", state: " + state);
+    }
+
+    private void encodeFileRegionContent(ChannelHandlerContext ctx, FileRegion msg, List<Object> out) {
+        try {
+            assert state != ST_INIT;
             switch (state) {
-                case ST_INIT:
-                    throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
-                        + ", state: " + state);
                 case ST_CONTENT_NON_CHUNK:
-                    final long contentLength = contentLength(msg);
-                    if (contentLength > 0) {
-                        if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
-                            // merge into other buffer for performance reasons
-                            buf.writeBytes(((HttpContent) msg).content());
-                            out.add(buf);
-                        } else {
-                            if (buf != null) {
-                                out.add(buf);
-                            }
-                            out.add(encodeAndRetain(msg));
-                        }
-
-                        if (msg instanceof LastHttpContent) {
-                            state = ST_INIT;
-                        }
-
+                    if (msg.count() > 0) {
+                        out.add(msg.retain());
                         break;
                     }
 
                     // fall-through!
                 case ST_CONTENT_ALWAYS_EMPTY:
-
-                    if (buf != null) {
-                        // We allocated a buffer so add it now.
-                        out.add(buf);
-                    } else {
-                        // Need to produce some output otherwise an
-                        // IllegalStateException will be thrown as we did not write anything
-                        // Its ok to just write an EMPTY_BUFFER as if there are reference count issues these will be
-                        // propagated as the caller of the encode(...) method will release the original
-                        // buffer.
-                        // Writing an empty buffer will not actually write anything on the wire, so if there is a user
-                        // error with msg it will not be visible externally
-                        out.add(Unpooled.EMPTY_BUFFER);
-                    }
-
+                    // Need to produce some output otherwise an
+                    // IllegalStateException will be thrown as we did not write anything
+                    // Its ok to just write an EMPTY_BUFFER as if there are reference count issues these will be
+                    // propagated as the caller of the encode(...) method will release the original
+                    // buffer.
+                    // Writing an empty buffer will not actually write anything on the wire, so if there is a user
+                    // error with msg it will not be visible externally
+                    out.add(Unpooled.EMPTY_BUFFER);
                     break;
                 case ST_CONTENT_CHUNK:
-                    if (buf != null) {
-                        // We allocated a buffer so add it now.
-                        out.add(buf);
-                    }
-                    encodeChunkedContent(ctx, msg, contentLength(msg), out);
-
+                    encodedChunkedFileRegionContent(ctx, msg, out);
                     break;
                 default:
                     throw new Error();
             }
+        } finally {
+            msg.release();
+        }
+    }
 
-            if (msg instanceof LastHttpContent) {
-                state = ST_INIT;
+    // Bypass the encoder in case of an empty buffer, so that the following idiom works:
+    //
+    //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+    //
+    // See https://github.com/netty/netty/issues/2983 for more information.
+    private static boolean bypassEncoderIfEmpty(ByteBuf msg, List<Object> out) {
+        if (!msg.isReadable()) {
+            out.add(msg.retain());
+            return true;
+        }
+        return false;
+    }
+
+    private void encodeByteBufContent(ChannelHandlerContext ctx, ByteBuf content, List<Object> out) {
+        try {
+            assert state != ST_INIT;
+            if (bypassEncoderIfEmpty(content, out)) {
+                return;
             }
-        } else if (buf != null) {
+            encodeByteBufAndTrailers(state, ctx, out, content, null);
+        } finally {
+            content.release();
+        }
+    }
+
+    private static int encodeEmptyLastHttpContent(int state, List<Object> out) {
+        assert state != ST_INIT;
+
+        switch (state) {
+            case ST_CONTENT_NON_CHUNK:
+            case ST_CONTENT_ALWAYS_EMPTY:
+                out.add(Unpooled.EMPTY_BUFFER);
+                break;
+            case ST_CONTENT_CHUNK:
+                out.add(ZERO_CRLF_CRLF_BUF.duplicate());
+                break;
+            default:
+                throw new Error();
+        }
+        return ST_INIT;
+    }
+
+    private void encodeLastHttpContent(ChannelHandlerContext ctx, LastHttpContent msg, List<Object> out) {
+        assert state != ST_INIT;
+        assert !(msg instanceof HttpMessage);
+        try {
+            encodeByteBufAndTrailers(state, ctx, out, msg.content(), msg.trailingHeaders());
+            state = ST_INIT;
+        } finally {
+            msg.release();
+        }
+    }
+
+    private void encodeHttpContent(ChannelHandlerContext ctx, HttpContent msg, List<Object> out) {
+        assert state != ST_INIT;
+        assert !(msg instanceof HttpMessage);
+        assert !(msg instanceof LastHttpContent);
+        try {
+            this.encodeByteBufAndTrailers(state, ctx, out, msg.content(), null);
+        } finally {
+            msg.release();
+        }
+    }
+
+    private void encodeByteBufAndTrailers(int state, ChannelHandlerContext ctx, List<Object> out, ByteBuf content,
+                                          HttpHeaders trailingHeaders) {
+        switch (state) {
+            case ST_CONTENT_NON_CHUNK:
+                if (content.isReadable()) {
+                    out.add(content.retain());
+                    break;
+                }
+                // fall-through!
+            case ST_CONTENT_ALWAYS_EMPTY:
+                out.add(Unpooled.EMPTY_BUFFER);
+                break;
+            case ST_CONTENT_CHUNK:
+                encodeChunkedHttpContent(ctx, content, trailingHeaders, out);
+                break;
+            default:
+                throw new Error();
+        }
+    }
+
+    private void encodeChunkedHttpContent(ChannelHandlerContext ctx, ByteBuf content, HttpHeaders trailingHeaders,
+                                          List<Object> out) {
+        final int contentLength = content.readableBytes();
+        if (contentLength > 0) {
+            addEncodedLengthHex(ctx, contentLength, out);
+            out.add(content.retain());
+            out.add(CRLF_BUF.duplicate());
+        }
+        if (trailingHeaders != null) {
+            encodeTrailingHeaders(ctx, trailingHeaders, out);
+        } else if (contentLength == 0) {
+            // Need to produce some output otherwise an
+            // IllegalStateException will be thrown
+            out.add(content.retain());
+        }
+    }
+
+    private void encodeTrailingHeaders(ChannelHandlerContext ctx, HttpHeaders trailingHeaders, List<Object> out) {
+        if (trailingHeaders.isEmpty()) {
+            out.add(ZERO_CRLF_CRLF_BUF.duplicate());
+        } else {
+            ByteBuf buf = ctx.alloc().buffer((int) trailersEncodedSizeAccumulator);
+            ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM);
+            encodeHeaders(trailingHeaders, buf);
+            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            trailersEncodedSizeAccumulator = TRAILERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
+                    TRAILERS_WEIGHT_HISTORICAL * trailersEncodedSizeAccumulator;
             out.add(buf);
         }
+    }
+
+    private ByteBuf encodeInitHttpMessage(ChannelHandlerContext ctx, H m) throws Exception {
+        assert state == ST_INIT;
+
+        ByteBuf buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
+        // Encode the message.
+        encodeInitialLine(buf, m);
+        state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
+                HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+
+        sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
+
+        encodeHeaders(m.headers(), buf);
+        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+
+        headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
+                HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
+        return buf;
     }
 
     /**
@@ -194,35 +526,25 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
-    private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
+    private static void encodedChunkedFileRegionContent(ChannelHandlerContext ctx, FileRegion msg, List<Object> out) {
+        final long contentLength = msg.count();
         if (contentLength > 0) {
-            String lengthHex = Long.toHexString(contentLength);
-            ByteBuf buf = ctx.alloc().buffer(lengthHex.length() + 2);
-            buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
-            out.add(buf);
-            out.add(encodeAndRetain(msg));
+            addEncodedLengthHex(ctx, contentLength, out);
+            out.add(msg.retain());
             out.add(CRLF_BUF.duplicate());
-        }
-
-        if (msg instanceof LastHttpContent) {
-            HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
-            if (headers.isEmpty()) {
-                out.add(ZERO_CRLF_CRLF_BUF.duplicate());
-            } else {
-                ByteBuf buf = ctx.alloc().buffer((int) trailersEncodedSizeAccumulator);
-                ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM);
-                encodeHeaders(headers, buf);
-                ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
-                trailersEncodedSizeAccumulator = TRAILERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
-                                                 TRAILERS_WEIGHT_HISTORICAL * trailersEncodedSizeAccumulator;
-                out.add(buf);
-            }
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
             // IllegalStateException will be thrown
-            out.add(encodeAndRetain(msg));
+            out.add(msg.retain());
         }
+    }
+
+    private static void addEncodedLengthHex(ChannelHandlerContext ctx, long contentLength, List<Object> out) {
+        String lengthHex = Long.toHexString(contentLength);
+        ByteBuf buf = ctx.alloc().buffer(lengthHex.length() + 2);
+        buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
+        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+        out.add(buf);
     }
 
     /**
@@ -244,39 +566,21 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     @Override
+    @SuppressWarnings("ConditionCoveredByFurtherCondition")
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof HttpObject || msg instanceof ByteBuf || msg instanceof FileRegion;
-    }
-
-    private static Object encodeAndRetain(Object msg) {
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).retain();
-        }
-        if (msg instanceof HttpContent) {
-            return ((HttpContent) msg).content().retain();
-        }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).retain();
-        }
-        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
-    }
-
-    private static long contentLength(Object msg) {
-        if (msg instanceof HttpContent) {
-            return ((HttpContent) msg).content().readableBytes();
-        }
-        if (msg instanceof ByteBuf) {
-            return ((ByteBuf) msg).readableBytes();
-        }
-        if (msg instanceof FileRegion) {
-            return ((FileRegion) msg).count();
-        }
-        throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
+        return msg == Unpooled.EMPTY_BUFFER ||
+                msg == LastHttpContent.EMPTY_LAST_CONTENT ||
+                msg instanceof FullHttpMessage ||
+                msg instanceof HttpMessage ||
+                msg instanceof LastHttpContent ||
+                msg instanceof HttpContent ||
+                msg instanceof ByteBuf || msg instanceof FileRegion;
     }
 
     /**
      * Add some additional overhead to the buffer. The rational is that it is better to slightly over allocate and waste
      * some memory, rather than under allocate and require a resize/copy.
+     *
      * @param readableBytes The readable bytes in the buffer.
      * @return The {@code readableBytes} with some additional padding.
      */

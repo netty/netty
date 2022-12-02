@@ -82,7 +82,7 @@ jobs:
           if-no-files-found: error
 
   deploy-staged-snapshots:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     # Wait until we have staged everything
     needs: stage-snapshot
     steps:

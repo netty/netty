@@ -24,10 +24,10 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07
 
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
-                                                      boolean absoluteUpgradeUrl) {
+                                                      boolean absoluteUpgradeUrl, boolean generateOriginHeader) {
         return new WebSocketClientHandshaker13(uri, WebSocketVersion.V13, subprotocol, false, headers,
           1024, true, true, 10000,
-          absoluteUpgradeUrl);
+          absoluteUpgradeUrl, generateOriginHeader);
     }
 
     @Override

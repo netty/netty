@@ -15,19 +15,16 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.aayushatharva.brotli4j.decoder.Decoder;
-import com.aayushatharva.brotli4j.decoder.DecoderJNI;
-import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
 public class BrotliEncoderTest extends AbstractEncoderTest {
+
+    private EmbeddedChannel ENCODER_CHANNEL;
+    private EmbeddedChannel DECODER_CHANNEL;
 
     @BeforeAll
     static void setUp() {
@@ -40,22 +37,34 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
 
     @Override
     public EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new BrotliEncoder());
+        // Setup Encoder and Decoder
+        ENCODER_CHANNEL = new EmbeddedChannel(new BrotliEncoder());
+        DECODER_CHANNEL = new EmbeddedChannel(new BrotliDecoder());
+
+        // Return the main channel (Encoder)
+        return ENCODER_CHANNEL;
     }
 
     @Override
-    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        byte[] compressedArray = new byte[compressed.readableBytes()];
-        compressed.readBytes(compressedArray);
-        compressed.release();
+    public void destroyChannel() {
+        ENCODER_CHANNEL.finishAndReleaseAll();
+        DECODER_CHANNEL.finishAndReleaseAll();
+    }
 
-        DirectDecompress decompress = Decoder.decompress(compressedArray);
-        if (decompress.getResultStatus() == DecoderJNI.Status.ERROR) {
-            throw new DecompressionException("Brotli stream corrupted");
+    @Override
+    protected ByteBuf decompress(ByteBuf compressed, int originalLength) {
+        DECODER_CHANNEL.writeInbound(compressed);
+
+        ByteBuf aggregatedBuffer = Unpooled.buffer();
+        ByteBuf decompressed = DECODER_CHANNEL.readInbound();
+        while (decompressed != null) {
+            aggregatedBuffer.writeBytes(decompressed);
+
+            decompressed.release();
+            decompressed = DECODER_CHANNEL.readInbound();
         }
 
-        byte[] decompressed = decompress.getDecompressedData();
-        return Unpooled.wrappedBuffer(decompressed);
+        return aggregatedBuffer;
     }
 
     @Override
@@ -70,9 +79,5 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
             }
         }
         return decompressed;
-    }
-
-    static boolean isNotSupported() {
-        return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
 }

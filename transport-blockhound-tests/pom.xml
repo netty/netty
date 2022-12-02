@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.80.Final-SNAPSHOT</version>
+    <version>4.1.86.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-blockhound-tests</artifactId>
@@ -81,6 +81,15 @@
       <id>java18</id>
       <activation>
         <jdk>18</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+      </properties>
+    </profile>
+    <profile>
+      <id>java19</id>
+      <activation>
+        <jdk>19</jdk>
       </activation>
       <properties>
         <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>

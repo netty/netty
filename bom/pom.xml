@@ -25,7 +25,7 @@
 
   <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
-  <version>4.1.80.Final-SNAPSHOT</version>
+  <version>4.1.86.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Netty/BOM</name>
@@ -65,7 +65,7 @@
 
   <properties>
     <!-- Keep in sync with ../pom.xml -->
-    <tcnative.version>2.0.53.Final</tcnative.version>
+    <tcnative.version>2.0.54.Final</tcnative.version>
   </properties>
 
   <build>
@@ -74,9 +74,6 @@
         <groupId>com.commsen.maven</groupId>
         <artifactId>bom-helper-maven-plugin</artifactId>
         <version>0.4.0</version>
-        <goals>
-          <goal>resolve</goal>
-        </goals>
       </plugin>
     </plugins>
   </build>
@@ -166,6 +163,11 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-handler-proxy</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-handler-ssl-ocsp</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

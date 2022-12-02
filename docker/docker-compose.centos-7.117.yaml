@@ -6,7 +6,7 @@ services:
     image: netty:centos-7-1.17
     build:
       args:
-        java_version : "17.0.3-zulu"
+        java_version : "17.0.5-zulu"
 
   build:
     image: netty:centos-7-1.17

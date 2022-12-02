@@ -39,6 +39,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -65,6 +66,8 @@ public final class OpenSsl {
     private static final boolean SUPPORTS_OCSP;
     private static final boolean TLSV13_SUPPORTED;
     private static final boolean IS_BORINGSSL;
+    private static final Set<String> CLIENT_DEFAULT_PROTOCOLS;
+    private static final Set<String> SERVER_DEFAULT_PROTOCOLS;
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
     static final String[] EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
     static final String EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
@@ -179,6 +182,8 @@ public final class OpenSsl {
         }
 
         UNAVAILABILITY_CAUSE = cause;
+        CLIENT_DEFAULT_PROTOCOLS = protocols("jdk.tls.client.protocols");
+        SERVER_DEFAULT_PROTOCOLS = protocols("jdk.tls.server.protocols");
 
         if (cause == null) {
             logger.debug("netty-tcnative using native library: {}", SSL.versionString());
@@ -718,6 +723,33 @@ public final class OpenSsl {
 
     static boolean isTlsv13Supported() {
         return TLSV13_SUPPORTED;
+    }
+
+    private static Set<String> protocols(String property) {
+        String protocolsString = SystemPropertyUtil.get(property, null);
+        if (protocolsString != null) {
+            Set<String> protocols = new HashSet<String>();
+            for (String proto : protocolsString.split(",")) {
+                String p = proto.trim();
+                protocols.add(p);
+            }
+            return protocols;
+        }
+        return null;
+    }
+
+    static String[] defaultProtocols(boolean isClient) {
+        final Collection<String> defaultProtocols = isClient ? CLIENT_DEFAULT_PROTOCOLS : SERVER_DEFAULT_PROTOCOLS;
+        if (defaultProtocols == null) {
+            return null;
+        }
+        List<String> protocols = new ArrayList<String>(defaultProtocols.size());
+        for (String proto : defaultProtocols) {
+            if (SUPPORTED_PROTOCOLS_SET.contains(proto)) {
+                protocols.add(proto);
+            }
+        }
+        return protocols.toArray(new String[0]);
     }
 
     static boolean isBoringSSL() {

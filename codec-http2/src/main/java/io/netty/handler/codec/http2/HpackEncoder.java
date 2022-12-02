@@ -37,7 +37,6 @@ import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
-import java.util.Arrays;
 import java.util.Map;
 
 import static io.netty.handler.codec.http2.HpackUtil.equalsConstantTime;
@@ -64,10 +63,17 @@ import static java.lang.Math.min;
 final class HpackEncoder {
     static final int NOT_FOUND = -1;
     static final int HUFF_CODE_THRESHOLD = 512;
-    // a linked hash map of header fields
-    private final HeaderEntry[] headerFields;
-    private final HeaderEntry head = new HeaderEntry(-1, AsciiString.EMPTY_STRING,
-            AsciiString.EMPTY_STRING, Integer.MAX_VALUE, null);
+    // a hash map of header fields keyed by header name
+    private final NameEntry[] nameEntries;
+
+    // a hash map of header fields keyed by header name and value
+    private final NameValueEntry[] nameValueEntries;
+
+    private final NameValueEntry head = new NameValueEntry(-1, AsciiString.EMPTY_STRING,
+      AsciiString.EMPTY_STRING, Integer.MAX_VALUE, null);
+
+    private NameValueEntry latest = head;
+
     private final HpackHuffmanEncoder hpackHuffmanEncoder = new HpackHuffmanEncoder();
     private final byte hashMask;
     private final boolean ignoreMaxHeaderListSize;
@@ -87,7 +93,7 @@ final class HpackEncoder {
      * Creates a new encoder.
      */
     HpackEncoder(boolean ignoreMaxHeaderListSize) {
-        this(ignoreMaxHeaderListSize, 16, HUFF_CODE_THRESHOLD);
+        this(ignoreMaxHeaderListSize, 64, HUFF_CODE_THRESHOLD);
     }
 
     /**
@@ -99,19 +105,19 @@ final class HpackEncoder {
         maxHeaderListSize = MAX_HEADER_LIST_SIZE;
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
-        headerFields = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
-        hashMask = (byte) (headerFields.length - 1);
-        head.before = head.after = head;
+        nameEntries = new NameEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
+        nameValueEntries = new NameValueEntry[nameEntries.length];
+        hashMask = (byte) (nameEntries.length - 1);
         this.huffCodeThreshold = huffCodeThreshold;
     }
 
     /**
      * Encode the header field into the header block.
-     *
+     * <p>
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
     public void encodeHeaders(int streamId, ByteBuf out, Http2Headers headers, SensitivityDetector sensitivityDetector)
-            throws Http2Exception {
+      throws Http2Exception {
         if (ignoreMaxHeaderListSize) {
             encodeHeadersIgnoreMaxHeaderListSize(out, headers, sensitivityDetector);
         } else {
@@ -121,7 +127,7 @@ final class HpackEncoder {
 
     private void encodeHeadersEnforceMaxHeaderListSize(int streamId, ByteBuf out, Http2Headers headers,
                                                        SensitivityDetector sensitivityDetector)
-            throws Http2Exception {
+      throws Http2Exception {
         long headerSize = 0;
         // To ensure we stay consistent with our peer check the size is valid before we potentially modify HPACK state.
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
@@ -138,18 +144,18 @@ final class HpackEncoder {
     }
 
     private void encodeHeadersIgnoreMaxHeaderListSize(ByteBuf out, Http2Headers headers,
-                                                      SensitivityDetector sensitivityDetector) throws Http2Exception {
+                                                      SensitivityDetector sensitivityDetector) {
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
             encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
-                         HpackHeaderField.sizeOf(name, value));
+              HpackHeaderField.sizeOf(name, value));
         }
     }
 
     /**
      * Encode the header field into the header block.
-     *
+     * <p>
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
     private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {
@@ -179,11 +185,12 @@ final class HpackEncoder {
             return;
         }
 
-        HeaderEntry headerField = getEntryInsensitive(name, value);
+        int nameHash = AsciiString.hashCode(name);
+        int valueHash = AsciiString.hashCode(value);
+        NameValueEntry headerField = getEntryInsensitive(name, nameHash, value, valueHash);
         if (headerField != null) {
-            int index = getIndex(headerField.index) + HpackStaticTable.length;
             // Section 6.1. Indexed Header Field Representation
-            encodeInteger(out, 0x80, 7, index);
+            encodeInteger(out, 0x80, 7, getIndexPlusOffset(headerField.counter));
         } else {
             int staticTableIndex = HpackStaticTable.getIndexInsensitive(name, value);
             if (staticTableIndex != HpackStaticTable.NOT_FOUND) {
@@ -191,9 +198,33 @@ final class HpackEncoder {
                 encodeInteger(out, 0x80, 7, staticTableIndex);
             } else {
                 ensureCapacity(headerSize);
-                encodeLiteral(out, name, value, IndexType.INCREMENTAL, getNameIndex(name));
-                add(name, value, headerSize);
+                encodeAndAddEntries(out, name, nameHash, value, valueHash);
+                size += headerSize;
             }
+        }
+    }
+
+    private void encodeAndAddEntries(ByteBuf out, CharSequence name, int nameHash, CharSequence value, int valueHash) {
+        int staticTableIndex = HpackStaticTable.getIndex(name);
+        int nextCounter = latestCounter() - 1;
+        if (staticTableIndex == HpackStaticTable.NOT_FOUND) {
+            NameEntry e = getEntry(name, nameHash);
+            if (e == null) {
+                encodeLiteral(out, name, value, IndexType.INCREMENTAL, NOT_FOUND);
+                addNameEntry(name, nameHash, nextCounter);
+                addNameValueEntry(name, value, nameHash, valueHash, nextCounter);
+            } else {
+                encodeLiteral(out, name, value, IndexType.INCREMENTAL, getIndexPlusOffset(e.counter));
+                addNameValueEntry(e.name, value, nameHash, valueHash, nextCounter);
+
+                // The name entry should always point to the latest counter.
+                e.counter = nextCounter;
+            }
+        } else {
+            encodeLiteral(out, name, value, IndexType.INCREMENTAL, staticTableIndex);
+            // use the name from the static table to optimize memory usage.
+            addNameValueEntry(
+              HpackStaticTable.getEntry(staticTableIndex).name, value, nameHash, valueHash, nextCounter);
         }
     }
 
@@ -203,7 +234,7 @@ final class HpackEncoder {
     public void setMaxHeaderTableSize(ByteBuf out, long maxHeaderTableSize) throws Http2Exception {
         if (maxHeaderTableSize < MIN_HEADER_TABLE_SIZE || maxHeaderTableSize > MAX_HEADER_TABLE_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header Table Size must be >= %d and <= %d but was %d",
-                    MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderTableSize);
+              MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderTableSize);
         }
         if (this.maxHeaderTableSize == maxHeaderTableSize) {
             return;
@@ -224,7 +255,7 @@ final class HpackEncoder {
     public void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
         if (maxHeaderListSize < MIN_HEADER_LIST_SIZE || maxHeaderListSize > MAX_HEADER_LIST_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
-                    MIN_HEADER_LIST_SIZE, MAX_HEADER_LIST_SIZE, maxHeaderListSize);
+              MIN_HEADER_LIST_SIZE, MAX_HEADER_LIST_SIZE, maxHeaderListSize);
         }
         this.maxHeaderListSize = maxHeaderListSize;
     }
@@ -264,7 +295,7 @@ final class HpackEncoder {
     private void encodeStringLiteral(ByteBuf out, CharSequence string) {
         int huffmanLength;
         if (string.length() >= huffCodeThreshold
-                && (huffmanLength = hpackHuffmanEncoder.getEncodedLength(string)) < string.length()) {
+          && (huffmanLength = hpackHuffmanEncoder.getEncodedLength(string)) < string.length()) {
             encodeInteger(out, 0x80, 7, huffmanLength);
             hpackHuffmanEncoder.encode(out, string);
         } else {
@@ -308,13 +339,11 @@ final class HpackEncoder {
 
     private int getNameIndex(CharSequence name) {
         int index = HpackStaticTable.getIndex(name);
-        if (index == HpackStaticTable.NOT_FOUND) {
-            index = getIndex(name);
-            if (index >= 0) {
-                index += HpackStaticTable.length;
-            }
+        if (index != HpackStaticTable.NOT_FOUND) {
+            return index;
         }
-        return index;
+        NameEntry e = getEntry(name, AsciiString.hashCode(name));
+        return e == null ? NOT_FOUND : getIndexPlusOffset(e.counter);
     }
 
     /**
@@ -323,10 +352,6 @@ final class HpackEncoder {
      */
     private void ensureCapacity(long headerSize) {
         while (maxHeaderTableSize - size < headerSize) {
-            int index = length();
-            if (index == 0) {
-                break;
-            }
             remove();
         }
     }
@@ -335,7 +360,7 @@ final class HpackEncoder {
      * Return the number of header fields in the dynamic table. Exposed for testing.
      */
     int length() {
-        return size == 0 ? 0 : head.after.index - head.before.index + 1;
+        return isEmpty() ? 0 : getIndex(head.after.counter);
     }
 
     /**
@@ -349,9 +374,9 @@ final class HpackEncoder {
      * Return the header field at the given index. Exposed for testing.
      */
     HpackHeaderField getHeaderField(int index) {
-        HeaderEntry entry = head;
-        while (index-- >= 0) {
-            entry = entry.before;
+        NameValueEntry entry = head;
+        while (index++ < length()) {
+            entry = entry.after;
         }
         return entry;
     }
@@ -360,15 +385,9 @@ final class HpackEncoder {
      * Returns the header entry with the lowest index value for the header field. Returns null if
      * header field is not in the dynamic table.
      */
-    private HeaderEntry getEntryInsensitive(CharSequence name, CharSequence value) {
-        if (length() == 0 || name == null || value == null) {
-            return null;
-        }
-        int h = AsciiString.hashCode(name);
-        int i = index(h);
-        for (HeaderEntry e = headerFields[i]; e != null; e = e.next) {
-            // Check the value before then name, as it is more likely the value will be different incase there is no
-            // match.
+    private NameValueEntry getEntryInsensitive(CharSequence name, int nameHash, CharSequence value, int valueHash) {
+        int h = hash(nameHash, valueHash);
+        for (NameValueEntry e = nameValueEntries[bucket(h)]; e != null; e = e.next) {
             if (e.hash == h && equalsVariableTime(value, e.value) && equalsVariableTime(name, e.name)) {
                 return e;
             }
@@ -380,142 +399,157 @@ final class HpackEncoder {
      * Returns the lowest index value for the header field name in the dynamic table. Returns -1 if
      * the header field name is not in the dynamic table.
      */
-    private int getIndex(CharSequence name) {
-        if (length() == 0 || name == null) {
-            return NOT_FOUND;
-        }
-        int h = AsciiString.hashCode(name);
-        int i = index(h);
-        for (HeaderEntry e = headerFields[i]; e != null; e = e.next) {
-            if (e.hash == h && equalsConstantTime(name, e.name) != 0) {
-                return getIndex(e.index);
+    private NameEntry getEntry(CharSequence name, int nameHash) {
+        for (NameEntry e = nameEntries[bucket(nameHash)]; e != null; e = e.next) {
+            if (e.hash == nameHash && equalsConstantTime(name, e.name) != 0) {
+                return e;
             }
-        }
-        return NOT_FOUND;
-    }
-
-    /**
-     * Compute the index into the dynamic table given the index in the header entry.
-     */
-    private int getIndex(int index) {
-        return index == NOT_FOUND ? NOT_FOUND : index - head.before.index + 1;
-    }
-
-    /**
-     * Add the header field to the dynamic table. Entries are evicted from the dynamic table until
-     * the size of the table and the new header field is less than the table's maxHeaderTableSize. If the size
-     * of the new entry is larger than the table's maxHeaderTableSize, the dynamic table will be cleared.
-     */
-    private void add(CharSequence name, CharSequence value, long headerSize) {
-        // Clear the table if the header field size is larger than the maxHeaderTableSize.
-        if (headerSize > maxHeaderTableSize) {
-            clear();
-            return;
-        }
-
-        // Evict oldest entries until we have enough maxHeaderTableSize.
-        while (maxHeaderTableSize - size < headerSize) {
-            remove();
-        }
-
-        int h = AsciiString.hashCode(name);
-        int i = index(h);
-        HeaderEntry old = headerFields[i];
-        HeaderEntry e = new HeaderEntry(h, name, value, head.before.index - 1, old);
-        headerFields[i] = e;
-        e.addBefore(head);
-        size += headerSize;
-    }
-
-    /**
-     * Remove and return the oldest header field from the dynamic table.
-     */
-    private HpackHeaderField remove() {
-        if (size == 0) {
-            return null;
-        }
-        HeaderEntry eldest = head.after;
-        int h = eldest.hash;
-        int i = index(h);
-        HeaderEntry prev = headerFields[i];
-        HeaderEntry e = prev;
-        while (e != null) {
-            HeaderEntry next = e.next;
-            if (e == eldest) {
-                if (prev == eldest) {
-                    headerFields[i] = next;
-                } else {
-                    prev.next = next;
-                }
-                eldest.remove();
-                size -= eldest.size();
-                return eldest;
-            }
-            prev = e;
-            e = next;
         }
         return null;
     }
 
-    /**
-     * Remove all entries from the dynamic table.
-     */
-    private void clear() {
-        Arrays.fill(headerFields, null);
-        head.before = head.after = head;
-        size = 0;
+    private int getIndexPlusOffset(int counter) {
+        return getIndex(counter) + HpackStaticTable.length;
     }
 
     /**
-     * Returns the index into the hash table for the hash code h.
+     * Compute the index into the dynamic table given the counter in the header entry.
      */
-    private int index(int h) {
+    private int getIndex(int counter) {
+        return counter - latestCounter() + 1;
+    }
+
+    private int latestCounter() {
+        return latest.counter;
+    }
+
+    private void addNameEntry(CharSequence name, int nameHash, int nextCounter) {
+        int bucket = bucket(nameHash);
+        nameEntries[bucket] = new NameEntry(nameHash, name, nextCounter, nameEntries[bucket]);
+    }
+
+    private void addNameValueEntry(CharSequence name, CharSequence value,
+                                   int nameHash, int valueHash, int nextCounter) {
+        int hash = hash(nameHash, valueHash);
+        int bucket = bucket(hash);
+        NameValueEntry e = new NameValueEntry(hash, name, value, nextCounter, nameValueEntries[bucket]);
+        nameValueEntries[bucket] = e;
+        latest.after = e;
+        latest = e;
+    }
+
+    /**
+     * Remove the oldest header field from the dynamic table.
+     */
+    private void remove() {
+        NameValueEntry eldest = head.after;
+        removeNameValueEntry(eldest);
+        removeNameEntryMatchingCounter(eldest.name, eldest.counter);
+        head.after = eldest.after;
+        eldest.unlink();
+        size -= eldest.size();
+        if (isEmpty()) {
+            latest = head;
+        }
+    }
+
+    private boolean isEmpty() {
+        return size == 0;
+    }
+
+    private void removeNameValueEntry(NameValueEntry eldest) {
+        int bucket = bucket(eldest.hash);
+        NameValueEntry e = nameValueEntries[bucket];
+        if (e == eldest) {
+            nameValueEntries[bucket] = eldest.next;
+        } else {
+            while (e.next != eldest) {
+                e = e.next;
+            }
+            e.next = eldest.next;
+        }
+    }
+
+    private void removeNameEntryMatchingCounter(CharSequence name, int counter) {
+        int hash = AsciiString.hashCode(name);
+        int bucket = bucket(hash);
+        NameEntry e = nameEntries[bucket];
+        if (e == null) {
+            return;
+        }
+        if (counter == e.counter) {
+            nameEntries[bucket] = e.next;
+            e.unlink();
+        } else {
+            NameEntry prev = e;
+            e = e.next;
+            while (e != null) {
+                if (counter == e.counter) {
+                    prev.next = e.next;
+                    e.unlink();
+                    break;
+                }
+                prev = e;
+                e = e.next;
+            }
+        }
+    }
+
+    /**
+     * Returns the bucket of the hash table for the hash code h.
+     */
+    private int bucket(int h) {
         return h & hashMask;
     }
 
-    /**
-     * A linked hash map HpackHeaderField entry.
-     */
-    private static final class HeaderEntry extends HpackHeaderField {
-        // These fields comprise the doubly linked list used for iteration.
-        HeaderEntry before, after;
+    private static int hash(int nameHash, int valueHash) {
+        return 31 * nameHash + valueHash;
+    }
 
-        // These fields comprise the chained list for header fields with the same hash.
-        HeaderEntry next;
-        int hash;
+    private static final class NameEntry {
+        NameEntry next;
+
+        final CharSequence name;
+
+        final int hash;
 
         // This is used to compute the index in the dynamic table.
-        int index;
+        int counter;
 
-        /**
-         * Creates new entry.
-         */
-        HeaderEntry(int hash, CharSequence name, CharSequence value, int index, HeaderEntry next) {
-            super(name, value);
-            this.index = index;
+        NameEntry(int hash, CharSequence name, int counter, NameEntry next) {
             this.hash = hash;
+            this.name = name;
+            this.counter = counter;
             this.next = next;
         }
 
-        /**
-         * Removes this entry from the linked list.
-         */
-        private void remove() {
-            before.after = after;
-            after.before = before;
-            before = null; // null references to prevent nepotism in generational GC.
-            after = null;
-            next = null;
+        void unlink() {
+            next = null; // null references to prevent nepotism in generational GC.
+        }
+    }
+
+    private static final class NameValueEntry extends HpackHeaderField {
+        // This field comprises the linked list used for implementing the eviction policy.
+        NameValueEntry after;
+
+        NameValueEntry next;
+
+        // hash of both name and value
+        final int hash;
+
+        // This is used to compute the index in the dynamic table.
+        final int counter;
+
+        NameValueEntry(int hash, CharSequence name, CharSequence value, int counter, NameValueEntry next) {
+            super(name, value);
+            this.next = next;
+            this.hash = hash;
+            this.counter = counter;
         }
 
-        /**
-         * Inserts this entry before the specified existing entry in the list.
-         */
-        private void addBefore(HeaderEntry existingEntry) {
-            after = existingEntry;
-            before = existingEntry.before;
-            before.after = this;
-            after.before = this;
+        void unlink() {
+            after = null; // null references to prevent nepotism in generational GC.
+            next = null;
         }
     }
 }

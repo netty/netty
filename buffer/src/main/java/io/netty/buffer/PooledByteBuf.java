@@ -176,6 +176,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
             tmpNioBuf = null;
             chunk = null;
+            cache = null;
             recycle();
         }
     }

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "io.netty.handler.codec.stomp.StompSubframeAggregator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.stomp.StompSubframeAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.stomp.StompSubframeDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.stomp.StompSubframeDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.stomp.StompSubframeEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.stomp.StompSubframeEncoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

@@ -1043,6 +1043,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private final class EpollSocketWritableByteChannel extends SocketWritableByteChannel {
         EpollSocketWritableByteChannel() {
             super(socket);
+            assert fd == socket;
+        }
+
+        @Override
+        protected int write(final ByteBuffer buf, final int pos, final int limit) throws IOException {
+            return socket.send(buf, pos, limit);
         }
 
         @Override

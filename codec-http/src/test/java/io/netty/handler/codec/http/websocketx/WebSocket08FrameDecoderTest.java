@@ -13,15 +13,19 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -68,5 +72,26 @@ public class WebSocket08FrameDecoderTest {
                 outputFrame.release();
             }
         }
+    }
+
+    @Test
+    void protocolViolationWhenNegativeFrameLength() {
+        WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
+        final EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        final ByteBuf invalidFrame = Unpooled.buffer(10).writeByte(0x81)
+                                             .writeByte(0xFF).writeLong(-1L);
+
+        Throwable exception = assertThrows(CorruptedWebSocketFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(invalidFrame);
+            }
+        });
+        assertEquals("invalid data frame length (negative length)", exception.getMessage());
+
+        CloseWebSocketFrame closeFrame = channel.readOutbound();
+        assertEquals("invalid data frame length (negative length)", closeFrame.reasonText());
+        assertTrue(closeFrame.release());
+        assertFalse(channel.isActive());
     }
 }

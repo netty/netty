@@ -25,7 +25,7 @@ env:
 
 jobs:
   prepare-release:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -169,7 +169,7 @@ jobs:
         run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty 4.1
 
   deploy-staged-release:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     # Wait until we have staged everything
     needs: stage-release-linux
     steps:

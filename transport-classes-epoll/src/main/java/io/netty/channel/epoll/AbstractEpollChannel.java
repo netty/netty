@@ -346,10 +346,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         int localReadAmount;
         unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
         if (byteBuf.hasMemoryAddress()) {
-            localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+            localReadAmount = socket.recvAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
         } else {
             ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            localReadAmount = socket.read(buf, buf.position(), buf.limit());
+            localReadAmount = socket.recv(buf, buf.position(), buf.limit());
         }
         if (localReadAmount > 0) {
             byteBuf.writerIndex(writerIndex + localReadAmount);
@@ -359,7 +359,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         if (buf.hasMemoryAddress()) {
-            int localFlushedAmount = socket.writeAddress(buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
+            int localFlushedAmount = socket.sendAddress(buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
             if (localFlushedAmount > 0) {
                 in.removeBytes(localFlushedAmount);
                 return 1;
@@ -367,7 +367,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         } else {
             final ByteBuffer nioBuf = buf.nioBufferCount() == 1 ?
                     buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()) : buf.nioBuffer();
-            int localFlushedAmount = socket.write(nioBuf, nioBuf.position(), nioBuf.limit());
+            int localFlushedAmount = socket.send(nioBuf, nioBuf.position(), nioBuf.limit());
             if (localFlushedAmount > 0) {
                 nioBuf.position(nioBuf.position() + localFlushedAmount);
                 in.removeBytes(localFlushedAmount);
@@ -387,7 +387,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
             if (remoteAddress == null) {
-                return socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+                return socket.sendAddress(memoryAddress, data.readerIndex(), data.writerIndex());
             }
             return socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
                     remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
@@ -408,7 +408,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
         if (remoteAddress == null) {
-            return socket.write(nioData, nioData.position(), nioData.limit());
+            return socket.send(nioData, nioData.position(), nioData.limit());
         }
         return socket.sendTo(nioData, nioData.position(), nioData.limit(),
                 remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
@@ -516,12 +516,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
                     }
-                    clearEpollIn();
+                    clearEpollIn0();
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
                 }
-            } else if (!rdHup) {
+            } else if (!rdHup && !inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;
                 pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }

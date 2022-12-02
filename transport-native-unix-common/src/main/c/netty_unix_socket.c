@@ -435,6 +435,52 @@ static jobject _recvFromDomainSocket(JNIEnv* env, jint fd, void* buffer, jint po
     return createDomainDatagramSocketAddress(env, &addr, res, NULL);
 }
 
+static jint _send(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
+    ssize_t res;
+    int err;
+    do {
+       res = send(fd, buffer + pos, (size_t) (limit - pos), 0);
+       // keep on writing if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+    return (jint) res;
+}
+
+static jint netty_unix_socket_send(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+    // We check that GetDirectBufferAddress will not return NULL in OnLoad
+    return _send(env, clazz, fd, (*env)->GetDirectBufferAddress(env, jbuffer), pos, limit);
+}
+
+static jint netty_unix_socket_sendAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return _send(env, clazz, fd, (void*) (intptr_t) address, pos, limit);
+}
+
+static jint _recv(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
+    ssize_t res;
+    int err;
+    do {
+        res = recv(fd, buffer + pos, (size_t) (limit - pos), 0);
+        // Keep on reading if we was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+    return (jint) res;
+}
+
+static jint netty_unix_socket_recv(JNIEnv* env, jclass clazz, jint fd, jobject jbuffer, jint pos, jint limit) {
+    // We check that GetDirectBufferAddress will not return NULL in OnLoad
+    return _recv(env, clazz, fd, (*env)->GetDirectBufferAddress(env, jbuffer), pos, limit);
+}
+
+static jint netty_unix_socket_recvAddress(JNIEnv* env, jclass clazz, jint fd, jlong address, jint pos, jint limit) {
+    return _recv(env, clazz, fd, (void*) (intptr_t) address, pos, limit);
+}
+
 void netty_unix_socket_getOptionHandleError(JNIEnv* env, int err) {
     netty_unix_socket_optionHandleError(env, err, "getsockopt() failed: ");
 }
@@ -1120,6 +1166,10 @@ static const JNINativeMethod fixed_method_table[] = {
   // "recvFromAddress" has a dynamic signature
   // "recvFromDomainSocket" has a dynamic signature
   // "recvFromAddressDomainSocket" has a dynamic signature
+  { "send", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_socket_send },
+  { "sendAddress", "(IJII)I", (void *) netty_unix_socket_sendAddress },
+  { "recv", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_socket_recv },
+  { "recvAddress", "(IJII)I", (void *) netty_unix_socket_recvAddress },
   { "recvFd", "(I)I", (void *) netty_unix_socket_recvFd },
   { "sendFd", "(II)I", (void *) netty_unix_socket_sendFd },
   { "bindDomainSocket", "(I[B)I", (void *) netty_unix_socket_bindDomainSocket },

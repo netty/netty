@@ -29,7 +29,18 @@ import java.io.OutputStream;
 /**
  * An {@link ObjectOutput} which is interoperable with {@link ObjectDecoder}
  * and {@link ObjectDecoderInputStream}.
+ * <p>
+ * <strong>Security:</strong> serialization can be a security liability,
+ * and should not be used without defining a list of classes that are
+ * allowed to be desirialized. Such a list can be specified with the
+ * <tt>jdk.serialFilter</tt> system property, for instance.
+ * See the <a href="https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html">
+ * serialization filtering</a> article for more information.
+ *
+ * @deprecated This class has been deprecated with no replacement,
+ * because serialization can be a security liability
  */
+@Deprecated
 public class ObjectEncoderOutputStream extends OutputStream implements
         ObjectOutput {
 

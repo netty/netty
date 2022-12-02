@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.80.Final-SNAPSHOT</version>
+  <version>4.1.86.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -179,6 +179,30 @@
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
+      </properties>
+    </profile>
+    <profile>
+      <id>java19</id>
+      <activation>
+        <jdk>19</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -543,7 +567,7 @@
     <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <netty.build.version>30</netty.build.version>
+    <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
     <jetty.alpnAgent.version>2.0.10</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
@@ -567,7 +591,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.53.Final</tcnative.version>
+    <tcnative.version>2.0.54.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -578,7 +602,7 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.17.2</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
-    <junit.version>5.7.0</junit.version>
+    <junit.version>5.9.0</junit.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
@@ -586,7 +610,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
-    <brotli4j.version>1.7.1</brotli4j.version>
+    <brotli4j.version>1.8.0</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -626,6 +650,7 @@
     <module>transport-udt</module>
     <module>handler</module>
     <module>handler-proxy</module>
+    <module>handler-ssl-ocsp</module>
     <module>example</module>
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
@@ -929,6 +954,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.reflections</groupId>
+        <artifactId>reflections</artifactId>
+        <version>0.10.2</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
         <version>1.2.3</version>
@@ -1090,10 +1121,6 @@
                   </item>
                   <item>
                     <matcher>java-package</matcher>
-                    <match>/io\.netty\.microbench\..*/</match>
-                  </item>
-                  <item>
-                    <matcher>java-package</matcher>
                     <match>/org\.openjdk\.jmh\..*/</match>
                   </item>
                   <item>
@@ -1130,13 +1157,6 @@
                   <regex>true</regex>
                   <package>io\.netty\..*</package>
                   <justification>They're not "external classes" if they're from a Netty package.</justification>
-                </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.class.removed</code>
-                  <regex>true</regex>
-                  <package>.*\.generated($|\..+)</package>
-                  <justification>Ignore all classes generated by JMH.</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
@@ -1437,6 +1457,9 @@
           <systemPropertyVariables>
             <logback.configurationFile>${logging.config}</logback.configurationFile>
             <logLevel>${logging.logLevel}</logLevel>
+            <!-- Used by ChannelHandlerMetadataUtil to create the recommended directory layout for native-image metadata -->
+            <nativeImage.handlerMetadataGroupId>${project.groupId}</nativeImage.handlerMetadataGroupId>
+            <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
           <properties>

@@ -30,6 +30,11 @@
 
 # JVM crash logs
 hs_err_pid*.log
+replay_pid*.log
+
+# JVM dumps
+*.hprof.xz
+*.threads
 
 dependency-reduced-pom.xml
 
@@ -49,3 +54,4 @@ mainframer
 
 # exclude file created by the flatten plugin
 .flattened-pom.xml
+.java-version

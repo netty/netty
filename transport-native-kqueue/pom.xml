@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.80.Final-SNAPSHOT</version>
+    <version>4.1.86.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-kqueue</artifactId>
 
@@ -287,7 +287,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_transport_native_kqueue_aarch_64</name>
+                  <name>netty_transport_native_kqueue_x86_64</name>
                   <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -325,7 +325,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_aarch_64.jnilib; osname=MacOSX; processor=aarch64</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_x86_64.jnilib; osname=MacOSX; processor=x86_64</Bundle-NativeCode>
                       <Fragment-Host>io.netty.transport-classes-kqueue</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>

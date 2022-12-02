@@ -20,6 +20,8 @@ import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Map.Entry;
 
@@ -171,6 +173,32 @@ public class DefaultHttp2HeadersTest {
         assertFalse(headers.contains("name1", "Value2"));
         assertTrue(headers.contains("2name", "Value3", true));
         assertFalse(headers.contains("2name", "Value3", false));
+    }
+
+    @Test
+    void setMustOverwritePseudoHeaders() {
+        Http2Headers headers = newHeaders();
+        // The headers are already populated with pseudo headers.
+        headers.method(of("GET"));
+        headers.path(of("/index2.html"));
+        headers.status(of("101"));
+        headers.authority(of("github.com"));
+        headers.scheme(of("http"));
+        headers.set(of(":protocol"), of("http"));
+        assertEquals(of("GET"), headers.method());
+        assertEquals(of("/index2.html"), headers.path());
+        assertEquals(of("101"), headers.status());
+        assertEquals(of("github.com"), headers.authority());
+        assertEquals(of("http"), headers.scheme());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] name={0} value={1}")
+    @CsvSource(value = {"upgrade,protocol1", "connection,close", "keep-alive,timeout=5", "proxy-connection,close",
+            "transfer-encoding,chunked", "te,something-else"})
+    void possibleToAddConnectionHeaders(String name, String value) {
+        Http2Headers headers = newHeaders();
+        headers.add(name, value);
+        assertTrue(headers.contains(name, value));
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {

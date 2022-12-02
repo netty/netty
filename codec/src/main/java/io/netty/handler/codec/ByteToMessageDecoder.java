@@ -83,6 +83,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            if (cumulation == in) {
+                // when the in buffer is the same as the cumulation it is doubly retained, release it once
+                in.release();
+                return cumulation;
+            }
             if (!cumulation.isReadable() && in.isContiguous()) {
                 // If cumulation is empty and input buffer is contiguous, use it directly
                 cumulation.release();
@@ -118,6 +123,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            if (cumulation == in) {
+                // when the in buffer is the same as the cumulation it is doubly retained, release it once
+                in.release();
+                return cumulation;
+            }
             if (!cumulation.isReadable()) {
                 cumulation.release();
                 return in;

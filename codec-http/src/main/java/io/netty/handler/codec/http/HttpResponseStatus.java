@@ -49,6 +49,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus PROCESSING = newStatus(102, "Processing");
 
     /**
+     * 103 Early Hints (RFC 8297)
+     */
+    public static final HttpResponseStatus EARLY_HINTS = newStatus(103, "Early Hints");
+
+    /**
      * 200 OK
      */
     public static final HttpResponseStatus OK = newStatus(200, "OK");
@@ -344,6 +349,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return SWITCHING_PROTOCOLS;
         case 102:
             return PROCESSING;
+        case 103:
+            return EARLY_HINTS;
         case 200:
             return OK;
         case 201:

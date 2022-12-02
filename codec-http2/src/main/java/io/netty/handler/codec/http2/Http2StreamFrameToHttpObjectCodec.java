@@ -37,6 +37,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -91,9 +92,9 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
             final CharSequence status = headers.status();
 
-            // 100-continue response is a special case where Http2HeadersFrame#isEndStream=false
+            // 1xx response (excluding 101) is a special case where Http2HeadersFrame#isEndStream=false
             // but we need to decode it as a FullHttpResponse to play nice with HttpObjectAggregator.
-            if (null != status && HttpResponseStatus.CONTINUE.codeAsText().contentEquals(status)) {
+            if (null != status && isInformationalResponseHeaderFrame(status)) {
                 final FullHttpMessage fullMsg = newFullMessage(id, headers, ctx.alloc());
                 out.add(fullMsg);
                 return;
@@ -151,18 +152,22 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
      */
     @Override
     protected void encode(ChannelHandlerContext ctx, HttpObject obj, List<Object> out) throws Exception {
-        // 100-continue is typically a FullHttpResponse, but the decoded
+        // 1xx (excluding 101) is typically a FullHttpResponse, but the decoded
         // Http2HeadersFrame should not be marked as endStream=true
         if (obj instanceof HttpResponse) {
             final HttpResponse res = (HttpResponse) obj;
-            if (res.status().equals(HttpResponseStatus.CONTINUE)) {
+            final HttpResponseStatus status = res.status();
+            final int code = status.code();
+            final HttpStatusClass statusClass = status.codeClass();
+            // An informational response using a 1xx status code other than 101 is
+            // transmitted as a HEADERS frame
+            if (statusClass == HttpStatusClass.INFORMATIONAL && code != 101) {
                 if (res instanceof FullHttpResponse) {
                     final Http2Headers headers = toHttp2Headers(ctx, res);
                     out.add(new DefaultHttp2HeadersFrame(headers, false));
                     return;
                 } else {
-                    throw new EncoderException(
-                            HttpResponseStatus.CONTINUE + " must be a FullHttpResponse");
+                    throw new EncoderException(status + " must be a FullHttpResponse");
                 }
             }
         }
@@ -246,5 +251,21 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     private static Channel connectionChannel(ChannelHandlerContext ctx) {
         final Channel ch = ctx.channel();
         return ch instanceof Http2StreamChannel ? ch.parent() : ch;
+    }
+
+    /**
+     *    An informational response using a 1xx status code other than 101 is
+     *    transmitted as a HEADERS frame
+     */
+    private static boolean isInformationalResponseHeaderFrame(CharSequence status) {
+        if (status.length() == 3) {
+            char char0 = status.charAt(0);
+            char char1 = status.charAt(1);
+            char char2 = status.charAt(2);
+            return char0 == '1'
+                && char1 >= '0' && char1 <= '9'
+                && char2 >= '0' && char2 <= '9' && char2 != '1';
+        }
+        return false;
     }
 }

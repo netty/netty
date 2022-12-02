@@ -1,0 +1,16 @@
+[
+  {
+    "name": "io.netty.handler.codec.xml.XmlDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.xml.XmlDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.xml.XmlFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.xml.XmlFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

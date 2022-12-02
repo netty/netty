@@ -32,6 +32,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
 
@@ -78,15 +79,14 @@ final class HpackDecoder {
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - max dynamic table size change required",
                     Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "decode(..)");
     private static final byte READ_HEADER_REPRESENTATION = 0;
-    private static final byte READ_MAX_DYNAMIC_TABLE_SIZE = 1;
-    private static final byte READ_INDEXED_HEADER = 2;
-    private static final byte READ_INDEXED_HEADER_NAME = 3;
-    private static final byte READ_LITERAL_HEADER_NAME_LENGTH_PREFIX = 4;
-    private static final byte READ_LITERAL_HEADER_NAME_LENGTH = 5;
-    private static final byte READ_LITERAL_HEADER_NAME = 6;
-    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX = 7;
-    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH = 8;
-    private static final byte READ_LITERAL_HEADER_VALUE = 9;
+    private static final byte READ_INDEXED_HEADER = 1;
+    private static final byte READ_INDEXED_HEADER_NAME = 2;
+    private static final byte READ_LITERAL_HEADER_NAME_LENGTH_PREFIX = 3;
+    private static final byte READ_LITERAL_HEADER_NAME_LENGTH = 4;
+    private static final byte READ_LITERAL_HEADER_NAME = 5;
+    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX = 6;
+    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH = 7;
+    private static final byte READ_LITERAL_HEADER_VALUE = 8;
 
     private final HpackHuffmanDecoder huffmanDecoder = new HpackHuffmanDecoder();
     private final HpackDynamicTable hpackDynamicTable;
@@ -123,8 +123,12 @@ final class HpackDecoder {
      * <p>
      * This method assumes the entire header block is contained in {@code in}.
      */
-    public void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
-        Http2HeadersSink sink = new Http2HeadersSink(streamId, headers, maxHeaderListSize, validateHeaders);
+    void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
+        Http2HeadersSink sink = new Http2HeadersSink(
+                streamId, headers, maxHeaderListSize, validateHeaders);
+        // Check for dynamic table size updates, which must occur at the beginning:
+        // https://www.rfc-editor.org/rfc/rfc7541.html#section-4.2
+        decodeDynamicTableSizeUpdates(in);
         decode(in, sink);
 
         // Now that we've read all of our headers we can perform the validation steps. We must
@@ -132,13 +136,26 @@ final class HpackDecoder {
         sink.finish();
     }
 
-    private void decode(ByteBuf in, Sink sink) throws Http2Exception {
+    private void decodeDynamicTableSizeUpdates(ByteBuf in) throws Http2Exception {
+        byte b;
+        while (in.isReadable() && ((b = in.getByte(in.readerIndex())) & 0x20) == 0x20 && ((b & 0xC0) == 0x00)) {
+            in.readByte();
+            int index = b & 0x1F;
+            if (index == 0x1F) {
+                setDynamicTableSize(decodeULE128(in, (long) index));
+            } else {
+                setDynamicTableSize(index);
+            }
+        }
+    }
+
+    private void decode(ByteBuf in, Http2HeadersSink sink) throws Http2Exception {
         int index = 0;
         int nameLength = 0;
         int valueLength = 0;
         byte state = READ_HEADER_REPRESENTATION;
         boolean huffmanEncoded = false;
-        CharSequence name = null;
+        AsciiString name = null;
         IndexType indexType = IndexType.NONE;
         while (in.isReadable()) {
             switch (state) {
@@ -159,7 +176,9 @@ final class HpackDecoder {
                                 break;
                             default:
                                 HpackHeaderField indexedHeader = getIndexedHeader(index);
-                                sink.appendToHeaderList(indexedHeader.name, indexedHeader.value);
+                                sink.appendToHeaderList(
+                                        (AsciiString) indexedHeader.name,
+                                        (AsciiString) indexedHeader.value);
                         }
                     } else if ((b & 0x40) == 0x40) {
                         // Literal Header Field with Incremental Indexing
@@ -180,13 +199,9 @@ final class HpackDecoder {
                         }
                     } else if ((b & 0x20) == 0x20) {
                         // Dynamic Table Size Update
-                        index = b & 0x1F;
-                        if (index == 0x1F) {
-                            state = READ_MAX_DYNAMIC_TABLE_SIZE;
-                        } else {
-                            setDynamicTableSize(index);
-                            state = READ_HEADER_REPRESENTATION;
-                        }
+                        // See https://www.rfc-editor.org/rfc/rfc7541.html#section-4.2
+                        throw connectionError(COMPRESSION_ERROR, "Dynamic table size update must happen " +
+                            "at the beginning of the header block");
                     } else {
                         // Literal Header Field without Indexing / never Indexed
                         indexType = (b & 0x10) == 0x10 ? IndexType.NEVER : IndexType.NONE;
@@ -207,14 +222,11 @@ final class HpackDecoder {
                     }
                     break;
 
-                case READ_MAX_DYNAMIC_TABLE_SIZE:
-                    setDynamicTableSize(decodeULE128(in, (long) index));
-                    state = READ_HEADER_REPRESENTATION;
-                    break;
-
                 case READ_INDEXED_HEADER:
                     HpackHeaderField indexedHeader = getIndexedHeader(decodeULE128(in, index));
-                    sink.appendToHeaderList(indexedHeader.name, indexedHeader.value);
+                    sink.appendToHeaderList(
+                            (AsciiString) indexedHeader.name,
+                            (AsciiString) indexedHeader.value);
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
@@ -287,7 +299,7 @@ final class HpackDecoder {
                         throw notEnoughDataException(in);
                     }
 
-                    CharSequence value = readStringLiteral(in, valueLength, huffmanEncoded);
+                    AsciiString value = readStringLiteral(in, valueLength, huffmanEncoded);
                     insertHeader(sink, name, value, indexType);
                     state = READ_HEADER_REPRESENTATION;
                     break;
@@ -306,7 +318,7 @@ final class HpackDecoder {
      * Set the maximum table size. If this is below the maximum size of the dynamic table used by
      * the encoder, the beginning of the next header block MUST signal this change.
      */
-    public void setMaxHeaderTableSize(long maxHeaderTableSize) throws Http2Exception {
+    void setMaxHeaderTableSize(long maxHeaderTableSize) throws Http2Exception {
         if (maxHeaderTableSize < MIN_HEADER_TABLE_SIZE || maxHeaderTableSize > MAX_HEADER_TABLE_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header Table Size must be >= %d and <= %d but was %d",
                     MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderTableSize);
@@ -320,16 +332,7 @@ final class HpackDecoder {
         }
     }
 
-    /**
-     * @deprecated use {@link #setMaxHeaderListSize(long)}; {@code maxHeaderListSizeGoAway} is
-     *     ignored
-     */
-    @Deprecated
-    public void setMaxHeaderListSize(long maxHeaderListSize, long maxHeaderListSizeGoAway) throws Http2Exception {
-        setMaxHeaderListSize(maxHeaderListSize);
-    }
-
-    public void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
+    void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
         if (maxHeaderListSize < MIN_HEADER_LIST_SIZE || maxHeaderListSize > MAX_HEADER_LIST_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
                     MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderListSize);
@@ -337,7 +340,7 @@ final class HpackDecoder {
         this.maxHeaderListSize = maxHeaderListSize;
     }
 
-    public long getMaxHeaderListSize() {
+    long getMaxHeaderListSize() {
         return maxHeaderListSize;
     }
 
@@ -345,7 +348,7 @@ final class HpackDecoder {
      * Return the maximum table size. This is the maximum size allowed by both the encoder and the
      * decoder.
      */
-    public long getMaxHeaderTableSize() {
+    long getMaxHeaderTableSize() {
         return hpackDynamicTable.capacity();
     }
 
@@ -379,71 +382,40 @@ final class HpackDecoder {
         hpackDynamicTable.setCapacity(dynamicTableSize);
     }
 
-    private static HeaderType validate(int streamId, CharSequence name,
-                                       HeaderType previousHeaderType, Http2Headers headers) throws Http2Exception {
+    private static HeaderType validateHeader(int streamId, AsciiString name, CharSequence value,
+            HeaderType previousHeaderType) throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                 throw streamError(streamId, PROTOCOL_ERROR,
                         "Pseudo-header field '%s' found after regular header.", name);
             }
-
             final Http2Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
-            if (pseudoHeader == null) {
-                throw streamError(streamId, PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name);
-            }
-
             final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
                     HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
             if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
                 throw streamError(streamId, PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
             }
-
-            if (contains(headers, name)) {
-                throw streamError(streamId, PROTOCOL_ERROR, "Duplicate HTTP/2 pseudo-header '%s' encountered.", name);
-            }
-
             return currentHeaderType;
+        }
+        if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
+            throw streamError(streamId, PROTOCOL_ERROR, "Illegal connection-specific header '%s' encountered.", name);
+        }
+        if (HttpHeaderValidationUtil.isTeNotTrailers(name, value)) {
+            throw streamError(streamId, PROTOCOL_ERROR,
+                    "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
         }
 
         return HeaderType.REGULAR_HEADER;
     }
 
-    private static boolean contains(Http2Headers headers, CharSequence name) {
-        if (headers == EmptyHttp2Headers.INSTANCE) {
-            return false;
-        }
-        if (headers instanceof DefaultHttp2Headers || headers instanceof ReadOnlyHttp2Headers) {
-            return headers.contains(name);
-        }
-        // We can't be sure the Http2Headers implementation support contains on pseudo-headers,
-        // so we have to use the direct accessors instead.
-        if (Http2Headers.PseudoHeaderName.METHOD.value().equals(name)) {
-            return headers.method() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.SCHEME.value().equals(name)) {
-            return headers.scheme() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.AUTHORITY.value().equals(name)) {
-            return headers.authority() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.PATH.value().equals(name)) {
-            return headers.path() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.STATUS.value().equals(name)) {
-            return headers.status() != null;
-        }
-        // Note: We don't check PROTOCOL because the API presents no alternative way to access it.
-        return false;
-    }
-
-    private CharSequence readName(int index) throws Http2Exception {
+    private AsciiString readName(int index) throws Http2Exception {
         if (index <= HpackStaticTable.length) {
             HpackHeaderField hpackHeaderField = HpackStaticTable.getEntry(index);
-            return hpackHeaderField.name;
+            return (AsciiString) hpackHeaderField.name;
         }
         if (index - HpackStaticTable.length <= hpackDynamicTable.length()) {
             HpackHeaderField hpackHeaderField = hpackDynamicTable.getEntry(index - HpackStaticTable.length);
-            return hpackHeaderField.name;
+            return (AsciiString) hpackHeaderField.name;
         }
         throw READ_NAME_ILLEGAL_INDEX_VALUE;
     }
@@ -458,7 +430,7 @@ final class HpackDecoder {
         throw INDEX_HEADER_ILLEGAL_INDEX_VALUE;
     }
 
-    private void insertHeader(Sink sink, CharSequence name, CharSequence value, IndexType indexType) {
+    private void insertHeader(Http2HeadersSink sink, AsciiString name, AsciiString value, IndexType indexType) {
         sink.appendToHeaderList(name, value);
 
         switch (indexType) {
@@ -475,7 +447,7 @@ final class HpackDecoder {
         }
     }
 
-    private CharSequence readStringLiteral(ByteBuf in, int length, boolean huffmanEncoded) throws Http2Exception {
+    private AsciiString readStringLiteral(ByteBuf in, int length, boolean huffmanEncoded) throws Http2Exception {
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
         }
@@ -549,30 +521,24 @@ final class HpackDecoder {
         RESPONSE_PSEUDO_HEADER
     }
 
-    private interface Sink {
-        void appendToHeaderList(CharSequence name, CharSequence value);
-        void finish() throws Http2Exception;
-    }
-
-    private static final class Http2HeadersSink implements Sink {
+    private static final class Http2HeadersSink {
         private final Http2Headers headers;
         private final long maxHeaderListSize;
         private final int streamId;
-        private final boolean validate;
+        private final boolean validateHeaders;
         private long headersLength;
         private boolean exceededMaxLength;
         private HeaderType previousType;
         private Http2Exception validationException;
 
-        Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validate) {
+        Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validateHeaders) {
             this.headers = headers;
             this.maxHeaderListSize = maxHeaderListSize;
             this.streamId = streamId;
-            this.validate = validate;
+            this.validateHeaders = validateHeaders;
         }
 
-        @Override
-        public void finish() throws Http2Exception {
+        void finish() throws Http2Exception {
             if (exceededMaxLength) {
                 headerListSizeExceeded(streamId, maxHeaderListSize, true);
             } else if (validationException != null) {
@@ -580,8 +546,7 @@ final class HpackDecoder {
             }
         }
 
-        @Override
-        public void appendToHeaderList(CharSequence name, CharSequence value) {
+        void appendToHeaderList(AsciiString name, AsciiString value) {
             headersLength += HpackHeaderField.sizeOf(name, value);
             exceededMaxLength |= headersLength > maxHeaderListSize;
 
@@ -590,15 +555,17 @@ final class HpackDecoder {
                 return;
             }
 
-            if (validate) {
-                try {
-                    previousType = validate(streamId, name, previousType, headers);
-                } catch (Http2Exception ex) {
-                    validationException = ex;
-                    return;
+            try {
+                headers.add(name, value);
+                if (validateHeaders) {
+                    previousType = validateHeader(streamId, name, value, previousType);
                 }
+            } catch (IllegalArgumentException ex) {
+                validationException = streamError(streamId, PROTOCOL_ERROR, ex,
+                        "Validation failed for header '%s': %s", name, ex.getMessage());
+            } catch (Http2Exception ex) {
+                validationException = streamError(streamId, PROTOCOL_ERROR, ex, ex.getMessage());
             }
-            headers.add(name, value);
         }
     }
 }

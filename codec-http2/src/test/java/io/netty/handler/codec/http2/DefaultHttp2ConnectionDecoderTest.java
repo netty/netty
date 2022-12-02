@@ -23,7 +23,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import junit.framework.AssertionFailedError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -55,6 +54,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -231,7 +231,13 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode().onSettingsAckRead(ctx);
 
         // Disallow any further flushes now that settings ACK has been sent
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
+            @Override
+            public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
+                fail();
+                return null;
+            }
+        });
     }
 
     @Test

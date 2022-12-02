@@ -27,7 +27,7 @@ env:
 
 jobs:
   verify-pr:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Set up JDK 8
@@ -150,9 +150,9 @@ jobs:
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-leak"
-          - setup: linux-x86_64-java18
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.118.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.118.yaml run build-leak"
+          - setup: linux-x86_64-java19
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml run build-leak"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
@@ -206,4 +206,6 @@ jobs:
           name: build-${{ matrix.setup }}-target
           path: |
             **/target/surefire-reports/
+            **/target/autobahntestsuite-reports/
             **/hs_err*.log
+            **/core.*

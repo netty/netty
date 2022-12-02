@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -1773,5 +1774,37 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             slice.release();
             composite.release();
         }
+    }
+
+    @Test
+    public void forEachByteOnNestedCompositeByteBufMustSeeEntireFlattenedContents() {
+        CompositeByteBuf buf = newCompositeBuffer();
+        buf.addComponent(true, newCompositeBuffer().addComponents(
+                true,
+                wrappedBuffer(new byte[] {1, 2, 3}),
+                wrappedBuffer(new byte[] {4, 5, 6})));
+        final byte[] arrayAsc = new byte[6];
+        final byte[] arrayDesc = new byte[6];
+        buf.forEachByte(new ByteProcessor() {
+            int index;
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                arrayAsc[index++] = value;
+                return true;
+            }
+        });
+        buf.forEachByteDesc(new ByteProcessor() {
+            int index;
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                arrayDesc[index++] = value;
+                return true;
+            }
+        });
+        assertArrayEquals(new byte[] {1, 2, 3, 4, 5, 6}, arrayAsc);
+        assertArrayEquals(new byte[] {6, 5, 4, 3, 2, 1}, arrayDesc);
+        buf.release();
     }
 }
