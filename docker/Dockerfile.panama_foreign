@@ -29,4 +29,6 @@ WORKDIR /root/build/panama-foreign
 RUN chmod +x configure
 RUN scl enable devtoolset-7 './configure --with-debug-level=fastdebug --with-vendor-name=netty-build --enable-warnings-as-errors=no'
 RUN make images && mv build/linux-*-server-fastdebug/images/jdk /root/jdk && rm -fr *
-ENV JAVA_HOME="/root/jdk"
+
+RUN echo 'export JAVA_HOME="/root/jdk"' >> ~/.bashrc
+RUN echo 'PATH=/root/jdk/bin:$PATH' >> ~/.bashrc
