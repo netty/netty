@@ -90,7 +90,7 @@ final class InternalThreadLocalMap {
 
     static int nextVariableIndex() {
         int index = nextIndex.getAndIncrement();
-        if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE || index < 0) {
+        if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE) {
             nextIndex.set(ARRAY_LIST_CAPACITY_MAX_SIZE);
             throw new IllegalStateException("too many thread-local indexed variables");
         }
