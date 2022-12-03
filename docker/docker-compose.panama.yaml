@@ -12,6 +12,10 @@ services:
 
   build-leak:
     image: netty:panama
+    command: '/bin/bash -cl "
+      ./mvnw -B -ntp clean install -DskipTests -Pfast &&
+      ./mvnw -B -ntp -Pleak verify -Dio.netty5.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -pl buffer-memory-segment
+    "'
 
   build-boringssl-static:
     image: netty:panama
