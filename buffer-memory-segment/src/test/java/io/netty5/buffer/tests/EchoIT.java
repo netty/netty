@@ -20,7 +20,6 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.buffer.tests.examples.echo.EchoServerHandler;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -101,6 +100,31 @@ public class EchoIT {
             // Shut down all event loops to terminate all threads.
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
+        }
+    }
+
+    static class EchoServerHandler implements ChannelHandler {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            Buffer buf = (Buffer) msg;
+            ctx.write(buf);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) {
+            ctx.flush();
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+
+        @Override
+        public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            // Close the connection when an exception is raised.
+            cause.printStackTrace();
+            ctx.close();
         }
     }
 
