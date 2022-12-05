@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @EnabledOnOs(OS.WINDOWS)
@@ -27,5 +29,14 @@ public class WindowsAdapterInfoTest {
     void loads() {
         assertThat(WindowsAdapterInfo.isAvailable()).isTrue();
         assertThat(WindowsAdapterInfo.adapters()).isNotNull();
+
+        List<NetworkAdapter> adapters = WindowsAdapterInfo.adapters();
+
+        for (NetworkAdapter adapter : adapters) {
+            System.out.println("=== Search Domains ===");
+            System.out.println(adapter.getSearchDomains());
+            System.out.println("=== Nameservers ===");
+            System.out.println(adapter.getNameservers());
+        }
     }
 }

@@ -20,9 +20,13 @@ import io.netty.resolver.dns.windows.WindowsAdapterInfo;
 import io.netty.util.internal.StringUtil;
 
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class WindowsResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
+public final class WindowsResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
 
     private final Map<String, DnsServerAddresses> resolverMap;
 
@@ -86,7 +90,7 @@ public class WindowsResolverDnsServerAddressStreamProvider implements DnsServerA
                 continue;
             }
 
-            for(String domain : adapter.getSearchDomains()) {
+            for (String domain : adapter.getSearchDomains()) {
                 if (domain == null) {
                     // Default mapping.
                     domain = StringUtil.EMPTY_STRING;

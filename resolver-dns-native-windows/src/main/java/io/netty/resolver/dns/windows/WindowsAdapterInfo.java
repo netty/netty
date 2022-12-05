@@ -19,6 +19,8 @@ package io.netty.resolver.dns.windows;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.List;
+
 public final class WindowsAdapterInfo {
     private static final Throwable UNAVAILABILITY_CAUSE;
 
@@ -61,5 +63,5 @@ public final class WindowsAdapterInfo {
         return UNAVAILABILITY_CAUSE;
     }
 
-    public static native NetworkAdapter[] adapters();
+    public static native List<NetworkAdapter> adapters();
 }

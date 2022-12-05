@@ -143,7 +143,8 @@ public final class DnsServerAddressStreamProviders {
                     }
 
                     private DnsServerAddressStreamProvider provider() {
-                        return PlatformDependent.isWindows() ? WindowsResolverDnsServerAddressStreamProvider.loadConfig() :
+                        return PlatformDependent.isWindows() ?
+                                WindowsResolverDnsServerAddressStreamProvider.loadConfig() :
                                 UnixResolverDnsServerAddressStreamProvider.parseSilently();
                     }
                 };

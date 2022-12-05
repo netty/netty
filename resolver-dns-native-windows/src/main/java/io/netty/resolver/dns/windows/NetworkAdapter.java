@@ -16,35 +16,22 @@
 package io.netty.resolver.dns.windows;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
-// TODO Rename to something like InterfaceConfiguration?
 public final class NetworkAdapter {
-    private final InetSocketAddress[] nameservers;
-    private final String[] searchDomains;
+    private final List<InetSocketAddress> nameservers;
+    private final List<String> searchDomains;
 
-    private final int ipv4Index;
-    private final int ipv6Index;
-
-    NetworkAdapter(InetSocketAddress[] nameservers, String[] searchDomains, int ipv4Index, int ipv6Index) {
+    NetworkAdapter(List<InetSocketAddress> nameservers, List<String> searchDomains) {
         this.nameservers = nameservers;
         this.searchDomains = searchDomains;
-        this.ipv4Index = ipv4Index;
-        this.ipv6Index = ipv6Index;
     }
 
-    public InetSocketAddress[] getNameservers() {
+    public List<InetSocketAddress> getNameservers() {
         return nameservers;
     }
 
-    public String[] getSearchDomains() {
+    public List<String> getSearchDomains() {
         return searchDomains;
-    }
-
-    public int getIpv4Index() {
-        return ipv4Index;
-    }
-
-    public int getIpv6Index() {
-        return ipv6Index;
     }
 }
