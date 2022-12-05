@@ -41,42 +41,48 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>com.googlecode.cmake-maven-project</groupId>
-            <artifactId>cmake-maven-plugin</artifactId>
-            <version>3.23.2-b1</version>
+            <groupId>org.fusesource.hawtjni</groupId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
             <executions>
               <execution>
-                <id>cmake-generate</id>
+                <id>build-native-lib</id>
+                <phase>compile</phase>
+                <configuration>
+                  <name>netty_resolver_dns_native_windows_${os.detected.arch}</name>
+                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <libDirectory>${project.build.directory}/native-build</libDirectory>
+                  <windowsBuildTool>msbuild</windowsBuildTool>
+                  <windowsPlatformToolset>v143</windowsPlatformToolset>
+                  <windowsTargetPlatformVersion>10.0.19041.0</windowsTargetPlatformVersion>
+                  <windowsCustomProps>true</windowsCustomProps>
+                </configuration>
                 <goals>
                   <goal>generate</goal>
+                  <goal>build</goal>
                 </goals>
-                <configuration>
-                  <options>
-                    <option>-DJAVA_ARCH:string=${os.detected.arch}</option>
-                    <option>-A x${os.detected.bitness}</option>
-                    <option>-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE:string=${project.build.outputDirectory}/META-INF/native</option>
-                  </options>
-                  <sourcePath>${project.basedir}/src/main/c</sourcePath>
-                  <targetPath>${project.build.directory}/native</targetPath>
-                </configuration>
               </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
               <execution>
-                <id>cmake-compile</id>
+                <id>copy-windows-dll</id>
+                <phase>process-classes</phase>
                 <goals>
-                  <goal>compile</goal>
+                  <goal>copy-resources</goal>
                 </goals>
                 <configuration>
-                  <config>Release</config>
-                  <projectDirectory>${project.build.directory}/native</projectDirectory>
-                </configuration>
-              </execution>
-              <execution>
-                <id>cmake-test</id>
-                <goals>
-                  <goal>test</goal>
-                </goals>
-                <configuration>
-                  <buildDirectory>${project.build.directory}/native</buildDirectory>
+                  <outputDirectory>${project.build.outputDirectory}/META-INF/native/</outputDirectory>
+                  <resources>
+                    <resource>
+
+                      <directory>${project.build.directory}/native-build/META-INF/native/windows${os.detected.bitness}</directory>
+                      <includes>
+                        <include>netty_resolver_dns_native_windows_${os.detected.arch}.dll</include>
+                      </includes>
+                    </resource>
+                  </resources>
                 </configuration>
               </execution>
             </executions>

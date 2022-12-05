@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class WindowsAdapterInfoTest {
     @Test
     void loads() {
+        System.out.println("Loading Exception (if any): " + WindowsAdapterInfo.unavailabilityCause());
+
         assertThat(WindowsAdapterInfo.isAvailable()).isTrue();
         assertThat(WindowsAdapterInfo.adapters()).isNotNull();
 
