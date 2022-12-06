@@ -175,6 +175,11 @@ public class SensitiveBufferTest {
         }
 
         @Override
+        public int sizeOf(Object memory) {
+            return baseMemoryManager.sizeOf(memory);
+        }
+
+        @Override
         public String implementationName() {
             throw new UnsupportedOperationException();
         }

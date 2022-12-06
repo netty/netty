@@ -531,7 +531,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         // Release the old memory, and install the new memory:
         Drop<UnsafeBuffer> drop = buffer.unsafeGetDrop();
         disconnectDrop(drop);
-        attachNewMemory(buffer.memory, drop);
+        attachNewMemory(buffer, drop);
         return this;
     }
 
@@ -546,13 +546,13 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         return drop;
     }
 
-    private void attachNewMemory(UnsafeMemory memory, Drop<UnsafeBuffer> drop) {
-        this.memory = memory;
-        base = memory.base;
-        baseOffset = 0;
-        address = memory.address;
-        rsize = memory.size;
-        wsize = memory.size;
+    private void attachNewMemory(UnsafeBuffer source, Drop<UnsafeBuffer> drop) {
+        memory = source.memory;
+        base = source.base;
+        baseOffset = source.baseOffset;
+        address = source.address;
+        rsize = source.rsize;
+        wsize = source.wsize;
         drop.attach(this);
     }
 

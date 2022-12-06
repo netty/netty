@@ -129,6 +129,11 @@ public final class UnsafeMemoryManager implements MemoryManager {
     }
 
     @Override
+    public int sizeOf(Object memory) {
+        return ((UnsafeMemory) memory).size;
+    }
+
+    @Override
     public String implementationName() {
         return "Unsafe";
     }

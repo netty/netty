@@ -107,6 +107,12 @@ public class SegmentMemoryManager implements MemoryManager {
     }
 
     @Override
+    public int sizeOf(Object memory) {
+        var segment = (MemorySegment) memory;
+        return Math.toIntExact(segment.byteSize());
+    }
+
+    @Override
     public String implementationName() {
         return "MemorySegment";
     }
