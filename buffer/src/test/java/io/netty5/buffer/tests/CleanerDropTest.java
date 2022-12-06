@@ -221,6 +221,11 @@ public class CleanerDropTest {
         }
 
         @Override
+        public int sizeOf(Object memory) {
+            return manager.sizeOf(memory);
+        }
+
+        @Override
         public String implementationName() {
             return "Leak Tracking " + manager.implementationName();
         }
