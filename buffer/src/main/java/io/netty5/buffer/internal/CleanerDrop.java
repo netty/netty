@@ -37,7 +37,10 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
      * it becomes cleanable.
      */
     public static <T extends Buffer> Drop<T> wrap(Drop<T> drop, MemoryManager manager) {
-        return innerWrap(drop, manager, true);
+        if (LeakDetection.ALWAYS_ATTACH_CLEANER || LeakDetection.leakDetectionEnabled > 0) {
+            return innerWrap(drop, manager, true);
+        }
+        return drop;
     }
 
     /**
