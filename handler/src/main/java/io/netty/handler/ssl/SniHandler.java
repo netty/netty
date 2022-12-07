@@ -53,6 +53,17 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
 
     /**
      * Creates a SNI detection handler with configured {@link SslContext}
+     * maintained by {@link Mapping}
+     *
+     * @param mapping the mapping of domain name to {@link SslContext}
+     * @param handshakeTimeoutMillis the handshake timeout in milliseconds
+     */
+    public SniHandler(Mapping<? super String, ? extends SslContext> mapping, long handshakeTimeoutMillis) {
+        this(new AsyncMappingAdapter(mapping), handshakeTimeoutMillis);
+    }
+
+    /**
+     * Creates a SNI detection handler with configured {@link SslContext}
      * maintained by {@link DomainNameMapping}
      *
      * @param mapping the mapping of domain name to {@link SslContext}
@@ -69,6 +80,19 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      */
     @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
+        this(mapping, 0L);
+    }
+
+    /**
+     * Creates a SNI detection handler with configured {@link SslContext}
+     * maintained by {@link AsyncMapping}
+     *
+     * @param mapping the mapping of domain name to {@link SslContext}
+     * @param handshakeTimeoutMillis the handshake timeout in milliseconds
+     */
+    @SuppressWarnings("unchecked")
+    public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping, long handshakeTimeoutMillis) {
+        super(handshakeTimeoutMillis);
         this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
     }
 
@@ -148,7 +172,9 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      * Users may override this method to implement custom behavior.
      */
     protected SslHandler newSslHandler(SslContext context, ByteBufAllocator allocator) {
-        return context.newHandler(allocator);
+        SslHandler sslHandler = context.newHandler(allocator);
+        sslHandler.setHandshakeTimeoutMillis(handshakeTimeoutMillis);
+        return sslHandler;
     }
 
     private static final class AsyncMappingAdapter implements AsyncMapping<String, SslContext> {
