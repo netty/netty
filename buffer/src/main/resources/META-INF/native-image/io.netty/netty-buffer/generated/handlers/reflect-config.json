@@ -1,0 +1,9 @@
+[
+  {
+    "name": "io.netty.buffer.AbstractByteBufAllocator",
+    "condition": {
+      "typeReachable": "io.netty.buffer.AbstractByteBufAllocator"
+    },
+    "allDeclaredMethods": true
+  }
+]
