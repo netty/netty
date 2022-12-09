@@ -247,6 +247,7 @@ static int create_pipe(int fd[2], int flags) {
             return errno;
         }
     }
+    return 0;
 #endif  // PIPE2_SUPPORTED
     if (pipe(fd) != 0) {
         return errno;
