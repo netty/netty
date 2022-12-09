@@ -382,7 +382,7 @@ final class ChannelOutboundBuffer {
                 if (!processor.test(entry.msg, promise)) {
                     return;
                 }
-                promise.asFuture().addListener(new DecrementPendingBytes(this, entry.pendingSize));
+                promise.asFuture().addListener(new DecrementPendingBytes(this, entry));
             }
             removeEntry(entry);
             entry = entry.recycleAndGetNext();
@@ -449,10 +449,12 @@ final class ChannelOutboundBuffer {
     private static final class DecrementPendingBytes implements FutureListener<Void> {
         private final ChannelOutboundBuffer channelOutboundBuffer;
         private final int pendingSize;
+        private final Object toClose;
 
-        DecrementPendingBytes(ChannelOutboundBuffer channelOutboundBuffer, int pendingSize) {
+        DecrementPendingBytes(ChannelOutboundBuffer channelOutboundBuffer, Entry entry) {
             this.channelOutboundBuffer = channelOutboundBuffer;
-            this.pendingSize = pendingSize;
+            this.pendingSize = entry.pendingSize;
+            toClose = entry.msg;
         }
 
         @Override
@@ -462,6 +464,7 @@ final class ChannelOutboundBuffer {
             assert channelOutboundBuffer.executor.inEventLoop();
 
             channelOutboundBuffer.decrementPendingOutboundBytes(pendingSize);
+            SilentDispose.dispose(toClose, logger);
         }
     }
 }
