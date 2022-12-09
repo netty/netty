@@ -39,6 +39,8 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public final class LeakDetection {
+    static final boolean ALWAYS_ATTACH_CLEANER =
+            SystemPropertyUtil.getBoolean("io.netty5.buffer.alwaysAttachCleaner", false);
     static volatile int leakDetectionEnabled;
 
     // Protected by synchronizing on the instance.
