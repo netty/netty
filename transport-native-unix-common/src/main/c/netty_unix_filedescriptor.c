@@ -35,7 +35,12 @@ static jfieldID posFieldId = NULL;
 static jfieldID limitFieldId = NULL;
 
 // Optional external methods
+#ifndef __APPLE__
 extern int pipe2(int pipefd[2], int flags) __attribute__((weak)) __attribute__((weak_import));
+#define PIPE2_SUPPORTED 1
+#else
+#define PIPE2_SUPPORTED 0
+#endif  // __APPLE__
 
 static jint _write(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
     ssize_t res;
@@ -232,34 +237,41 @@ static jint netty_unix_filedescriptor_readAddress(JNIEnv* env, jclass clazz, jin
     return _read(env, clazz, fd, (void*) (intptr_t) address, pos, limit);
 }
 
-static jlong netty_unix_filedescriptor_newPipe(JNIEnv* env, jclass clazz) {
-    int fd[2];
+// Creates a pipe and sets the given flags on it. Returns the error code.  Uses
+// pipe2 if available, else makes 3 syscalls.
+static int create_pipe(int fd[2], int flags) {
+#if PIPE2_SUPPORTED
     if (pipe2) {
         // we can just use pipe2 and so save extra syscalls;
-        if (pipe2(fd, O_NONBLOCK) != 0) {
-            return -errno;
+        if (pipe2(fd, flags) != 0) {
+            return errno;
         }
-    } else {
-         if (pipe(fd) == 0) {
-            if (fcntl(fd[0], F_SETFD, O_NONBLOCK) < 0) {
-                int err = errno;
-                close(fd[0]);
-                close(fd[1]);
-                return -err;
-            }
-            if (fcntl(fd[1], F_SETFD, O_NONBLOCK) < 0) {
-                int err = errno;
-                close(fd[0]);
-                close(fd[1]);
-                return -err;
-            }
-         } else {
-            return -errno;
-         }
     }
+#endif  // PIPE2_SUPPORTED
+    if (pipe(fd) != 0) {
+        return errno;
+    }
+    if (fcntl(fd[0], F_SETFD, flags) < 0) {
+        int err = errno;
+        close(fd[0]);
+        close(fd[1]);
+        return err;
+    }
+    if (fcntl(fd[1], F_SETFD, flags) < 0) {
+        int err = errno;
+        close(fd[0]);
+        close(fd[1]);
+        return err;
+    }
+    return 0;
+}
 
-    // encode the fds into a 64 bit value
-    return (((jlong) fd[0]) << 32) | fd[1];
+static jlong netty_unix_filedescriptor_newPipe(JNIEnv* env, jclass clazz) {
+    int fd[2];
+    int err = create_pipe(fd, O_NONBLOCK);
+    if (err != 0) {
+        return -err;
+    }
 }
 // JNI Registered Methods End
 

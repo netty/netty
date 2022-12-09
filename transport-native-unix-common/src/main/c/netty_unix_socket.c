@@ -55,7 +55,12 @@ static const unsigned char ipv4MappedWildcardAddress[] = { 0x00, 0x00, 0x00, 0x0
 static const unsigned char ipv4MappedAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff };
 
 // Optional external methods
+#if defined(SOCK_NONBLOCK) && !defined(__APPLE__)
 extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int flags) __attribute__((weak)) __attribute__((weak_import));
+#define ACCEPT4_WITH_SOCK_NONBLOCK_SUPPORTED 1
+#else
+#define ACCEPT4_WITH_SOCK_NONBLOCK_SUPPORTED 0
+#endif
 
 // macro to calculate the length of a sockaddr_un struct for a given path length.
 // see sys/un.h#SUN_LEN, this is modified to allow nul bytes
@@ -627,13 +632,13 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     socklen_t address_len = sizeof(addr);
 
     for (;;) {
-#ifdef SOCK_NONBLOCK
+#if ACCEPT4_WITH_SOCK_NONBLOCK_SUPPORTED
         if (accept4) {
-            socketFd = accept4(fd, (struct sockaddr*) &addr, &address_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+           socketFd = accept4(fd, (struct sockaddr*) &addr, &address_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
         } else {
-#endif
+#endif // ACCEPT4_WITH_SOCK_NONBLOCK_SUPPORTED
             socketFd = accept(fd, (struct sockaddr*) &addr, &address_len);
-#ifdef SOCK_NONBLOCK
+#if ACCEPT4_WITH_SOCK_NONBLOCK_SUPPORTED
         }
 #endif
 
@@ -652,9 +657,12 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     (*env)->SetByteArrayRegion(env, acceptedAddress, 0, 1, (jbyte*) &len_b);
     initInetSocketAddressArray(env, &addr, acceptedAddress, 1, len);
 
+#if ACCEPT4_WITH_SOCK_NONBLOCK_SUPPORTED
     if (accept4)  {
         return socketFd;
     }
+#endif
+
     if (fcntl(socketFd, F_SETFD, FD_CLOEXEC) == -1 || fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
         // accept4 was not present so need two more sys-calls ...
         return -errno;
