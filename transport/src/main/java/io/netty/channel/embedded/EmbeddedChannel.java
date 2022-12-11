@@ -180,10 +180,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, channelId);
-        metadata = metadata(hasDisconnect);
-        config = new DefaultChannelConfig(this);
-        setup(register, handlers);
+        this(parent, channelId, register, hasDisconnect, null, handlers);
     }
 
     /**
@@ -198,10 +195,28 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
                            final ChannelHandler... handlers) {
-        super(null, channelId);
+        this(null, channelId, true, hasDisconnect, config, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param parent    the parent {@link Channel} of this {@link EmbeddedChannel}.
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+     *                 constructor. If {@code false} the user will need to call {@link #register()}.
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param config the {@link ChannelConfig} which will be returned by {@link #config()}.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
+        final ChannelConfig config, final ChannelHandler... handlers) {
+        super(parent, channelId);
         metadata = metadata(hasDisconnect);
-        this.config = ObjectUtil.checkNotNull(config, "config");
-        setup(true, handlers);
+        this.config = config == null ? new DefaultChannelConfig(this) : config;
+        setup(register, handlers);
     }
 
     private static ChannelMetadata metadata(boolean hasDisconnect) {
@@ -925,6 +940,104 @@ public class EmbeddedChannel extends AbstractChannel {
         @Override
         protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
             handleInboundMessage(msg);
+        }
+    }
+
+    /**
+     * Create new builder instance for {@link EmbeddedChannel}
+     *
+     * @return {@link Builder}
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+
+        private Channel parent;
+
+        private ChannelConfig config;
+
+        private ChannelId channelId = EmbeddedChannelId.INSTANCE;
+
+        private boolean hasDisconnect;
+
+        private boolean register = true;
+
+        private ChannelHandler[] handlers = EMPTY_HANDLERS;
+
+        /**
+         * Set parent channel
+         *
+         * @param parent    the parent {@link Channel} of this {@link EmbeddedChannel}.
+         * @return {@link Builder}
+         */
+        public Builder parent(Channel parent) {
+            this.parent = parent;
+            return this;
+        }
+
+        /**
+         * Set channel config
+         *
+         * @param config    config the {@link ChannelConfig} which will be returned by {@link EmbeddedChannel#config()}.
+         * @return {@link Builder}
+         */
+        public Builder config(ChannelConfig config) {
+            this.config = config;
+            return this;
+        }
+
+        /**
+         * Set channel ID
+         *
+         * @param channelId    the {@link ChannelId} that will be used to identify this channel
+         * @return {@link Builder}
+         */
+        public Builder channelId(ChannelId channelId) {
+            this.channelId = channelId;
+            return this;
+        }
+
+        /**
+         * Set has disconnect
+         *
+         * @param hasDisconnect    {@code false} if this {@link Channel} will delegate
+         *                         {@link EmbeddedChannel#disconnect()}
+         *                         to {@link #close()}, {@link false} otherwise.
+         * @return {@link Builder}
+         */
+        public Builder hasDisconnect(boolean hasDisconnect) {
+            this.hasDisconnect = hasDisconnect;
+            return this;
+        }
+
+        /**
+         * Set register
+         *
+         * @param register    {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+         *                    constructor. If {@code false} the user will need to call
+         *                    {@link EmbeddedChannel#register()}.
+         * @return {@link Builder}
+         */
+        public Builder register(boolean register) {
+            this.register = register;
+            return this;
+        }
+
+        /**
+         * Set handlers for channel pipeline
+         *
+         * @param handlers    handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+         * @return
+         */
+        public Builder handlers(ChannelHandler... handlers) {
+            this.handlers = handlers;
+            return this;
+        }
+
+        public EmbeddedChannel build() {
+            return new EmbeddedChannel(parent, channelId, register, hasDisconnect, config, handlers);
         }
     }
 }
