@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,24 +15,21 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 
-final class BoringSSLKeylogCallback {
+final class BoringSSLLoggingKeylog implements BoringSSLKeylog {
+    static final BoringSSLLoggingKeylog INSTANCE = new BoringSSLLoggingKeylog();
 
-    private final QuicheQuicSslEngineMap engineMap;
-    private final BoringSSLKeylog keylog;
-
-    BoringSSLKeylogCallback(QuicheQuicSslEngineMap engineMap, BoringSSLKeylog keylog) {
-        this.engineMap = engineMap;
-        this.keylog = keylog;
+    private BoringSSLLoggingKeylog() {
     }
 
-    @SuppressWarnings("unused")
-    void logKey(long ssl, String key) {
-        SSLEngine engine = engineMap.get(ssl);
-        if (engine != null) {
-            keylog.logKey(engine, key);
-        }
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BoringSSLLoggingKeylog.class);
+
+    @Override
+    public void logKey(SSLEngine engine, String key) {
+        logger.debug(key);
     }
 }

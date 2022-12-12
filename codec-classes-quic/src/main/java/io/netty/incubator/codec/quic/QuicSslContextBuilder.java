@@ -23,6 +23,7 @@ import io.netty.util.Mapping;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
@@ -32,7 +33,6 @@ import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.function.BiConsumer;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -160,7 +160,7 @@ public final class QuicSslContextBuilder {
     private ClientAuth clientAuth = ClientAuth.NONE;
     private String[] applicationProtocols;
     private Boolean earlyData;
-    private boolean keylog;
+    private BoringSSLKeylog keylog;
     private Mapping<? super String, ? extends QuicSslContext> mapping;
 
     private QuicSslContextBuilder(boolean forServer) {
@@ -182,13 +182,24 @@ public final class QuicSslContextBuilder {
 
     /**
      * Enable / disable keylog. When enabled, TLS keys are logged to an internal logger named
-     * "io.netty.incubator.codec.quic.BoringSSLKeylogCallback" with DEBUG level, see
-     * {@link io.netty.incubator.codec.quic.BoringSSLKeylogCallback} for detail, logging keys are following
+     * "io.netty.incubator.codec.quic.BoringSSLLogginKeylog" with DEBUG level, see
+     * {@link io.netty.incubator.codec.quic.BoringSSLKeylog} for detail, logging keys are following
      * <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format">
      *     NSS Key Log Format</a>. This is intended for debugging use with tools like Wireshark.
      */
     public QuicSslContextBuilder keylog(boolean enabled) {
-        this.keylog = enabled;
+        keylog(enabled ? BoringSSLLoggingKeylog.INSTANCE : null);
+        return this;
+    }
+
+    /**
+     * Enable / disable keylog. When enabled, TLS keys are logged to {@link BoringSSLKeylog#logKey(SSLEngine, String)}
+     * logging keys are following
+     * <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format">
+     *     NSS Key Log Format</a>. This is intended for debugging use with tools like Wireshark.
+     */
+    public QuicSslContextBuilder keylog(BoringSSLKeylog keylog) {
+        this.keylog = keylog;
         return this;
     }
 
@@ -365,4 +376,6 @@ public final class QuicSslContextBuilder {
                     applicationProtocols);
         }
     }
+
+
 }

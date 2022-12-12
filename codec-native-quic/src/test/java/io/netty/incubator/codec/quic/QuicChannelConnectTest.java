@@ -71,6 +71,7 @@ import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -156,24 +157,44 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @MethodSource("sslTaskExecutors")
     public void testKeylogEnabled(Executor executor) throws Throwable {
         testKeylog(executor, true);
+        assertNotEquals(0, TestLogBackAppender.getLogs().size());
     }
 
     @ParameterizedTest
     @MethodSource("sslTaskExecutors")
     public void testKeylogDisabled(Executor executor) throws Throwable {
         testKeylog(executor, false);
+        assertEquals(0, TestLogBackAppender.getLogs().size());
     }
 
-    private static void testKeylog(Executor sslTaskExecutor, boolean enable) throws Throwable {
+    @ParameterizedTest
+    @MethodSource("sslTaskExecutors")
+    public void testCustomKeylog(Executor executor) throws Throwable {
+        AtomicBoolean called = new AtomicBoolean();
+        testKeylog(executor, (BoringSSLKeylog) (engine, log) -> {
+            called.set(true);
+        });
+        assertTrue(called.get());
+    }
+
+    private static void testKeylog(Executor sslTaskExecutor, Object keylog) throws Throwable {
         TestLogBackAppender.clearLogs();
         QuicChannelValidationHandler serverValidationHandler = new QuicChannelValidationHandler();
         QuicChannelValidationHandler clientValidationHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(sslTaskExecutor, serverValidationHandler,
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(sslTaskExecutor,
-                QuicSslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .applicationProtocols(QuicTestUtils.PROTOS).keylog(enable).build()));
+        QuicSslContextBuilder ctxClientBuilder = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .applicationProtocols(QuicTestUtils.PROTOS);
+        if (keylog instanceof Boolean) {
+            ctxClientBuilder.keylog((Boolean) keylog);
+        } else {
+            ctxClientBuilder.keylog((BoringSSLKeylog) keylog);
+        }
+
+        QuicSslContext context = ctxClientBuilder.build();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(sslTaskExecutor, context));
 
         try {
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
@@ -185,7 +206,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
             quicChannel.close().sync();
             quicChannel.closeFuture().sync();
-            assertTrue(enable ? TestLogBackAppender.getLogs().size() > 0 : TestLogBackAppender.getLogs().size() == 0);
             serverValidationHandler.assertState();
             clientValidationHandler.assertState();
         } finally {

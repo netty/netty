@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2022 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,24 +15,21 @@
  */
 package io.netty.incubator.codec.quic;
 
-
 import javax.net.ssl.SSLEngine;
 
-final class BoringSSLKeylogCallback {
 
-    private final QuicheQuicSslEngineMap engineMap;
-    private final BoringSSLKeylog keylog;
+/**
+ * Allow to log keys, logging keys are following
+ * <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format">
+ *     NSS Key Log Format</a>. This is intended for debugging use with tools like Wireshark.
+ */
+public interface BoringSSLKeylog {
 
-    BoringSSLKeylogCallback(QuicheQuicSslEngineMap engineMap, BoringSSLKeylog keylog) {
-        this.engineMap = engineMap;
-        this.keylog = keylog;
-    }
-
-    @SuppressWarnings("unused")
-    void logKey(long ssl, String key) {
-        SSLEngine engine = engineMap.get(ssl);
-        if (engine != null) {
-            keylog.logKey(engine, key);
-        }
-    }
+    /**
+     * Called when a key should be logged.
+     *
+     * @param engine    the engine.
+     * @param key       the key.
+     */
+    void logKey(SSLEngine engine, String key);
 }
