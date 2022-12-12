@@ -803,6 +803,7 @@ public class SniHandlerTest {
             assertEquals(SslHandshakeTimeoutException.class, handshakeCompletionEvent.cause().getClass());
         } finally {
             ch.finishAndReleaseAll();
+            releaseAll(context);
         }
     }
 }
