@@ -532,7 +532,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
-            add0(h, i, name, fromObject(name, v));
+            V converted = fromObject(name, v);
+            validateValue(valueValidator, name, converted);
+            add0(h, i, name, converted);
         }
 
         return thisT();
@@ -550,7 +552,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
-            add0(h, i, name, fromObject(name, v));
+            V converted = fromObject(name, v);
+            validateValue(valueValidator, name, converted);
+            add0(h, i, name, converted);
         }
 
         return thisT();

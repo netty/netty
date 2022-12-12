@@ -22,7 +22,7 @@ import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultHttpHeadersTest {
     private static final CharSequence HEADER_NAME = "testHeader";
+    private static final CharSequence ILLEGAL_VALUE = "testHeader\r\nContent-Length:45\r\n\r\n";
 
     @Test
     public void nullHeaderNameNotAllowed() {
@@ -232,6 +233,28 @@ public class DefaultHttpHeadersTest {
         final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
         headers.set(HEADER_NAME, HeaderValue.THREE.asList());
         assertDefaultValues(headers, HeaderValue.THREE);
+    }
+
+    @Test
+    public void setCharSequenceValidatesValue() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.set(HEADER_NAME, ILLEGAL_VALUE);
+            }
+        });
+    }
+
+    @Test
+    public void setIterableValidatesValue() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.set(HEADER_NAME, Collections.singleton(ILLEGAL_VALUE));
+            }
+        });
     }
 
     @Test
