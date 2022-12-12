@@ -272,6 +272,12 @@ final class Quiche {
     static final int QUICHE_CC_CUBIC = QuicheNativeStaticallyReferencedJniMethods.quiche_cc_cubic();
 
     /**
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.16.0/quiche/include/quiche.h#L206">
+     *     QUICHE_CC_BBR</a>.
+     */
+    static final int QUICHE_CC_BBR = QuicheNativeStaticallyReferencedJniMethods.quiche_cc_bbr();
+
+    /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L105">quiche_version</a>.
      */
     static native String quiche_version();

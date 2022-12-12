@@ -277,6 +277,10 @@ static jint netty_quiche_cc_cubic(JNIEnv* env, jclass clazz) {
     return QUICHE_CC_CUBIC;
 }
 
+static jint netty_quiche_cc_bbr(JNIEnv* env, jclass clazz) {
+    return QUICHE_CC_BBR;
+}
+
 static jstring netty_quiche_version(JNIEnv* env, jclass clazz) {
     return (*env)->NewStringUTF(env, quiche_version());
 }
@@ -763,7 +767,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "quiche_err_stream_reset", "()I", (void *) netty_quiche_err_stream_reset },
   { "quiche_err_congestion_control", "()I", (void *) netty_quiche_err_congestion_control },
   { "quiche_cc_reno", "()I", (void *) netty_quiche_cc_reno },
-  { "quiche_cc_cubic", "()I", (void *) netty_quiche_cc_cubic }
+  { "quiche_cc_cubic", "()I", (void *) netty_quiche_cc_cubic },
+  { "quiche_cc_bbr", "()I", (void *) netty_quiche_cc_bbr }
 };
 
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
