@@ -106,8 +106,8 @@ public class EmbeddedChannel extends AbstractChannel {
      * Create a new instance with the pipeline initialized with the specified handlers.
      *
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@link false} otherwise.
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(boolean hasDisconnect, ChannelHandler... handlers) {
         this(EmbeddedChannelId.INSTANCE, hasDisconnect, handlers);
@@ -119,8 +119,8 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
      *                 constructor. If {@code false} the user will need to call {@link #register()}.
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@link false} otherwise.
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(boolean register, boolean hasDisconnect, ChannelHandler... handlers) {
         this(EmbeddedChannelId.INSTANCE, register, hasDisconnect, handlers);
@@ -131,7 +131,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * initialized with the specified handlers.
      *
      * @param channelId the {@link ChannelId} that will be used to identify this channel
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, ChannelHandler... handlers) {
         this(channelId, false, handlers);
@@ -143,8 +143,8 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @param channelId the {@link ChannelId} that will be used to identify this channel
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@link false} otherwise.
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, ChannelHandler... handlers) {
         this(channelId, true, hasDisconnect, handlers);
@@ -158,8 +158,8 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
      *                 constructor. If {@code false} the user will need to call {@link #register()}.
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@link false} otherwise.
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, boolean register, boolean hasDisconnect,
                            ChannelHandler... handlers) {
@@ -175,8 +175,8 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
      *                 constructor. If {@code false} the user will need to call {@link #register()}.
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@link false} otherwise.
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
@@ -192,9 +192,9 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @param channelId the {@link ChannelId} that will be used to identify this channel
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@link false} otherwise.
+     *                      to {@link #close()}, {@code true} otherwise.
      * @param config the {@link ChannelConfig} which will be returned by {@link #config()}.
-     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
                            final ChannelHandler... handlers) {
