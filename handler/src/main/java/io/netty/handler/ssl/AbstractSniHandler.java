@@ -132,7 +132,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
         this.handshakeTimeoutMillis = checkPositiveOrZero(handshakeTimeoutMillis, "handshakeTimeoutMillis");
     }
 
-    protected AbstractSniHandler() {
+    public AbstractSniHandler() {
         this(0L);
     }
 
