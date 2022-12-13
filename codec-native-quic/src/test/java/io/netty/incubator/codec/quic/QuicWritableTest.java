@@ -48,6 +48,7 @@ public class QuicWritableTest extends AbstractQuicTest {
         testCorrectlyHandleWritability(executor, true);
     }
 
+    @Disabled("Flaky, needs investigation")
     @ParameterizedTest
     @MethodSource("sslTaskExecutors")
     public void testCorrectlyHandleWritabilityReadRequestedInRead(Executor executor) throws Throwable {
