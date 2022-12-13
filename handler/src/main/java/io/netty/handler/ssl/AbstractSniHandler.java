@@ -128,11 +128,11 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     /**
      * @param handshakeTimeoutMillis the handshake timeout in milliseconds
      */
-    public AbstractSniHandler(long handshakeTimeoutMillis) {
+    protected AbstractSniHandler(long handshakeTimeoutMillis) {
         this.handshakeTimeoutMillis = checkPositiveOrZero(handshakeTimeoutMillis, "handshakeTimeoutMillis");
     }
 
-    public AbstractSniHandler() {
+    protected AbstractSniHandler() {
         this(0L);
     }
 
@@ -145,10 +145,11 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelActive();
         checkStartTimeout(ctx);
     }
 
-    protected void checkStartTimeout(final ChannelHandlerContext ctx) {
+    private void checkStartTimeout(final ChannelHandlerContext ctx) {
         if (handshakeTimeoutMillis <= 0 || timeoutFuture != null) {
             return;
         }
