@@ -287,11 +287,15 @@ final class PoolChunk<T> implements PoolChunkMetric {
     @Override
     public int usage() {
         final int freeBytes;
-        arena.lock();
-        try {
+        if (this.unpooled) {
             freeBytes = this.freeBytes;
-        } finally {
-            arena.unlock();
+        } else {
+            runsAvailLock.lock();
+            try {
+                freeBytes = this.freeBytes;
+            } finally {
+                runsAvailLock.unlock();
+            }
         }
         return usage(freeBytes);
     }
@@ -620,11 +624,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     @Override
     public int freeBytes() {
-        arena.lock();
+        if (this.unpooled) {
+            return freeBytes;
+        }
+        runsAvailLock.lock();
         try {
             return freeBytes;
         } finally {
-            arena.unlock();
+            runsAvailLock.unlock();
         }
     }
 
@@ -635,11 +642,15 @@ final class PoolChunk<T> implements PoolChunkMetric {
     @Override
     public String toString() {
         final int freeBytes;
-        arena.lock();
-        try {
+        if (this.unpooled) {
             freeBytes = this.freeBytes;
-        } finally {
-            arena.unlock();
+        } else {
+            runsAvailLock.lock();
+            try {
+                freeBytes = this.freeBytes;
+            } finally {
+                runsAvailLock.unlock();
+            }
         }
 
         return new StringBuilder()
