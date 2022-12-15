@@ -89,7 +89,7 @@
             </executions>
             <configuration>
               <skippedModules>
-                netty5-all,netty5-bom,netty-testsuite,netty5-testsuite-autobahn,netty5-testsuite-http2,
+                netty5-all,netty5-bom,netty5-testsuite,netty5-testsuite-autobahn,netty5-testsuite-http2,
                 netty5-testsuite-native,netty5-testsuite-native-image,netty5-testsuite-native-image-client,
                 netty5-testsuite-native-image-client-runtime-init,netty5-testsuite-osgi,netty5-testsuite-shading,
                 netty5-transport-blockhound-tests,netty5-transport-native-unix-common-tests,netty5-microbench,
