@@ -88,6 +88,13 @@
               </execution>
             </executions>
             <configuration>
+              <skippedModules>
+                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,netty-testsuite-http2,
+                netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
+                netty-testsuite-native-image-client-runtime-init,netty-testsuite-osgi,netty-testsuite-shading,
+                netty-transport-blockhound-tests,netty-transport-native-unix-common-tests,netty-microbench,
+                netty-dev-tools,netty-example
+              </skippedModules>
               <sourceFileExcludes>
                 <exclude>**/com/sun/**/*.java</exclude>
                 <exclude>**/example/**/*.java</exclude>
