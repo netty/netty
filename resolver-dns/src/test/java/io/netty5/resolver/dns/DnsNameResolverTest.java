@@ -102,6 +102,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -123,6 +124,7 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -3549,6 +3551,80 @@ public class DnsNameResolverTest {
             } catch (IllegalStateException cause) {
                 // We might also throw directly here... in this case let's verify that we use the correct exception.
                 assertThat(cause.getCause(), instanceOf(BindException.class));
+            }
+        }
+    }
+
+    @Test
+    public void testResponseFeedbackStream() throws Exception {
+        final AtomicBoolean successCalled = new AtomicBoolean();
+        final AtomicBoolean failureCalled = new AtomicBoolean();
+        final AtomicBoolean returnSuccess = new AtomicBoolean(false);
+        final DnsNameResolver resolver = newResolver(true, new DnsServerAddressStreamProvider() {
+            @Override
+            public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                return new DnsServerResponseFeedbackAddressStream() {
+                    @Override
+                    public void feedbackSuccess(InetSocketAddress address, long queryResponseTimeNanos) {
+                        assertThat(queryResponseTimeNanos, greaterThanOrEqualTo(0L));
+                        successCalled.set(true);
+                    }
+
+                    @Override
+                    public void feedbackFailure(InetSocketAddress address,
+                                                Throwable failureCause,
+                                                long queryResponseTimeNanos) {
+                        assertThat(queryResponseTimeNanos, greaterThanOrEqualTo(0L));
+                        assertNotNull(failureCause);
+                        failureCalled.set(true);
+                    }
+
+                    @Override
+                    public InetSocketAddress next() {
+                        if (returnSuccess.get()) {
+                            return dnsServer.localAddress();
+                        }
+                        try {
+                            return new InetSocketAddress(InetAddress.getByAddress("foo.com",
+                                    new byte[] {(byte) 169, (byte) 254, 12, 34 }), 53);
+                        } catch (UnknownHostException e) {
+                            throw new Error(e);
+                        }
+                    }
+
+                    @Override
+                    public int size() {
+                        return 1;
+                    }
+
+                    @Override
+                    public DnsServerAddressStream duplicate() {
+                        return this;
+                    }
+                };
+            }
+        }).build();
+        try {
+            // setup call to be successful and verify
+            returnSuccess.set(true);
+            resolver.resolve("google.com").asStage().get();
+            assertTrue(successCalled.get());
+            assertFalse(failureCalled.get());
+
+            // reset state for next query
+            successCalled.set(false);
+            failureCalled.set(false);
+
+            // setup call to fail and verify
+            returnSuccess.set(false);
+            ExecutionException e = assertThrows(ExecutionException.class,
+                    () -> resolver.resolve("yahoo.com").asStage().get());
+            assertThat(e.getCause(), is(instanceOf(UnknownHostException.class)));
+            assertFalse(successCalled.get());
+            assertTrue(failureCalled.get());
+        } finally {
+            if (resolver != null) {
+                resolver.close();
             }
         }
     }
