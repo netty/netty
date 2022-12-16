@@ -3079,6 +3079,14 @@ public class DnsNameResolverTest {
     }
 
     private static void testTruncated0(boolean tcpFallback, final boolean truncatedBecauseOfMtu) throws IOException {
+        ServerSocket serverSocket = null;
+        if (tcpFallback) {
+            // If we are configured to use TCP as a fallback also bind a TCP socket
+            serverSocket = new ServerSocket();
+            serverSocket.setReuseAddress(true);
+            serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+        }
+
         final String host = "somehost.netty.io";
         final String txt = "this is a txt record";
         final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
@@ -3110,24 +3118,22 @@ public class DnsNameResolverTest {
                 return message;
             }
         };
-        dnsServer2.start();
         DnsNameResolver resolver = null;
-        ServerSocket serverSocket = null;
         try {
-            DnsNameResolverBuilder builder = newResolver()
-                    .queryTimeoutMillis(10000)
+            DnsNameResolverBuilder builder = newResolver();
+
+            if (tcpFallback) {
+                dnsServer2.start(false, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+
+                // If we are configured to use TCP as a fallback also bind a TCP socket
+                builder.socketChannelType(NioSocketChannel.class);
+            } else {
+                dnsServer2.start();
+            }
+            builder.queryTimeoutMillis(10000)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
-
-            if (tcpFallback) {
-                // If we are configured to use TCP as a fallback also bind a TCP socket
-                serverSocket = new ServerSocket();
-                serverSocket.setReuseAddress(true);
-                serverSocket.bind(new InetSocketAddress(dnsServer2.localAddress().getPort()));
-
-                builder.socketChannelType(NioSocketChannel.class);
-            }
             resolver = builder.build();
             if (truncatedBecauseOfMtu) {
                 resolver.ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
