@@ -18,10 +18,10 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Handles the events notified by {@link ConcurrencyLimit}.
+ * Handles the events notified by {@link Limiter}.
  */
 @UnstableApi
-public interface ConcurrencyLimitHandler {
+public interface LimiterCallback {
     /**
      * Invoked when the requested permit has been acquired successfully.
      * Once this method is invoked, no other methods in this interface will be invoked.

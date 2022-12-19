@@ -26,7 +26,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class SimpleConcurrencyLimitTest {
+class ConcurrencyLimiterTest {
 
     private static final int NOT_INTERESTED = -1;
 
@@ -37,7 +37,7 @@ class SimpleConcurrencyLimitTest {
         executor.shutdownGracefully();
     }
 
-    private final BlockingQueue<String> events = new LinkedBlockingQueue<>();
+    private final BlockingQueue<String> events = new LinkedBlockingQueue<String>();
 
     @BeforeEach
     void clearEvents() {
@@ -46,7 +46,7 @@ class SimpleConcurrencyLimitTest {
 
     @Test
     void uncontendedSuccessfulAcquisition() throws Exception {
-        final SimpleConcurrencyLimit limit = new SimpleConcurrencyLimit(1);
+        final ConcurrencyLimiter limit = new ConcurrencyLimiter(1);
         acquireAndRelease(limit, 1, NOT_INTERESTED);
         assertEquals("acquired", takeEvent());
         assertNoEvents();
@@ -54,7 +54,7 @@ class SimpleConcurrencyLimitTest {
 
     @Test
     void contendedSuccessfulAcquisition() throws Exception {
-        final SimpleConcurrencyLimit limit = new SimpleConcurrencyLimit(1);
+        final ConcurrencyLimiter limit = new ConcurrencyLimiter(1);
         final Runnable releaser = acquireButNotRelease(limit);
 
         acquireAndRelease(limit, 1, NOT_INTERESTED);
@@ -70,7 +70,7 @@ class SimpleConcurrencyLimitTest {
 
     @Test
     void acquisitionTimeout() throws InterruptedException {
-        final SimpleConcurrencyLimit limit = new SimpleConcurrencyLimit(1);
+        final ConcurrencyLimiter limit = new ConcurrencyLimiter(1);
         acquireButNotRelease(limit);
         acquireAndRelease(limit, NOT_INTERESTED, 1);
 
@@ -81,14 +81,14 @@ class SimpleConcurrencyLimitTest {
 
     @Test
     void testToString() {
-        assertEquals("SimpleConcurrencyLimit{maxLimits=3, permitsInUse=0}",
-                     new SimpleConcurrencyLimit(3).toString());
+        assertEquals("SimpleConcurrencyLimit{maxPermits=3, permitsInUse=0}",
+                     new ConcurrencyLimiter(3).toString());
     }
 
     @Test
     void invalidMaxPermits() {
         try {
-            new SimpleConcurrencyLimit(0);
+            new ConcurrencyLimiter(0);
             fail();
         } catch (IllegalArgumentException expected) {
             // Expected
@@ -100,10 +100,10 @@ class SimpleConcurrencyLimitTest {
         return events.poll(10, TimeUnit.SECONDS);
     }
 
-    private void acquireAndRelease(final SimpleConcurrencyLimit limit,
+    private void acquireAndRelease(final ConcurrencyLimiter limit,
                                    final int expectedPermitsInUseOnAcquisition,
                                    final int expectedPermitsInUseOnTimeout) {
-        limit.acquire(executor, new ConcurrencyLimitHandler() {
+        limit.acquire(executor, new LimiterCallback() {
             @Override
             public void permitAcquired(Runnable releaser) {
                 try {
@@ -131,9 +131,9 @@ class SimpleConcurrencyLimitTest {
     }
 
     @Nullable
-    private static Runnable acquireButNotRelease(SimpleConcurrencyLimit limit) throws InterruptedException {
-        final BlockingQueue<Runnable> releaserQueue = new LinkedBlockingQueue<>();
-        limit.acquire(executor, new ConcurrencyLimitHandler() {
+    private static Runnable acquireButNotRelease(ConcurrencyLimiter limit) throws InterruptedException {
+        final BlockingQueue<Runnable> releaserQueue = new LinkedBlockingQueue<Runnable>();
+        limit.acquire(executor, new LimiterCallback() {
             @Override
             public void permitAcquired(Runnable releaser) {
                 releaserQueue.add(releaser);

@@ -20,23 +20,23 @@ import java.util.concurrent.TimeUnit;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Limits the number of tasks that can be executed concurrently.
+ * Limits the access to certain resources.
  */
 @UnstableApi
-public interface ConcurrencyLimit {
+public interface Limiter {
     /**
-     * Requests to acquire a permit with the specified {@link EventExecutor} and {@code timeout}.
-     * Once the requested permit is acquired, the specified {@code handler}'s
-     * {@link ConcurrencyLimitHandler#permitAcquired(Runnable)} will be invoked.
-     * The handler is responsible for calling the given {@link Runnable} to release the permit.
+     * Requests to acquire a permit to access resources with the specified {@link EventExecutor} and {@code timeout}.
+     * Once the requested permit is acquired, the specified {@code callback}'s
+     * {@link LimiterCallback#permitAcquired(Runnable)} will be invoked.
+     * The callback is responsible for calling the given {@link Runnable} to release the permit.
      * If failed to acquire a permit within the given timeout,
-     * {@link ConcurrencyLimitHandler#permitAcquisitionTimedOut()} will be invoked.
+     * {@link LimiterCallback#permitAcquisitionTimedOut()} will be invoked.
      *
-     * @param executor the {@link EventExecutor} that will be used for invoking {@link ConcurrencyLimitHandler}
-     * @param handler the {@link ConcurrencyLimitHandler} that will be notified when the requested permit
-     *                is acquired (or not)
+     * @param executor the {@link EventExecutor} that will be used for invoking {@link LimiterCallback}
+     * @param callback the {@link LimiterCallback} that will be notified when the requested permit
+     *                 is acquired (or not)
      * @param timeout the maximum amount of time to wait until the permit is acquired
      * @param unit    the {@link TimeUnit} of {@code timeout}.
      */
-    void acquire(EventExecutor executor, ConcurrencyLimitHandler handler, long timeout, TimeUnit unit);
+    void acquire(EventExecutor executor, LimiterCallback callback, long timeout, TimeUnit unit);
 }

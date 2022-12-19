@@ -28,7 +28,7 @@ import org.jetbrains.annotations.VisibleForTesting;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * A simple {@link ConcurrencyLimit} that limits the number of permits allowed concurrently.
+ * A simple {@link Limiter} that limits the number of permits allowed concurrently.
  * It is similar to {@link Semaphore} in its behavior, except that it's asynchronous and callback-driven.
  * <pre>{@code
  * limit = new SimpleConcurrencyLimit(42);
@@ -49,17 +49,17 @@ import io.netty.util.internal.UnstableApi;
  * }</pre>
  */
 @UnstableApi
-public class SimpleConcurrencyLimit implements ConcurrencyLimit {
+public class ConcurrencyLimiter implements Limiter {
 
-    private static final AtomicIntegerFieldUpdater<SimpleConcurrencyLimit> permitsInUseUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(SimpleConcurrencyLimit.class, "permitsInUse");
+    private static final AtomicIntegerFieldUpdater<ConcurrencyLimiter> permitsInUseUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(ConcurrencyLimiter.class, "permitsInUse");
 
     private volatile int permitsInUse;
     private final int maxPermits;
     private final Releaser releaser = new Releaser();
     private final Queue<PendingHandler> pendingHandlers = new ConcurrentLinkedQueue<PendingHandler>();
 
-    public SimpleConcurrencyLimit(int maxPermits) {
+    public ConcurrencyLimiter(int maxPermits) {
         this.maxPermits = checkPositive(maxPermits, "maxPermits");
     }
 
@@ -69,12 +69,12 @@ public class SimpleConcurrencyLimit implements ConcurrencyLimit {
     }
 
     @Override
-    public void acquire(EventExecutor executor, final ConcurrencyLimitHandler handler,
+    public void acquire(EventExecutor executor, final LimiterCallback callback,
                         long timeout, TimeUnit unit) {
         for (;;) {
             final int currentPermitsInUse = permitsInUse;
             if (currentPermitsInUse == maxPermits) {
-                final PendingHandler pendingHandler = new PendingHandler(executor, handler);
+                final PendingHandler pendingHandler = new PendingHandler(executor, callback);
                 if (timeout > 0) {
                     final ScheduledFuture<?> timeoutFuture = executor.schedule(new Runnable() {
                         @Override
@@ -96,12 +96,12 @@ public class SimpleConcurrencyLimit implements ConcurrencyLimit {
             final int nextPermitsInUse = currentPermitsInUse + 1;
             if (permitsInUseUpdater.compareAndSet(this, currentPermitsInUse, nextPermitsInUse)) {
                 if (executor.inEventLoop()) {
-                    handler.permitAcquired(releaser);
+                    callback.permitAcquired(releaser);
                 } else {
                     executor.execute(new Runnable() {
                         @Override
                         public void run() {
-                            handler.permitAcquired(releaser);
+                            callback.permitAcquired(releaser);
                         }
                     });
                 }
@@ -151,7 +151,7 @@ public class SimpleConcurrencyLimit implements ConcurrencyLimit {
                 final int currentPermitInUse = permitsInUse;
                 final int nextPermitInUse = currentPermitInUse - 1;
                 assert nextPermitInUse >= 0 : "Released more than acquired";
-                if (permitsInUseUpdater.compareAndSet(SimpleConcurrencyLimit.this,
+                if (permitsInUseUpdater.compareAndSet(ConcurrencyLimiter.this,
                                                       currentPermitInUse, nextPermitInUse)) {
                     final PendingHandler pendingHandler = pendingHandlers.poll();
                     if (pendingHandler == null) {
@@ -168,10 +168,10 @@ public class SimpleConcurrencyLimit implements ConcurrencyLimit {
 
     private static final class PendingHandler {
         final EventExecutor executor;
-        final ConcurrencyLimitHandler handler;
+        final LimiterCallback handler;
         ScheduledFuture<?> timeoutFuture;
 
-        PendingHandler(EventExecutor executor, ConcurrencyLimitHandler handler) {
+        PendingHandler(EventExecutor executor, LimiterCallback handler) {
             this.executor = executor;
             this.handler = handler;
         }
