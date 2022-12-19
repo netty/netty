@@ -26,6 +26,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -34,6 +36,23 @@ final class NetUtilInitializations {
      * The logger being used by this class
      */
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtilInitializations.class);
+
+    private static final Collection<NetworkInterface> NETWORK_INTERFACES;
+
+    static {
+        List<NetworkInterface> networkInterfaces = new ArrayList<NetworkInterface>();
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    networkInterfaces.add(interfaces.nextElement());
+                }
+            }
+        } catch (SocketException e) {
+            logger.warn("Failed to retrieve the list of available network interfaces", e);
+        }
+        NETWORK_INTERFACES = Collections.unmodifiableList(networkInterfaces);
+    }
 
     private NetUtilInitializations() {
     }
@@ -69,19 +88,11 @@ final class NetUtilInitializations {
     static NetworkIfaceAndInetAddress determineLoopback(Inet4Address localhost4, Inet6Address localhost6) {
         // Retrieve the list of available network interfaces.
         List<NetworkInterface> ifaces = new ArrayList<>();
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            if (interfaces != null) {
-                while (interfaces.hasMoreElements()) {
-                    NetworkInterface iface = interfaces.nextElement();
-                    // Use the interface with proper INET addresses only.
-                    if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
-                        ifaces.add(iface);
-                    }
-                }
+        for (NetworkInterface iface: NETWORK_INTERFACES) {
+            // Use the interface with proper INET addresses only.
+            if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
+                ifaces.add(iface);
             }
-        } catch (SocketException e) {
-            logger.warn("Failed to retrieve the list of available network interfaces", e);
         }
 
         // Find the first loopback interface available from its INET address (127.0.0.1 or ::1)
@@ -150,6 +161,10 @@ final class NetUtilInitializations {
         }
 
         return new NetworkIfaceAndInetAddress(loopbackIface, loopbackAddr);
+    }
+
+    static Collection<NetworkInterface> networkInterfaces() {
+        return NETWORK_INTERFACES;
     }
 
     static final class NetworkIfaceAndInetAddress {

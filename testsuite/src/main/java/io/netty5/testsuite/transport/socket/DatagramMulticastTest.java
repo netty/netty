@@ -24,7 +24,9 @@ import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.testsuite.transport.TestsuitePermutation;
+import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -187,9 +189,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     private NetworkInterface multicastNetworkInterface() throws IOException {
-        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-        while (interfaces.hasMoreElements()) {
-            NetworkInterface iface = interfaces.nextElement();
+        for (NetworkInterface iface : NetUtil.networkInterfaces()) {
             if (iface.isUp() && iface.supportsMulticast()) {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {

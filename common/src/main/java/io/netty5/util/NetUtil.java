@@ -40,6 +40,7 @@ import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
+import java.util.Collection;
 
 import static io.netty5.util.AsciiString.indexOf;
 
@@ -238,6 +239,15 @@ public final class NetUtil {
         } finally {
             process.destroy();
         }
+    }
+
+    /**
+     * Returns an unmodifiable Collection of all the interfaces on this machine.
+     *
+     * @return collections of network interfaces.
+     */
+    public static Collection<NetworkInterface> networkInterfaces() {
+        return NetUtilInitializations.networkInterfaces();
     }
 
     /**
