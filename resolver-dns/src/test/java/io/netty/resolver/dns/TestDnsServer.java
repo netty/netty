@@ -92,7 +92,10 @@ class TestDnsServer extends DnsServer {
      * Start the {@link TestDnsServer} but drop all {@code AAAA} queries and not send any response to these at all.
      */
     public void start(final boolean dropAAAAQueries) throws IOException {
-        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST4, 0);
+        start(dropAAAAQueries, new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+    }
+
+    public void start(final boolean dropAAAAQueries, InetSocketAddress address) throws IOException {
         UdpTransport transport = new UdpTransport(address.getHostName(), address.getPort());
         setTransports(transport);
 
