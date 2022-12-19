@@ -22,6 +22,9 @@ import io.netty5.util.concurrent.Future;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
+import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
@@ -119,7 +122,50 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
         return null;
     }
 
+    protected final long handshakeTimeoutMillis;
+    private Future<?> timeoutFuture;
     private String hostname;
+
+    /**
+     * @param handshakeTimeoutMillis the handshake timeout in milliseconds
+     */
+    protected AbstractSniHandler(long handshakeTimeoutMillis) {
+        this.handshakeTimeoutMillis = checkPositiveOrZero(handshakeTimeoutMillis, "handshakeTimeoutMillis");
+    }
+
+    public AbstractSniHandler() {
+        this(0L);
+    }
+
+    @Override
+    public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.channel().isActive()) {
+            checkStartTimeout(ctx);
+        }
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelActive();
+        checkStartTimeout(ctx);
+    }
+
+    private void checkStartTimeout(final ChannelHandlerContext ctx) {
+        if (handshakeTimeoutMillis <= 0 || timeoutFuture != null) {
+            return;
+        }
+        timeoutFuture = ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (ctx.channel().isActive()) {
+                    SslHandshakeTimeoutException exception = new SslHandshakeTimeoutException(
+                        "handshake timed out after " + handshakeTimeoutMillis + "ms");
+                    ctx.fireChannelInboundEvent(new SniCompletionEvent(exception));
+                    ctx.close();
+                }
+            }
+        }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
 
     @Override
     protected Future<T> lookup(ChannelHandlerContext ctx, Buffer clientHello) throws Exception {
@@ -130,6 +176,9 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
     @Override
     protected void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception {
+        if (timeoutFuture != null) {
+            timeoutFuture.cancel();
+        }
         try {
             onLookupComplete(ctx, hostname, future);
         } finally {
