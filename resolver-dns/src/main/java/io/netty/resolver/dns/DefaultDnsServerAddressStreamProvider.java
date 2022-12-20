@@ -87,7 +87,7 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             if (defaultNameserverString != null) {
                 for (String server : defaultNameserverString.split(",")) {
                     String dns = server.trim();
-                    if (!NetUtil.isValidIpV4Address(dns) || !NetUtil.isValidIpV6Address(dns)) {
+                    if (!NetUtil.isValidIpV4Address(dns) && !NetUtil.isValidIpV6Address(dns)) {
                         throw new ExceptionInInitializerError(DEFAULT_FALLBACK_SERVER_PROPERTY + " doesn't" +
                                 " contain a valid list of NameServers: " + defaultNameserverString);
                     }
