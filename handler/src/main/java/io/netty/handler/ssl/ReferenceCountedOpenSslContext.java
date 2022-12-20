@@ -345,6 +345,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                         | SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2;
             }
 
+            if (!tlsv13Supported) {
+                // Explicit disable TLSv1.3
+                // See https://github.com/netty/netty/issues/12968
+                options |= SSL.SSL_OP_NO_TLSv1_3;
+            }
+
             SSLContext.setOptions(ctx, options);
 
             // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between
