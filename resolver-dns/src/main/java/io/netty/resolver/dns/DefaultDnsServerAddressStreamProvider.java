@@ -86,6 +86,11 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             String defaultNameserverString = SystemPropertyUtil.get(DEFAULT_FALLBACK_SERVER_PROPERTY, null);
             if (defaultNameserverString != null) {
                 for (String server : defaultNameserverString.split(",")) {
+                    String dns = server.trim();
+                    if (!NetUtil.isValidIpV4Address(dns) || !NetUtil.isValidIpV6Address(dns)) {
+                        throw new ExceptionInInitializerError(DEFAULT_FALLBACK_SERVER_PROPERTY + " doesn't" +
+                                " contain a valid list of NameServers: " + defaultNameserverString);
+                    }
                     defaultNameServers.add(SocketUtils.socketAddress(server.trim(), DNS_PORT));
                 }
                 if (defaultNameServers.isEmpty()) {
