@@ -72,6 +72,11 @@ public final class NetUtil {
     public static final NetworkInterface LOOPBACK_IF;
 
     /**
+     * An unmodifiable Collection of all the interfaces on this machine.
+     */
+    public static final Collection<NetworkInterface> NETWORK_INTERFACES;
+
+    /**
      * The SOMAXCONN value of the current machine.  If failed to get the value,  {@code 200} is used as a
      * default value for Windows and {@code 128} for others.
      */
@@ -137,13 +142,16 @@ public final class NetUtil {
         logger.debug("-Djava.net.preferIPv4Stack: {}", IPV4_PREFERRED);
         logger.debug("-Djava.net.preferIPv6Addresses: {}", IPV6_ADDRESSES_PREFERRED);
 
+        NETWORK_INTERFACES = NetUtilInitializations.networkInterfaces();
+
         // Create IPv4 loopback address.
         LOCALHOST4 = NetUtilInitializations.createLocalhost4();
 
         // Create IPv6 loopback address.
         LOCALHOST6 = NetUtilInitializations.createLocalhost6();
 
-        NetworkIfaceAndInetAddress loopback = NetUtilInitializations.determineLoopback(LOCALHOST4, LOCALHOST6);
+        NetworkIfaceAndInetAddress loopback =
+                NetUtilInitializations.determineLoopback(NETWORK_INTERFACES, LOCALHOST4, LOCALHOST6);
         LOOPBACK_IF = loopback.iface();
         LOCALHOST = loopback.address();
 
@@ -242,15 +250,6 @@ public final class NetUtil {
             // raised will directly lead to throwable.
             process.destroy();
         }
-    }
-
-    /**
-     * Returns an unmodifiable Collection of all the interfaces on this machine.
-     *
-     * @return collections of network interfaces.
-     */
-    public static Collection<NetworkInterface> networkInterfaces() {
-        return NetUtilInitializations.networkInterfaces();
     }
 
     /**

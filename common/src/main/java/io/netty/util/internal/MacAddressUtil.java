@@ -51,7 +51,7 @@ public final class MacAddressUtil {
 
         // Retrieve the list of available network interfaces.
         Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<NetworkInterface, InetAddress>();
-        for (NetworkInterface iface: NetUtil.networkInterfaces()) {
+        for (NetworkInterface iface: NetUtil.NETWORK_INTERFACES) {
             // Use the interface with proper INET addresses only.
             Enumeration<InetAddress> addrs = SocketUtils.addressesFromNetworkInterface(iface);
             if (addrs.hasMoreElements()) {

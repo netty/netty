@@ -37,23 +37,6 @@ final class NetUtilInitializations {
      */
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtilInitializations.class);
 
-    private static final Collection<NetworkInterface> NETWORK_INTERFACES;
-
-    static {
-        List<NetworkInterface> networkInterfaces = new ArrayList<NetworkInterface>();
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            if (interfaces != null) {
-                while (interfaces.hasMoreElements()) {
-                    networkInterfaces.add(interfaces.nextElement());
-                }
-            }
-        } catch (SocketException e) {
-            logger.warn("Failed to retrieve the list of available network interfaces", e);
-        }
-        NETWORK_INTERFACES = Collections.unmodifiableList(networkInterfaces);
-    }
-
     private NetUtilInitializations() {
     }
 
@@ -85,10 +68,26 @@ final class NetUtilInitializations {
         return localhost6;
     }
 
-    static NetworkIfaceAndInetAddress determineLoopback(Inet4Address localhost4, Inet6Address localhost6) {
+    static Collection<NetworkInterface> networkInterfaces() {
+        List<NetworkInterface> networkInterfaces = new ArrayList<NetworkInterface>();
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    networkInterfaces.add(interfaces.nextElement());
+                }
+            }
+        } catch (SocketException e) {
+            logger.warn("Failed to retrieve the list of available network interfaces", e);
+        }
+        return Collections.unmodifiableList(networkInterfaces);
+    }
+
+    static NetworkIfaceAndInetAddress determineLoopback(
+            Collection<NetworkInterface> networkInterfaces, Inet4Address localhost4, Inet6Address localhost6) {
         // Retrieve the list of available network interfaces.
         List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
-        for (NetworkInterface iface: NETWORK_INTERFACES) {
+        for (NetworkInterface iface: networkInterfaces) {
             // Use the interface with proper INET addresses only.
             if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
                 ifaces.add(iface);
@@ -161,10 +160,6 @@ final class NetUtilInitializations {
         }
 
         return new NetworkIfaceAndInetAddress(loopbackIface, loopbackAddr);
-    }
-
-    static Collection<NetworkInterface> networkInterfaces() {
-        return NETWORK_INTERFACES;
     }
 
     static final class NetworkIfaceAndInetAddress {
