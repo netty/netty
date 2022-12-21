@@ -165,7 +165,7 @@ public class DnsNameResolver extends InetNameResolver {
      * Returns {@code true} if any {@link NetworkInterface} supports {@code IPv6}, {@code false} otherwise.
      */
     private static boolean anyInterfaceSupportsIpV6() {
-        for (NetworkInterface iface : NetUtil.networkInterfaces()) {
+        for (NetworkInterface iface : NetUtil.NETWORK_INTERFACES) {
             Enumeration<InetAddress> addresses = iface.getInetAddresses();
             while (addresses.hasMoreElements()) {
                 InetAddress inetAddress = addresses.nextElement();
