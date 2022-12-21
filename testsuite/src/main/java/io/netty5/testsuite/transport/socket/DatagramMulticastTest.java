@@ -189,7 +189,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     private NetworkInterface multicastNetworkInterface() throws IOException {
-        for (NetworkInterface iface : NetUtil.networkInterfaces()) {
+        for (NetworkInterface iface : NetUtil.NETWORK_INTERFACES) {
             if (iface.isUp() && iface.supportsMulticast()) {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {
