@@ -124,7 +124,7 @@ class Hidden {
                     "verify");
 
             builder.allowBlockingCallsInside(
-                    "io.netty.handler.ssl.JdkSslContext$Defaults",
+                    "io.netty5.handler.ssl.JdkSslContext$Defaults",
                     "init");
 
             // Let's whitelist SSLEngineImpl.unwrap(...) for now as it may fail otherwise for TLS 1.3.

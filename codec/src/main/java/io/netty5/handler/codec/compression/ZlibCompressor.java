@@ -61,11 +61,11 @@ public final class ZlibCompressor implements Compressor {
 
     static {
         MAX_INITIAL_OUTPUT_BUFFER_SIZE = SystemPropertyUtil.getInt(
-                "io.netty.jdkzlib.encoder.maxInitialOutputBufferSize",
+                "io.netty5.jdkzlib.encoder.maxInitialOutputBufferSize",
                 65536);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.jdkzlib.encoder.maxInitialOutputBufferSize={}", MAX_INITIAL_OUTPUT_BUFFER_SIZE);
+            logger.debug("-Dio.netty5.jdkzlib.encoder.maxInitialOutputBufferSize={}", MAX_INITIAL_OUTPUT_BUFFER_SIZE);
         }
     }
 

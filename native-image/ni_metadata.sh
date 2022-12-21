@@ -28,7 +28,7 @@ mkdir -p "${COLLECTED_CONFIG_PATH}" "${MERGED_CONFIG_PATH}"
 
 # Execute the netty build.
 cd "${SCRIPT_PATH}/.."
-./mvnw -DfailIfNoTests=false -Dtest=\!EpollDatagramMulticastIpv6WithIpv4AddrTest,\!ShadingIT,\!FlowControlHandlerTest,\!CloseNotifyTest,\!Http2MultiplexTransportTest -Dit.test=\!ShadingIT -DskipHttp2Testsuite=true -DargLine.javaProperties="-Dio.netty.tryReflectionSetAccessible=true -agentlib:native-image-agent=config-output-dir=${COLLECTED_CONFIG_PATH}/{pid},experimental-conditional-config-part" package
+./mvnw -DfailIfNoTests=false -Dtest=\!EpollDatagramMulticastIpv6WithIpv4AddrTest,\!ShadingIT,\!FlowControlHandlerTest,\!CloseNotifyTest,\!Http2MultiplexTransportTest -Dit.test=\!ShadingIT -DskipHttp2Testsuite=true -DargLine.javaProperties="-Dio.netty5.tryReflectionSetAccessible=true -agentlib:native-image-agent=config-output-dir=${COLLECTED_CONFIG_PATH}/{pid},experimental-conditional-config-part" package
 
 # Merge all of the generated metadata.
 NI_CONFIG_INPUT_ARGS=""

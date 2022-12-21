@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OsClassifiersTest {
-    private static final String OS_CLASSIFIERS_PROPERTY = "io.netty.osClassifiers";
+    private static final String OS_CLASSIFIERS_PROPERTY = "io.netty5.osClassifiers";
 
     private Properties systemProperties;
 
@@ -57,7 +57,7 @@ public class OsClassifiersTest {
 
     @Test
     void testOsClassifiersPropertyEmpty() {
-        // empty property -Dio.netty.osClassifiers
+        // empty property -Dio.netty5.osClassifiers
         systemProperties.setProperty(OS_CLASSIFIERS_PROPERTY, "");
         Set<String> allowed = Collections.singleton("fedora");
         Set<String> available = new LinkedHashSet<>(2);

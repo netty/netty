@@ -29,7 +29,7 @@
   <name>Netty5/Codec/HTTP2</name>
 
   <properties>
-    <javaModuleName>io.netty.codec.http2</javaModuleName>
+    <javaModuleName>io.netty5.codec.http2</javaModuleName>
     <!-- Needed for SSL tests as these use the SelfSignedCertificate -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
   </properties>

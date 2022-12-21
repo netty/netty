@@ -246,17 +246,17 @@ public final class PlatformDependent {
      */
     @VisibleForTesting
     static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
-        // empty: -Dio.netty.osClassifiers (no distro specific classifiers for native libs)
-        // single ID: -Dio.netty.osClassifiers=ubuntu
-        // pair ID, ID_LIKE: -Dio.netty.osClassifiers=ubuntu,debian
+        // empty: -Dio.netty5.osClassifiers (no distro specific classifiers for native libs)
+        // single ID: -Dio.netty5.osClassifiers=ubuntu
+        // pair ID, ID_LIKE: -Dio.netty5.osClassifiers=ubuntu,debian
         // illegal otherwise
-        String osClassifiersPropertyName = "io.netty.osClassifiers";
+        String osClassifiersPropertyName = "io.netty5.osClassifiers";
         String osClassifiers = SystemPropertyUtil.get(osClassifiersPropertyName);
         if (osClassifiers == null) {
             return false;
         }
         if (osClassifiers.isEmpty()) {
-            // let users omit classifiers with just -Dio.netty.osClassifiers
+            // let users omit classifiers with just -Dio.netty5.osClassifiers
             return true;
         }
         String[] classifiers = osClassifiers.split(",");
