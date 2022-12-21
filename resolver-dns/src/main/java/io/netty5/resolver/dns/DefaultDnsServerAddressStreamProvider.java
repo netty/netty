@@ -18,6 +18,7 @@ package io.netty5.resolver.dns;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
+import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
@@ -38,6 +39,7 @@ import static io.netty5.resolver.dns.DnsServerAddresses.sequential;
 public final class DefaultDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DefaultDnsServerAddressStreamProvider.class);
+    private static final String DEFAULT_FALLBACK_SERVER_PROPERTY = "io.netty5.resolver.dns.defaultNameServerFallback";
     public static final DefaultDnsServerAddressStreamProvider INSTANCE = new DefaultDnsServerAddressStreamProvider();
 
     private static final List<InetSocketAddress> DEFAULT_NAME_SERVER_LIST;
@@ -58,25 +60,47 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
                         "Default DNS servers: {} (sun.net.dns.ResolverConfiguration)", defaultNameServers);
             }
         } else {
-            // Depending if IPv6 or IPv4 is used choose the correct DNS servers provided by google:
-            // https://developers.google.com/speed/public-dns/docs/using
-            // https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
-            if (NetUtil.isIpV6AddressesPreferred() ||
-                NetUtil.LOCALHOST instanceof Inet6Address && !NetUtil.isIpV4StackPreferred()) {
-                Collections.addAll(
-                        defaultNameServers,
-                        SocketUtils.socketAddress("2001:4860:4860::8888", DNS_PORT),
-                        SocketUtils.socketAddress("2001:4860:4860::8844", DNS_PORT));
-            } else {
-                Collections.addAll(
-                        defaultNameServers,
-                        SocketUtils.socketAddress("8.8.8.8", DNS_PORT),
-                        SocketUtils.socketAddress("8.8.4.4", DNS_PORT));
-            }
+            String defaultNameserverString = SystemPropertyUtil.get(DEFAULT_FALLBACK_SERVER_PROPERTY, null);
+            if (defaultNameserverString != null) {
+                for (String server : defaultNameserverString.split(",")) {
+                    String dns = server.trim();
+                    if (!NetUtil.isValidIpV4Address(dns) && !NetUtil.isValidIpV6Address(dns)) {
+                        throw new ExceptionInInitializerError(DEFAULT_FALLBACK_SERVER_PROPERTY + " doesn't" +
+                                " contain a valid list of NameServers: " + defaultNameserverString);
+                    }
+                    defaultNameServers.add(SocketUtils.socketAddress(server.trim(), DNS_PORT));
+                }
+                if (defaultNameServers.isEmpty()) {
+                    throw new ExceptionInInitializerError(DEFAULT_FALLBACK_SERVER_PROPERTY + " doesn't" +
+                            " contain a valid list of NameServers: " + defaultNameserverString);
+                }
 
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "Default DNS servers: {} (Google Public DNS as a fallback)", defaultNameServers);
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Default DNS servers: {} (Configured by {} system property)",
+                            defaultNameServers, DEFAULT_FALLBACK_SERVER_PROPERTY);
+                }
+            } else {
+                // Depending if IPv6 or IPv4 is used choose the correct DNS servers provided by google:
+                // https://developers.google.com/speed/public-dns/docs/using
+                // https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+                if (NetUtil.isIpV6AddressesPreferred() ||
+                        (NetUtil.LOCALHOST instanceof Inet6Address && !NetUtil.isIpV4StackPreferred())) {
+                    Collections.addAll(
+                            defaultNameServers,
+                            SocketUtils.socketAddress("2001:4860:4860::8888", DNS_PORT),
+                            SocketUtils.socketAddress("2001:4860:4860::8844", DNS_PORT));
+                } else {
+                    Collections.addAll(
+                            defaultNameServers,
+                            SocketUtils.socketAddress("8.8.8.8", DNS_PORT),
+                            SocketUtils.socketAddress("8.8.4.4", DNS_PORT));
+                }
+
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Default DNS servers: {} (Google Public DNS as a fallback)", defaultNameServers);
+                }
             }
         }
 
