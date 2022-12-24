@@ -255,15 +255,15 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
 
         private final short[][] histo = {
-           new short[16], new short[16], new short[16], new short[16],
+           new short[15], new short[15], new short[15], new short[15],
         };
-        private final short[] sums = new short[16];
+        private final short[] sums = new short[15];
 
         private int histoIndex;
         private int histoCount;
         private volatile int prefChunkSize = DEFAULT_MIN_CHUNK_SIZE;
         private void recordAllocationSize(int size) {
-            int normalizedSize = size - 1 >> 6 & (1 << 15) - 1;
+            int normalizedSize = size - 1 >> 6 & (1 << 14) - 1;
             int bucket = Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
             histo[histoIndex][bucket]++;
             if (histoCount == 10_000) {
