@@ -265,7 +265,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         private void recordAllocationSize(int size) {
             int normalizedSize = size - 1 >> 6 & (1 << 15) - 1;
             int bucket = Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
-            histo[histoIndex][bucket] += 1;
+            histo[histoIndex][bucket]++;
             if (histoCount == 10_000) {
                 rotateHistograms(bucket);
             }
