@@ -294,6 +294,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             prefChunkSize = Math.max(percentileSize * 10, DEFAULT_MIN_CHUNK_SIZE);
 
             histoIndex = histoIndex + 1 & histo.length - 1;
+            histoCount = 0;
             Arrays.fill(histo[histoIndex], (short) 0);
         }
 
