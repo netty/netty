@@ -26,11 +26,8 @@ import io.netty5.buffer.internal.ArcDrop;
 import io.netty5.buffer.internal.CleanerDrop;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.util.NettyRuntime;
-import io.netty5.util.internal.PlatformDependent;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -39,23 +36,12 @@ import java.util.function.Supplier;
 
 import static io.netty5.buffer.internal.InternalBufferUtils.allocatorClosedException;
 import static io.netty5.buffer.internal.InternalBufferUtils.standardDrop;
+import static io.netty5.util.internal.PlatformDependent.threadId;
 
 public class AdaptablePoolingAllocator implements BufferAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
     private static final int DEFAULT_MIN_CHUNK_SIZE = 128 * 1028;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
-    private static final MethodHandle THREAD_ID = getThreadIdMethodHandle();
-
-    private static MethodHandle getThreadIdMethodHandle() {
-        try {
-            if (PlatformDependent.javaVersion() < 19) {
-                return MethodHandles.lookup().findVirtual(Thread.class, "getId", MethodType.methodType(long.class));
-            }
-            return MethodHandles.lookup().findVirtual(Thread.class, "threadId", MethodType.methodType(long.class));
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-    }
 
     private final AllocationType allocationType;
     private final MemoryManager manager;
@@ -119,14 +105,6 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         } while (expansions < 3);
         // The magazines failed us. Allocate unpooled buffer.
         return manager.allocateShared(allocatorControl, size, standardDrop(manager), allocationType);
-    }
-
-    private static long threadId(Thread thread) {
-        try {
-            return (long) THREAD_ID.invokeExact(thread);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private void tryExpandMagazines() {
