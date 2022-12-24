@@ -25,6 +25,7 @@ import io.netty5.buffer.StandardAllocationTypes;
 import io.netty5.buffer.internal.ArcDrop;
 import io.netty5.buffer.internal.CleanerDrop;
 import io.netty5.buffer.internal.InternalBufferUtils;
+import io.netty5.util.NettyRuntime;
 import io.netty5.util.internal.PlatformDependent;
 
 import java.lang.invoke.MethodHandle;
@@ -42,7 +43,7 @@ import static io.netty5.buffer.internal.InternalBufferUtils.standardDrop;
 public class AdaptablePoolingAllocator implements BufferAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
     private static final int DEFAULT_MIN_CHUNK_SIZE = 128 * 1028;
-    private static final int MAX_STRIPES = Runtime.getRuntime().availableProcessors() * 2;
+    private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
     private static final MethodHandle THREAD_ID = getThreadIdMethodHandle();
 
     private static MethodHandle getThreadIdMethodHandle() {
