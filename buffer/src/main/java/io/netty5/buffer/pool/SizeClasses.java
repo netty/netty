@@ -334,7 +334,7 @@ abstract class SizeClasses implements SizeClassesMetric {
 
         SizeClassValue(SizeClassKey key, int directMemoryCacheAlignment) {
             this.key = key;
-            int group = PoolThreadCache.log2(key.chunkSize) + 1 - LOG2_QUANTUM;
+            int group = PoolThreadCache.log2(key.chunkSize) - LOG2_SIZE_CLASS_GROUP + 1 - LOG2_QUANTUM;
 
             //generate size classes
             //[index, log2Group, log2Delta, nDelta, isMultiPageSize, isSubPage, log2DeltaLookup]
