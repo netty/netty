@@ -813,7 +813,7 @@ public final class PlatformDependent {
 
     /**
      * Get the ID of the given thread. This is {@code Thread.threadId()} on Java 19 and newer,
-     * or {@code Thread.getd()} on older Java versions.
+     * or {@code Thread.getId()} on older Java versions.
      *
      * @param thread The thread to get the ID from.
      * @return The ID of the given thread.
