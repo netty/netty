@@ -29,7 +29,6 @@ import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.StringUtil;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -831,7 +830,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return result;
     }
 
-    private static String[] splitInitialLine(ByteBuf asciiBuffer) {
+    private String[] splitInitialLine(ByteBuf asciiBuffer) {
         final byte[] asciiBytes = asciiBuffer.array();
 
         final int arrayOffset = asciiBuffer.arrayOffset();
@@ -849,13 +848,22 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         final int cStart = findNonSPLenient(asciiBytes, bEnd, end);
         final int cEnd = findEndOfString(asciiBytes, Math.max(cStart - 1, startContent), end);
 
-        final String first = langAsciiString(asciiBytes, aStart, aEnd - aStart);
+        return new String[]{
+                splitFirstWordInitialLine(asciiBytes, aStart, aEnd - aStart),
+                splitSecondWordInitialLine(asciiBytes, bStart, bEnd - bStart),
+                cStart < cEnd ? splitThirdWordInitialLine(asciiBytes, cStart, cEnd - cStart) : ""};
+    }
 
-        final String second = langAsciiString(asciiBytes, bStart, bEnd - bStart);
+    protected String splitFirstWordInitialLine(final byte[] asciiContent, int start, int length) {
+        return langAsciiString(asciiContent, start, length);
+    }
 
-        final String third = cStart < cEnd ? langAsciiString(asciiBytes, cStart, cEnd - cStart) : "";
+    protected String splitSecondWordInitialLine(final byte[] asciiContent, int start, int length) {
+        return langAsciiString(asciiContent, start, length);
+    }
 
-        return new String[]{first, second, third};
+    protected String splitThirdWordInitialLine(final byte[] asciiContent, int start, int length) {
+        return langAsciiString(asciiContent, start, length);
     }
 
     private static String langAsciiString(final byte[] asciiContent, int start, int length) {
@@ -910,7 +918,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 break;
             }
         }
-        name = new AsciiString(line, nameStart, nameEnd - nameStart, true);
+        name = splitHeaderName(line, nameStart, nameEnd - nameStart);
         final int valueStart = findNonWhitespace(line, colonEnd, end);
         if (valueStart == end) {
             value = EMPTY_VALUE;
@@ -919,6 +927,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // no need to make uses of the ByteBuf's toString ASCII method here, and risk to get JIT confused
             value = langAsciiString(line, valueStart, valueEnd - valueStart);
         }
+    }
+
+    protected AsciiString splitHeaderName(byte[] sb, int start, int length) {
+        return new AsciiString(sb, start, length, true);
     }
 
     private static int findNonSPLenient(byte[] sb, int offset, int end) {
