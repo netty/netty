@@ -40,7 +40,7 @@ import static io.netty5.util.internal.PlatformDependent.threadId;
 
 public class AdaptablePoolingAllocator implements BufferAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
-    private static final int DEFAULT_MIN_CHUNK_SIZE = 128 * 1028;
+    private static final int DEFAULT_MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
 
     private final AllocationType allocationType;
@@ -246,12 +246,12 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             int bucket = Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
             histo[histoIndex][bucket]++;
             if (histoCount == 10_000) {
-                rotateHistograms(bucket);
+                rotateHistograms();
             }
             histoCount++;
         }
 
-        private void rotateHistograms(int bucket) {
+        private void rotateHistograms() {
             Arrays.fill(sums, (short) 0);
             int sum = 0;
             for (short[] buckets : histo) {
@@ -269,7 +269,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 }
                 targetPercentile -= sums[sizeBucket];
             }
-            int percentileSize = 1 << bucket + 6;
+            int percentileSize = 1 << sizeBucket + 6;
             prefChunkSize = Math.max(percentileSize * 10, DEFAULT_MIN_CHUNK_SIZE);
 
             histoIndex = histoIndex + 1 & histo.length - 1;
