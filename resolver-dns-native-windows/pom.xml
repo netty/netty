@@ -41,6 +41,29 @@
       <build>
         <plugins>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <!-- unpack netty-jni-util files -->
+              <execution>
+                <id>unpack</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>io.netty</includeGroupIds>
+                  <includeArtifactIds>netty-jni-util</includeArtifactIds>
+                  <classifier>sources</classifier>
+                  <outputDirectory>${combinedSources}</outputDirectory>
+                  <includes>**.h,**.c</includes>
+                  <overWriteReleases>false</overWriteReleases>
+                  <overWriteSnapshots>true</overWriteSnapshots>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
             <groupId>org.fusesource.hawtjni</groupId>
             <artifactId>hawtjni-maven-plugin</artifactId>
             <executions>
@@ -49,12 +72,11 @@
                 <phase>compile</phase>
                 <configuration>
                   <name>netty_resolver_dns_native_windows_${os.detected.arch}</name>
-                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <nativeSourceDirectory>${combinedSources}</nativeSourceDirectory>
                   <libDirectory>${project.build.directory}/native-build</libDirectory>
                   <windowsBuildTool>msbuild</windowsBuildTool>
                   <windowsPlatformToolset>v143</windowsPlatformToolset>
                   <windowsTargetPlatformVersion>10.0.19041.0</windowsTargetPlatformVersion>
-                  <windowsCustomProps>true</windowsCustomProps>
                 </configuration>
                 <goals>
                   <goal>generate</goal>
@@ -67,6 +89,21 @@
             <artifactId>maven-resources-plugin</artifactId>
             <executions>
               <execution>
+                <id>copy-sources</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${combinedSources}</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${project.basedir}/src/main/c/src</directory>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+              <execution>
                 <id>copy-windows-dll</id>
                 <phase>process-classes</phase>
                 <goals>
@@ -76,7 +113,6 @@
                   <outputDirectory>${project.build.outputDirectory}/META-INF/native/</outputDirectory>
                   <resources>
                     <resource>
-
                       <directory>${project.build.directory}/native-build/META-INF/native/windows${os.detected.bitness}</directory>
                       <includes>
                         <include>netty_resolver_dns_native_windows_${os.detected.arch}.dll</include>
@@ -122,6 +158,7 @@
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <javaModuleName>io.netty.resolver.dns.windows.${javaModuleNameClassifier}</javaModuleName>
+    <combinedSources>${project.build.directory}/native-src</combinedSources>
   </properties>
 
   <dependencies>
@@ -129,6 +166,13 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-jni-util</artifactId>
+      <classifier>sources</classifier>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 

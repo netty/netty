@@ -14,7 +14,9 @@
  * under the License.
  */
 
-#include "netty_window_dns_native.h"
+#include <jni.h>
+
+#include "netty_jni_util.h"
 
 #include <winsock2.h>
 #include <Ws2ipdef.h>
@@ -26,19 +28,23 @@
 
 #define NETTY_JNI_UTIL_JNI_VERSION JNI_VERSION_1_6
 
-jclass nativeExceptionClass;
+#define ADAPTER_INFO_CLASS "io/netty/resolver/dns/windows/WindowsAdapterInfo"
 
-jclass networkAdapterClass;
-jmethodID networkAdapterCtor;
+static jclass nativeExceptionClass = NULL;
 
-jclass stringClass;
+static jclass networkAdapterClass = NULL;
+static jmethodID networkAdapterCtor = NULL;
 
-jclass linkedListClass;
-jmethodID linkedListCtor; 
-jmethodID linkedListAdd;
+static jclass stringClass = NULL;
 
-jclass inetSocketAddressClass;
-jmethodID inetSocketAddressCtor;
+static jclass linkedListClass = NULL;
+static jmethodID linkedListCtor = NULL;
+static jmethodID linkedListAdd = NULL;
+
+static jclass inetSocketAddressClass = NULL;
+static jmethodID inetSocketAddressCtor = NULL;
+
+static const char* cached_package_prefix = NULL;
 
 int throwNativeException(JNIEnv* env, const char* fmt, ...) {
     va_list countArgs;
@@ -250,7 +256,7 @@ jobject adapterToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
     return (*env)->NewObject(env, networkAdapterClass, networkAdapterCtor, dnsServers, searchDomains);
 }
 
-JNIEXPORT jobject JNICALL Java_io_netty_resolver_dns_windows_WindowsAdapterInfo_adapters(JNIEnv* env, jclass clazz) {
+static jobject windows_adapters(JNIEnv* env, jclass clazz) {
     IP_ADAPTER_ADDRESSES* adapters;
 
     if (read_adapter_addresses(env, &adapters) != JNI_OK) {
@@ -292,15 +298,29 @@ error:
 }
 
 jint loadClass(JNIEnv* env, const char* name, jclass* target) {
-    *target = (*env)->FindClass(env, name);
+    jclass clazz;
+    NETTY_JNI_UTIL_LOAD_CLASS(env, clazz, name, fail);
 
-    if (*target == NULL) {
-        fprintf(stderr, "Class not found: %s\n", name);
-        fflush(stderr);
-        return JNI_ERR;
-    }
-
+    *target = clazz;
     return JNI_OK;
+fail:
+    fprintf(stderr, "Class not found: %s\n", name);
+    fflush(stderr);
+    return JNI_ERR;
+}
+
+jint loadNettyClass(JNIEnv* env, const char* name, jclass* target, const char* packagePrefix) {
+    char* nettyClassName = netty_jni_util_prepend(packagePrefix, name);
+    jclass clazz;
+    NETTY_JNI_UTIL_LOAD_CLASS(env, clazz, nettyClassName, fail);
+    free(nettyClassName);
+    *target = clazz;
+    return JNI_OK;
+fail:
+    fprintf(stderr, "Class not found: %s\n", nettyClassName);
+    fflush(stderr);
+    free(nettyClassName);
+    return JNI_ERR;
 }
 
 jint loadMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig, jmethodID* target) {
@@ -315,66 +335,124 @@ jint loadMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig, jm
     return JNI_OK;
 }
 
-JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    JNIEnv* env = NULL;
+static JNINativeMethod* createDynamicMethodsTable() {
+    JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * 1);
 
-    if ((*vm)->GetEnv(vm, (void**)&env, NETTY_JNI_UTIL_JNI_VERSION) != JNI_OK) {
-        fprintf(stderr, "FATAL: JNI version mismatch\n");
-        fflush(stderr);
-        return JNI_ERR;
+    if (dynamicMethods == NULL) {
+        return NULL;
     }
 
-    if (loadClass(env, "io/netty/resolver/dns/windows/NativeException", &nativeExceptionClass) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadClass(env, "io/netty/resolver/dns/windows/NetworkAdapter", &networkAdapterClass) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadMethod(env, networkAdapterClass, "<init>", "(Ljava/util/List;Ljava/util/List;)V", &networkAdapterCtor) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadClass(env, "java/util/LinkedList", &linkedListClass) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadMethod(env, linkedListClass, "<init>", "()V", &linkedListCtor) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadMethod(env, linkedListClass, "add", "(Ljava/lang/Object;)Z", &linkedListAdd) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadClass(env, "java/lang/String", &stringClass) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadClass(env, "java/net/InetSocketAddress", &inetSocketAddressClass) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadMethod(env, inetSocketAddressClass, "<init>", "(Ljava/lang/String;I)V", &inetSocketAddressCtor) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    return NETTY_JNI_UTIL_JNI_VERSION;
+    JNINativeMethod* dynamicMethod = &dynamicMethods[0];
+    dynamicMethod->name = "adapters";
+    dynamicMethod->signature = "()Ljava/util/List;";
+    dynamicMethod->fnPtr = (void *) windows_adapters;
+    return dynamicMethods;
 }
 
-JNIEXPORT void JNI_OnUnload(JavaVM* env, void* reserved) {
-    free(nativeExceptionClass);
+static jint register_natives(JNIEnv* env, const char* packagePrefix) {
+    // Register the methods which are not referenced by static member variables
+    JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    if (dynamicMethods == NULL) {
+        return JNI_ERR;
+    }
+
+    cached_package_prefix = packagePrefix;
+
+    jint result = netty_jni_util_register_natives(env,
+            packagePrefix,
+            ADAPTER_INFO_CLASS,
+            dynamicMethods, 1);
+
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, 1, 1);
+
+    return result == 0 ? JNI_OK : JNI_ERR;
+}
+
+static void unload_jvm_references(JNIEnv* env) {
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, nativeExceptionClass);
 
     free(networkAdapterCtor);
-    free(networkAdapterClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, networkAdapterClass);
 
-    free(stringClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
 
     free(linkedListAdd);
     free(linkedListCtor);
-    free(linkedListClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, linkedListClass);
 
     free(inetSocketAddressCtor);
-    free(inetSocketAddressClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, inetSocketAddressClass);
 }
+
+static jint netty_resolver_dns_native_windows_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+    if (loadNettyClass(env, "io/netty/resolver/dns/windows/NativeException", &nativeExceptionClass, packagePrefix) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadNettyClass(env, "io/netty/resolver/dns/windows/NetworkAdapter", &networkAdapterClass, packagePrefix) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadMethod(env, networkAdapterClass, "<init>", "(Ljava/util/List;Ljava/util/List;)V", &networkAdapterCtor) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadClass(env, "java/util/LinkedList", &linkedListClass) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadMethod(env, linkedListClass, "<init>", "()V", &linkedListCtor) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadMethod(env, linkedListClass, "add", "(Ljava/lang/Object;)Z", &linkedListAdd) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadClass(env, "java/lang/String", &stringClass) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadClass(env, "java/net/InetSocketAddress", &inetSocketAddressClass) != JNI_OK) {
+        goto fail;
+    }
+
+    if (loadMethod(env, inetSocketAddressClass, "<init>", "(Ljava/lang/String;I)V", &inetSocketAddressCtor) != JNI_OK) {
+        goto fail;
+    }
+
+    if (register_natives(env, packagePrefix) != JNI_OK) {
+        goto fail;
+    }
+
+    return NETTY_JNI_UTIL_JNI_VERSION;
+fail:
+    unload_jvm_references(env);
+    return JNI_ERR;
+}
+
+static void netty_resolver_dns_native_windows_JNI_OnUnLoad(JNIEnv* env) {
+    unload_jvm_references(env);
+
+    netty_jni_util_unregister_natives(env, cached_package_prefix, ADAPTER_INFO_CLASS);
+}
+
+// Invoked by the JVM when statically linked
+JNIEXPORT jint JNI_OnLoad_netty_resolver_dns_native_windows(JavaVM* vm, void* reserved) {
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_resolver_dns_native_windows", netty_resolver_dns_native_windows_JNI_OnLoad);
+}
+
+// Invoked by the JVM when statically linked
+JNIEXPORT void JNI_OnUnload_netty_resolver_dns_native_windows(JavaVM* vm, void* reserved) {
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_resolver_dns_native_windows_JNI_OnUnLoad);
+}
+
+#ifndef NETTY_BUILD_STATIC
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    return netty_jni_util_JNI_OnLoad(vm, reserved, "netty_resolver_dns_native_windows", netty_resolver_dns_native_windows_JNI_OnLoad);
+}
+
+JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
+    netty_jni_util_JNI_OnUnload(vm, reserved, netty_resolver_dns_native_windows_JNI_OnUnLoad);
+}
+#endif /* NETTY_BUILD_STATIC */
