@@ -385,7 +385,7 @@ static void unload_jvm_references(JNIEnv* env) {
 }
 
 static jint netty_resolver_dns_native_windows_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    if (loadNettyClass(env, "io/netty/resolver/dns/windows/NativeException", &nativeExceptionClass, packagePrefix) != JNI_OK) {
+    if (loadClass(env, "java/lang/RuntimeException", &nativeExceptionClass, packagePrefix) != JNI_OK) {
         goto fail;
     }
 
