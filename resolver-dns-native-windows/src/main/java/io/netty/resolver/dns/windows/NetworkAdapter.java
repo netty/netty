@@ -18,7 +18,7 @@ package io.netty.resolver.dns.windows;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-public final class NetworkAdapter {
+final class NetworkAdapter {
     private final List<InetSocketAddress> nameservers;
     private final List<String> searchDomains;
 
