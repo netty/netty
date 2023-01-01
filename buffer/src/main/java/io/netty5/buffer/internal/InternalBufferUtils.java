@@ -23,6 +23,7 @@ import io.netty5.buffer.Drop;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.PlatformDependent;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -135,12 +136,22 @@ public interface InternalBufferUtils {
      */
     static void assertValidBufferSize(long size) {
         if (size < 0) {
-            throw new IllegalArgumentException("Buffer size must not be negative, but was " + size + '.');
+            throw bufferSizeNegative(size);
         }
         if (size > MAX_BUFFER_SIZE) {
-            throw new IllegalArgumentException(
-                    "Buffer size cannot be greater than " + MAX_BUFFER_SIZE + ", but was " + size + '.');
+            throw bufferSizeTooBig(size);
         }
+    }
+
+    @NotNull
+    private static IllegalArgumentException bufferSizeNegative(long size) {
+        return new IllegalArgumentException("Buffer size must not be negative, but was " + size + '.');
+    }
+
+    @NotNull
+    private static IllegalArgumentException bufferSizeTooBig(long size) {
+        return new IllegalArgumentException(
+                "Buffer size cannot be greater than " + MAX_BUFFER_SIZE + ", but was " + size + '.');
     }
 
     static void checkImplicitCapacity(int implicitCapacity, int currentCapacity) {

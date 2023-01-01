@@ -84,6 +84,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             throw allocatorClosedException();
         }
         InternalBufferUtils.assertValidBufferSize(size);
+        int sizeBucket = Magazine.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
         int expansions = 0;
         do {
             Magazine[] mags = magazines;
@@ -94,7 +95,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 long writeLock = mag.tryWriteLock();
                 if (writeLock != 0) {
                     try {
-                        return mag.allocate(size);
+                        return mag.allocate(size, sizeBucket);
                     } finally {
                         mag.unlockWrite(writeLock);
                     }
@@ -192,8 +193,8 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             this.parent = parent;
         }
 
-        public Buffer allocate(int size) {
-            recordAllocationSize(size);
+        public Buffer allocate(int size, int sizeBucket) {
+            recordAllocationSize(sizeBucket);
             Buffer curr = current;
             if (curr != null && curr.capacity() >= size) {
                 if (curr.capacity() == size) {
@@ -240,15 +241,20 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
 
         private int histoIndex;
         private int histoCount;
-        private volatile int prefChunkSize = DEFAULT_MIN_CHUNK_SIZE;
-        private void recordAllocationSize(int size) {
-            int normalizedSize = size - 1 >> 6 & (1 << 14) - 1;
-            int bucket = Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
+        private volatile int localPrefChunkSize = DEFAULT_MIN_CHUNK_SIZE;
+        private int sharedPrefChunkSize = DEFAULT_MIN_CHUNK_SIZE;
+
+        private void recordAllocationSize(int bucket) {
             histo[histoIndex][bucket]++;
             if (histoCount == 10_000) {
                 rotateHistograms();
             }
             histoCount++;
+        }
+
+        static int sizeBucket(int size) {
+            int normalizedSize = size - 1 >> 6 & (1 << 14) - 1;
+            return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
         }
 
         private void rotateHistograms() {
@@ -270,7 +276,11 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 targetPercentile -= sums[sizeBucket];
             }
             int percentileSize = 1 << sizeBucket + 6;
-            prefChunkSize = Math.max(percentileSize * 10, DEFAULT_MIN_CHUNK_SIZE);
+            localPrefChunkSize = Math.max(percentileSize * 10, DEFAULT_MIN_CHUNK_SIZE);
+            sharedPrefChunkSize = localPrefChunkSize;
+            for (Magazine mag : parent.magazines) {
+                sharedPrefChunkSize = Math.max(sharedPrefChunkSize, mag.localPrefChunkSize);
+            }
 
             histoIndex = histoIndex + 1 & histo.length - 1;
             histoCount = 0;
@@ -286,7 +296,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
          * @return The currently preferred chunk allocation size.
          */
         private int preferredChunkSize() {
-            return prefChunkSize;
+            return sharedPrefChunkSize;
         }
 
         private Buffer newChunkAllocation(int promptingSize) {
