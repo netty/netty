@@ -40,7 +40,7 @@ import static io.netty5.util.internal.PlatformDependent.threadId;
 
 public class AdaptablePoolingAllocator implements BufferAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
-    private static final int DEFAULT_MIN_CHUNK_SIZE = 128 * 1024;
+    private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
 
     private final AllocationType allocationType;
@@ -235,14 +235,14 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
 
         private final short[][] histo = {
-           new short[15], new short[15], new short[15], new short[15],
+           new short[9], new short[9], new short[9], new short[9],
         };
-        private final short[] sums = new short[15];
+        private final short[] sums = new short[9];
 
         private int histoIndex;
         private int histoCount;
-        private volatile int localPrefChunkSize = DEFAULT_MIN_CHUNK_SIZE;
-        private int sharedPrefChunkSize = DEFAULT_MIN_CHUNK_SIZE;
+        private volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
+        private int sharedPrefChunkSize = MIN_CHUNK_SIZE;
 
         private void recordAllocationSize(int bucket) {
             histo[histoIndex][bucket]++;
@@ -253,7 +253,9 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
 
         static int sizeBucket(int size) {
-            int normalizedSize = size - 1 >> 6 & (1 << 14) - 1;
+            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater,
+            // so we truncate and roll up the bottom part of the histogram to 8 KiB.
+            int normalizedSize = size - 1 >> 12 & (1 << 8) - 1;
             return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
         }
 
@@ -275,8 +277,8 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 }
                 targetPercentile -= sums[sizeBucket];
             }
-            int percentileSize = 1 << sizeBucket + 6;
-            localPrefChunkSize = Math.max(percentileSize * 10, DEFAULT_MIN_CHUNK_SIZE);
+            int percentileSize = 1 << sizeBucket + 12;
+            localPrefChunkSize = Math.max(percentileSize * 10, MIN_CHUNK_SIZE);
             sharedPrefChunkSize = localPrefChunkSize;
             for (Magazine mag : parent.magazines) {
                 sharedPrefChunkSize = Math.max(sharedPrefChunkSize, mag.localPrefChunkSize);
