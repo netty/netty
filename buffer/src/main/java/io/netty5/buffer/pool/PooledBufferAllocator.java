@@ -211,11 +211,6 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         this.normalCacheSize = normalCacheSize;
 
         if (directMemoryCacheAlignment != 0) {
-            if (!PlatformDependent.hasAlignDirectByteBuffer()) {
-                throw new UnsupportedOperationException("Buffer alignment is not supported. " +
-                        "Either Unsafe or ByteBuffer.alignSlice() must be available.");
-            }
-
             // Ensure page size is a whole multiple of the alignment, or bump it to the next whole multiple.
             pageSize = (int) PlatformDependent.align(pageSize, directMemoryCacheAlignment);
         }
