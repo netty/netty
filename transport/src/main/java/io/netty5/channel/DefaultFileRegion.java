@@ -47,17 +47,14 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     /**
      * Create a new instance
      *
-     * @param file      the {@link FileChannel} which should be transferred
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param fileChannel      the {@link FileChannel} which should be transferred
+     * @param position         the position from which the transfer should start
+     * @param count            the number of bytes to transfer
      */
-    public DefaultFileRegion(FileChannel file, long position, long count) {
-        requireNonNull(file, "file");
-        checkPositiveOrZero(position, "position");
-        checkPositiveOrZero(count, "count");
-        this.file = file;
-        this.position = position;
-        this.count = count;
+    public DefaultFileRegion(FileChannel fileChannel, long position, long count) {
+        this.file = requireNonNull(fileChannel, "fileChannel");
+        this.position = checkPositiveOrZero(position, "position");
+        this.count = checkPositiveOrZero(count, "count");
         f = null;
     }
 
@@ -65,17 +62,14 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * Create a new instance using the given {@link File}. The {@link File} will be opened lazily or
      * explicitly via {@link #open()}.
      *
-     * @param f         the {@link File} which should be transferred
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param file         the {@link File} which should be transferred
+     * @param position     the position from which the transfer should start
+     * @param count        the number of bytes to transfer
      */
-    public DefaultFileRegion(File f, long position, long count) {
-        requireNonNull(f, "f");
-        checkPositiveOrZero(position, "position");
-        checkPositiveOrZero(count, "count");
-        this.position = position;
-        this.count = count;
-        this.f = f;
+    public DefaultFileRegion(File file, long position, long count) {
+        this.f = requireNonNull(file, "file");
+        this.position = checkPositiveOrZero(position, "position");
+        this.count = checkPositiveOrZero(count, "count");
     }
 
     /**
