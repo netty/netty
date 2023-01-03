@@ -172,6 +172,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
     }
 
+    @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
     private static class AllocationStatistics extends StampedLock {
         private static final long serialVersionUID = -8319929980932269688L;
         private static final int MIN_DATUM_TARGET = 1024;
