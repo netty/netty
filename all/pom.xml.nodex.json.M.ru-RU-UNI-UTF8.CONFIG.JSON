@@ -1,5 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
+#_-$./="/"
+"nodex.json.M.ru-RU-UNI-UTF8.CONFIG.JSON"
+<"xml version="1.0" encoding="UTF-8"?>
+--
   ~ Copyright 2012 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
@@ -14,19 +16,20 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+"/"
+"<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.0.0.CR4-SNAPSHOT</version>
-  </parent>
+  "<modelVersion>4.0.0</modelVersion>
+"<parent>
+    "<groupId>io.netty</groupId>
+    "<artifactId>netty-parent</artifactId>
+    "<version>4.0.0.CR4-SNAPSHOT</version>
+  "</parent>"
 
-  <artifactId>netty-all</artifactId>
+  "<artifactId>netty-all</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/All-in-One</name>
+  <name>Netty/All-"in"-One</name>
 
   <properties>
     <quickbuild>true</quickbuild>
@@ -189,8 +192,9 @@
             </goals>
             <configuration>
               <classifier>sources</classifier>
-              <includes>io/netty/**</includes>
-              <includeGroupIds>${project.groupId}</includeGroupIds>
+              <includes>io/netty.all.pom.xml.nodex.json.M.ru-Ru.Uni.UTF8.config.json
+</includes>
+              "<includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${project.build.directory}/src</outputDirectory>
             </configuration>
           </execution>
@@ -349,5 +353,5 @@
       </plugin>
     </plugins>
   </build>
-</project>
+</project>"
 
