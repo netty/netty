@@ -84,7 +84,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             throw allocatorClosedException();
         }
         InternalBufferUtils.assertValidBufferSize(size);
-        int sizeBucket = Magazine.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
+        int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
         int expansions = 0;
         do {
             Magazine[] mags = magazines;
@@ -172,7 +172,106 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
     }
 
-    private static final class Magazine extends StampedLock {
+    private static class AllocationStatistics extends StampedLock {
+        private static final long serialVersionUID = -8319929980932269688L;
+        private static final int MIN_DATUM_TARGET = 1024;
+        private static final int MAX_DATUM_TARGET = 65534;
+        private static final int INIT_DATUM_TARGET = 8192;
+        private static final int HISTO_MIN_BUCKET_SHIFT = 13; // Smallest bucket is 1 << 13 = 8192 bytes in size.
+        private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
+        private static final int HISTO_BUCKET_COUNT = 1 << HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT;
+        private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
+
+        protected final AdaptablePoolingAllocator parent;
+        private final short[][] histos = {
+                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
+                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
+        };
+        private short[] histo = histos[0];
+        private final int[] sums = new int[HISTO_BUCKET_COUNT];
+
+        private int histoIndex;
+        private int datumCount;
+        private int datumTarget = INIT_DATUM_TARGET;
+        private volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
+        protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
+
+        private AllocationStatistics(AdaptablePoolingAllocator parent) {
+            this.parent = parent;
+        }
+
+        protected void recordAllocationSize(int bucket) {
+            histo[bucket]++;
+            if (datumCount++ == datumTarget) {
+                rotateHistograms();
+            }
+        }
+
+        static int sizeBucket(int size) {
+            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater,
+            // so we truncate and roll up the bottom part of the histogram to 8 KiB.
+            // The upper size band is 1 MiB, and that gives us exactly 8 size buckets,
+            // which is a magical number for JIT optimisations.
+            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & HISTO_MAX_BUCKET_MASK;
+            return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
+        }
+
+        private void rotateHistograms() {
+            Arrays.fill(sums, 0);
+            for (short[] buckets : histos) {
+                int len = buckets.length;
+                for (int i = 0; i < len; i++) {
+                    int count = buckets[i] & 0xFFFF; // Read as unsigned short.
+                    sums[i] += count;
+                }
+            }
+            int sum = 0;
+            for (int count : sums) {
+                sum  += count;
+            }
+            int targetPercentile = (int) (sum * 0.99);
+            int sizeBucket = 0;
+            for (; sizeBucket < sums.length; sizeBucket++) {
+                if (sums[sizeBucket] > targetPercentile) {
+                    break;
+                }
+                targetPercentile -= sums[sizeBucket];
+            }
+            int percentileSize = 1 << sizeBucket + HISTO_MIN_BUCKET_SHIFT;
+            int prefChunkSize = Math.max(percentileSize * 10, MIN_CHUNK_SIZE);
+            localPrefChunkSize = prefChunkSize;
+            for (Magazine mag : parent.magazines) {
+                prefChunkSize = Math.max(prefChunkSize, mag.localPrefChunkSize);
+            }
+            if (sharedPrefChunkSize != prefChunkSize) {
+                // Preferred chunk size changed. Increase check frequency.
+                datumTarget = Math.max(datumTarget >> 1, MIN_DATUM_TARGET);
+            } else {
+                // Preferred chunk size did not change. Check less often.
+                datumTarget = Math.min(datumTarget << 1, MAX_DATUM_TARGET);
+            }
+            sharedPrefChunkSize = prefChunkSize;
+
+            histoIndex = histoIndex + 1 & histos.length - 1;
+            histo = histos[histoIndex];
+            datumCount = 0;
+            Arrays.fill(histo, (short) 0);
+        }
+
+        /**
+         * Get the preferred chunk size, based on statistics from the {@linkplain #recordAllocationSize(int) recorded}
+         * allocation sizes.
+         * <p>
+         * This method must be thread-safe.
+         *
+         * @return The currently preferred chunk allocation size.
+         */
+        protected int preferredChunkSize() {
+            return sharedPrefChunkSize;
+        }
+    }
+
+    private static final class Magazine extends AllocationStatistics {
         private static final long serialVersionUID = -4068223712022528165L;
         private static final VarHandle NEXT_IN_LINE;
 
@@ -183,14 +282,12 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 throw new RuntimeException(e);
             }
         }
-
-        private final AdaptablePoolingAllocator parent;
         private Buffer current;
         @SuppressWarnings("unused") // updated via VarHandle
         private volatile Buffer nextInLine;
 
         Magazine(AdaptablePoolingAllocator parent) {
-            this.parent = parent;
+            super(parent);
         }
 
         public Buffer allocate(int size, int sizeBucket) {
@@ -232,86 +329,6 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 }
             }
             return result;
-        }
-
-        private final short[][] histos = {
-           new short[8], new short[8], new short[8], new short[8],
-        };
-        private short[] histo = histos[0];
-        private final int[] sums = new int[8];
-
-        private int histoIndex;
-        private int datumCount;
-        private int datumTarget = 8192;
-        private volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
-        private int sharedPrefChunkSize = MIN_CHUNK_SIZE;
-
-        private void recordAllocationSize(int bucket) {
-            histo[bucket]++;
-            if (datumCount++ == datumTarget) {
-                rotateHistograms();
-            }
-        }
-
-        static int sizeBucket(int size) {
-            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater,
-            // so we truncate and roll up the bottom part of the histogram to 8 KiB.
-            // The upper size band is 1 MiB, and that gives us exactly 8 size buckets,
-            // which is a magical number for JIT optimisations.
-            int normalizedSize = size - 1 >> 13 & (1 << 7) - 1;
-            return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
-        }
-
-        private void rotateHistograms() {
-            Arrays.fill(sums, 0);
-            int sum = 0;
-            for (short[] buckets : histos) {
-                int len = buckets.length;
-                for (int i = 0; i < len; i++) {
-                    int count = buckets[i] & 0xFFFF; // Read as unsigned short.
-                    sums[i] += count;
-                    sum  += count;
-                }
-            }
-            int targetPercentile = (int) (sum * 0.99);
-            int sizeBucket = 0;
-            for (; sizeBucket < sums.length; sizeBucket++) {
-                if (sums[sizeBucket] > targetPercentile) {
-                    break;
-                }
-                targetPercentile -= sums[sizeBucket];
-            }
-            int percentileSize = 1 << sizeBucket + 13;
-            int prefChunkSize = Math.max(percentileSize * 10, MIN_CHUNK_SIZE);
-            localPrefChunkSize = prefChunkSize;
-            for (Magazine mag : parent.magazines) {
-                prefChunkSize = Math.max(prefChunkSize, mag.localPrefChunkSize);
-            }
-            if (sharedPrefChunkSize != prefChunkSize) {
-                // Preferred chunk size changed. Increase check frequency.
-                datumTarget = Math.max(datumTarget >> 1, 1024);
-            } else {
-                // Preferred chunk size did not change. Check less often.
-                datumTarget = Math.min(datumTarget << 1, 65534);
-            }
-            sharedPrefChunkSize = prefChunkSize;
-
-            histoIndex = histoIndex + 1 & histos.length - 1;
-            histo = histos[histoIndex];
-            datumCount = 0;
-            Arrays.fill(histos[histoIndex], (short) 0);
-        }
-
-        /**
-         * Get the preferred chunk size, based on statistics from the {@linkplain #recordAllocationSize(int) recorded}
-         * allocation sizes.
-         * <p>
-         * This method must be thread-safe.
-         *
-         * @return The currently preferred chunk allocation size.
-         */
-        private int preferredChunkSize() {
-            return sharedPrefChunkSize;
         }
 
         private Buffer newChunkAllocation(int promptingSize) {
