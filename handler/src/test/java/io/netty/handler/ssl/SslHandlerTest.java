@@ -90,6 +90,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.X509ExtendedTrustManager;
 
@@ -568,8 +569,8 @@ public class SslHandlerTest {
 
         assertFalse(ch.finishAndReleaseAll());
 
-        assertTrue(handler.handshakeFuture().cause() instanceof ClosedChannelException);
-        assertTrue(handler.sslCloseFuture().cause() instanceof ClosedChannelException);
+        assertThat(handler.handshakeFuture().cause(), instanceOf(SSLHandshakeException.class));
+        assertThat(handler.sslCloseFuture().cause(), instanceOf(SSLHandshakeException.class));
     }
 
     @Test
@@ -590,11 +591,11 @@ public class SslHandlerTest {
 
         SslCompletionEvent evt = events.take();
         assertTrue(evt instanceof SslHandshakeCompletionEvent);
-        assertTrue(evt.cause() instanceof ClosedChannelException);
+        assertThat(evt.cause(), instanceOf(SSLHandshakeException.class));
 
         evt = events.take();
         assertTrue(evt instanceof SslCloseCompletionEvent);
-        assertTrue(evt.cause() instanceof ClosedChannelException);
+        assertThat(evt.cause(), instanceOf(SSLHandshakeException.class));
         assertTrue(events.isEmpty());
     }
 
