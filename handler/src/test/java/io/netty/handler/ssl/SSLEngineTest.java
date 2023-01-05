@@ -1644,6 +1644,9 @@ public abstract class SSLEngineTest {
 
                 if (isHandshakeFinished(clientResult)) {
                     clientHandshakeFinished = true;
+                } else {
+                    cTOs = increaseDstBufferIfNeeded(clientResult,
+                            clientEngine.getSession().getPacketBufferSize(), type, cTOs);
                 }
             }
 
@@ -1655,6 +1658,9 @@ public abstract class SSLEngineTest {
 
                 if (isHandshakeFinished(serverResult)) {
                     serverHandshakeFinished = true;
+                } else {
+                    sTOc = increaseDstBufferIfNeeded(serverResult,
+                            serverEngine.getSession().getPacketBufferSize(), type, sTOc);
                 }
             }
 
@@ -1678,8 +1684,8 @@ public abstract class SSLEngineTest {
                 if (isHandshakeFinished(clientResult)) {
                     clientHandshakeFinished = true;
                 } else {
-                    clientAppReadBuffer = increaseAppReadBufferIfNeeded(
-                            clientEngine, clientResult, type, clientAppReadBuffer);
+                    clientAppReadBuffer = increaseDstBufferIfNeeded(clientResult,
+                            clientEngine.getSession().getApplicationBufferSize(), type, clientAppReadBuffer);
                 }
             } else {
                 assertEquals(0, sTOc.remaining());
@@ -1695,8 +1701,8 @@ public abstract class SSLEngineTest {
                 if (isHandshakeFinished(serverResult)) {
                     serverHandshakeFinished = true;
                 } else {
-                    serverAppReadBuffer = increaseAppReadBufferIfNeeded(
-                            serverEngine, serverResult, type, serverAppReadBuffer);
+                    serverAppReadBuffer = increaseDstBufferIfNeeded(serverResult,
+                            serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
                 }
             } else {
                 assertFalse(cTOs.hasRemaining());
@@ -1714,14 +1720,13 @@ public abstract class SSLEngineTest {
                 cTOsHasRemaining || sTOcHasRemaining);
     }
 
-    private ByteBuffer increaseAppReadBufferIfNeeded(SSLEngine engine, SSLEngineResult result,
+    private ByteBuffer increaseDstBufferIfNeeded(SSLEngineResult result, int maxBufferSize,
                                                      BufferType type, ByteBuffer dstBuffer) {
         if (result.getStatus() == Status.BUFFER_OVERFLOW) {
             // We need to increase the destination buffer
-            int appSize = engine.getSession().getApplicationBufferSize();
-            assertNotEquals(appSize, dstBuffer.capacity());
+            assertNotEquals(maxBufferSize, dstBuffer.remaining());
             dstBuffer.flip();
-            ByteBuffer tmpBuffer = allocateBuffer(type, appSize + dstBuffer.remaining());
+            ByteBuffer tmpBuffer = allocateBuffer(type, maxBufferSize + dstBuffer.remaining());
             tmpBuffer.put(dstBuffer);
             return tmpBuffer;
         }
