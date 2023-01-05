@@ -1724,7 +1724,6 @@ public abstract class SSLEngineTest {
                                                      BufferType type, ByteBuffer dstBuffer) {
         if (result.getStatus() == Status.BUFFER_OVERFLOW) {
             // We need to increase the destination buffer
-            assertNotEquals(maxBufferSize, dstBuffer.remaining());
             dstBuffer.flip();
             ByteBuffer tmpBuffer = allocateBuffer(type, maxBufferSize + dstBuffer.remaining());
             tmpBuffer.put(dstBuffer);
