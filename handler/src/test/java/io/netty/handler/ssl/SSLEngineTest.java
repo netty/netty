@@ -1709,7 +1709,8 @@ public abstract class SSLEngineTest {
                 }
 
                 if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
-                    serverAppReadBuffer = increaseDstBuffer(serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
+                    serverAppReadBuffer = increaseDstBuffer(
+                            serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
                 }
             } else {
                 assertFalse(cTOs.hasRemaining());
