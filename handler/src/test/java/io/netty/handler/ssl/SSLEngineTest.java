@@ -1718,7 +1718,6 @@ public abstract class SSLEngineTest {
                 cTOsHasRemaining || sTOcHasRemaining);
     }
 
-
     private static boolean compactOrClear(ByteBuffer buffer) {
         if (buffer.hasRemaining()) {
             buffer.compact();
