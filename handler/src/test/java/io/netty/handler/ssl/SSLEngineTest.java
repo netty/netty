@@ -1730,6 +1730,7 @@ public abstract class SSLEngineTest {
     private ByteBuffer increaseDstBufferIfNeeded(SSLEngineResult result, int maxBufferSize,
                                                      BufferType type, ByteBuffer dstBuffer) {
         if (result.getStatus() == Status.BUFFER_OVERFLOW) {
+            assertNotEquals(maxBufferSize, dstBuffer.remaining());
             // We need to increase the destination buffer
             dstBuffer.flip();
             ByteBuffer tmpBuffer = allocateBuffer(type, maxBufferSize + dstBuffer.remaining());
