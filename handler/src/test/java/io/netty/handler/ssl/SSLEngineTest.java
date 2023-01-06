@@ -1708,16 +1708,24 @@ public abstract class SSLEngineTest {
                 assertFalse(cTOs.hasRemaining());
             }
 
-            cTOsHasRemaining = cTOs.hasRemaining();
-            sTOcHasRemaining = sTOc.hasRemaining();
+            cTOsHasRemaining = compactOrClear(cTOs);
+            sTOcHasRemaining = compactOrClear(sTOc);
 
-            sTOc.compact();
-            cTOs.compact();
         } while (!clientHandshakeFinished || !serverHandshakeFinished ||
                 // We need to ensure we feed all the data to the engine to not end up with a corrupted state.
                 // This is especially important with TLS1.3 which may produce sessions after the "main handshake" is
                 // done
                 cTOsHasRemaining || sTOcHasRemaining);
+    }
+
+
+    private static boolean compactOrClear(ByteBuffer buffer) {
+        if (buffer.hasRemaining()) {
+            buffer.compact();
+            return true;
+        }
+        buffer.clear();
+        return false;
     }
 
     private ByteBuffer increaseDstBufferIfNeeded(SSLEngineResult result, int maxBufferSize,
