@@ -2667,7 +2667,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
         @Override
         public int getPacketBufferSize() {
-            return maxEncryptedPacketLength();
+            return SSL.SSL_MAX_ENCRYPTED_LENGTH;
         }
 
         @Override

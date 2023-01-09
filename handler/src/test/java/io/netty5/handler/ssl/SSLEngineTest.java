@@ -1554,6 +1554,10 @@ public abstract class SSLEngineTest {
                 if (isHandshakeFinished(clientResult)) {
                     clientHandshakeFinished = true;
                 }
+
+                if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                    cTOs = increaseDstBuffer(clientEngine.getSession().getPacketBufferSize(), type, cTOs);
+                }
             }
 
             if (!serverHandshakeFinished) {
@@ -1564,6 +1568,10 @@ public abstract class SSLEngineTest {
 
                 if (isHandshakeFinished(serverResult)) {
                     serverHandshakeFinished = true;
+                }
+
+                if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                    sTOc = increaseDstBuffer(serverEngine.getSession().getPacketBufferSize(), type, sTOc);
                 }
             }
 
@@ -1583,9 +1591,15 @@ public abstract class SSLEngineTest {
                 runDelegatedTasks(delegate, clientResult, clientEngine);
                 assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
                 assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
+                assertEquals(0, clientAppReadBuffer.position());
 
                 if (isHandshakeFinished(clientResult)) {
                     clientHandshakeFinished = true;
+                }
+
+                if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                    clientAppReadBuffer = increaseDstBuffer(
+                            clientEngine.getSession().getApplicationBufferSize(), type, clientAppReadBuffer);
                 }
             } else {
                 assertEquals(0, sTOc.remaining());
@@ -1597,24 +1611,57 @@ public abstract class SSLEngineTest {
                 runDelegatedTasks(delegate, serverResult, serverEngine);
                 assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
                 assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
+                assertEquals(0, serverAppReadBuffer.position());
 
                 if (isHandshakeFinished(serverResult)) {
                     serverHandshakeFinished = true;
+                }
+
+                if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                    serverAppReadBuffer = increaseDstBuffer(
+                            serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
                 }
             } else {
                 assertFalse(cTOs.hasRemaining());
             }
 
-            cTOsHasRemaining = cTOs.hasRemaining();
-            sTOcHasRemaining = sTOc.hasRemaining();
+            cTOsHasRemaining = compactOrClear(cTOs);
+            sTOcHasRemaining = compactOrClear(sTOc);
 
-            sTOc.compact();
-            cTOs.compact();
+            serverAppReadBuffer.clear();
+            clientAppReadBuffer.clear();
+
+            if (clientEngine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
+                clientHandshakeFinished = true;
+            }
+
+            if (serverEngine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
+                serverHandshakeFinished = true;
+            }
         } while (!clientHandshakeFinished || !serverHandshakeFinished ||
                 // We need to ensure we feed all the data to the engine to not end up with a corrupted state.
                 // This is especially important with TLS1.3 which may produce sessions after the "main handshake" is
                 // done
                 cTOsHasRemaining || sTOcHasRemaining);
+    }
+
+    private static boolean compactOrClear(ByteBuffer buffer) {
+        if (buffer.hasRemaining()) {
+            buffer.compact();
+            return true;
+        }
+        buffer.clear();
+        return false;
+    }
+
+    private ByteBuffer increaseDstBuffer(int maxBufferSize,
+                                                     BufferType type, ByteBuffer dstBuffer) {
+        assumeFalse(maxBufferSize == dstBuffer.remaining());
+        // We need to increase the destination buffer
+        dstBuffer.flip();
+        ByteBuffer tmpBuffer = allocateBuffer(type, maxBufferSize + dstBuffer.remaining());
+        tmpBuffer.put(dstBuffer);
+        return tmpBuffer;
     }
 
     private static boolean isHandshakeFinished(SSLEngineResult result) {
@@ -4146,6 +4193,40 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             assertNotNull(clientEngine.getSSLParameters());
             assertNotNull(serverEngine.getSSLParameters());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testBufferUnderflowPacketSizeDependency(SSLEngineTestParam param) throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .keyManager(ssc.certificate(), ssc.privateKey())
+                .trustManager((TrustManagerFactory) null)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .clientAuth(ClientAuth.REQUIRE)
+                .build());
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
+
+            handshake(param.type(), param.delegate(), clientEngine, serverEngine);
+        } catch (SSLHandshakeException expected) {
+            // Expected
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
