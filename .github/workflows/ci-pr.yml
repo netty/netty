@@ -77,6 +77,10 @@ jobs:
       - name: Build project
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v2
@@ -196,6 +200,10 @@ jobs:
 
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
+
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
 
       - name: Upload Test Results
         if: always()
