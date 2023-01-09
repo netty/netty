@@ -914,14 +914,6 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- Test dependency for log4j2 tests -->
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
-        <version>${log4j2.version}</version>
-        <scope>test</scope>
-      </dependency>
-
       <!-- BlockHound integration -->
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
