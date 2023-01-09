@@ -49,6 +49,10 @@ jobs:
       - name: Checking bom dependency versions
         run: ./.github/scripts/check_bom_dependencies.sh
 
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
   build-pr-windows:
     runs-on: windows-2019
     name: windows-x86_64-java11-boringssl
@@ -72,6 +76,10 @@ jobs:
 
       - name: Build project
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
 
       - name: Upload Test Results
         if: always()
@@ -248,6 +256,10 @@ jobs:
 
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
+
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
 
       - name: Upload Test Results
         if: always()
