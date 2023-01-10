@@ -67,7 +67,7 @@ final class PcapWriter implements Closeable {
 
         PcapHeaders.writeGlobalHeader(byteBuf);
         if (sharedOutputStream) {
-            synchronized(outputStream) {
+            synchronized (outputStream) {
                 byteBuf.readBytes(outputStream, byteBuf.readableBytes());
             }
         } else {
