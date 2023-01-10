@@ -108,8 +108,12 @@ final class PcapWriter implements Closeable {
             logger.debug("PcapWriter is already closed");
         } else {
             isClosed = true;
-            outputStream.flush();
-            if (!sharedOutputStream) {
+            if (sharedOutputStream) {
+                synchronized(outputStream) {
+                    outputStream.flush();
+                }
+            } else {
+                outputStream.flush();
                 outputStream.close();
             }
             logger.debug("PcapWriter is now closed");
