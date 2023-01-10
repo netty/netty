@@ -66,7 +66,13 @@ final class PcapWriter implements Closeable {
         this.sharedOutputStream = sharedOutputStream;
 
         PcapHeaders.writeGlobalHeader(byteBuf);
-        byteBuf.readBytes(outputStream, byteBuf.readableBytes());
+        if (sharedOutputStream) {
+            synchronized(outputStream) {
+                byteBuf.readBytes(outputStream, byteBuf.readableBytes());
+            }
+        } else {
+            byteBuf.readBytes(outputStream, byteBuf.readableBytes());
+        }
     }
 
     /**
@@ -109,7 +115,7 @@ final class PcapWriter implements Closeable {
         } else {
             isClosed = true;
             if (sharedOutputStream) {
-                synchronized(outputStream) {
+                synchronized (outputStream) {
                     outputStream.flush();
                 }
             } else {
