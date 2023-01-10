@@ -424,9 +424,6 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
             segmentSize = 0;
         }
 
-        // Since we remove the messages from WriteSink/OutboundBuffer, it falls to us to close the buffer, and complete
-        // the promise.
-        promise.asFuture().addListener(data, CLOSE_BUFFER);
         short pendingId = pendingWrites.addPending(promise);
 
         try (var itr = data.forEachComponent()) {
