@@ -87,6 +87,7 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     private Buffer connectRemoteAddressMem;
     private boolean scheduledRdHup;
     private boolean receivedRdHup;
+    private boolean submittedClose;
 
     protected AbstractIOUringChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                      ReadHandleFactory defaultReadHandleFactory,
@@ -490,7 +491,7 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         if (scheduledRdHup) {
             submissionQueue.addPollRemove(fd().intValue(), Native.POLLRDHUP);
         }
-        closeTransportNow(false);
+        closeTransportNow();
         return prepareClosePromise.asFuture();
     }
 
@@ -510,8 +511,13 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         }
     }
 
-    void closeTransportNow(boolean drainIO) {
-        submissionQueue.addClose(socket.intValue(), drainIO, (short) 0);
+    void closeTransportNow() {
+        if (!submittedClose) {
+            submissionQueue.addClose(socket.intValue(), false, (short) 0);
+            submittedClose = true;
+        } else {
+            logger().warn("Double-close attempted for {}", this);
+        }
     }
 
     void closeComplete(int res, long udata) {

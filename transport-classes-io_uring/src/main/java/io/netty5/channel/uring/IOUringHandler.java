@@ -40,6 +40,7 @@ import static java.util.Objects.requireNonNull;
  */
 final class IOUringHandler implements IoHandler, CompletionCallback {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringHandler.class);
+    private static final short RING_CLOSE = 1;
 
     private final RingBuffer ringBuffer;
     private final IntObjectMap<AbstractIOUringChannel<?>> channels;
@@ -98,7 +99,7 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
         }
         byte op = UserData.decodeOp(udata);
         if (fd == ringBuffer.fd()) {
-            if (op == Native.IORING_OP_NOP) {
+            if (op == Native.IORING_OP_NOP && UserData.decodeData(udata) == RING_CLOSE) {
                 completeRingClose();
             }
             return;
@@ -170,16 +171,18 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         AbstractIOUringChannel<?>[] chs = channels.values().toArray(AbstractIOUringChannel[]::new);
-        boolean first = true; // Ensure all previously submitted IOs get to complete before closing all fds.
+
+        // Ensure all previously submitted IOs get to complete before closing all fds.
+        submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, (short) 0);
+
         for (AbstractIOUringChannel<?> ch : chs) {
-            ch.closeTransportNow(first);
+            ch.close();
             if (submissionQueue.count() > 0) {
                 submissionQueue.submit();
             }
             if (completionQueue.hasCompletions()) {
                 completionQueue.process(this);
             }
-            first = false;
         }
     }
 
@@ -227,7 +230,6 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
             throw new RejectedExecutionException("IoEventLoop is shutting down");
         }
         int fd = ch.fd().intValue();
-        logger.debug("Adding channel: {} (fd={})", ch.id(), fd);
         ch.completeChannelRegister(ringBuffer.ioUringSubmissionQueue());
         if (channels.put(fd, ch) == null) {
             ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
@@ -238,7 +240,6 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
     public void deregister(IoHandle handle) {
         AbstractIOUringChannel<?> ch = cast(handle);
         int fd = ch.fd().intValue();
-        logger.debug("Removing channel: {} (fd={})", ch.id(), fd);
         AbstractIOUringChannel<?> existing = channels.remove(fd);
         if (existing != null) {
             ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
