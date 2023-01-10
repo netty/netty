@@ -135,7 +135,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             return -1;
         }
 
-        return binaryData.getShort(binaryData.readerIndex());
+        return binaryData.getUnsignedShort(binaryData.readerIndex());
     }
 
     /**
