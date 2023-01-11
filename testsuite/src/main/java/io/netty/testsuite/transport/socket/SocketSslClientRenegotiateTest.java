@@ -255,7 +255,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                     assertSame(SslHandshakeCompletionEvent.SUCCESS, evt);
                 } else {
                     if (ctx.channel().parent() == null) {
-                        assertTrue(handshakeEvt.cause() instanceof ClosedChannelException);
+                        assertTrue(handshakeEvt.cause() instanceof SSLHandshakeException);
                     }
                 }
             }
