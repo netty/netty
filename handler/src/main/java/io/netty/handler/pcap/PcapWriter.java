@@ -109,6 +109,15 @@ final class PcapWriter implements Closeable {
     }
 
     @Override
+    public String toString() {
+        return "PcapWriter{" +
+                "outputStream=" + outputStream +
+                ", sharedOutputStream=" + sharedOutputStream +
+                ", isClosed=" + isClosed +
+                '}';
+    }
+
+    @Override
     public void close() throws IOException {
         if (isClosed) {
             logger.debug("PcapWriter is already closed");
