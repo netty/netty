@@ -138,9 +138,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_VALIDATE_HEADERS = true;
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
-
-    private static final String EMPTY_VALUE = "";
-
     private final int maxChunkSize;
     private final boolean chunkedSupported;
     private final boolean allowPartialChunks;
@@ -169,18 +166,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         } finally {
             super.handlerRemoved0(ctx);
-        }
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        try {
-            if (parserScratchBuffer.refCnt() == 1) {
-                // the buffer is not meant to be shared
-                parserScratchBuffer.release();
-            }
-        } finally {
-            super.channelInactive(ctx);
         }
     }
 
@@ -851,7 +836,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return new String[]{
                 splitFirstWordInitialLine(asciiBytes, aStart, aEnd - aStart),
                 splitSecondWordInitialLine(asciiBytes, bStart, bEnd - bStart),
-                cStart < cEnd ? splitThirdWordInitialLine(asciiBytes, cStart, cEnd - cStart) : ""};
+                cStart < cEnd ? splitThirdWordInitialLine(asciiBytes, cStart, cEnd - cStart) : StringUtil.EMPTY_STRING};
     }
 
     protected String splitFirstWordInitialLine(final byte[] asciiContent, int start, int length) {
@@ -866,11 +851,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return langAsciiString(asciiContent, start, length);
     }
 
+    /**
+     * This method shouldn't exist: look at https://bugs.openjdk.org/browse/JDK-8295496 for more context
+     */
     private static String langAsciiString(final byte[] asciiContent, int start, int length) {
         if (length == 0) {
-            return "";
+            return StringUtil.EMPTY_STRING;
         }
-        // DON'T REMOVE: it helps JIT to use a simpler intrinsic stub for System::arrayCopy
+        // DON'T REMOVE: it helps JIT to use a simpler intrinsic stub for System::arrayCopy based on the call-site
         if (start == 0) {
             if (length == asciiContent.length) {
                 return new String(asciiContent, 0, 0, asciiContent.length);
@@ -921,7 +909,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         name = splitHeaderName(line, nameStart, nameEnd - nameStart);
         final int valueStart = findNonWhitespace(line, colonEnd, end);
         if (valueStart == end) {
-            value = EMPTY_VALUE;
+            value = StringUtil.EMPTY_STRING;
         } else {
             final int valueEnd = findEndOfString(line, start, end);
             // no need to make uses of the ByteBuf's toString ASCII method here, and risk to get JIT confused
@@ -1060,7 +1048,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
             this.size = size;
             seq.clear();
-            // from
             seq.writeBytes(buffer, readerIndex, newSize);
             buffer.readerIndex(indexOfLf + 1);
             return seq;
