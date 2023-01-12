@@ -634,6 +634,23 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         ctx.fireExceptionCaught(cause);
     }
 
+    @Override
+    public String toString() {
+        return "PcapWriteHandler{" +
+                "captureZeroByte=" + captureZeroByte +
+                ", writePcapGlobalHeader=" + writePcapGlobalHeader +
+                ", sharedOutputStream=" + sharedOutputStream +
+                ", sendSegmentNumber=" + sendSegmentNumber +
+                ", receiveSegmentNumber=" + receiveSegmentNumber +
+                ", channelType=" + channelType +
+                ", initiatorAddr=" + initiatorAddr +
+                ", handlerAddr=" + handlerAddr +
+                ", isServerPipeline=" + isServerPipeline +
+                ", isClosed=" + isClosed +
+                ", initialized=" + initialized +
+                '}';
+    }
+
     /**
      * <p> Close {@code PcapWriter} and {@link OutputStream}. </p>
      * <p> Note: Calling this method does not close {@link PcapWriteHandler}.
