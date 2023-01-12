@@ -60,7 +60,6 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     private static final long DEFAULT_CACHE_TRIM_INTERVAL_MILLIS;
     private static final boolean DEFAULT_USE_CACHE_FOR_ALL_THREADS;
     private static final int DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT;
-    static final int DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK;
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -138,11 +137,6 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         DEFAULT_USE_CACHE_FOR_ALL_THREADS = SystemPropertyUtil.getBoolean(
                 "io.netty5.allocator.useCacheForAllThreads", false);
 
-        // Use 1023 by default as we use an ArrayDeque as backing storage which will then allocate an internal array
-        // of 1024 elements. Otherwise, we would allocate 2048 and only use 1024 which is wasteful.
-        DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK = SystemPropertyUtil.getInt(
-                "io.netty5.allocator.maxCachedByteBuffersPerChunk", 1023);
-
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty5.allocator.numArenas: {}", DEFAULT_NUM_HEAP_ARENA);
             logger.debug("-Dio.netty5.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
@@ -163,8 +157,6 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             logger.debug("-Dio.netty5.allocator.cacheTrimInterval: {}", DEFAULT_CACHE_TRIM_INTERVAL);
             logger.debug("-Dio.netty5.allocator.cacheTrimIntervalMillis: {}", DEFAULT_CACHE_TRIM_INTERVAL_MILLIS);
             logger.debug("-Dio.netty5.allocator.useCacheForAllThreads: {}", DEFAULT_USE_CACHE_FOR_ALL_THREADS);
-            logger.debug("-Dio.netty5.allocator.maxCachedByteBuffersPerChunk: {}",
-                    DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK);
         }
     }
 
