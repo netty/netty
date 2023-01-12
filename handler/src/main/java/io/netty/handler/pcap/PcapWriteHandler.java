@@ -125,16 +125,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     private InetSocketAddress handlerAddr;
 
     private boolean isServerPipeline;
-
-    /**
-     * Set to {@code true} if {@link #close()} is called and we should stop writing Pcap.
-     */
-    private boolean isClosed;
-
-    /**
-     * Whether this handler is initialized (headers written, channel type inferred)
-     */
-    private boolean initialized;
+    private State state = State.INIT;
 
     /**
      * Create new {@link PcapWriteHandler} Instance.
@@ -199,7 +190,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     private void initializeIfNecessary(ChannelHandlerContext ctx) {
-        if (initialized) {
+        if (state == State.STARTED) {
             return;
         }
 
@@ -212,7 +203,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
             ByteBuf byteBuf = byteBufAllocator.buffer();
             try {
-                this.pCapWriter = new PcapWriter(this.outputStream, byteBuf, sharedOutputStream);
+                this.pCapWriter = new PcapWriter(this, byteBuf);
             } catch (IOException ex) {
                 ctx.channel().close();
                 ctx.fireExceptionCaught(ex);
@@ -221,7 +212,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 byteBuf.release();
             }
         } else {
-            this.pCapWriter = new PcapWriter(this.outputStream, sharedOutputStream);
+            this.pCapWriter = new PcapWriter(this);
         }
 
         if (channelType == null) {
@@ -281,7 +272,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             logger.debug("Finished Fake TCP 3-Way Handshake");
         }
 
-        initialized = true;
+        state = State.STARTED;
     }
 
     @Override
@@ -292,9 +283,13 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!isClosed) {
+        // Initialize if needed
+        if (state == State.INIT) {
             initializeIfNecessary(ctx);
+        }
 
+        // Only write if State is STARTED
+        if (state == State.STARTED) {
             if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, false);
             } else if (channelType == ChannelType.UDP) {
@@ -308,9 +303,13 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (!isClosed) {
+        // Initialize if needed
+        if (state == State.INIT) {
             initializeIfNecessary(ctx);
+        }
 
+        // Only write if State is STARTED
+        if (state == State.STARTED) {
             if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, true);
             } else if (channelType == ChannelType.UDP) {
@@ -320,12 +319,6 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             }
         }
         super.write(ctx, msg, promise);
-    }
-
-    private void logDiscard() {
-        logger.warn("Discarding pcap write because channel type is unknown. The channel this handler is registered " +
-                "on is not a SocketChannel or DatagramChannel, so the inference does not work. Please call " +
-                "forceTcpChannel or forceUdpChannel before registering the handler.");
     }
 
     /**
@@ -449,25 +442,6 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             ipBuf.release();
             ethernetBuf.release();
             pcap.release();
-        }
-    }
-
-    /**
-     * Logger for TCP
-     */
-    private void logTCP(boolean isWriteOperation, int bytes, int sendSegmentNumber, int receiveSegmentNumber,
-                        InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
-        // If `ackOnly` is `true` when we don't need to write any data so we'll not
-        // log number of bytes being written and mark the operation as "TCP ACK".
-        if (logger.isDebugEnabled()) {
-            if (ackOnly) {
-                logger.debug("Writing TCP ACK, isWriteOperation {}, Segment Number {}, Ack Number {}, Src Addr {}, "
-                        + "Dst Addr {}", isWriteOperation, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr);
-            } else {
-                logger.debug("Writing TCP Data of {} Bytes, isWriteOperation {}, Segment Number {}, Ack Number {}, " +
-                                "Src Addr {}, Dst Addr {}", bytes, isWriteOperation, sendSegmentNumber,
-                        receiveSegmentNumber, srcAddr, dstAddr);
-            }
         }
     }
 
@@ -634,6 +608,44 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         ctx.fireExceptionCaught(cause);
     }
 
+
+    /**
+     * Logger for TCP
+     */
+    private void logTCP(boolean isWriteOperation, int bytes, int sendSegmentNumber, int receiveSegmentNumber,
+                        InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
+        // If `ackOnly` is `true` when we don't need to write any data so we'll not
+        // log number of bytes being written and mark the operation as "TCP ACK".
+        if (logger.isDebugEnabled()) {
+            if (ackOnly) {
+                logger.debug("Writing TCP ACK, isWriteOperation {}, Segment Number {}, Ack Number {}, Src Addr {}, "
+                        + "Dst Addr {}", isWriteOperation, sendSegmentNumber, receiveSegmentNumber, dstAddr, srcAddr);
+            } else {
+                logger.debug("Writing TCP Data of {} Bytes, isWriteOperation {}, Segment Number {}, Ack Number {}, " +
+                                "Src Addr {}, Dst Addr {}", bytes, isWriteOperation, sendSegmentNumber,
+                        receiveSegmentNumber, srcAddr, dstAddr);
+            }
+        }
+    }
+
+    OutputStream outputStream() {
+        return outputStream;
+    }
+
+    boolean sharedOutputStream() {
+        return sharedOutputStream;
+    }
+
+    State state() {
+        return state;
+    }
+
+    private void logDiscard() {
+        logger.warn("Discarding pcap write because channel type is unknown. The channel this handler is registered " +
+                "on is not a SocketChannel or DatagramChannel, so the inference does not work. Please call " +
+                "forceTcpChannel or forceUdpChannel before registering the handler.");
+    }
+
     @Override
     public String toString() {
         return "PcapWriteHandler{" +
@@ -646,8 +658,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 ", initiatorAddr=" + initiatorAddr +
                 ", handlerAddr=" + handlerAddr +
                 ", isServerPipeline=" + isServerPipeline +
-                ", isClosed=" + isClosed +
-                ", initialized=" + initialized +
+                ", state=" + state +
                 '}';
     }
 
@@ -660,10 +671,10 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      */
     @Override
     public void close() throws IOException {
-        if (isClosed) {
+        if (state == State.CLOSED) {
             logger.debug("PcapWriterHandler is already closed");
         } else {
-            isClosed = true;
+            state = State.CLOSED;
             pCapWriter.close();
             logger.debug("PcapWriterHandler is now closed");
         }
