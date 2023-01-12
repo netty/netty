@@ -608,7 +608,6 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         ctx.fireExceptionCaught(cause);
     }
 
-
     /**
      * Logger for TCP
      */
