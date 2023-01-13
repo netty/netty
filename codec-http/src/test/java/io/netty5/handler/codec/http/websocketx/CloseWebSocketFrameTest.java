@@ -12,8 +12,11 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
+import io.netty5.buffer.Buffer;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +54,16 @@ class CloseWebSocketFrameTest {
 
         doTestValidCode(new CloseWebSocketFrame(preferredAllocator(), true, 0, 1000, "valid code"),
                 1000, "valid code");
+    }
+
+    @Test
+    void testCustomCloseCode() {
+        Buffer buffer = preferredAllocator().allocate(8);
+        buffer.writeByte((byte) 0);
+        buffer.writeShort((short) 60000)
+                .writeCharSequence("Custom close code", StandardCharsets.US_ASCII);
+        doTestValidCode(new CloseWebSocketFrame(true, 0, buffer.skipReadableBytes(1)),
+                60000, "Custom close code");
     }
 
     private static void doTestInvalidCode(ThrowableAssert.ThrowingCallable callable) {
