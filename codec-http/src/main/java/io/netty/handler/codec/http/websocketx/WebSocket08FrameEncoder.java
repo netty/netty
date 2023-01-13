@@ -61,7 +61,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 
@@ -106,7 +105,6 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final ByteBuf data = msg.content();
-        byte[] mask;
 
         byte opcode;
         if (msg instanceof TextWebSocketFrame) {
@@ -175,9 +173,8 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskPayload) {
-                int random = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
-                mask = ByteBuffer.allocate(4).putInt(random).array();
-                buf.writeBytes(mask);
+                int mask = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
+                buf.writeInt(mask);
 
                 if (data.isReadable()) {
 
@@ -188,13 +185,9 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     int end = data.writerIndex();
 
                     if (srcOrder == dstOrder) {
-                        // Use the optimized path only when byte orders match
-                        // Remark: & 0xFF is necessary because Java will do signed expansion from
-                        // byte to int which we don't want.
-                        long longMask = (long) (mask[0] & 0xff) << 24
-                                        | (mask[1] & 0xff) << 16
-                                        | (mask[2] & 0xff) << 8
-                                        | (mask[3] & 0xff);
+                        // Use the optimized path only when byte orders match.
+                        // Avoid sign extension on widening primitive conversion
+                        long longMask = (long) mask & 0xFFFFFFFFL;
                         longMask |= longMask << 32;
 
                         // If the byte order of our buffers it little endian we have to bring our mask
@@ -215,7 +208,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     int maskOffset = 0;
                     for (; i < end; i++) {
                         byte byteData = data.getByte(i);
-                        buf.writeByte(byteData ^ mask[maskOffset++ & 3]);
+                        buf.writeByte(byteData ^ WebSocketUtil.byteAtIndex(mask, maskOffset++ & 3));
                     }
                 }
                 out.add(buf);

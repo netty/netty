@@ -102,6 +102,9 @@ struct mmsghdr {
 #elif defined(__i386__)
 // See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_32.tbl
 #define SYS_recvmmsg 337
+#elif defined(__loongarch64)
+// See https://github.com/torvalds/linux/blob/v6.1/include/uapi/asm-generic/unistd.h
+#define SYS_recvmmsg 243
 #else
 #define SYS_recvmmsg -1
 #endif
@@ -115,6 +118,9 @@ struct mmsghdr {
 #elif defined(__i386__)
 // See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_32.tbl
 #define SYS_sendmmsg 345
+#elif defined(__loongarch64)
+// See https://github.com/torvalds/linux/blob/v6.1/include/uapi/asm-generic/unistd.h
+#define SYS_sendmmsg 269
 #else
 #define SYS_sendmmsg -1
 #endif

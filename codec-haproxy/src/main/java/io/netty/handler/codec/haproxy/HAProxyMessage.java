@@ -35,6 +35,9 @@ import java.util.List;
  * Message container for decoded HAProxy proxy protocol parameters
  */
 public final class HAProxyMessage extends AbstractReferenceCounted {
+
+    // Let's pick some conservative limit here.
+    private static final int MAX_NESTING_LEVEL = 128;
     private static final ResourceLeakDetector<HAProxyMessage> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(HAProxyMessage.class);
 
@@ -241,7 +244,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
     }
 
     private static List<HAProxyTLV> readTlvs(final ByteBuf header) {
-        HAProxyTLV haProxyTLV = readNextTLV(header);
+        HAProxyTLV haProxyTLV = readNextTLV(header, 0);
         if (haProxyTLV == null) {
             return Collections.emptyList();
         }
@@ -253,12 +256,15 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
             if (haProxyTLV instanceof HAProxySSLTLV) {
                 haProxyTLVs.addAll(((HAProxySSLTLV) haProxyTLV).encapsulatedTLVs());
             }
-        } while ((haProxyTLV = readNextTLV(header)) != null);
+        } while ((haProxyTLV = readNextTLV(header, 0)) != null);
         return haProxyTLVs;
     }
 
-    private static HAProxyTLV readNextTLV(final ByteBuf header) {
-
+    private static HAProxyTLV readNextTLV(final ByteBuf header, int nestingLevel) {
+        if (nestingLevel > MAX_NESTING_LEVEL) {
+            throw new HAProxyProtocolException(
+                    "Maximum TLV nesting level reached: " + nestingLevel + " (expected: < " + MAX_NESTING_LEVEL + ')');
+        }
         // We need at least 4 bytes for a TLV
         if (header.readableBytes() < 4) {
             return null;
@@ -279,7 +285,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
                 final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<HAProxyTLV>(4);
                 do {
-                    final HAProxyTLV haProxyTLV = readNextTLV(byteBuf);
+                    final HAProxyTLV haProxyTLV = readNextTLV(byteBuf, nestingLevel + 1);
                     if (haProxyTLV == null) {
                         break;
                     }

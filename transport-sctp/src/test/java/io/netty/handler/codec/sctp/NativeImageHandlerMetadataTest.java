@@ -22,9 +22,7 @@ public class NativeImageHandlerMetadataTest {
 
     @Test
     public void collectAndCompareMetadata() {
-        ChannelHandlerMetadataUtil.generateMetadata(
-                "transport-sctp-handlers/reflect-config.json",
-                "io.netty.handler.codec.sctp");
+        ChannelHandlerMetadataUtil.generateMetadata("io.netty.handler.codec.sctp");
     }
 
 }

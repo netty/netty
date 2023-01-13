@@ -253,6 +253,7 @@ public class FastThreadLocalTest {
         nextIndexField.setAccessible(true);
         AtomicInteger nextIndex = (AtomicInteger) nextIndexField.get(AtomicInteger.class);
         int nextIndex_before = nextIndex.get();
+        final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
         try {
             while (nextIndex.get() < ARRAY_LIST_CAPACITY_MAX_SIZE) {
                 new FastThreadLocal<Boolean>();
@@ -261,13 +262,16 @@ public class FastThreadLocalTest {
             try {
                 new FastThreadLocal<Boolean>();
             } catch (Throwable t) {
-                // assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1)
-                assertThat(t, is(instanceOf(IllegalStateException.class)));
+                throwable.set(t);
+            } finally {
+                // Assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1).
+                assertThat(throwable.get(), is(instanceOf(IllegalStateException.class)));
+                // Assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE
+                // after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE.
+                assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
             }
-            // assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE
-            assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
         } finally {
-            // restore the index
+            // Restore the index.
             nextIndex.set(nextIndex_before);
         }
     }
@@ -297,5 +301,63 @@ public class FastThreadLocalTest {
         fastThreadLocalThread.join();
         // assert the expanded size is not overflowed to negative value
         assertThat(throwable.get(), is(not(instanceOf(NegativeArraySizeException.class))));
+    }
+
+    @Test
+    public void testFastThreadLocalSize() throws Exception {
+        int originSize = FastThreadLocal.size();
+        assertTrue(originSize >= 0);
+
+        InternalThreadLocalMap.get();
+        assertEquals(originSize, FastThreadLocal.size());
+
+        new FastThreadLocal<Boolean>();
+        assertEquals(originSize, FastThreadLocal.size());
+
+        FastThreadLocal<Boolean> fst2 = new FastThreadLocal<Boolean>();
+        fst2.get();
+        assertEquals(1 + originSize, FastThreadLocal.size());
+
+        FastThreadLocal<Boolean> fst3 = new FastThreadLocal<Boolean>();
+        fst3.set(null);
+        assertEquals(2 + originSize, FastThreadLocal.size());
+
+        FastThreadLocal<Boolean> fst4 = new FastThreadLocal<Boolean>();
+        fst4.set(Boolean.TRUE);
+        assertEquals(3 + originSize, FastThreadLocal.size());
+
+        fst4.set(Boolean.TRUE);
+        assertEquals(3 + originSize, FastThreadLocal.size());
+
+        fst4.remove();
+        assertEquals(2 + originSize, FastThreadLocal.size());
+
+        FastThreadLocal.removeAll();
+        assertEquals(0, FastThreadLocal.size());
+    }
+
+    @Test
+    public void testFastThreadLocalInitialValueWithUnset() throws Exception {
+        final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
+        final FastThreadLocal fst = new FastThreadLocal() {
+            @Override
+            protected Object initialValue() throws Exception {
+                return InternalThreadLocalMap.UNSET;
+            }
+        };
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    fst.get();
+                } catch (Throwable t) {
+                    throwable.set(t);
+                }
+            }
+        };
+        FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread(runnable);
+        fastThreadLocalThread.start();
+        fastThreadLocalThread.join();
+        assertThat(throwable.get(), is(instanceOf(IllegalArgumentException.class)));
     }
 }

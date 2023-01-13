@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.83.Final-SNAPSHOT</version>
+  <version>4.1.88.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -88,6 +88,13 @@
               </execution>
             </executions>
             <configuration>
+              <skippedModules>
+                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,netty-testsuite-http2,
+                netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
+                netty-testsuite-native-image-client-runtime-init,netty-testsuite-osgi,netty-testsuite-shading,
+                netty-transport-blockhound-tests,netty-transport-native-unix-common-tests,netty-microbench,
+                netty-dev-tools,netty-example
+              </skippedModules>
               <sourceFileExcludes>
                 <exclude>**/com/sun/**/*.java</exclude>
                 <exclude>**/example/**/*.java</exclude>
@@ -179,6 +186,30 @@
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
+      </properties>
+    </profile>
+    <profile>
+      <id>java19</id>
+      <activation>
+        <jdk>19</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -562,12 +593,12 @@
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
-    <osmaven.version>1.7.0</osmaven.version>
+    <osmaven.version>1.7.1</osmaven.version>
     <!-- keep in sync with PlatformDependent#ALLOWED_LINUX_OS_CLASSIFIERS -->
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.54.Final</tcnative.version>
+    <tcnative.version>2.0.56.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -586,7 +617,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
-    <brotli4j.version>1.8.0</brotli4j.version>
+    <brotli4j.version>1.9.0</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -626,6 +657,7 @@
     <module>transport-udt</module>
     <module>handler</module>
     <module>handler-proxy</module>
+    <module>handler-ssl-ocsp</module>
     <module>example</module>
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
@@ -1173,6 +1205,12 @@
                   <superClass>io.netty.handler.codec.http.multipart.AbstractMixedHttpData&lt;io.netty.handler.codec.http.multipart.Attribute&gt;</superClass>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>No change in compatibility</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1431,6 +1469,9 @@
           <systemPropertyVariables>
             <logback.configurationFile>${logging.config}</logback.configurationFile>
             <logLevel>${logging.logLevel}</logLevel>
+            <!-- Used by ChannelHandlerMetadataUtil to create the recommended directory layout for native-image metadata -->
+            <nativeImage.handlerMetadataGroupId>${project.groupId}</nativeImage.handlerMetadataGroupId>
+            <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
           <properties>
@@ -1449,7 +1490,7 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.5.4</version>
+        <version>5.1.8</version>
         <executions>
           <execution>
             <id>generate-manifest</id>

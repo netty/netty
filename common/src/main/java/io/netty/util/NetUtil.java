@@ -37,6 +37,7 @@ import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
+import java.util.Collection;
 
 import static io.netty.util.AsciiString.indexOf;
 
@@ -69,6 +70,11 @@ public final class NetUtil {
      * The loopback {@link NetworkInterface} of the current machine
      */
     public static final NetworkInterface LOOPBACK_IF;
+
+    /**
+     * An unmodifiable Collection of all the interfaces on this machine.
+     */
+    public static final Collection<NetworkInterface> NETWORK_INTERFACES;
 
     /**
      * The SOMAXCONN value of the current machine.  If failed to get the value,  {@code 200} is used as a
@@ -136,13 +142,16 @@ public final class NetUtil {
         logger.debug("-Djava.net.preferIPv4Stack: {}", IPV4_PREFERRED);
         logger.debug("-Djava.net.preferIPv6Addresses: {}", IPV6_ADDRESSES_PREFERRED);
 
+        NETWORK_INTERFACES = NetUtilInitializations.networkInterfaces();
+
         // Create IPv4 loopback address.
         LOCALHOST4 = NetUtilInitializations.createLocalhost4();
 
         // Create IPv6 loopback address.
         LOCALHOST6 = NetUtilInitializations.createLocalhost6();
 
-        NetworkIfaceAndInetAddress loopback = NetUtilInitializations.determineLoopback(LOCALHOST4, LOCALHOST6);
+        NetworkIfaceAndInetAddress loopback =
+                NetUtilInitializations.determineLoopback(NETWORK_INTERFACES, LOCALHOST4, LOCALHOST6);
         LOOPBACK_IF = loopback.iface();
         LOCALHOST = loopback.address();
 

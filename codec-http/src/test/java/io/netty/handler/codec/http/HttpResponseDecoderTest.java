@@ -23,7 +23,9 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -601,6 +603,23 @@ public class HttpResponseDecoderTest {
 
         assertThat(ch.finish(), is(false));
         assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testOrderOfHeadersWithContentLength() {
+        String requestStr = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: text/plain; charset=UTF-8\r\n" +
+                "Content-Length: 5\r\n" +
+                "Connection: close\r\n\r\n" +
+                "hello";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        List<String> headers = new ArrayList<String>();
+        for (Map.Entry<String, String> header : response.headers()) {
+            headers.add(header.getKey());
+        }
+        assertEquals(Arrays.asList("Content-Type", "Content-Length", "Connection"), headers, "ordered headers");
     }
 
     @Test

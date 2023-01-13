@@ -49,6 +49,10 @@ jobs:
       - name: Checking bom dependency versions
         run: ./.github/scripts/check_bom_dependencies.sh
 
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
   build-pr-windows:
     runs-on: windows-2019
     name: windows-x86_64-java11-boringssl
@@ -72,6 +76,10 @@ jobs:
 
       - name: Build project
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
 
       - name: Upload Test Results
         if: always()
@@ -150,9 +158,9 @@ jobs:
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-leak"
-          - setup: linux-x86_64-java18
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.118.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.118.yaml run build-leak"
+          - setup: linux-x86_64-java19
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml run build-leak"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
@@ -192,6 +200,10 @@ jobs:
 
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
+
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
 
       - name: Upload Test Results
         if: always()

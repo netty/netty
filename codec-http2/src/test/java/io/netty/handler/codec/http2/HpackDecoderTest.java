@@ -37,12 +37,15 @@ import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.MockingDetails;
 import org.mockito.invocation.Invocation;
 
 import java.lang.reflect.Method;
 
 import static io.netty.handler.codec.http2.HpackDecoder.decodeULE128;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.of;
@@ -396,6 +399,22 @@ public class HpackDecoderTest {
             @Override
             public void execute() throws Throwable {
                 decode("81");
+            }
+        });
+    }
+
+    @Test
+    public void testDynamicTableSizeUpdateAfterTheBeginingOfTheBlock() throws Http2Exception {
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode("8120");
+            }
+        });
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode("813FE11F");
             }
         });
     }
@@ -765,12 +784,42 @@ public class HpackDecoderTest {
 
             final Http2Headers decoded = new DefaultHttp2Headers();
 
-            assertThrows(Http2Exception.StreamException.class, new Executable() {
+            Http2Exception.StreamException e = assertThrows(Http2Exception.StreamException.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
-                    hpackDecoder.decode(1, in, decoded, true);
+                    hpackDecoder.decode(3, in, decoded, true);
                 }
             });
+            assertThat(e.streamId(), is(3));
+            assertThat(e.error(), is(PROTOCOL_ERROR));
+        } finally {
+            in.release();
+        }
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] name={0} value={1}")
+    @CsvSource(value = {"upgrade,protocol1", "connection,close", "keep-alive,timeout=5", "proxy-connection,close",
+            "transfer-encoding,chunked", "te,something-else"})
+    public void receivedConnectionHeader(String name, String value) throws Exception {
+        final ByteBuf in = Unpooled.buffer(200);
+        try {
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = new InOrderHttp2Headers();
+            toEncode.add(":method", "GET");
+            toEncode.add(name, value);
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            final Http2Headers decoded = new DefaultHttp2Headers();
+
+            Http2Exception.StreamException e = assertThrows(Http2Exception.StreamException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    hpackDecoder.decode(3, in, decoded, true);
+                }
+            });
+            assertThat(e.streamId(), is(3));
+            assertThat(e.error(), is(PROTOCOL_ERROR));
         } finally {
             in.release();
         }

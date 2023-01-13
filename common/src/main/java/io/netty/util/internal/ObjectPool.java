@@ -55,6 +55,8 @@ public abstract class ObjectPool<T> {
         /**
          * Creates an returns a new {@link Object} that can be used and later recycled via
          * {@link Handle#recycle(Object)}.
+         *
+         * @param handle can NOT be null.
          */
         T newObject(Handle<T> handle);
     }

@@ -68,7 +68,7 @@ public abstract class Recycler<T> {
         DEFAULT_MAX_CAPACITY_PER_THREAD = maxCapacityPerThread;
         DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD = SystemPropertyUtil.getInt("io.netty.recycler.chunkSize", 32);
 
-        // By default we allow one push to a Recycler for each 8th try on handles that were never recycled before.
+        // By default, we allow one push to a Recycler for each 8th try on handles that were never recycled before.
         // This should help to slowly increase the capacity of the recycler while not be too sensitive to allocation
         // bursts.
         RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
@@ -196,9 +196,13 @@ public abstract class Recycler<T> {
     }
 
     final int threadLocalSize() {
-        return threadLocal.get().pooledHandles.size();
+        LocalPool<T> localPool = threadLocal.getIfExists();
+        return localPool == null ? 0 : localPool.pooledHandles.size();
     }
 
+    /**
+     * @param handle can NOT be null.
+     */
     protected abstract T newObject(Handle<T> handle);
 
     @SuppressWarnings("ClassNameSameAsAncestorName") // Can't change this due to compatibility.
@@ -214,7 +218,6 @@ public abstract class Recycler<T> {
             STATE_UPDATER = (AtomicIntegerFieldUpdater<DefaultHandle<?>>) updater;
         }
 
-        @SuppressWarnings({"FieldMayBeFinal", "unused"}) // Updated by STATE_UPDATER.
         private volatile int state; // State is initialised to STATE_CLAIMED (aka. 0) so they can be released.
         private final LocalPool<T> localPool;
         private T value;
@@ -239,11 +242,9 @@ public abstract class Recycler<T> {
             this.value = value;
         }
 
-        boolean availableToClaim() {
-            if (state != STATE_AVAILABLE) {
-                return false;
-            }
-            return STATE_UPDATER.compareAndSet(this, STATE_AVAILABLE, STATE_CLAIMED);
+        void toClaimed() {
+            assert state == STATE_AVAILABLE;
+            state = STATE_CLAIMED;
         }
 
         void toAvailable() {
@@ -275,16 +276,16 @@ public abstract class Recycler<T> {
             if (handles == null) {
                 return null;
             }
-            DefaultHandle<T> handle;
-            do {
-                handle = handles.relaxedPoll();
-            } while (handle != null && !handle.availableToClaim());
+            DefaultHandle<T> handle = handles.relaxedPoll();
+            if (null != handle) {
+                handle.toClaimed();
+            }
             return handle;
         }
 
         void release(DefaultHandle<T> handle) {
-            MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
             handle.toAvailable();
+            MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
             if (handles != null) {
                 handles.relaxedOffer(handle);
             }

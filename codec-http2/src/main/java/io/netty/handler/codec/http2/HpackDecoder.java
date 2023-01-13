@@ -32,6 +32,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
 
@@ -78,15 +79,14 @@ final class HpackDecoder {
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - max dynamic table size change required",
                     Http2Exception.ShutdownHint.HARD_SHUTDOWN, HpackDecoder.class, "decode(..)");
     private static final byte READ_HEADER_REPRESENTATION = 0;
-    private static final byte READ_MAX_DYNAMIC_TABLE_SIZE = 1;
-    private static final byte READ_INDEXED_HEADER = 2;
-    private static final byte READ_INDEXED_HEADER_NAME = 3;
-    private static final byte READ_LITERAL_HEADER_NAME_LENGTH_PREFIX = 4;
-    private static final byte READ_LITERAL_HEADER_NAME_LENGTH = 5;
-    private static final byte READ_LITERAL_HEADER_NAME = 6;
-    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX = 7;
-    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH = 8;
-    private static final byte READ_LITERAL_HEADER_VALUE = 9;
+    private static final byte READ_INDEXED_HEADER = 1;
+    private static final byte READ_INDEXED_HEADER_NAME = 2;
+    private static final byte READ_LITERAL_HEADER_NAME_LENGTH_PREFIX = 3;
+    private static final byte READ_LITERAL_HEADER_NAME_LENGTH = 4;
+    private static final byte READ_LITERAL_HEADER_NAME = 5;
+    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX = 6;
+    private static final byte READ_LITERAL_HEADER_VALUE_LENGTH = 7;
+    private static final byte READ_LITERAL_HEADER_VALUE = 8;
 
     private final HpackHuffmanDecoder huffmanDecoder = new HpackHuffmanDecoder();
     private final HpackDynamicTable hpackDynamicTable;
@@ -126,11 +126,27 @@ final class HpackDecoder {
     void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
         Http2HeadersSink sink = new Http2HeadersSink(
                 streamId, headers, maxHeaderListSize, validateHeaders);
+        // Check for dynamic table size updates, which must occur at the beginning:
+        // https://www.rfc-editor.org/rfc/rfc7541.html#section-4.2
+        decodeDynamicTableSizeUpdates(in);
         decode(in, sink);
 
         // Now that we've read all of our headers we can perform the validation steps. We must
         // delay throwing until this point to prevent dynamic table corruption.
         sink.finish();
+    }
+
+    private void decodeDynamicTableSizeUpdates(ByteBuf in) throws Http2Exception {
+        byte b;
+        while (in.isReadable() && ((b = in.getByte(in.readerIndex())) & 0x20) == 0x20 && ((b & 0xC0) == 0x00)) {
+            in.readByte();
+            int index = b & 0x1F;
+            if (index == 0x1F) {
+                setDynamicTableSize(decodeULE128(in, (long) index));
+            } else {
+                setDynamicTableSize(index);
+            }
+        }
     }
 
     private void decode(ByteBuf in, Http2HeadersSink sink) throws Http2Exception {
@@ -183,13 +199,9 @@ final class HpackDecoder {
                         }
                     } else if ((b & 0x20) == 0x20) {
                         // Dynamic Table Size Update
-                        index = b & 0x1F;
-                        if (index == 0x1F) {
-                            state = READ_MAX_DYNAMIC_TABLE_SIZE;
-                        } else {
-                            setDynamicTableSize(index);
-                            state = READ_HEADER_REPRESENTATION;
-                        }
+                        // See https://www.rfc-editor.org/rfc/rfc7541.html#section-4.2
+                        throw connectionError(COMPRESSION_ERROR, "Dynamic table size update must happen " +
+                            "at the beginning of the header block");
                     } else {
                         // Literal Header Field without Indexing / never Indexed
                         indexType = (b & 0x10) == 0x10 ? IndexType.NEVER : IndexType.NONE;
@@ -208,11 +220,6 @@ final class HpackDecoder {
                                 state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                         }
                     }
-                    break;
-
-                case READ_MAX_DYNAMIC_TABLE_SIZE:
-                    setDynamicTableSize(decodeULE128(in, (long) index));
-                    state = READ_HEADER_REPRESENTATION;
                     break;
 
                 case READ_INDEXED_HEADER:
@@ -375,8 +382,8 @@ final class HpackDecoder {
         hpackDynamicTable.setCapacity(dynamicTableSize);
     }
 
-    private static HeaderType validateHeader(int streamId, AsciiString name, HeaderType previousHeaderType)
-            throws Http2Exception {
+    private static HeaderType validateHeader(int streamId, AsciiString name, CharSequence value,
+            HeaderType previousHeaderType) throws Http2Exception {
         if (hasPseudoHeaderFormat(name)) {
             if (previousHeaderType == HeaderType.REGULAR_HEADER) {
                 throw streamError(streamId, PROTOCOL_ERROR,
@@ -390,42 +397,15 @@ final class HpackDecoder {
             }
             return currentHeaderType;
         }
+        if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
+            throw streamError(streamId, PROTOCOL_ERROR, "Illegal connection-specific header '%s' encountered.", name);
+        }
+        if (HttpHeaderValidationUtil.isTeNotTrailers(name, value)) {
+            throw streamError(streamId, PROTOCOL_ERROR,
+                    "Illegal value specified for the 'TE' header (only 'trailers' is allowed).");
+        }
 
         return HeaderType.REGULAR_HEADER;
-    }
-
-    private static boolean contains(Http2Headers headers, AsciiString name) {
-        if (headers == EmptyHttp2Headers.INSTANCE) {
-            return false;
-        }
-        if (headers instanceof DefaultHttp2Headers || headers instanceof ReadOnlyHttp2Headers) {
-            return headers.contains(name);
-        }
-        // We can't be sure the Http2Headers implementation support contains on pseudo-headers,
-        // so we have to use the direct accessors instead.
-        if (Http2Headers.PseudoHeaderName.METHOD.value().equals(name)) {
-            return headers.method() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.SCHEME.value().equals(name)) {
-            return headers.scheme() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.AUTHORITY.value().equals(name)) {
-            return headers.authority() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.PATH.value().equals(name)) {
-            return headers.path() != null;
-        }
-        if (Http2Headers.PseudoHeaderName.STATUS.value().equals(name)) {
-            return headers.status() != null;
-        }
-        // Note: We don't check PROTOCOL because the API presents no alternative way to access it.
-        return false;
-    }
-
-    private static Http2Exception illegalHeaderValue(int streamId, AsciiString name, int illegalByte, int index) {
-        return streamError(streamId, PROTOCOL_ERROR,
-                "Illegal header value given for header '%s': illegal byte 0x%X at index %s.",
-                name, illegalByte, index);
     }
 
     private AsciiString readName(int index) throws Http2Exception {
@@ -578,7 +558,7 @@ final class HpackDecoder {
             try {
                 headers.add(name, value);
                 if (validateHeaders) {
-                    previousType = validateHeader(streamId, name, previousType);
+                    previousType = validateHeader(streamId, name, value, previousType);
                 }
             } catch (IllegalArgumentException ex) {
                 validationException = streamError(streamId, PROTOCOL_ERROR, ex,
