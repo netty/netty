@@ -422,7 +422,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         ensureAccessible();
         ByteBuffer src;
         try {
-            src = (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+            src = internalNioBuffer().clear().position(index).limit(index + length);
         } catch (IllegalArgumentException ignored) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }
@@ -445,13 +445,13 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        return (ByteBuffer) buffer.duplicate().position(index).limit(index + length);
+        return buffer.duplicate().position(index).limit(index + length);
     }
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         ensureAccessible();
-        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+        return internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override
