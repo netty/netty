@@ -80,6 +80,15 @@ class CloseWebSocketFrameTest {
                 WebSocketCloseStatus.NORMAL_CLOSURE.code(), WebSocketCloseStatus.NORMAL_CLOSURE.reasonText());
     }
 
+    @Test
+    void testCustomCloseCode() {
+        ByteBuf buffer = Unpooled.buffer().writeZero(1);
+        buffer.writeShort(60000)
+                .writeCharSequence("Custom close code", CharsetUtil.US_ASCII);
+        doTestValidCode(new CloseWebSocketFrame(true, 0, buffer.skipBytes(1)),
+                60000, "Custom close code");
+    }
+
     private static void doTestInvalidCode(ThrowableAssert.ThrowingCallable callable) {
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(callable);
     }
