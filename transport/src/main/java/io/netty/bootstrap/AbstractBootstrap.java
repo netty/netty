@@ -285,7 +285,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     Throwable cause = future.cause();
                     if (cause != null) {
                         // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
@@ -341,7 +341,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return regFuture;
     }
 
-    abstract void init(Channel channel) throws Exception;
+    abstract void init(Channel channel);
 
     private static void doBind0(
             final ChannelFuture regFuture, final Channel channel,

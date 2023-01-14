@@ -121,7 +121,7 @@ public class OcspClientExample {
 
         return new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 SslHandler sslHandler = context.newHandler(ch.alloc());
                 ReferenceCountedOpenSslEngine engine
                     = (ReferenceCountedOpenSslEngine) sslHandler.engine();
@@ -136,7 +136,7 @@ public class OcspClientExample {
             }
 
             @Override
-            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            public void channelInactive(ChannelHandlerContext ctx) {
                 if (!promise.isDone()) {
                     promise.tryFailure(new IllegalStateException("Connection closed and Promise was not done."));
                 }
@@ -144,7 +144,7 @@ public class OcspClientExample {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 if (!promise.tryFailure(cause)) {
                     ctx.fireExceptionCaught(cause);
                 }
@@ -164,7 +164,7 @@ public class OcspClientExample {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             FullHttpRequest request = new DefaultFullHttpRequest(
                     HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.EMPTY_BUFFER);
             request.headers().set(HttpHeaderNames.HOST, host);
@@ -176,7 +176,7 @@ public class OcspClientExample {
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             if (!promise.isDone()) {
                 promise.tryFailure(new IllegalStateException("Connection closed and Promise was not done."));
             }
@@ -184,7 +184,7 @@ public class OcspClientExample {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof FullHttpResponse) {
                 if (!promise.trySuccess((FullHttpResponse) msg)) {
                     ReferenceCountUtil.release(msg);
@@ -196,7 +196,7 @@ public class OcspClientExample {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (!promise.tryFailure(cause)) {
                 ctx.fireExceptionCaught(cause);
             }

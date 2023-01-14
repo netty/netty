@@ -36,7 +36,7 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
     private final IntObjectMap<ByteBuf> fragments = new IntObjectHashMap<ByteBuf>();
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) {
         final ByteBuf byteBuf = msg.content();
         final int protocolIdentifier = msg.protocolIdentifier();
         final int streamIdentifier = msg.streamIdentifier();

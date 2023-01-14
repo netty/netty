@@ -80,14 +80,14 @@ public abstract class SimpleKeyManagerFactory extends KeyManagerFactory {
      *
      * @see KeyManagerFactorySpi#engineInit(KeyStore, char[])
      */
-    protected abstract void engineInit(KeyStore keyStore, char[] var2) throws Exception;
+    protected abstract void engineInit(KeyStore keyStore, char[] var2);
 
     /**
      * Initializes this factory with a source of provider-specific key material.
      *
      * @see KeyManagerFactorySpi#engineInit(ManagerFactoryParameters)
      */
-    protected abstract void engineInit(ManagerFactoryParameters managerFactoryParameters) throws Exception;
+    protected abstract void engineInit(ManagerFactoryParameters managerFactoryParameters);
 
     /**
      * Returns one key manager for each type of key material.
@@ -109,9 +109,8 @@ public abstract class SimpleKeyManagerFactory extends KeyManagerFactory {
         protected void engineInit(KeyStore keyStore, char[] pwd) throws KeyStoreException {
             try {
                 parent.engineInit(keyStore, pwd);
-            } catch (KeyStoreException e) {
-                throw e;
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 throw new KeyStoreException(e);
             }
         }
@@ -121,9 +120,8 @@ public abstract class SimpleKeyManagerFactory extends KeyManagerFactory {
                 ManagerFactoryParameters managerFactoryParameters) throws InvalidAlgorithmParameterException {
             try {
                 parent.engineInit(managerFactoryParameters);
-            } catch (InvalidAlgorithmParameterException e) {
-                throw e;
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 throw new InvalidAlgorithmParameterException(e);
             }
         }

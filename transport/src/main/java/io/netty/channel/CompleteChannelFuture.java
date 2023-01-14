@@ -84,7 +84,7 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
     }
 
     @Override
-    public ChannelFuture await() throws InterruptedException {
+    public ChannelFuture await() {
         return this;
     }
 

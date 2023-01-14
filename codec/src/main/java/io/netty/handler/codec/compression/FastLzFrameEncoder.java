@@ -107,7 +107,7 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         final ByteBufChecksum checksum = this.checksum;
 
         for (;;) {

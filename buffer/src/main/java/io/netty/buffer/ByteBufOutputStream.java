@@ -59,7 +59,7 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
     }
 
     @Override
-    public void write(byte[] b, int off, int len) throws IOException {
+    public void write(byte[] b, int off, int len) {
         if (len == 0) {
             return;
         }
@@ -68,37 +68,37 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
     }
 
     @Override
-    public void write(byte[] b) throws IOException {
+    public void write(byte[] b) {
         buffer.writeBytes(b);
     }
 
     @Override
-    public void write(int b) throws IOException {
+    public void write(int b) {
         buffer.writeByte(b);
     }
 
     @Override
-    public void writeBoolean(boolean v) throws IOException {
+    public void writeBoolean(boolean v) {
         buffer.writeBoolean(v);
     }
 
     @Override
-    public void writeByte(int v) throws IOException {
+    public void writeByte(int v) {
         buffer.writeByte(v);
     }
 
     @Override
-    public void writeBytes(String s) throws IOException {
+    public void writeBytes(String s) {
         buffer.writeCharSequence(s, CharsetUtil.US_ASCII);
     }
 
     @Override
-    public void writeChar(int v) throws IOException {
+    public void writeChar(int v) {
         buffer.writeChar(v);
     }
 
     @Override
-    public void writeChars(String s) throws IOException {
+    public void writeChars(String s) {
         int len = s.length();
         for (int i = 0 ; i < len ; i ++) {
             buffer.writeChar(s.charAt(i));
@@ -106,27 +106,27 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
     }
 
     @Override
-    public void writeDouble(double v) throws IOException {
+    public void writeDouble(double v) {
         buffer.writeDouble(v);
     }
 
     @Override
-    public void writeFloat(float v) throws IOException {
+    public void writeFloat(float v) {
         buffer.writeFloat(v);
     }
 
     @Override
-    public void writeInt(int v) throws IOException {
+    public void writeInt(int v) {
         buffer.writeInt(v);
     }
 
     @Override
-    public void writeLong(long v) throws IOException {
+    public void writeLong(long v) {
         buffer.writeLong(v);
     }
 
     @Override
-    public void writeShort(int v) throws IOException {
+    public void writeShort(int v) {
         buffer.writeShort((short) v);
     }
 

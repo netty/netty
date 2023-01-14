@@ -62,7 +62,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
     }
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return msg instanceof MemcacheObject || msg instanceof ByteBuf || msg instanceof FileRegion;
     }
 

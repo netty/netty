@@ -47,7 +47,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     private MqttEncoder() { }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) {
         out.add(doEncode(ctx, msg));
     }
 

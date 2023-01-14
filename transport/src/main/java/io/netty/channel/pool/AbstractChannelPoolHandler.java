@@ -28,7 +28,7 @@ public abstract class AbstractChannelPoolHandler implements ChannelPoolHandler {
      * {@inheritDoc}
      */
     @Override
-    public void channelAcquired(@SuppressWarnings("unused") Channel ch) throws Exception {
+    public void channelAcquired(@SuppressWarnings("unused") Channel ch) {
         // NOOP
     }
 
@@ -38,7 +38,7 @@ public abstract class AbstractChannelPoolHandler implements ChannelPoolHandler {
      * {@inheritDoc}
      */
     @Override
-    public void channelReleased(@SuppressWarnings("unused") Channel ch) throws Exception {
+    public void channelReleased(@SuppressWarnings("unused") Channel ch) {
         // NOOP
     }
 }

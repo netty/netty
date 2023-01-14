@@ -123,7 +123,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
 
     @Override
     protected final void onLookupComplete(ChannelHandlerContext ctx,
-                                          String hostname, Future<SslContext> future) throws Exception {
+                                          String hostname, Future<SslContext> future) {
         if (!future.isSuccess()) {
             final Throwable cause = future.cause();
             if (cause instanceof Error) {

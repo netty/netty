@@ -69,7 +69,7 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
     }
 
     @TearDown(Level.Iteration)
-    public final void tearDown() throws Exception {
+    public final void tearDown() {
         destroySslHandlers();
         wrapSrcBuffer.release();
         clientCtx.releaseCumulation();

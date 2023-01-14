@@ -215,7 +215,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     }
 
     @SuppressWarnings("deprecation")
-    private SpdySynStreamFrame createSynStreamFrame(HttpRequest httpRequest) throws Exception {
+    private SpdySynStreamFrame createSynStreamFrame(HttpRequest httpRequest) {
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, and scheme from the headers
         final HttpHeaders httpHeaders = httpRequest.headers();
         int streamId = httpHeaders.getInt(SpdyHttpHeaders.Names.STREAM_ID);
@@ -273,7 +273,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     }
 
     @SuppressWarnings("deprecation")
-    private SpdyHeadersFrame createHeadersFrame(HttpResponse httpResponse) throws Exception {
+    private SpdyHeadersFrame createHeadersFrame(HttpResponse httpResponse) {
         // Get the Stream-ID from the headers
         final HttpHeaders httpHeaders = httpResponse.headers();
         int streamId = httpHeaders.getInt(SpdyHttpHeaders.Names.STREAM_ID);

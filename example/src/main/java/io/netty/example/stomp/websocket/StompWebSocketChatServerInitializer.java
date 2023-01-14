@@ -33,7 +33,7 @@ public class StompWebSocketChatServerInitializer extends ChannelInitializer<Sock
     }
 
     @Override
-    protected void initChannel(SocketChannel channel) throws Exception {
+    protected void initChannel(SocketChannel channel) {
         channel.pipeline()
                .addLast(new HttpServerCodec())
                .addLast(new HttpObjectAggregator(65536))

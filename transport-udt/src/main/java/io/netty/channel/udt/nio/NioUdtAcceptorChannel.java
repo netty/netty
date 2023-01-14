@@ -89,27 +89,27 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel im
 
     @Override
     protected boolean doConnect(final SocketAddress remoteAddress,
-            final SocketAddress localAddress) throws Exception {
+            final SocketAddress localAddress) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
+    protected void doDisconnect() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void doFinishConnect() throws Exception {
+    protected void doFinishConnect() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected final Object filterOutboundMessage(Object msg) throws Exception {
+    protected final Object filterOutboundMessage(Object msg) {
         throw new UnsupportedOperationException();
     }
 

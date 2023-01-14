@@ -34,7 +34,7 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 if (byteBuf.readByte() != SocksProtocolVersion.SOCKS5.byteValue()) {

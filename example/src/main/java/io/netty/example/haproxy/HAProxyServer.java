@@ -53,13 +53,13 @@ public final class HAProxyServer {
 
     static class HAProxyServerInitializer extends ChannelInitializer<SocketChannel> {
         @Override
-        public void initChannel(SocketChannel ch) throws Exception {
+        public void initChannel(SocketChannel ch) {
             ch.pipeline().addLast(
                     new LoggingHandler(LogLevel.DEBUG),
                     new HAProxyMessageDecoder(),
                     new SimpleChannelInboundHandler() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof HAProxyMessage) {
                                 System.out.println("proxy message: " + msg);
                             } else if (msg instanceof ByteBuf) {

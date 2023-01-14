@@ -54,7 +54,7 @@ public final class SctpMultiHomingEchoServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SctpChannel>() {
                  @Override
-                 public void initChannel(SctpChannel ch) throws Exception {
+                 public void initChannel(SctpChannel ch) {
                      ch.pipeline().addLast(
 //                             new LoggingHandler(LogLevel.INFO),
                              new SctpEchoServerHandler());

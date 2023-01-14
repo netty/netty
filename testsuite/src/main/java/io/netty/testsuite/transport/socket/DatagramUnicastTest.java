@@ -214,10 +214,10 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         final Semaphore semaphore = new Semaphore(0);
         Channel server = sb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
                         semaphore.release();
                     }
                 });
@@ -261,7 +261,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         }
         Channel sc = sb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {

@@ -100,7 +100,7 @@ public abstract class AbstractOioChannel extends AbstractChannel {
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() {
         if (readPending) {
             return;
         }

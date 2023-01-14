@@ -69,7 +69,7 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) {
         if (msg.length() == 0) {
             return;
         }

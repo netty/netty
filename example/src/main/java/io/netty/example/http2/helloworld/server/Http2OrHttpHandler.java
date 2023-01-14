@@ -33,7 +33,7 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     }
 
     @Override
-    protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
+    protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
         if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
             ctx.pipeline().addLast(new HelloWorldHttp2HandlerBuilder().build());
             return;

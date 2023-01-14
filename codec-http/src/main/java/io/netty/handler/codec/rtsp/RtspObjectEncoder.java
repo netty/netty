@@ -38,7 +38,7 @@ public abstract class RtspObjectEncoder<H extends HttpMessage> extends HttpObjec
     }
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return msg instanceof FullHttpMessage;
     }
 }

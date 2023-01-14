@@ -124,13 +124,10 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     @Override
     public String toString() {
         File file = null;
-        try {
-            file = getFile();
-        } catch (IOException e) {
-            // Should not occur.
-        }
+      file = getFile();
 
-        return HttpHeaderNames.CONTENT_DISPOSITION + ": " +
+
+      return HttpHeaderNames.CONTENT_DISPOSITION + ": " +
                HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + getName() +
                 "\"; " + HttpHeaderValues.FILENAME + "=\"" + filename + "\"\r\n" +
                 HttpHeaderNames.CONTENT_TYPE + ": " + contentType +

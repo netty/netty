@@ -60,7 +60,7 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) {
         out.add(Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect));
     }
 }

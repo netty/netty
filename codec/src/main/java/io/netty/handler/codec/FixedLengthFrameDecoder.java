@@ -69,7 +69,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
      *                          be created.
      */
     protected Object decode(
-            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {

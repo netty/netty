@@ -51,17 +51,17 @@ public abstract class AbstractMemcacheObjectAggregator<H extends MemcacheMessage
     }
 
     @Override
-    protected boolean isContentMessage(MemcacheObject msg) throws Exception {
+    protected boolean isContentMessage(MemcacheObject msg) {
         return msg instanceof MemcacheContent;
     }
 
     @Override
-    protected boolean isLastContentMessage(MemcacheContent msg) throws Exception {
+    protected boolean isLastContentMessage(MemcacheContent msg) {
         return msg instanceof LastMemcacheContent;
     }
 
     @Override
-    protected boolean isAggregated(MemcacheObject msg) throws Exception {
+    protected boolean isAggregated(MemcacheObject msg) {
         return msg instanceof FullMemcacheMessage;
     }
 
@@ -76,12 +76,12 @@ public abstract class AbstractMemcacheObjectAggregator<H extends MemcacheMessage
     }
 
     @Override
-    protected boolean closeAfterContinueResponse(Object msg) throws Exception {
+    protected boolean closeAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean ignoreContentAfterContinueResponse(Object msg) throws Exception {
+    protected boolean ignoreContentAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 }

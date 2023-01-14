@@ -52,7 +52,7 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
     }
 
     @Override
-    protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) throws Exception {
+    protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) {
         return new EpollDomainSocketChannel(this, new Socket(fd));
     }
 

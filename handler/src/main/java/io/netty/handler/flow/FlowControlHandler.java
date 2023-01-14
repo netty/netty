@@ -115,7 +115,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         config = ctx.channel().config();
     }
 
@@ -129,13 +129,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         destroy();
         ctx.fireChannelInactive();
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (dequeue(ctx, 1) == 0) {
             // It seems no messages were consumed. We need to read() some
             // messages from upstream and once one arrives it need to be
@@ -163,7 +163,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         if (isQueueEmpty()) {
             ctx.fireChannelReadComplete();
         } else {

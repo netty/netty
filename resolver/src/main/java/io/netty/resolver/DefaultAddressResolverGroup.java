@@ -30,7 +30,7 @@ public final class DefaultAddressResolverGroup extends AddressResolverGroup<Inet
     private DefaultAddressResolverGroup() { }
 
     @Override
-    protected AddressResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
+    protected AddressResolver<InetSocketAddress> newResolver(EventExecutor executor) {
         return new DefaultNameResolver(executor).asAddressResolver();
     }
 }

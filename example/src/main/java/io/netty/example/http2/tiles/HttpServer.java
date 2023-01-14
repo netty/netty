@@ -52,7 +52,7 @@ public final class HttpServer {
         b.group(group).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO))
         .childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
+            protected void initChannel(SocketChannel ch) {
                 ch.pipeline().addLast(new HttpRequestDecoder(),
                                       new HttpResponseEncoder(),
                                       new HttpObjectAggregator(MAX_CONTENT_LENGTH),

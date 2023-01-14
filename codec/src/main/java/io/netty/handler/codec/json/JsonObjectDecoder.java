@@ -87,7 +87,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (state == ST_CORRUPTED) {
             in.skipBytes(in.readableBytes());
             return;

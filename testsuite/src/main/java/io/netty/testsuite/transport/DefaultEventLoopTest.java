@@ -33,7 +33,7 @@ public class DefaultEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testChannelsIteratorNotSupported() throws Exception {
+    public void testChannelsIteratorNotSupported() {
         EventLoopGroup group = newEventLoopGroup();
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
         try {
@@ -42,7 +42,7 @@ public class DefaultEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
             assertThrows(UnsupportedOperationException.class, new Executable() {
                 @Override
-                public void execute() throws Throwable {
+                public void execute() {
                     loop.registeredChannelsIterator();
                 }
             });

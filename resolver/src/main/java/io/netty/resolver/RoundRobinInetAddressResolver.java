@@ -48,13 +48,13 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
     }
 
     @Override
-    protected void doResolve(final String inetHost, final Promise<InetAddress> promise) throws Exception {
+    protected void doResolve(final String inetHost, final Promise<InetAddress> promise) {
         // hijack the doResolve request, but do a doResolveAll request under the hood.
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
             @Override
-            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+            public void operationComplete(Future<List<InetAddress>> future) {
                 if (future.isSuccess()) {
                     List<InetAddress> inetAddresses = future.getNow();
                     int numAddresses = inetAddresses.size();
@@ -73,10 +73,10 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
     }
 
     @Override
-    protected void doResolveAll(String inetHost, final Promise<List<InetAddress>> promise) throws Exception {
+    protected void doResolveAll(String inetHost, final Promise<List<InetAddress>> promise) {
         nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
             @Override
-            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+            public void operationComplete(Future<List<InetAddress>> future) {
                 if (future.isSuccess()) {
                     List<InetAddress> inetAddresses = future.getNow();
                     if (!inetAddresses.isEmpty()) {

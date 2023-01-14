@@ -63,16 +63,16 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected Object filterOutboundMessage(Object msg) throws Exception {
+    protected Object filterOutboundMessage(Object msg) {
         throw new UnsupportedOperationException();
     }
 
-    abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
+    abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len);
 
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
         // Will hold the remote address after accept(...) was successful.
@@ -136,7 +136,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
         throw new UnsupportedOperationException();
     }
 }

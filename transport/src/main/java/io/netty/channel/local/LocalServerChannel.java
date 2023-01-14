@@ -90,18 +90,18 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister() {
         ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress) {
         this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
         state = 1;
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose() {
         if (state <= 1) {
             // Update all internal state before the closeFuture is notified.
             if (localAddress != null) {
@@ -113,12 +113,12 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister() {
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() {
         if (acceptInProgress) {
             return;
         }

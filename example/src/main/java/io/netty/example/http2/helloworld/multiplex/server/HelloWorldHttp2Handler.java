@@ -62,14 +62,14 @@ public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 
     /**
      * If receive a frame with end-of-stream set, send a pre-canned response.
      */
-    private static void onDataRead(ChannelHandlerContext ctx, Http2DataFrame data) throws Exception {
+    private static void onDataRead(ChannelHandlerContext ctx, Http2DataFrame data) {
         if (data.isEndStream()) {
             sendResponse(ctx, data.content());
         } else {
@@ -81,8 +81,7 @@ public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
     /**
      * If receive a frame with end-of-stream set, send a pre-canned response.
      */
-    private static void onHeadersRead(ChannelHandlerContext ctx, Http2HeadersFrame headers)
-            throws Exception {
+    private static void onHeadersRead(ChannelHandlerContext ctx, Http2HeadersFrame headers) {
         if (headers.isEndStream()) {
             ByteBuf content = ctx.alloc().buffer();
             content.writeBytes(RESPONSE_BYTES.duplicate());

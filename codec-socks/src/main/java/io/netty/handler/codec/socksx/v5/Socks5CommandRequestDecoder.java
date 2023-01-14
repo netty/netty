@@ -55,7 +55,7 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
             switch (state()) {
             case INIT: {

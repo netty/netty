@@ -57,7 +57,7 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
     private static final FastThreadLocal<LinkedHashMap<CharSequence, CharSequence>> ESCAPE_HEADER_KEY_CACHE =
             new FastThreadLocal<LinkedHashMap<CharSequence, CharSequence>>() {
                 @Override
-                protected LinkedHashMap<CharSequence, CharSequence> initialValue() throws Exception {
+                protected LinkedHashMap<CharSequence, CharSequence> initialValue() {
                     LinkedHashMap<CharSequence, CharSequence> cache = new LinkedHashMap<CharSequence, CharSequence>(
                             ESCAPE_HEADER_KEY_CACHE_LIMIT, DEFAULT_LOAD_FACTOR, true) {
 

@@ -36,7 +36,7 @@ public class SecureChatClientInitializer extends ChannelInitializer<SocketChanne
     }
 
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
 
         // Add SSL handler first to encrypt and decrypt everything.

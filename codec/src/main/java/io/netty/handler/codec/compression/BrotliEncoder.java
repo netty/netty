@@ -134,7 +134,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) {
         // NO-OP
     }
 
@@ -169,9 +169,8 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      * Finish the encoding, close streams and write final {@link ByteBuf} to the channel.
      *
      * @param ctx {@link ChannelHandlerContext} which we want to close
-     * @throws IOException If an error occurred during closure
      */
-    public void finish(ChannelHandlerContext ctx) throws IOException {
+    public void finish(ChannelHandlerContext ctx) {
         Writer writer;
 
         if (isSharable) {
@@ -251,16 +250,12 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        finish(promise);
-                    } catch (IOException ex) {
-                        promise.setFailure(new IllegalStateException("Failed to finish encoding", ex));
-                    }
+                  finish(promise);
                 }
             });
         }
 
-        public void finish(final ChannelPromise promise) throws IOException {
+        public void finish(final ChannelPromise promise) {
             if (!isClosed) {
                 // Allocate a buffer and write last pending data.
                 allocate(true);

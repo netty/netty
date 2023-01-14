@@ -60,7 +60,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final FutureListener<Object> childTerminationListener = new FutureListener<Object>() {
         @Override
-        public void operationComplete(Future<Object> future) throws Exception {
+        public void operationComplete(Future<Object> future) {
             // Inefficient, but works.
             if (isTerminated()) {
                 terminationFuture.trySuccess(null);
@@ -139,7 +139,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     /**
      * Creates a new {@link EventLoop}.  The default implementation creates a new {@link ThreadPerChannelEventLoop}.
      */
-    protected EventLoop newChild(@SuppressWarnings("UnusedParameters") Object... args) throws Exception {
+    protected EventLoop newChild(@SuppressWarnings("UnusedParameters") Object... args) {
         return new ThreadPerChannelEventLoop(this);
     }
 

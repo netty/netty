@@ -36,12 +36,12 @@ public class SpdyHttpResponseStreamIdHandler extends
     private final Queue<Integer> ids = new ArrayDeque<Integer>();
 
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public boolean acceptInboundMessage(Object msg) {
         return msg instanceof HttpMessage || msg instanceof SpdyRstStreamFrame;
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpMessage msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpMessage msg, List<Object> out) {
         Integer id = ids.poll();
         if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
             msg.headers().setInt(Names.STREAM_ID, id);
@@ -51,7 +51,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Object msg, List<Object> out) {
         if (msg instanceof HttpMessage) {
             boolean contains = ((HttpMessage) msg).headers().contains(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {

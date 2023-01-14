@@ -269,7 +269,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
                     promise.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (future.isCancelled()) {
                                 if (connectTimeoutFuture != null) {
                                     connectTimeoutFuture.cancel(false);
@@ -395,7 +395,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister() {
         eventLoop().cancel(selectionKey());
     }
 

@@ -118,7 +118,7 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
     }
 
     @Override
-    public boolean isEndOfInput() throws Exception {
+    public boolean isEndOfInput() {
         return !(offset < endOffset && file.getChannel().isOpen());
     }
 

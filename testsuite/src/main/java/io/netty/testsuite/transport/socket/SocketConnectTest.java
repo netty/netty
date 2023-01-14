@@ -69,7 +69,7 @@ public class SocketConnectTest extends AbstractSocketTest {
             final Promise<InetSocketAddress> localAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             localAddressPromise.setSuccess((InetSocketAddress) ctx.channel().localAddress());
                         }
                     }).bind().syncUninterruptibly().channel();
@@ -116,12 +116,12 @@ public class SocketConnectTest extends AbstractSocketTest {
 
             cb.handler(new ChannelInboundHandlerAdapter() {
                 @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(ChannelHandlerContext ctx) {
                     events.add(0);
                 }
 
                 @Override
-                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                public void channelInactive(ChannelHandlerContext ctx) {
                     events.add(1);
                 }
             });
@@ -158,7 +158,7 @@ public class SocketConnectTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
+            protected void initChannel(SocketChannel ch) {
                 ch.pipeline().addLast(new EchoServerHandler());
             }
         });
@@ -224,7 +224,7 @@ public class SocketConnectTest extends AbstractSocketTest {
 
     private static final class EchoServerHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof ByteBuf) {
                 ByteBuf buffer = ctx.alloc().buffer();
                 ByteBuf buf = (ByteBuf) msg;

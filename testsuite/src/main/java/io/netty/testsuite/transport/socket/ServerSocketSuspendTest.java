@@ -109,7 +109,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             latch.countDown();
         }
     }

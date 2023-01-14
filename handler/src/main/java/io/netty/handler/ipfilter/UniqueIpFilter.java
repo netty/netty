@@ -36,14 +36,14 @@ public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddres
     private final Set<InetAddress> connected = new ConcurrentSet<InetAddress>();
 
     @Override
-    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {
+    protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
         final InetAddress remoteIp = remoteAddress.getAddress();
         if (!connected.add(remoteIp)) {
             return false;
         } else {
             ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     connected.remove(remoteIp);
                 }
             });

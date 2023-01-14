@@ -116,7 +116,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void initChannel(Channel ch) throws Exception {
+        protected void initChannel(Channel ch) {
             channel = ch;
             ch.pipeline().addLast(autoReadHandler);
         }
@@ -134,7 +134,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ReferenceCountUtil.release(msg);
             if (count.incrementAndGet() == 1) {
                 ctx.channel().config().setAutoRead(false);
@@ -146,7 +146,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             latch.countDown();
             latch2.countDown();
         }

@@ -118,7 +118,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) {
         initMap.remove(ctx);
     }
 

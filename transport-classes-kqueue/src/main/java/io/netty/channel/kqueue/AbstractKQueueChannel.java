@@ -188,7 +188,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister() {
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
@@ -337,14 +337,14 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    void readFilter(boolean readFilterEnabled) throws IOException {
+    void readFilter(boolean readFilterEnabled) {
         if (this.readFilterEnabled != readFilterEnabled) {
             this.readFilterEnabled = readFilterEnabled;
             evSet(Native.EVFILT_READ, readFilterEnabled ? Native.EV_ADD_CLEAR_ENABLE : Native.EV_DELETE_DISABLE);
         }
     }
 
-    void writeFilter(boolean writeFilterEnabled) throws IOException {
+    void writeFilter(boolean writeFilterEnabled) {
         if (this.writeFilterEnabled != writeFilterEnabled) {
             this.writeFilterEnabled = writeFilterEnabled;
             evSet(Native.EVFILT_WRITE, writeFilterEnabled ? Native.EV_ADD_CLEAR_ENABLE : Native.EV_DELETE_DISABLE);
@@ -526,15 +526,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         protected final void clearReadFilter0() {
             assert eventLoop().inEventLoop();
-            try {
-                readPending = false;
-                readFilter(false);
-            } catch (IOException e) {
-                // When this happens there is something completely wrong with either the filedescriptor or epoll,
-                // so fire the exception through the pipeline and close the Channel.
-                pipeline().fireExceptionCaught(e);
-                unsafe().close(unsafe().voidPromise());
-            }
+          readPending = false;
+          readFilter(false);
+
         }
 
         private void fireEventAndClose(Object evt) {
@@ -579,7 +573,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
                     promise.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (future.isCancelled()) {
                                 if (connectTimeoutFuture != null) {
                                     connectTimeoutFuture.cancel(false);

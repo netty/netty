@@ -36,12 +36,12 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
     }
 
     @Override
-    protected boolean isStartMessage(MemcacheObject msg) throws Exception {
+    protected boolean isStartMessage(MemcacheObject msg) {
         return msg instanceof BinaryMemcacheMessage;
     }
 
     @Override
-    protected FullMemcacheMessage beginAggregation(BinaryMemcacheMessage start, ByteBuf content) throws Exception {
+    protected FullMemcacheMessage beginAggregation(BinaryMemcacheMessage start, ByteBuf content) {
         if (start instanceof BinaryMemcacheRequest) {
             return toFullRequest((BinaryMemcacheRequest) start, content);
         }

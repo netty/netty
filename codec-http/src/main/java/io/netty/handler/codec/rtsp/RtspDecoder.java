@@ -118,8 +118,7 @@ public class RtspDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(final String[] initialLine)
-            throws Exception {
+    protected HttpMessage createMessage(final String[] initialLine) {
         // If the first element of the initial line is a version string then
         // this is a response
         if (versionPattern.matcher(initialLine[0]).matches()) {

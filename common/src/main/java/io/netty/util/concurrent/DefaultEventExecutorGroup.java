@@ -55,7 +55,7 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
     }
 
     @Override
-    protected EventExecutor newChild(Executor executor, Object... args) throws Exception {
+    protected EventExecutor newChild(Executor executor, Object... args) {
         return new DefaultEventExecutor(this, executor, (Integer) args[0], (RejectedExecutionHandler) args[1]);
     }
 }

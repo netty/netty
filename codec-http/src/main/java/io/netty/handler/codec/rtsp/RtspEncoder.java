@@ -42,8 +42,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
     }
 
     @Override
-    protected void encodeInitialLine(final ByteBuf buf, final HttpMessage message)
-           throws Exception {
+    protected void encodeInitialLine(final ByteBuf buf, final HttpMessage message) {
         if (message instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) message;
             ByteBufUtil.copy(request.method().asciiName(), buf);

@@ -86,7 +86,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof SpdyDataFrame) {
 
             /*
@@ -411,7 +411,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         for (Integer streamId: spdySession.activeStreams().keySet()) {
             removeStream(streamId, ctx.newSucceededFuture());
         }
@@ -419,7 +419,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause instanceof SpdyProtocolException) {
             issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
         }
@@ -428,7 +428,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         sendGoAwayFrame(ctx, promise);
     }
 
@@ -450,7 +450,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
@@ -502,7 +502,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 final ChannelHandlerContext context = ctx;
                 ctx.write(partialDataFrame).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -519,7 +519,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 final ChannelHandlerContext context = ctx;
                 promise.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -779,7 +779,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 ctx.writeAndFlush(partialDataFrame).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -800,7 +800,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -847,7 +847,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
         }
 
         @Override
-        public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
+        public void operationComplete(ChannelFuture sentGoAwayFuture) {
             ctx.close(promise);
         }
     }

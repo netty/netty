@@ -464,7 +464,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public final void channelReadComplete(ChannelHandlerContext ctx) {
             // We intentionally do not ctx.flush() here because we want to verify the SslHandler correctly flushing
             // non-application and previously flushed writes internally.
             if (!autoRead) {
@@ -488,7 +488,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the client side:", cause);
             }
@@ -521,7 +521,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -550,7 +550,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(final ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }
@@ -558,7 +558,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

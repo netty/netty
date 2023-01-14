@@ -274,7 +274,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected Object filterOutboundMessage(Object msg) throws Exception {
+    protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof SctpMessage) {
             return msg;
         }

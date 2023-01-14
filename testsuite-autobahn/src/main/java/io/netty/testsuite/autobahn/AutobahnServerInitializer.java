@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 
 public class AutobahnServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());

@@ -94,7 +94,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *
      * @param msg the message
      */
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return outboundMsgMatcher.match(msg);
     }
 

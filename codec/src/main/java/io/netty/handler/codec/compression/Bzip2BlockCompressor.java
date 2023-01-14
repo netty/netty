@@ -37,7 +37,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_R
 final class Bzip2BlockCompressor {
     private final ByteProcessor writeProcessor = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return write(value);
         }
     };

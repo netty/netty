@@ -30,7 +30,7 @@ public final class NoopAddressResolverGroup extends AddressResolverGroup<SocketA
     private NoopAddressResolverGroup() { }
 
     @Override
-    protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
+    protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) {
         return new NoopAddressResolver(executor);
     }
 }

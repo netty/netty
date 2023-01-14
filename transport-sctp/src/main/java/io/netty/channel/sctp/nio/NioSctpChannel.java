@@ -260,7 +260,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected int doReadMessages(List<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) {
         SctpChannel ch = javaChannel();
 
         RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
@@ -321,7 +321,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected final Object filterOutboundMessage(Object msg) throws Exception {
+    protected final Object filterOutboundMessage(Object msg) {
         if (msg instanceof SctpMessage) {
             SctpMessage m = (SctpMessage) msg;
             ByteBuf buf = m.content();

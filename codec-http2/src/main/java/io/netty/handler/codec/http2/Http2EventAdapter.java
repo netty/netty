@@ -42,27 +42,27 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
 
     @Override
     public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
-            boolean exclusive) throws Http2Exception {
+            boolean exclusive) {
     }
 
     @Override
-    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
     }
 
     @Override
-    public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
+    public void onSettingsAckRead(ChannelHandlerContext ctx) {
     }
 
     @Override
-    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
     }
 
     @Override
-    public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+    public void onPingRead(ChannelHandlerContext ctx, long data) {
     }
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) {
     }
 
     @Override
@@ -71,18 +71,16 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
-            throws Http2Exception {
+    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
     }
 
     @Override
-    public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement)
-            throws Http2Exception {
+    public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement) {
     }
 
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-            ByteBuf payload) throws Http2Exception {
+            ByteBuf payload) {
     }
 
     @Override

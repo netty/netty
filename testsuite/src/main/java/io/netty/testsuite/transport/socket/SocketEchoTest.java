@@ -174,13 +174,13 @@ public class SocketEchoTest extends AbstractSocketTest {
         if (additionalExecutor) {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel c) throws Exception {
+                protected void initChannel(Channel c) {
                     c.pipeline().addLast(group, sh);
                 }
             });
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel c) throws Exception {
+                protected void initChannel(Channel c) {
                     c.pipeline().addLast(group, ch);
                 }
             });
@@ -188,7 +188,7 @@ public class SocketEchoTest extends AbstractSocketTest {
             sb.childHandler(sh);
             sb.handler(new ChannelInboundHandlerAdapter() {
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                     cause.printStackTrace();
                 }
             });
@@ -262,8 +262,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (!autoRead) {
                 ctx.read();
@@ -271,7 +270,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -288,7 +287,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             try {
                 ctx.flush();
             } finally {
@@ -300,7 +299,7 @@ public class SocketEchoTest extends AbstractSocketTest {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+                Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 ctx.close();

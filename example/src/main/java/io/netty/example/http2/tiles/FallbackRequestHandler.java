@@ -46,7 +46,7 @@ public final class FallbackRequestHandler extends SimpleChannelInboundHandler<Ht
             + ")</h2></body></html>", UTF_8)).asReadOnly();
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, HttpRequest req) {
         if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, EMPTY_BUFFER));
         }
@@ -62,7 +62,7 @@ public final class FallbackRequestHandler extends SimpleChannelInboundHandler<Ht
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 

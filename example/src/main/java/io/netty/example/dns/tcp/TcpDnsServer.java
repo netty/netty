@@ -63,12 +63,12 @@ public final class TcpDnsServer {
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         ch.pipeline().addLast(new TcpDnsQueryDecoder(), new TcpDnsResponseEncoder(),
                                 new SimpleChannelInboundHandler<DnsQuery>() {
                                     @Override
                                     protected void channelRead0(ChannelHandlerContext ctx,
-                                                                DnsQuery msg) throws Exception {
+                                                                DnsQuery msg) {
                                         DnsQuestion question = msg.recordAt(DnsSection.QUESTION);
                                         System.out.println("Query domain: " + question);
 

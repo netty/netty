@@ -119,7 +119,7 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) throws Exception {
+    protected HttpMessage createMessage(String[] initialLine) {
         return new DefaultHttpRequest(
                 HttpVersion.valueOf(initialLine[2]),
                 HttpMethod.valueOf(initialLine[0]), initialLine[1], validateHeaders);

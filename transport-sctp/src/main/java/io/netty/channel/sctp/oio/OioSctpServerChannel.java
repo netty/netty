@@ -179,7 +179,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(List<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) {
         if (!isActive()) {
             return -1;
         }
@@ -271,7 +271,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doConnect(
-            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+            SocketAddress remoteAddress, SocketAddress localAddress) {
         throw new UnsupportedOperationException();
     }
 
@@ -281,17 +281,17 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
+    protected void doDisconnect() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected Object filterOutboundMessage(Object msg) throws Exception {
+    protected Object filterOutboundMessage(Object msg) {
         throw new UnsupportedOperationException();
     }
 

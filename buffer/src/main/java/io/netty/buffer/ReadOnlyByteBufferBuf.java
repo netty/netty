@@ -395,17 +395,17 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length) throws IOException {
+    public int setBytes(int index, InputStream in, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
+    public int setBytes(int index, ScatteringByteChannel in, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+    public int setBytes(int index, FileChannel in, long position, int length) {
         throw new ReadOnlyBufferException();
     }
 

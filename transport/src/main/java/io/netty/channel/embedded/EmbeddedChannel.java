@@ -64,7 +64,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             recordException(future);
         }
     };
@@ -213,7 +213,7 @@ public class EmbeddedChannel extends AbstractChannel {
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 for (ChannelHandler h: handlers) {
                     if (h == null) {
@@ -232,7 +232,7 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Register this {@code Channel} on its {@link EventLoop}.
      */
-    public void register() throws Exception {
+    public void register() {
         ChannelFuture future = loop.register(this);
         assert future.isDone();
         Throwable cause = future.cause();
@@ -749,12 +749,12 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister() {
         state = State.ACTIVE;
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress) {
         // NOOP
     }
 
@@ -766,12 +766,12 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose() {
         state = State.CLOSED;
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() {
         // NOOP
     }
 

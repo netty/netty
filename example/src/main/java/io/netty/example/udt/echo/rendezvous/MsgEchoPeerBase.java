@@ -57,8 +57,7 @@ public abstract class MsgEchoPeerBase {
                     .channelFactory(NioUdtProvider.MESSAGE_RENDEZVOUS)
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override
-                        public void initChannel(final UdtChannel ch)
-                                throws Exception {
+                        public void initChannel(final UdtChannel ch) {
                             ch.pipeline().addLast(
                                     new LoggingHandler(LogLevel.INFO),
                                     new MsgEchoPeerHandler(messageSize));

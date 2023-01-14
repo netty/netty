@@ -90,7 +90,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 ServerBootstrap sb = new ServerBootstrap().group(group);
                 Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    public void channelActive(ChannelHandlerContext ctx) {
                         ctx.writeAndFlush(Unpooled.copyInt(42));
                     }
                 }).channel(NioServerSocketChannel.class).bind(0).sync().channel();
@@ -98,13 +98,13 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 final CountDownLatch readLatch = new CountDownLatch(1);
                 bootstrap.handler(new ByteToMessageDecoder() {
                     @Override
-                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                    public void handlerAdded(ChannelHandlerContext ctx) {
                         assertFalse(ctx.channel().isActive());
                         ctx.read();
                     }
 
                     @Override
-                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                         assertThat(in.readableBytes()).isLessThanOrEqualTo(Integer.BYTES);
                         if (in.readableBytes() == Integer.BYTES) {
                             assertThat(in.readInt()).isEqualTo(42);

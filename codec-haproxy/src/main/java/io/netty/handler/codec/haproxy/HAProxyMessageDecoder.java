@@ -364,9 +364,8 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
          * @param buffer  the {@link ByteBuf} from which to read data
          * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
          *                be created
-         * @throws Exception if exceed maxLength
          */
-        public ByteBuf extract(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        public ByteBuf extract(ChannelHandlerContext ctx, ByteBuf buffer) {
             final int eoh = findEndOfHeader(buffer);
             if (!discarding) {
                 if (eoh >= 0) {

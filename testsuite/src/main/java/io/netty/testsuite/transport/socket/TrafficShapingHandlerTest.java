@@ -362,7 +362,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
-            protected void initChannel(SocketChannel c) throws Exception {
+            protected void initChannel(SocketChannel c) {
                 if (limitRead) {
                     c.pipeline().addLast(TRAFFIC, handler);
                 }
@@ -371,7 +371,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         });
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
-            protected void initChannel(SocketChannel c) throws Exception {
+            protected void initChannel(SocketChannel c) {
                 if (limitWrite) {
                     c.pipeline().addLast(TRAFFIC, handler);
                 }
@@ -457,12 +457,12 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             long lastTimestamp = 0;
             loggerClient.debug("Step: " + step + " Read: " + in.readableBytes() / 8 + " blocks");
             while (in.isReadable()) {
@@ -498,7 +498,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 promise.setFailure(cause);
@@ -520,7 +520,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
         }
 
@@ -594,7 +594,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 ctx.close();

@@ -157,7 +157,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         parentReadInProgress = true;
         if (msg instanceof Http2StreamFrame) {
             if (msg instanceof Http2WindowUpdateFrame) {
@@ -326,7 +326,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
      * Notifies any child streams of the read completion.
      */
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         processPendingReadCompleteQueue();
         ctx.fireChannelReadComplete();
     }

@@ -783,7 +783,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     protected abstract boolean isDecodingRequest();
-    protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
+    protected abstract HttpMessage createMessage(String[] initialLine);
     protected abstract HttpMessage createInvalidMessage();
 
     private static int getChunkSize(String hex) {

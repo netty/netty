@@ -47,7 +47,7 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) {
         // Handle a bad request.
         if (!req.decoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(req.protocolVersion(), BAD_REQUEST,

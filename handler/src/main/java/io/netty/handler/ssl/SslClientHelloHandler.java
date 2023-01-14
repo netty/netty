@@ -182,7 +182,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
         }
     }
 
-    private void select(final ChannelHandlerContext ctx, ByteBuf clientHello) throws Exception {
+    private void select(final ChannelHandlerContext ctx, ByteBuf clientHello) {
         final Future<T> future;
         try {
             future = lookup(ctx, clientHello);
@@ -266,7 +266,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception;
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (suppressRead) {
             readPending = true;
         } else {
@@ -275,38 +275,38 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.close(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ctx.write(msg, promise);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 }

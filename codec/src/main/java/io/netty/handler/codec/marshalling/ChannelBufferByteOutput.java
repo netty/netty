@@ -37,27 +37,27 @@ class ChannelBufferByteOutput implements ByteOutput {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         // Nothing to do
     }
 
     @Override
-    public void flush() throws IOException {
+    public void flush() {
         // nothing to do
     }
 
     @Override
-    public void write(int b) throws IOException {
+    public void write(int b) {
         buffer.writeByte(b);
     }
 
     @Override
-    public void write(byte[] bytes) throws IOException {
+    public void write(byte[] bytes) {
         buffer.writeBytes(bytes);
     }
 
     @Override
-    public void write(byte[] bytes, int srcIndex, int length) throws IOException {
+    public void write(byte[] bytes, int srcIndex, int length) {
         buffer.writeBytes(bytes, srcIndex, length);
     }
 

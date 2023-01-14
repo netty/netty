@@ -228,7 +228,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected final Object filterOutboundMessage(Object msg) throws Exception {
+    protected final Object filterOutboundMessage(Object msg) {
         if (msg instanceof ByteBuf || msg instanceof FileRegion) {
             return msg;
         }

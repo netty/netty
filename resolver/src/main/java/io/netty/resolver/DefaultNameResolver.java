@@ -36,7 +36,7 @@ public class DefaultNameResolver extends InetNameResolver {
     }
 
     @Override
-    protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
+    protected void doResolve(String inetHost, Promise<InetAddress> promise) {
         try {
             promise.setSuccess(SocketUtils.addressByName(inetHost));
         } catch (UnknownHostException e) {
@@ -45,7 +45,7 @@ public class DefaultNameResolver extends InetNameResolver {
     }
 
     @Override
-    protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
+    protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) {
         try {
             promise.setSuccess(Arrays.asList(SocketUtils.allAddressesByName(inetHost)));
         } catch (UnknownHostException e) {

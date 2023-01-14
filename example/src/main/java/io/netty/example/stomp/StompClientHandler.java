@@ -37,7 +37,7 @@ public class StompClientHandler extends SimpleChannelInboundHandler<StompFrame> 
     private ClientState state;
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         state = ClientState.AUTHENTICATING;
         StompFrame connFrame = new DefaultStompFrame(StompCommand.CONNECT);
         connFrame.headers().set(StompHeaders.ACCEPT_VERSION, "1.2");
@@ -48,7 +48,7 @@ public class StompClientHandler extends SimpleChannelInboundHandler<StompFrame> 
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, StompFrame frame) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, StompFrame frame) {
         String subscrReceiptId = "001";
         String disconReceiptId = "002";
         switch (frame.command()) {
@@ -93,7 +93,7 @@ public class StompClientHandler extends SimpleChannelInboundHandler<StompFrame> 
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

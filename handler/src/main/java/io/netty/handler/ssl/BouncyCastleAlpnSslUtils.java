@@ -202,7 +202,7 @@ final class BouncyCastleAlpnSslUtils {
                     new Class[]{BC_APPLICATION_PROTOCOL_SELECTOR},
                     new InvocationHandler() {
                         @Override
-                        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                        public Object invoke(Object proxy, Method method, Object[] args) {
                             if (method.getName().equals("select")) {
                                 try {
                                     return selector.apply((SSLEngine) args[0], (List<String>) args[1]);

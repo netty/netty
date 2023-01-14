@@ -91,7 +91,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         try {
             if (acceptOutboundMessage(msg)) {
                 encode(ctx, msg, out);
@@ -593,5 +593,5 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         buf.writeCharSequence(s, CharsetUtil.US_ASCII);
     }
 
-    protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;
+    protected abstract void encodeInitialLine(ByteBuf buf, H message);
 }

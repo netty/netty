@@ -180,7 +180,7 @@ public class SimpleChannelPool implements ChannelPool {
                 } else {
                     f.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             notifyConnect(future, promise);
                         }
                     });
@@ -316,14 +316,14 @@ public class SimpleChannelPool implements ChannelPool {
         }
     }
 
-    private void doHealthCheckOnRelease(final Channel channel, final Promise<Void> promise) throws Exception {
+    private void doHealthCheckOnRelease(final Channel channel, final Promise<Void> promise) {
         final Future<Boolean> f = healthCheck.isHealthy(channel);
         if (f.isDone()) {
             releaseAndOfferIfHealthy(channel, promise, f);
         } else {
             f.addListener(new FutureListener<Boolean>() {
                 @Override
-                public void operationComplete(Future<Boolean> future) throws Exception {
+                public void operationComplete(Future<Boolean> future) {
                     releaseAndOfferIfHealthy(channel, promise, f);
                 }
             });
@@ -359,7 +359,7 @@ public class SimpleChannelPool implements ChannelPool {
         }
     }
 
-    private void closeChannel(Channel channel) throws Exception {
+    private void closeChannel(Channel channel) {
         channel.attr(POOL_KEY).getAndSet(null);
         channel.close();
     }
@@ -418,7 +418,7 @@ public class SimpleChannelPool implements ChannelPool {
         // Execute close asynchronously in case this is being invoked on an eventloop to avoid blocking
         return GlobalEventExecutor.INSTANCE.submit(new Callable<Void>() {
             @Override
-            public Void call() throws Exception {
+            public Void call() {
                 close();
                 return null;
             }

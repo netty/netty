@@ -675,7 +675,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public boolean visit(Http2Stream stream) throws Http2Exception {
+        public boolean visit(Http2Stream stream) {
             FlowState state = state(stream);
             if (isWritable(state) != state.markedWritability()) {
                 notifyWritabilityChanged(state);

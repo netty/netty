@@ -1020,7 +1020,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         // NO since the user can want to reuse (broadcast for instance)
         // cleanFiles();
     }
@@ -1130,7 +1130,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     }
 
     @Override
-    public boolean isEndOfInput() throws Exception {
+    public boolean isEndOfInput() {
         return isLastChunkSent;
     }
 

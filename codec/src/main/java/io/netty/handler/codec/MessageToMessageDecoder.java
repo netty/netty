@@ -78,7 +78,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         CodecOutputList out = CodecOutputList.newInstance();
         try {
             if (acceptInboundMessage(msg)) {

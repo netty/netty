@@ -413,7 +413,7 @@ public final class CorsConfigBuilder {
         static final DateValueGenerator INSTANCE = new DateValueGenerator();
 
         @Override
-        public Date call() throws Exception {
+        public Date call() {
             return new Date();
         }
     }

@@ -54,8 +54,7 @@ public final class MsgEchoServer {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<UdtChannel>() {
                         @Override
-                        public void initChannel(final UdtChannel ch)
-                                throws Exception {
+                        public void initChannel(final UdtChannel ch) {
                             ch.pipeline().addLast(
                                     new LoggingHandler(LogLevel.INFO),
                                     new MsgEchoServerHandler());

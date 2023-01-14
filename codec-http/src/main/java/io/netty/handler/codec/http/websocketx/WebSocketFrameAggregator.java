@@ -40,12 +40,12 @@ public class WebSocketFrameAggregator
     }
 
     @Override
-    protected boolean isStartMessage(WebSocketFrame msg) throws Exception {
+    protected boolean isStartMessage(WebSocketFrame msg) {
         return msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame;
     }
 
     @Override
-    protected boolean isContentMessage(WebSocketFrame msg) throws Exception {
+    protected boolean isContentMessage(WebSocketFrame msg) {
         return msg instanceof ContinuationWebSocketFrame;
     }
 
@@ -74,17 +74,17 @@ public class WebSocketFrameAggregator
     }
 
     @Override
-    protected boolean closeAfterContinueResponse(Object msg) throws Exception {
+    protected boolean closeAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean ignoreContentAfterContinueResponse(Object msg) throws Exception {
+    protected boolean ignoreContentAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected WebSocketFrame beginAggregation(WebSocketFrame start, ByteBuf content) throws Exception {
+    protected WebSocketFrame beginAggregation(WebSocketFrame start, ByteBuf content) {
         if (start instanceof TextWebSocketFrame) {
             return new TextWebSocketFrame(true, start.rsv(), content);
         }

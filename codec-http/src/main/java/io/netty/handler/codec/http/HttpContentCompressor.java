@@ -226,12 +226,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 
     @Override
-    protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception {
+    protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
         if (this.contentSizeThreshold > 0) {
             if (httpResponse instanceof HttpContent &&
                     ((HttpContent) httpResponse).content().readableBytes() < contentSizeThreshold) {

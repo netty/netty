@@ -39,7 +39,7 @@ public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFr
             Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte((byte) 0x00)).asReadOnly();
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) {
         if (msg instanceof TextWebSocketFrame) {
             // Text frame
             ByteBuf data = msg.content();

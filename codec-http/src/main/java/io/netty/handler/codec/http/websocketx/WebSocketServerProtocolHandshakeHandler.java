@@ -61,7 +61,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     }
 
     @Override
-    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) {
         final HttpObject httpObject = (HttpObject) msg;
 
         if (httpObject instanceof HttpRequest) {

@@ -160,7 +160,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             cb.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(expectedBytes / 10));
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new TestHandler(bytesRead, extraReadRequested, latch));
                 }
             });

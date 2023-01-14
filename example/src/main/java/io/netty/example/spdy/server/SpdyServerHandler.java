@@ -45,7 +45,7 @@ import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
 public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 

@@ -75,9 +75,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
      *
      * @param httpHeaders The HTTP/1.x headers object to look for the stream id
      * @return The stream id to use with this {@link HttpHeaders} object
-     * @throws Exception If the {@code httpHeaders} object specifies an invalid stream id
      */
-    private int getStreamId(HttpHeaders httpHeaders) throws Exception {
+    private int getStreamId(HttpHeaders httpHeaders) {
         return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
                                   connection().local().incrementAndGetNextStreamId());
     }

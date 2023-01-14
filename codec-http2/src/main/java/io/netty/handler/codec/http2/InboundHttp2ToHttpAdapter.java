@@ -279,7 +279,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     }
 
     @Override
-    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
         Http2Stream stream = connection.stream(streamId);
         FullHttpMessage msg = getMessage(stream);
         if (msg != null) {
@@ -316,7 +316,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     }
 
     @Override
-    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+    public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
         if (propagateSettings) {
             // Provide an interface for non-listeners to capture settings
             ctx.fireChannelRead(settings);

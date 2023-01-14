@@ -66,7 +66,7 @@ public final class ChannelOutboundBuffer {
 
     private static final FastThreadLocal<ByteBuffer[]> NIO_BUFFERS = new FastThreadLocal<ByteBuffer[]>() {
         @Override
-        protected ByteBuffer[] initialValue() throws Exception {
+        protected ByteBuffer[] initialValue() {
             return new ByteBuffer[1024];
         }
     };
@@ -794,7 +794,7 @@ public final class ChannelOutboundBuffer {
          * Will be called for each flushed message until it either there are no more flushed messages or this
          * method returns {@code false}.
          */
-        boolean processMessage(Object msg) throws Exception;
+        boolean processMessage(Object msg);
     }
 
     static final class Entry {

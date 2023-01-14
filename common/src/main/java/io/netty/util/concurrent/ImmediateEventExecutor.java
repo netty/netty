@@ -38,7 +38,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
      */
     private static final FastThreadLocal<Queue<Runnable>> DELAYED_RUNNABLES = new FastThreadLocal<Queue<Runnable>>() {
         @Override
-        protected Queue<Runnable> initialValue() throws Exception {
+        protected Queue<Runnable> initialValue() {
             return new ArrayDeque<Runnable>();
         }
     };
@@ -47,7 +47,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
      */
     private static final FastThreadLocal<Boolean> RUNNING = new FastThreadLocal<Boolean>() {
         @Override
-        protected Boolean initialValue() throws Exception {
+        protected Boolean initialValue() {
             return false;
         }
     };

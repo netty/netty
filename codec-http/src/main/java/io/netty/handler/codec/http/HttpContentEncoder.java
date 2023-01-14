@@ -69,12 +69,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private State state = State.AWAIT_HEADERS;
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return msg instanceof HttpContent || msg instanceof HttpResponse;
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) {
         CharSequence acceptEncoding;
         List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
         switch (acceptEncodingHeaders.size()) {

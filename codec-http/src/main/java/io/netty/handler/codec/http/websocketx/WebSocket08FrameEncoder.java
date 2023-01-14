@@ -103,7 +103,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) {
         final ByteBuf data = msg.content();
 
         byte opcode;

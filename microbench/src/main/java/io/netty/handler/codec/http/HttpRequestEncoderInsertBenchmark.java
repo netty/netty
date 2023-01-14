@@ -73,7 +73,7 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
+        protected void encodeInitialLine(ByteBuf buf, HttpRequest request) {
             AsciiString method = request.method().asciiName();
             ByteBufUtil.copy(method, method.arrayOffset(), buf, method.length());
             buf.writeByte(SP);

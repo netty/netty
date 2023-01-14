@@ -58,7 +58,7 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) {
         out.add(Base64.decode(msg, msg.readerIndex(), msg.readableBytes(), dialect));
     }
 }

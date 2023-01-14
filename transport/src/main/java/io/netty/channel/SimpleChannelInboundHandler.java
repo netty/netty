@@ -85,7 +85,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
      * {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public boolean acceptInboundMessage(Object msg) {
         return matcher.match(msg);
     }
 

@@ -124,8 +124,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     }
 
     @Override
-    public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse)
-        throws Exception {
+    public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) {
         try {
             // Add the handler to the pipeline.
             ctx.pipeline().addAfter(ctx.name(), handlerName, upgradeToHandler);

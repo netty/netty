@@ -45,7 +45,7 @@ abstract class ByteBufChecksum implements Checksum {
 
     private final ByteProcessor updateProcessor = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             update(value);
             return true;
         }

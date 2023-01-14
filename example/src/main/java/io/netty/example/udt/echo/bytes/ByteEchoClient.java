@@ -52,8 +52,7 @@ public final class ByteEchoClient {
                     .channelFactory(NioUdtProvider.BYTE_CONNECTOR)
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override
-                        public void initChannel(final UdtChannel ch)
-                                throws Exception {
+                        public void initChannel(final UdtChannel ch) {
                             ch.pipeline().addLast(
                                     new LoggingHandler(LogLevel.INFO),
                                     new ByteEchoClientHandler());

@@ -167,7 +167,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testChannelsIteratorEmpty() throws Exception {
+    public void testChannelsIteratorEmpty() {
         assumeTrue(supportsChannelIteration());
         EventLoopGroup group = newEventLoopGroup();
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();

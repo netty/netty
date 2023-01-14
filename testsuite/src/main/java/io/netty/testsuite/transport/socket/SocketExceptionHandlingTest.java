@@ -81,7 +81,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
     private static class MyInitializer extends ChannelInitializer<Channel> {
         final ExceptionHandler exceptionHandler = new ExceptionHandler();
         @Override
-        protected void initChannel(Channel ch) throws Exception {
+        protected void initChannel(Channel ch) {
             ChannelPipeline pipeline = ch.pipeline();
 
             pipeline.addLast(new BuggyChannelHandler());
@@ -91,7 +91,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
 
     private static class BuggyChannelHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ReferenceCountUtil.release(msg);
             throw new NullPointerException("I am a bug!");
         }
@@ -106,7 +106,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
         final CountDownLatch latch2 = new CountDownLatch(1);
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (count.incrementAndGet() <= 2) {
                 latch1.countDown();
             } else {

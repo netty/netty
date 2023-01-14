@@ -78,7 +78,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
      */
     protected ByteBuf allocateBuffer(
         ChannelHandlerContext ctx,
-        @SuppressWarnings("unused") AddressedEnvelope<DnsQuery, InetSocketAddress> msg) throws Exception {
+        @SuppressWarnings("unused") AddressedEnvelope<DnsQuery, InetSocketAddress> msg) {
         return ctx.alloc().ioBuffer(1024);
     }
 }

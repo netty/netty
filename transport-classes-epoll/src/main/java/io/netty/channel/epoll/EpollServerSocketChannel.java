@@ -98,7 +98,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     }
 
     @Override
-    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
+    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) {
         return new EpollSocketChannel(this, new LinuxSocket(fd), address(address, offset, len));
     }
 

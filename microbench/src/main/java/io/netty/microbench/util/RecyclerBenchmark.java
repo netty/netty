@@ -73,7 +73,7 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
     // The allocation stats are the main thing interesting about this benchmark
     @Benchmark
     @Group("producerConsumer")
-    public void producer(ProducerConsumerState state, Control control) throws Exception {
+    public void producer(ProducerConsumerState state, Control control) {
         ArrayBlockingQueue<DummyObject> queue = state.queue;
         DummyObject object = recycler.get();
         while (!control.stopMeasurement) {
@@ -85,7 +85,7 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @Group("producerConsumer")
-    public void consumer(ProducerConsumerState state, Control control) throws Exception {
+    public void consumer(ProducerConsumerState state, Control control) {
         DummyObject object;
         do {
             object = state.queue.poll();

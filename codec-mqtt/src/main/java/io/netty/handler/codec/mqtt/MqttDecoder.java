@@ -82,7 +82,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) {
         switch (state()) {
             case READ_FIXED_HEADER: try {
                 mqttFixedHeader = decodeFixedHeader(ctx, buffer);

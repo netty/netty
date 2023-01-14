@@ -72,7 +72,7 @@ public class DatagramDnsResponseEncoder
      */
     protected ByteBuf allocateBuffer(
         ChannelHandlerContext ctx,
-        @SuppressWarnings("unused") AddressedEnvelope<DnsResponse, InetSocketAddress> msg) throws Exception {
+        @SuppressWarnings("unused") AddressedEnvelope<DnsResponse, InetSocketAddress> msg) {
         return ctx.alloc().ioBuffer(1024);
     }
 }

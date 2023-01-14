@@ -177,7 +177,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (finished) {
             // Skip data received after finished.
             in.skipBytes(in.readableBytes());

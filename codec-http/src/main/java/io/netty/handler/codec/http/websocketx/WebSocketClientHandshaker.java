@@ -521,14 +521,14 @@ public abstract class WebSocketClientHandshaker {
                 }
 
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                     // Remove ourself and fail the handshake promise.
                     ctx.pipeline().remove(this);
                     promise.setFailure(cause);
                 }
 
                 @Override
-                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                public void channelInactive(ChannelHandlerContext ctx) {
                     try {
                         // Fail promise if Channel was closed
                         if (!promise.isDone()) {
@@ -541,7 +541,7 @@ public abstract class WebSocketClientHandshaker {
                 }
 
                 @Override
-                public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                public void handlerRemoved(ChannelHandlerContext ctx) {
                     releaseFullHttpResponse();
                 }
 
@@ -708,7 +708,7 @@ public abstract class WebSocketClientHandshaker {
 
                     channel.closeFuture().addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             forceCloseFuture.cancel(false);
                         }
                     });

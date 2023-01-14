@@ -81,7 +81,7 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
     }
 
     protected abstract DnsResponse newResponse(A sender, A recipient, int id,
-                                               DnsOpCode opCode, DnsResponseCode responseCode) throws Exception;
+                                               DnsOpCode opCode, DnsResponseCode responseCode);
 
     private void decodeQuestions(DnsResponse response, ByteBuf buf, int questionCount) throws Exception {
         for (int i = questionCount; i > 0; i --) {

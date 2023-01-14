@@ -46,7 +46,7 @@ public final class MqttHeartBeatClient {
             b.group(workerGroup);
             b.channel(NioSocketChannel.class);
             b.handler(new ChannelInitializer<SocketChannel>() {
-                protected void initChannel(SocketChannel ch) throws Exception {
+                protected void initChannel(SocketChannel ch) {
                     ch.pipeline().addLast("encoder", MqttEncoder.INSTANCE);
                     ch.pipeline().addLast("decoder", new MqttDecoder());
                     ch.pipeline().addLast("heartBeatHandler", new IdleStateHandler(0, 20, 0, TimeUnit.SECONDS));

@@ -48,7 +48,7 @@ public class RedisClient {
              .channel(NioSocketChannel.class)
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
-                 protected void initChannel(SocketChannel ch) throws Exception {
+                 protected void initChannel(SocketChannel ch) {
                      ChannelPipeline p = ch.pipeline();
                      p.addLast(new RedisDecoder());
                      p.addLast(new RedisBulkStringAggregator());
@@ -78,7 +78,7 @@ public class RedisClient {
                 lastWriteFuture = ch.writeAndFlush(line);
                 lastWriteFuture.addListener(new GenericFutureListener<ChannelFuture>() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             System.err.print("write failed: ");
                             future.cause().printStackTrace(System.err);

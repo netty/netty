@@ -59,7 +59,7 @@ public final class ByteBufUtil {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ByteBufUtil.class);
     private static final FastThreadLocal<byte[]> BYTE_ARRAYS = new FastThreadLocal<byte[]>() {
         @Override
-        protected byte[] initialValue() throws Exception {
+        protected byte[] initialValue() {
             return PlatformDependent.allocateUninitializedArray(MAX_TL_ARRAY_LEN);
         }
     };

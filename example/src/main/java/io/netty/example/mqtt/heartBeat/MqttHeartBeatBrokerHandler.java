@@ -38,7 +38,7 @@ public final class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapt
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         MqttMessage mqttMessage = (MqttMessage) msg;
         System.out.println("Received MQTT message: " + mqttMessage);
         switch (mqttMessage.fixedHeader().messageType()) {
@@ -67,7 +67,7 @@ public final class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapt
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         System.out.println("Channel heartBeat lost");
         if (evt instanceof IdleStateEvent && IdleState.READER_IDLE == ((IdleStateEvent) evt).state()) {
             ctx.close();
@@ -75,7 +75,7 @@ public final class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapt
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

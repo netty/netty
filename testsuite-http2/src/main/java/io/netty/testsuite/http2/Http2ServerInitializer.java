@@ -83,7 +83,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
         p.addLast(cleartextHttp2ServerUpgradeHandler);
         p.addLast(new SimpleChannelInboundHandler<HttpMessage>() {
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, HttpMessage msg) {
                 // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ChannelPipeline pipeline = ctx.pipeline();

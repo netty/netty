@@ -41,14 +41,14 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
     private final Bootstrap b = new Bootstrap();
 
     @Override
-    public void channelRead0(final ChannelHandlerContext ctx, final SocksMessage message) throws Exception {
+    public void channelRead0(final ChannelHandlerContext ctx, final SocksMessage message) {
         if (message instanceof Socks4CommandRequest) {
             final Socks4CommandRequest request = (Socks4CommandRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
             promise.addListener(
                     new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(final Future<Channel> future) throws Exception {
+                        public void operationComplete(final Future<Channel> future) {
                             final Channel outboundChannel = future.getNow();
                             if (future.isSuccess()) {
                                 ChannelFuture responseFuture = ctx.channel().writeAndFlush(
@@ -79,7 +79,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
             b.connect(request.dstAddr(), request.dstPort()).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         // Connection established use handler provided results
                     } else {
@@ -97,7 +97,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
             promise.addListener(
                     new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(final Future<Channel> future) throws Exception {
+                        public void operationComplete(final Future<Channel> future) {
                             final Channel outboundChannel = future.getNow();
                             if (future.isSuccess()) {
                                 ChannelFuture responseFuture =
@@ -132,7 +132,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
             b.connect(request.dstAddr(), request.dstPort()).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         // Connection established use handler provided results
                     } else {
@@ -149,7 +149,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         SocksServerUtils.closeOnFlush(ctx.channel());
     }
 }

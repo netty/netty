@@ -58,7 +58,7 @@ public class ReadOnlyHttp2HeadersBenchmark extends AbstractMicrobenchmark {
     private final AsciiString authority = new AsciiString("io.netty");
 
     @Setup
-    public void setUp() throws Exception {
+    public void setUp() {
         headerNames = new AsciiString[headerCount];
         headerValues = new AsciiString[headerCount];
         for (int i = 0; i < headerCount; ++i) {

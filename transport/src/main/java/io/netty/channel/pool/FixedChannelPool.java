@@ -407,7 +407,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         }
 
         @Override
-        public void operationComplete(Future<Channel> future) throws Exception {
+        public void operationComplete(Future<Channel> future) {
             try {
                 assert executor.inEventLoop();
 
@@ -471,7 +471,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 public void run() {
                     close0().addListener(new FutureListener<Void>() {
                         @Override
-                        public void operationComplete(Future<Void> f) throws Exception {
+                        public void operationComplete(Future<Void> f) {
                             if (f.isSuccess()) {
                                 closeComplete.setSuccess(null);
                             } else {
@@ -508,7 +508,7 @@ public class FixedChannelPool extends SimpleChannelPool {
             // to ensure we will not block in a EventExecutor.
             return GlobalEventExecutor.INSTANCE.submit(new Callable<Void>() {
                 @Override
-                public Void call() throws Exception {
+                public Void call() {
                     FixedChannelPool.super.close();
                     return null;
                 }

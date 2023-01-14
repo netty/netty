@@ -43,7 +43,7 @@ public class ScheduledFutureTaskBenchmark extends AbstractMicrobenchmark {
 
         private static final Callable<Void> NO_OP = new Callable<Void>() {
             @Override
-            public Void call() throws Exception {
+            public Void call() {
                 return null;
             }
         };
@@ -68,7 +68,7 @@ public class ScheduledFutureTaskBenchmark extends AbstractMicrobenchmark {
     }
 
     @TearDown(Level.Trial)
-    public void stop() throws Exception {
+    public void stop() {
         executor.shutdownGracefully().syncUninterruptibly();
     }
 

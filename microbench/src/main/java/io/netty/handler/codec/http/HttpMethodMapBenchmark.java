@@ -152,21 +152,21 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void oldMapKnownMethods(Blackhole bh) throws Exception {
+    public void oldMapKnownMethods(Blackhole bh) {
         for (int i = 0; i < KNOWN_METHODS.length; ++i) {
             bh.consume(OLD_MAP.get(KNOWN_METHODS[i]));
         }
     }
 
     @Benchmark
-    public void newMapKnownMethods(Blackhole bh) throws Exception {
+    public void newMapKnownMethods(Blackhole bh) {
         for (int i = 0; i < KNOWN_METHODS.length; ++i) {
             bh.consume(NEW_MAP.get(KNOWN_METHODS[i]));
         }
     }
 
     @Benchmark
-    public void oldMapMixMethods(Blackhole bh) throws Exception {
+    public void oldMapMixMethods(Blackhole bh) {
         for (int i = 0; i < MIXED_METHODS.length; ++i) {
             HttpMethod method = OLD_MAP.get(MIXED_METHODS[i]);
             if (method != null) {
@@ -176,7 +176,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void newMapMixMethods(Blackhole bh) throws Exception {
+    public void newMapMixMethods(Blackhole bh) {
         for (int i = 0; i < MIXED_METHODS.length; ++i) {
             HttpMethod method = NEW_MAP.get(MIXED_METHODS[i]);
             if (method != null) {
@@ -186,7 +186,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void oldMapUnknownMethods(Blackhole bh) throws Exception {
+    public void oldMapUnknownMethods(Blackhole bh) {
         for (int i = 0; i < UNKNOWN_METHODS.length; ++i) {
             HttpMethod method = OLD_MAP.get(UNKNOWN_METHODS[i]);
             if (method != null) {
@@ -196,7 +196,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void newMapUnknownMethods(Blackhole bh) throws Exception {
+    public void newMapUnknownMethods(Blackhole bh) {
         for (int i = 0; i < UNKNOWN_METHODS.length; ++i) {
             HttpMethod method = NEW_MAP.get(UNKNOWN_METHODS[i]);
             if (method != null) {

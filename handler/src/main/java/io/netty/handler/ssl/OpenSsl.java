@@ -680,7 +680,7 @@ public final class OpenSsl {
 
     private OpenSsl() { }
 
-    private static void loadTcNative() throws Exception {
+    private static void loadTcNative() {
         String os = PlatformDependent.normalizedOs();
         String arch = PlatformDependent.normalizedArch();
 

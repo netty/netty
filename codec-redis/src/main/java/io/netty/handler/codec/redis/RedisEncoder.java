@@ -51,7 +51,7 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, RedisMessage msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, RedisMessage msg, List<Object> out) {
         try {
             writeRedisMessage(ctx.alloc(), msg, out);
         } catch (CodecException e) {

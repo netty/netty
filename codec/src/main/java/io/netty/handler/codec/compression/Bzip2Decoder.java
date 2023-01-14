@@ -90,7 +90,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
     private int streamCRC;
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (!in.isReadable()) {
             return;
         }

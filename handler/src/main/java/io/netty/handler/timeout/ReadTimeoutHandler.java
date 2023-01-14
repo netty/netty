@@ -93,7 +93,7 @@ public class ReadTimeoutHandler extends IdleStateHandler {
     /**
      * Is called when a read timeout was detected.
      */
-    protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
+    protected void readTimedOut(ChannelHandlerContext ctx) {
         if (!closed) {
             ctx.fireExceptionCaught(ReadTimeoutException.INSTANCE);
             ctx.close();

@@ -135,17 +135,17 @@ public class HttpObjectAggregator
     }
 
     @Override
-    protected boolean isContentMessage(HttpObject msg) throws Exception {
+    protected boolean isContentMessage(HttpObject msg) {
         return msg instanceof HttpContent;
     }
 
     @Override
-    protected boolean isLastContentMessage(HttpContent msg) throws Exception {
+    protected boolean isLastContentMessage(HttpContent msg) {
         return msg instanceof LastHttpContent;
     }
 
     @Override
-    protected boolean isAggregated(HttpObject msg) throws Exception {
+    protected boolean isAggregated(HttpObject msg) {
         return msg instanceof FullHttpMessage;
     }
 
@@ -201,7 +201,7 @@ public class HttpObjectAggregator
     }
 
     @Override
-    protected FullHttpMessage beginAggregation(HttpMessage start, ByteBuf content) throws Exception {
+    protected FullHttpMessage beginAggregation(HttpMessage start, ByteBuf content) {
         assert !(start instanceof FullHttpMessage);
 
         HttpUtil.setTransferEncodingChunked(start, false);
@@ -218,7 +218,7 @@ public class HttpObjectAggregator
     }
 
     @Override
-    protected void aggregate(FullHttpMessage aggregated, HttpContent content) throws Exception {
+    protected void aggregate(FullHttpMessage aggregated, HttpContent content) {
         if (content instanceof LastHttpContent) {
             // Merge trailing headers into the message.
             ((AggregatedFullHttpMessage) aggregated).setTrailingHeaders(((LastHttpContent) content).trailingHeaders());
@@ -226,7 +226,7 @@ public class HttpObjectAggregator
     }
 
     @Override
-    protected void finishAggregation(FullHttpMessage aggregated) throws Exception {
+    protected void finishAggregation(FullHttpMessage aggregated) {
         // Set the 'Content-Length' header. If one isn't already set.
         // This is important as HEAD responses will use a 'Content-Length' header which
         // does not match the actual body, but the number of bytes that would be
@@ -241,7 +241,7 @@ public class HttpObjectAggregator
     }
 
     @Override
-    protected void handleOversizedMessage(final ChannelHandlerContext ctx, HttpMessage oversized) throws Exception {
+    protected void handleOversizedMessage(final ChannelHandlerContext ctx, HttpMessage oversized) {
         if (oversized instanceof HttpRequest) {
             // send back a 413 and close the connection
 
@@ -252,7 +252,7 @@ public class HttpObjectAggregator
                 ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
                 future.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
                         }
@@ -262,7 +262,7 @@ public class HttpObjectAggregator
             } else {
                 ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
                             ctx.close();

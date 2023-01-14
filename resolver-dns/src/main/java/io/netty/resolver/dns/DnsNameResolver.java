@@ -942,7 +942,7 @@ public class DnsNameResolver extends InetNameResolver {
     protected void doResolve(String inetHost,
                              DnsRecord[] additionals,
                              Promise<InetAddress> promise,
-                             DnsCache resolveCache) throws Exception {
+                             DnsCache resolveCache) {
         if (inetHost == null || inetHost.isEmpty()) {
             // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
             promise.setSuccess(loopbackAddress());
@@ -1047,7 +1047,7 @@ public class DnsNameResolver extends InetNameResolver {
     protected void doResolveAll(String inetHost,
                                 DnsRecord[] additionals,
                                 Promise<List<InetAddress>> promise,
-                                DnsCache resolveCache) throws Exception {
+                                DnsCache resolveCache) {
         if (inetHost == null || inetHost.isEmpty()) {
             // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
             promise.setSuccess(Collections.singletonList(loopbackAddress()));

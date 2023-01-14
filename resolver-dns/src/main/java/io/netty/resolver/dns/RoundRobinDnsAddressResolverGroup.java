@@ -59,8 +59,7 @@ public class RoundRobinDnsAddressResolverGroup extends DnsAddressResolverGroup {
      */
     @Override
     protected final AddressResolver<InetSocketAddress> newAddressResolver(EventLoop eventLoop,
-                                                                          NameResolver<InetAddress> resolver)
-            throws Exception {
+                                                                          NameResolver<InetAddress> resolver) {
         return new RoundRobinInetAddressResolver(eventLoop, resolver).asAddressResolver();
     }
 }

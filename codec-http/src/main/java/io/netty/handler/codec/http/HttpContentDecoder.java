@@ -186,7 +186,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         boolean needRead = this.needRead;
         this.needRead = true;
 
@@ -219,7 +219,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      * @return the expected content encoding of the new content
      */
     protected String getTargetContentEncoding(
-            @SuppressWarnings("UnusedParameters") String contentEncoding) throws Exception {
+            @SuppressWarnings("UnusedParameters") String contentEncoding) {
         return IDENTITY;
     }
 

@@ -47,7 +47,7 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
     }
 
     @Override
-    protected void apply(final ChannelUDT channelUDT) throws IOException {
+    protected void apply(final ChannelUDT channelUDT) {
         // nothing to apply for now.
     }
 

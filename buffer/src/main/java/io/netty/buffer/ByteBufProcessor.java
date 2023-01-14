@@ -30,7 +30,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_NUL = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value != 0;
         }
     };
@@ -41,7 +41,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_NON_NUL = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value == 0;
         }
     };
@@ -52,7 +52,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_CR = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value != '\r';
         }
     };
@@ -63,7 +63,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_NON_CR = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value == '\r';
         }
     };
@@ -74,7 +74,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_LF = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value != '\n';
         }
     };
@@ -85,7 +85,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_NON_LF = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value == '\n';
         }
     };
@@ -96,7 +96,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_CRLF = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value != '\r' && value != '\n';
         }
     };
@@ -107,7 +107,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_NON_CRLF = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value == '\r' || value == '\n';
         }
     };
@@ -118,7 +118,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value != ' ' && value != '\t';
         }
     };
@@ -129,7 +129,7 @@ public interface ByteBufProcessor extends ByteProcessor {
     @Deprecated
     ByteBufProcessor FIND_NON_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return value == ' ' || value == '\t';
         }
     };

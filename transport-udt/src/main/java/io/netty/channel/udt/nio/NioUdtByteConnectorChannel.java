@@ -160,7 +160,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     }
 
     @Override
-    protected long doWriteFileRegion(FileRegion region) throws Exception {
+    protected long doWriteFileRegion(FileRegion region) {
         throw new UnsupportedOperationException();
     }
 

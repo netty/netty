@@ -63,14 +63,14 @@ public class SocketRstTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.SO_LINGER, 0);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 serverChannelRef.compareAndSet(null, ch);
                 latch.countDown();
             }
         });
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -122,14 +122,14 @@ public class SocketRstTest extends AbstractSocketTest {
         final CountDownLatch latch2 = new CountDownLatch(1);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 serverChannelRef.compareAndSet(null, ch);
                 latch.countDown();
             }
         });
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {

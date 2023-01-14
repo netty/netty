@@ -43,22 +43,22 @@ public class StompSubframeAggregator
     }
 
     @Override
-    protected boolean isStartMessage(StompSubframe msg) throws Exception {
+    protected boolean isStartMessage(StompSubframe msg) {
         return msg instanceof StompHeadersSubframe;
     }
 
     @Override
-    protected boolean isContentMessage(StompSubframe msg) throws Exception {
+    protected boolean isContentMessage(StompSubframe msg) {
         return msg instanceof StompContentSubframe;
     }
 
     @Override
-    protected boolean isLastContentMessage(StompContentSubframe msg) throws Exception {
+    protected boolean isLastContentMessage(StompContentSubframe msg) {
         return msg instanceof LastStompContentSubframe;
     }
 
     @Override
-    protected boolean isAggregated(StompSubframe msg) throws Exception {
+    protected boolean isAggregated(StompSubframe msg) {
         return msg instanceof StompFrame;
     }
 
@@ -74,17 +74,17 @@ public class StompSubframeAggregator
     }
 
     @Override
-    protected boolean closeAfterContinueResponse(Object msg) throws Exception {
+    protected boolean closeAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean ignoreContentAfterContinueResponse(Object msg) throws Exception {
+    protected boolean ignoreContentAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected StompFrame beginAggregation(StompHeadersSubframe start, ByteBuf content) throws Exception {
+    protected StompFrame beginAggregation(StompHeadersSubframe start, ByteBuf content) {
         StompFrame ret = new DefaultStompFrame(start.command(), content);
         ret.headers().set(start.headers());
         return ret;

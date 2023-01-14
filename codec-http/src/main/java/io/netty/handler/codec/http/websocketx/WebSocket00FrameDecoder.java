@@ -65,7 +65,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());

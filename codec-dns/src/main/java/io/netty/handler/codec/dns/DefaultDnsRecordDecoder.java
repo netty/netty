@@ -34,7 +34,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
     protected DefaultDnsRecordDecoder() { }
 
     @Override
-    public final DnsQuestion decodeQuestion(ByteBuf in) throws Exception {
+    public final DnsQuestion decodeQuestion(ByteBuf in) {
         String name = decodeName(in);
         DnsRecordType type = DnsRecordType.valueOf(in.readUnsignedShort());
         int qClass = in.readUnsignedShort();
@@ -86,7 +86,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
      */
     protected DnsRecord decodeRecord(
             String name, DnsRecordType type, int dnsClass, long timeToLive,
-            ByteBuf in, int offset, int length) throws Exception {
+            ByteBuf in, int offset, int length) {
 
         // DNS message compression means that domain names may contain "pointers" to other positions in the packet
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the

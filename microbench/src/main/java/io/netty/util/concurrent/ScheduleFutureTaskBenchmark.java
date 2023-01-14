@@ -39,7 +39,7 @@ public class ScheduleFutureTaskBenchmark extends AbstractMicrobenchmark {
 
     static final Callable<Void> NO_OP = new Callable<Void>() {
         @Override
-        public Void call() throws Exception {
+        public Void call() {
             return null;
         }
     };

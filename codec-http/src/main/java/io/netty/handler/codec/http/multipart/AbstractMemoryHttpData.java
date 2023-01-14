@@ -222,7 +222,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     }
 
     @Override
-    public ByteBuf getChunk(int length) throws IOException {
+    public ByteBuf getChunk(int length) {
         if (byteBuf == null || length == 0 || byteBuf.readableBytes() == 0) {
             chunkPosition = 0;
             return EMPTY_BUFFER;

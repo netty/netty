@@ -122,7 +122,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (destroyed) {
             // Skip data received after finished.
             in.skipBytes(in.readableBytes());

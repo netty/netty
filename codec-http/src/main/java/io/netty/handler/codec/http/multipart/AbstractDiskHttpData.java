@@ -467,7 +467,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     }
 
     @Override
-    public File getFile() throws IOException {
+    public File getFile() {
         return file;
     }
 

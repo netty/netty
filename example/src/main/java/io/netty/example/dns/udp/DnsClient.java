@@ -74,7 +74,7 @@ public final class DnsClient {
              .channel(NioDatagramChannel.class)
              .handler(new ChannelInitializer<DatagramChannel>() {
                  @Override
-                 protected void initChannel(DatagramChannel ch) throws Exception {
+                 protected void initChannel(DatagramChannel ch) {
                      ChannelPipeline p = ch.pipeline();
                      p.addLast(new DatagramDnsQueryEncoder())
                      .addLast(new DatagramDnsResponseDecoder())

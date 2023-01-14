@@ -287,17 +287,17 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         final BlockingDeque<Boolean> writabilityQueue = new LinkedBlockingDeque<Boolean>();
 
         @Override
-        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) {
             writabilityQueue.add(ctx.channel().isWritable());
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             ch = (SocketChannel) ctx.channel();
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             queue.offer(msg.readByte());
         }
 
@@ -307,7 +307,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             }
         }
 
-        void assertWritability(boolean isWritable) throws InterruptedException {
+        void assertWritability(boolean isWritable) {
             try {
                 Boolean writability = writabilityQueue.takeLast();
                 assertEquals(isWritable, writability);

@@ -688,7 +688,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // This means close() was called before so we just register a listener and return
                     closeFuture.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             promise.setSuccess();
                         }
                     });
@@ -1126,7 +1126,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Invoked when a new message is added to a {@link ChannelOutboundBuffer} of this {@link AbstractChannel}, so that
      * the {@link Channel} implementation converts the message to another. (e.g. heap buffer -> direct buffer)
      */
-    protected Object filterOutboundMessage(Object msg) throws Exception {
+    protected Object filterOutboundMessage(Object msg) {
         return msg;
     }
 

@@ -198,7 +198,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
-            public void initChannel(SocketChannel channel) throws Exception {
+            public void initChannel(SocketChannel channel) {
                 channel.pipeline().addLast(
                         new SpdyFrameCodec(version),
                         sh);
@@ -246,19 +246,19 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ctx.write(msg);
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             try {
                 ctx.flush();
             } finally {
@@ -269,7 +269,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }
@@ -287,14 +287,14 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
             this.autoRead = autoRead;
         }
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -307,14 +307,14 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }

@@ -127,7 +127,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * return msg instanceof MyContentMessage;
      * </pre>
      */
-    protected abstract boolean isContentMessage(I msg) throws Exception;
+    protected abstract boolean isContentMessage(I msg);
 
     /**
      * Returns {@code true} if and only if the specified message is the last content message. Typically, this method is
@@ -226,7 +226,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 if (listener == null) {
                     continueResponseWriteListener = listener = new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (!future.isSuccess()) {
                                 ctx.fireExceptionCaught(future.cause());
                             }
@@ -340,7 +340,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * @return {@code true} if the message {@code start}'s content length is known, and if it greater than
      * {@code maxContentLength}. {@code false} otherwise.
      */
-    protected abstract boolean isContentLengthInvalid(S start, int maxContentLength) throws Exception;
+    protected abstract boolean isContentLengthInvalid(S start, int maxContentLength);
 
     /**
      * Returns the 'continue response' for the specified start message if necessary. For example, this method is
@@ -349,7 +349,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * @return the 'continue response', or {@code null} if there's no message to send
      */
     protected abstract Object newContinueResponse(S start, int maxContentLength, ChannelPipeline pipeline)
-            throws Exception;
+    ;
 
     /**
      * Determine if the channel should be closed after the result of
@@ -358,7 +358,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * @return {@code true} if the channel should be closed after the result of
      * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written. {@code false} otherwise.
      */
-    protected abstract boolean closeAfterContinueResponse(Object msg) throws Exception;
+    protected abstract boolean closeAfterContinueResponse(Object msg);
 
     /**
      * Determine if all objects for the current request/response should be ignored or not.
@@ -368,7 +368,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * @return {@code true} if all objects for the current request/response should be ignored or not.
      * {@code false} otherwise.
      */
-    protected abstract boolean ignoreContentAfterContinueResponse(Object msg) throws Exception;
+    protected abstract boolean ignoreContentAfterContinueResponse(Object msg);
 
     /**
      * Creates a new aggregated message from the specified start message and the specified content.  If the start
@@ -383,7 +383,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * aggregated message already, so that you don't need to.  Use this method to transfer the additional information
      * that the content message provides to {@code aggregated}.
      */
-    protected void aggregate(O aggregated, C content) throws Exception { }
+    protected void aggregate(O aggregated, C content) { }
 
     private void finishAggregation0(O aggregated) throws Exception {
         aggregating = false;
@@ -393,7 +393,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     /**
      * Invoked when the specified {@code aggregated} message is about to be passed to the next handler in the pipeline.
      */
-    protected void finishAggregation(O aggregated) throws Exception { }
+    protected void finishAggregation(O aggregated) { }
 
     private void invokeHandleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
         handlingOversizedMessage = true;
@@ -413,13 +413,13 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
      * @param ctx the {@link ChannelHandlerContext}
      * @param oversized the accumulated message up to this point, whose type is {@code S} or {@code O}
      */
-    protected void handleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
+    protected void handleOversizedMessage(ChannelHandlerContext ctx, S oversized) {
         ctx.fireExceptionCaught(
                 new TooLongFrameException("content length exceeded " + maxContentLength() + " bytes."));
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         // We might need keep reading the channel until the full message is aggregated.
         //
         // See https://github.com/netty/netty/issues/6583
@@ -440,7 +440,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 

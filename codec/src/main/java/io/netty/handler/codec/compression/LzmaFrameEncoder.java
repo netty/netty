@@ -195,7 +195,7 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf in, boolean preferDirect) throws Exception {
+    protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf in, boolean preferDirect) {
         final int length = in.readableBytes();
         final int maxOutputLength = maxOutputBufferLength(length);
         return ctx.alloc().ioBuffer(maxOutputLength);

@@ -137,7 +137,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writeBytes(content, content.readerIndex(), contentLen);
     }
 
-    protected void encodeName(String name, ByteBuf buf) throws Exception {
+    protected void encodeName(String name, ByteBuf buf) {
         DnsCodecUtil.encodeDomainName(name, buf);
     }
 

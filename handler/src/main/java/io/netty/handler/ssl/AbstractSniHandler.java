@@ -137,14 +137,14 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         if (ctx.channel().isActive()) {
             checkStartTimeout(ctx);
         }
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         ctx.fireChannelActive();
         checkStartTimeout(ctx);
     }
@@ -199,7 +199,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
      * @see #lookup(ChannelHandlerContext, String)
      */
     protected abstract void onLookupComplete(ChannelHandlerContext ctx,
-                                             String hostname, Future<T> future) throws Exception;
+                                             String hostname, Future<T> future);
 
     private static void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<?> future) {
         Throwable cause = future.cause();

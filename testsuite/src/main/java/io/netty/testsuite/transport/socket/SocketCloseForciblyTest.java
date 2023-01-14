@@ -39,7 +39,7 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
     public void testCloseForcibly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 SocketChannel childChannel = (SocketChannel) msg;
                 childChannel.config().setSoLinger(0);
                 childChannel.unsafe().closeForcibly();

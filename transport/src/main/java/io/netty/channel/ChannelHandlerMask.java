@@ -168,7 +168,7 @@ final class ChannelHandlerMask {
             final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
         return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
             @Override
-            public Boolean run() throws Exception {
+            public Boolean run() {
                 Method m;
                 try {
                     m = handlerType.getMethod(methodName, paramTypes);

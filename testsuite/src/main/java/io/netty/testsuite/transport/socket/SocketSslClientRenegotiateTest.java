@@ -156,7 +156,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 @SuppressWarnings("deprecation")
-                public void initChannel(Channel sch) throws Exception {
+                public void initChannel(Channel sch) {
                     serverChannel = sch;
                     serverSslHandler = newSslHandler(serverCtx, sch.alloc(), executorService);
                     // As we test renegotiation we should use a protocol that support it.
@@ -169,7 +169,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 @SuppressWarnings("deprecation")
-                public void initChannel(Channel sch) throws Exception {
+                public void initChannel(Channel sch) {
                     clientChannel = sch;
                     clientSslHandler = newSslHandler(clientCtx, sch.alloc(), executorService);
                     // As we test renegotiation we should use a protocol that support it.
@@ -233,18 +233,18 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.flush();
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             exception.compareAndSet(null, cause);
             ctx.close();
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
                 if (handshakeCounter == 0) {
@@ -262,6 +262,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) { }
     }
 }

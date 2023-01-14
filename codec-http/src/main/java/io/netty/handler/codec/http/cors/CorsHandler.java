@@ -78,7 +78,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
         if (msg instanceof HttpRequest) {
             request = (HttpRequest) msg;
             final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
@@ -226,8 +226,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
-            throws Exception {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
         if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
             if (setOrigin(response)) {

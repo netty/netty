@@ -256,9 +256,8 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      * The window update ratio is used to determine when a window update must be sent. If the ratio
      * of bytes processed since the last update has meet or exceeded this ratio then a window update will
      * be sent. This window update ratio will only be applied to {@code streamId}.
-     * @throws Http2Exception If no stream corresponding to {@code stream} could be found.
      */
-    public float windowUpdateRatio(Http2Stream stream) throws Http2Exception {
+    public float windowUpdateRatio(Http2Stream stream) {
         return state(stream).windowUpdateRatio();
     }
 
@@ -312,7 +311,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public boolean consumeBytes(int numBytes) throws Http2Exception {
+        public boolean consumeBytes(int numBytes) {
             // Do nothing, since the bytes are already consumed upon receiving the data.
             return false;
         }
@@ -514,12 +513,12 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public boolean writeWindowUpdateIfNeeded() throws Http2Exception {
+        public boolean writeWindowUpdateIfNeeded() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public boolean consumeBytes(int numBytes) throws Http2Exception {
+        public boolean consumeBytes(int numBytes) {
             return false;
         }
 
@@ -539,12 +538,12 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         }
 
         @Override
-        public void receiveFlowControlledFrame(int dataLength) throws Http2Exception {
+        public void receiveFlowControlledFrame(int dataLength) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void incrementFlowControlWindows(int delta) throws Http2Exception {
+        public void incrementFlowControlWindows(int delta) {
             // This operation needs to be supported during the initial settings exchange when
             // the peer has not yet acknowledged this peer being activated.
         }

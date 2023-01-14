@@ -46,7 +46,7 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HAProxyMessage msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HAProxyMessage msg, ByteBuf out) {
         switch (msg.protocolVersion()) {
             case V1:
                 encodeV1(msg, out);

@@ -704,18 +704,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
@@ -732,7 +732,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (!handshakePromise.isDone()) {
             setState(STATE_READ_DURING_HANDSHAKE);
         }
@@ -759,7 +759,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
         if (startTls && !isStateSet(STATE_SENT_FIRST_MESSAGE)) {
@@ -1086,7 +1086,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (ignoreException(cause)) {
             // It is safe to ignore the 'connection reset by peer' or
             // 'broken pipe' error after sending close_notify.
@@ -1289,7 +1289,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         channelReadComplete0(ctx);
     }
 
@@ -2127,7 +2127,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Cancel the handshake timeout when handshake is finished.
         localHandshakePromise.addListener(new FutureListener<Channel>() {
             @Override
-            public void operationComplete(Future<Channel> f) throws Exception {
+            public void operationComplete(Future<Channel> f) {
                 timeoutFuture.cancel(false);
             }
         });
@@ -2148,7 +2148,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Issues an initial TLS handshake once connected when used in client-mode
      */
     @Override
-    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(final ChannelHandlerContext ctx) {
         setOpensslEngineSocketFd(ctx.channel());
         if (!startTls) {
             startHandshakeProcessing(true);
@@ -2223,7 +2223,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // Do the close once the we received the close_notify.
                     sslClosePromise.addListener(new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(Future<Channel> future) throws Exception {
+                        public void operationComplete(Future<Channel> future) {
                             if (closeNotifyReadTimeoutFuture != null) {
                                 closeNotifyReadTimeoutFuture.cancel(false);
                             }

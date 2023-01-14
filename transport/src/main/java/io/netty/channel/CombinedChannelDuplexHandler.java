@@ -176,7 +176,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) {
         try {
             inboundCtx.remove();
         } finally {

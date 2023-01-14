@@ -89,7 +89,7 @@ final class Utf8Validator implements ByteProcessor {
     }
 
     @Override
-    public boolean process(byte b) throws Exception {
+    public boolean process(byte b) {
         byte type = TYPES[b & 0xFF];
 
         codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;

@@ -264,10 +264,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @param contentEncoding the value of the {@code content-encoding} header
      * @return a new {@link ByteToMessageDecoder} if the specified encoding is supported. {@code null} otherwise
      * (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
-     * @throws Http2Exception If the specified encoding is not supported and warrants an exception
      */
-    protected EmbeddedChannel newContentCompressor(ChannelHandlerContext ctx, CharSequence contentEncoding)
-            throws Http2Exception {
+    protected EmbeddedChannel newContentCompressor(ChannelHandlerContext ctx, CharSequence contentEncoding) {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ctx, ZlibWrapper.GZIP);
         }
@@ -293,9 +291,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      *
      * @param contentEncoding the value of the {@code content-encoding} header
      * @return the expected content encoding of the new content.
-     * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
-    protected CharSequence getTargetContentEncoding(CharSequence contentEncoding) throws Http2Exception {
+    protected CharSequence getTargetContentEncoding(CharSequence contentEncoding) {
         return contentEncoding;
     }
 

@@ -145,7 +145,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         final int length = in.readableBytes();
         final int idx = in.readerIndex();
         final byte[] input;

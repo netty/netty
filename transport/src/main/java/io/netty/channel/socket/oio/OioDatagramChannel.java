@@ -198,12 +198,12 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
+    protected void doDisconnect() {
         socket.disconnect();
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose() {
         socket.close();
     }
 
@@ -245,7 +245,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) {
         for (;;) {
             final Object o = in.current();
             if (o == null) {

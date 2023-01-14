@@ -41,7 +41,7 @@ public final class RxtxClient {
              .channel(RxtxChannel.class)
              .handler(new ChannelInitializer<RxtxChannel>() {
                  @Override
-                 public void initChannel(RxtxChannel ch) throws Exception {
+                 public void initChannel(RxtxChannel ch) {
                      ch.pipeline().addLast(
                          new LineBasedFrameDecoder(32768),
                          new StringEncoder(),

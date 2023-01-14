@@ -242,7 +242,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    void handlerAdded0(@SuppressWarnings("unsed") ChannelHandlerContext ctx) throws Exception {
+    void handlerAdded0(@SuppressWarnings("unsed") ChannelHandlerContext ctx) {
         // sub-class can override this for extra steps that needs to be done when the handler is added.
     }
 

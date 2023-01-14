@@ -114,12 +114,12 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         if (readInProgress) {
             // If there is still a read in progress we are sure we will see a channelReadComplete(...) call. Thus
             // we only need to flush if we reach the explicitFlushAfterFlushes limit.
@@ -140,41 +140,41 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         // This may be the last event in the read loop, so flush now!
         resetReadAndFlushIfNeeded(ctx);
         ctx.fireChannelReadComplete();
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         readInProgress = true;
         ctx.fireChannelRead(msg);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         // To ensure we not miss to flush anything, do it now.
         resetReadAndFlushIfNeeded(ctx);
         ctx.fireExceptionCaught(cause);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         // Try to flush one last time if flushes are pending before disconnect the channel.
         resetReadAndFlushIfNeeded(ctx);
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         // Try to flush one last time if flushes are pending before close the channel.
         resetReadAndFlushIfNeeded(ctx);
         ctx.close(promise);
     }
 
     @Override
-    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) {
         if (!ctx.channel().isWritable()) {
             // The writability of the channel changed to false, so flush all consolidated flushes now to free up memory.
             flushIfNeeded(ctx);
@@ -183,7 +183,7 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) {
         flushIfNeeded(ctx);
     }
 

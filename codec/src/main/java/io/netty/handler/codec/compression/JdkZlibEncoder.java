@@ -213,7 +213,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out) {
         if (finished) {
             out.writeBytes(uncompressed);
             return;
@@ -279,7 +279,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
     @Override
     protected final ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg,
-                                           boolean preferDirect) throws Exception {
+                                           boolean preferDirect) {
         int sizeEstimate = (int) Math.ceil(msg.readableBytes() * 1.001) + 12;
         if (writeHeader) {
             switch (wrapper) {
@@ -302,11 +302,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
+            public void operationComplete(ChannelFuture f) {
                 ctx.close(promise);
             }
         });
@@ -387,7 +387,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 }

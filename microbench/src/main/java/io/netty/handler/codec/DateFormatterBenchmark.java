@@ -44,7 +44,7 @@ public class DateFormatterBenchmark {
     }
 
     @Benchmark
-    public String formatHttpHeaderDateFormat() throws Exception {
+    public String formatHttpHeaderDateFormat() {
         return HttpHeaderDateFormat.get().format(DATE);
     }
 }

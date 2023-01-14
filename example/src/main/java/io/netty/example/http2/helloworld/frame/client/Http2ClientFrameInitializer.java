@@ -36,7 +36,7 @@ public final class Http2ClientFrameInitializer extends ChannelInitializer<Channe
     }
 
     @Override
-    protected void initChannel(Channel ch) throws Exception {
+    protected void initChannel(Channel ch) {
         // ensure that our 'trust all' SSL handler is the first in the pipeline if SSL is enabled.
         if (sslCtx != null) {
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));

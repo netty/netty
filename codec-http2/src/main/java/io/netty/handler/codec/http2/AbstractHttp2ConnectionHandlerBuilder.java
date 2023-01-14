@@ -603,7 +603,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * </ul>
      */
     protected abstract T build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-                               Http2Settings initialSettings) throws Exception;
+                               Http2Settings initialSettings);
 
     /**
      * Returns {@code this}.

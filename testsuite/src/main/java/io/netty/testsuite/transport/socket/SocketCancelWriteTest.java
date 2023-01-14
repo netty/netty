@@ -105,20 +105,19 @@ public class SocketCancelWriteTest extends AbstractSocketTest {
         volatile int counter;
         final ByteBuf received = Unpooled.buffer();
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             counter += in.readableBytes();
             received.writeBytes(in);
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+                Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

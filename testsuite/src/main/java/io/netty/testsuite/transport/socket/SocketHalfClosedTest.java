@@ -81,7 +81,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
               .childHandler(new ChannelInitializer<Channel>() {
 
                   @Override
-                  protected void initChannel(Channel ch) throws Exception {
+                  protected void initChannel(Channel ch) {
                       ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 
                             @Override
@@ -102,7 +102,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
               .handler(new ChannelInitializer<Channel>() {
                   @Override
-                  protected void initChannel(Channel ch) throws Exception {
+                  protected void initChannel(Channel ch) {
                       ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 
                             @Override
@@ -242,15 +242,15 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
                             ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
+                                public void operationComplete(ChannelFuture future) {
                                     ((DuplexChannel) future.channel()).shutdownOutput();
                                 }
                             });
@@ -267,7 +267,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         private int bytesRead;
                         private int bytesSinceReadComplete;
@@ -381,14 +381,14 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     serverReadExpectedLatch, doneLatch, causeRef);
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientIsLeader ? followerHandler :leaderHandler);
                 }
             });
 
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientIsLeader ? leaderHandler : followerHandler);
                 }
             });
@@ -436,7 +436,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             bytesRead += msg.readableBytes();
             if (bytesRead >= expectedBytes) {
                 // We write a reply and immediately close our end of the socket.
@@ -444,10 +444,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 buf.writerIndex(buf.writerIndex() + expectedBytes);
                 ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         future.channel().close().addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(final ChannelFuture future) throws Exception {
+                            public void operationComplete(final ChannelFuture future) {
                                 // This is a bit racy but there is no better way how to handle this in Java11.
                                 // The problem is that on close() the underlying FD will not actually be closed directly
                                 // but the close will be done after the Selector did process all events. Because of
@@ -503,7 +503,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             // This write should fail, but we should still be allowed to read the peer's data
             ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.cause() == null) {
                         causeRef.set(new IllegalStateException("second write should have failed!"));
                         doneLatch.countDown();
@@ -513,7 +513,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             bytesRead += msg.readableBytes();
             if (bytesRead >= expectedBytes) {
                 doneLatch.countDown();
@@ -581,10 +581,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
                             ctx.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
@@ -601,7 +601,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         private int bytesRead;
 

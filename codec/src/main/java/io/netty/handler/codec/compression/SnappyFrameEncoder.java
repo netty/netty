@@ -46,7 +46,7 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     private boolean started;
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         if (!in.isReadable()) {
             return;
         }

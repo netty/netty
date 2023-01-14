@@ -83,7 +83,7 @@ public class SctpEchoTest extends AbstractSctpTest {
 
         sb.childHandler(new ChannelInitializer<SctpChannel>() {
             @Override
-            public void initChannel(SctpChannel c) throws Exception {
+            public void initChannel(SctpChannel c) {
                 c.pipeline().addLast(
                         new SctpMessageCompletionHandler(),
                         new SctpInboundByteStreamHandler(0, 0),
@@ -93,7 +93,7 @@ public class SctpEchoTest extends AbstractSctpTest {
         });
         cb.handler(new ChannelInitializer<SctpChannel>() {
             @Override
-            public void initChannel(SctpChannel c) throws Exception {
+            public void initChannel(SctpChannel c) {
                 c.pipeline().addLast(
                         new SctpMessageCompletionHandler(),
                         new SctpInboundByteStreamHandler(0, 0),
@@ -157,12 +157,12 @@ public class SctpEchoTest extends AbstractSctpTest {
         volatile int counter;
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -179,7 +179,7 @@ public class SctpEchoTest extends AbstractSctpTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

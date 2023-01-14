@@ -63,7 +63,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         ctx.pipeline()
                 .addAfter(ctx.name(), null, httpServerUpgradeHandler)
                 .addAfter(ctx.name(), null, httpServerCodec);
@@ -74,7 +74,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecod
      * by HTTP upgrade or prior knowledge
      */
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         int prefaceLength = CONNECTION_PREFACE.readableBytes();
         int bytesRead = Math.min(in.readableBytes(), prefaceLength);
 

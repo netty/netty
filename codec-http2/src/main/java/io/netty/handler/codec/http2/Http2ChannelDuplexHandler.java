@@ -43,7 +43,7 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
         handlerAdded0(ctx);
     }
 
-    protected void handlerAdded0(@SuppressWarnings("unused") ChannelHandlerContext ctx) throws Exception {
+    protected void handlerAdded0(@SuppressWarnings("unused") ChannelHandlerContext ctx) {
         // NOOP
     }
 
@@ -56,7 +56,7 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
         }
     }
 
-    protected void handlerRemoved0(@SuppressWarnings("unused") ChannelHandlerContext ctx) throws Exception {
+    protected void handlerRemoved0(@SuppressWarnings("unused") ChannelHandlerContext ctx) {
         // NOOP
     }
 

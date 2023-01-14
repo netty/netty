@@ -56,45 +56,43 @@ public final class RedisBulkStringAggregator extends MessageAggregator<RedisMess
     }
 
     @Override
-    protected boolean isContentMessage(RedisMessage msg) throws Exception {
+    protected boolean isContentMessage(RedisMessage msg) {
         return msg instanceof BulkStringRedisContent;
     }
 
     @Override
-    protected boolean isLastContentMessage(BulkStringRedisContent msg) throws Exception {
+    protected boolean isLastContentMessage(BulkStringRedisContent msg) {
         return msg instanceof LastBulkStringRedisContent;
     }
 
     @Override
-    protected boolean isAggregated(RedisMessage msg) throws Exception {
+    protected boolean isAggregated(RedisMessage msg) {
         return msg instanceof FullBulkStringRedisMessage;
     }
 
     @Override
-    protected boolean isContentLengthInvalid(BulkStringHeaderRedisMessage start, int maxContentLength)
-            throws Exception {
+    protected boolean isContentLengthInvalid(BulkStringHeaderRedisMessage start, int maxContentLength) {
         return start.bulkStringLength() > maxContentLength;
     }
 
     @Override
     protected Object newContinueResponse(BulkStringHeaderRedisMessage start, int maxContentLength,
-                                         ChannelPipeline pipeline) throws Exception {
+                                         ChannelPipeline pipeline) {
         return null;
     }
 
     @Override
-    protected boolean closeAfterContinueResponse(Object msg) throws Exception {
+    protected boolean closeAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean ignoreContentAfterContinueResponse(Object msg) throws Exception {
+    protected boolean ignoreContentAfterContinueResponse(Object msg) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected FullBulkStringRedisMessage beginAggregation(BulkStringHeaderRedisMessage start, ByteBuf content)
-            throws Exception {
+    protected FullBulkStringRedisMessage beginAggregation(BulkStringHeaderRedisMessage start, ByteBuf content) {
         return new FullBulkStringRedisMessage(content);
     }
 }

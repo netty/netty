@@ -95,7 +95,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         switch (state()) {
             case SKIP_CONTROL_CHARACTERS:
                 skipControlCharacters(in);

@@ -448,7 +448,7 @@ public final class CorsConfig {
     public static final class DateValueGenerator implements Callable<Date> {
 
         @Override
-        public Date call() throws Exception {
+        public Date call() {
             return new Date();
         }
     }

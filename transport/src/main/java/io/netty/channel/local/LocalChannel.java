@@ -155,7 +155,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister() {
         // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
         // This is needed as a peer may not be null also if a LocalChannel was connected before and
         // deregistered / registered later again.
@@ -191,7 +191,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress) {
         this.localAddress =
                 LocalChannelRegistry.register(this, this.localAddress,
                         localAddress);
@@ -204,7 +204,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose() {
         final LocalChannel peer = this.peer;
         State oldState = state;
         try {
@@ -282,7 +282,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister() {
         // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
@@ -303,7 +303,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() {
         if (readInProgress) {
             return;
         }

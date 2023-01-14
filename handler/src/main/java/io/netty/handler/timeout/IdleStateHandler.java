@@ -102,7 +102,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
     private final ChannelFutureListener writeListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             lastWriteTime = ticksInNanos();
             firstWriterIdleEvent = firstAllIdleEvent = true;
         }
@@ -237,7 +237,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             // channelActive() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
@@ -249,7 +249,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) {
         destroy();
     }
 
@@ -278,7 +278,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             reading = true;
             firstReaderIdleEvent = firstAllIdleEvent = true;
@@ -287,7 +287,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         if ((readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) && reading) {
             lastReadTime = ticksInNanos();
             reading = false;
@@ -296,7 +296,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         // Allow writing with void promise if handler is only configured for read timeout events.
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             ctx.write(msg, promise.unvoid()).addListener(writeListener);

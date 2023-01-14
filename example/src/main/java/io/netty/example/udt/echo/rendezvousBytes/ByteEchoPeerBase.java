@@ -59,7 +59,7 @@ public class ByteEchoPeerBase {
                     .channelFactory(NioUdtProvider.BYTE_RENDEZVOUS)
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override
-                        protected void initChannel(UdtChannel ch) throws Exception {
+                        protected void initChannel(UdtChannel ch) {
                             ch.pipeline().addLast(
                                     new LoggingHandler(LogLevel.INFO),
                                     new ByteEchoPeerHandler(messageSize));

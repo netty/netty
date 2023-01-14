@@ -40,7 +40,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext context, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext context, ByteBuf in, List<Object> out) {
         if (in.readableBytes() < SslUtils.SSL_RECORD_HEADER_LENGTH) {
             return;
         }

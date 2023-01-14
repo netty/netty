@@ -98,11 +98,11 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         testConnectRefused0(cb, true);
     }
 
-    private static void testConnectRefused0(Bootstrap cb, boolean halfClosure) throws Throwable {
+    private static void testConnectRefused0(Bootstrap cb, boolean halfClosure) {
         final Promise<Error> errorPromise = GlobalEventExecutor.INSTANCE.newPromise();
         ChannelHandler handler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(ChannelHandlerContext ctx) {
                 errorPromise.setFailure(new AssertionError("should have never been called"));
             }
         };
@@ -170,7 +170,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     private static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             InternalLoggerFactory.getInstance(
                     SocketConnectionAttemptTest.class).warn("Unexpected exception:", cause);
         }

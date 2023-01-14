@@ -116,7 +116,7 @@ public class RxtxChannel extends OioByteStreamChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress) {
         throw new UnsupportedOperationException();
     }
 

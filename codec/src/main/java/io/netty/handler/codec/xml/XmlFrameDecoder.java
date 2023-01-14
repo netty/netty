@@ -84,7 +84,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         boolean openingBracketFound = false;
         boolean atLeastOneXmlElementFound = false;
         boolean inCDATASection = false;

@@ -80,8 +80,7 @@ public class UDTClientServerConnectionTest {
                         .handler(new ChannelInitializer<UdtChannel>() {
 
                             @Override
-                            protected void initChannel(final UdtChannel ch)
-                                    throws Exception {
+                            protected void initChannel(final UdtChannel ch) {
                                 final ChannelPipeline pipeline = ch.pipeline();
                                 pipeline.addLast("framer",
                                         new DelimiterBasedFrameDecoder(8192,
@@ -166,13 +165,13 @@ public class UDTClientServerConnectionTest {
 
         @Override
         public void exceptionCaught(final ChannelHandlerContext ctx,
-                final Throwable cause) throws Exception {
+                final Throwable cause) {
             log.warn("Client unexpected exception from downstream.", cause);
             ctx.close();
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) {
             log.info("Client received: " + msg);
         }
     }
@@ -207,8 +206,7 @@ public class UDTClientServerConnectionTest {
                         .channelFactory(NioUdtProvider.BYTE_ACCEPTOR)
                         .childHandler(new ChannelInitializer<UdtChannel>() {
                             @Override
-                            protected void initChannel(final UdtChannel ch)
-                                    throws Exception {
+                            protected void initChannel(final UdtChannel ch) {
                                 final ChannelPipeline pipeline = ch.pipeline();
                                 pipeline.addLast("framer",
                                         new DelimiterBasedFrameDecoder(8192,
@@ -323,7 +321,7 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) {
             log.info("Server received: " + msg);
         }
     }

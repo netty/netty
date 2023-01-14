@@ -95,7 +95,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
             for (;;) {
                 switch (state) {
@@ -142,7 +142,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         remainingBulkLength = 0;
     }
 
-    private boolean decodeType(ByteBuf in) throws Exception {
+    private boolean decodeType(ByteBuf in) {
         if (!in.isReadable()) {
             return false;
         }
@@ -152,7 +152,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         return true;
     }
 
-    private boolean decodeInline(ByteBuf in, List<Object> out) throws Exception {
+    private boolean decodeInline(ByteBuf in, List<Object> out) {
         ByteBuf lineBytes = readLine(in);
         if (lineBytes == null) {
             if (in.readableBytes() > maxInlineMessageLength) {
@@ -209,7 +209,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
     }
 
     // $0\r\n <here> \r\n
-    private boolean decodeBulkStringEndOfLine(ByteBuf in, List<Object> out) throws Exception {
+    private boolean decodeBulkStringEndOfLine(ByteBuf in, List<Object> out) {
         if (in.readableBytes() < RedisConstants.EOL_LENGTH) {
             return false;
         }
@@ -220,7 +220,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
     }
 
     // ${expectedBulkLength}\r\n <here> {data...}\r\n
-    private boolean decodeBulkStringContent(ByteBuf in, List<Object> out) throws Exception {
+    private boolean decodeBulkStringContent(ByteBuf in, List<Object> out) {
         final int readableBytes = in.readableBytes();
         if (readableBytes == 0 || remainingBulkLength == 0 && readableBytes < RedisConstants.EOL_LENGTH) {
             return false;
@@ -313,7 +313,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         private long result;
 
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             if (value < '0' || value > '9') {
                 throw new RedisCodecException("bad byte in number: " + value);
             }

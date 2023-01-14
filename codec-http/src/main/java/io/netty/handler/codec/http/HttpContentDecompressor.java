@@ -54,7 +54,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
     }
 
     @Override
-    protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
+    protected EmbeddedChannel newContentDecoder(String contentEncoding) {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
             X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),

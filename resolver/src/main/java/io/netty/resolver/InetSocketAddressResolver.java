@@ -48,14 +48,13 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
     }
 
     @Override
-    protected void doResolve(final InetSocketAddress unresolvedAddress, final Promise<InetSocketAddress> promise)
-            throws Exception {
+    protected void doResolve(final InetSocketAddress unresolvedAddress, final Promise<InetSocketAddress> promise) {
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolve(unresolvedAddress.getHostName())
                 .addListener(new FutureListener<InetAddress>() {
                     @Override
-                    public void operationComplete(Future<InetAddress> future) throws Exception {
+                    public void operationComplete(Future<InetAddress> future) {
                         if (future.isSuccess()) {
                             promise.setSuccess(new InetSocketAddress(future.getNow(), unresolvedAddress.getPort()));
                         } else {
@@ -67,13 +66,13 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
 
     @Override
     protected void doResolveAll(final InetSocketAddress unresolvedAddress,
-                                final Promise<List<InetSocketAddress>> promise) throws Exception {
+                                final Promise<List<InetSocketAddress>> promise) {
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolveAll(unresolvedAddress.getHostName())
                 .addListener(new FutureListener<List<InetAddress>>() {
                     @Override
-                    public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+                    public void operationComplete(Future<List<InetAddress>> future) {
                         if (future.isSuccess()) {
                             List<InetAddress> inetAddresses = future.getNow();
                             List<InetSocketAddress> socketAddresses =

@@ -83,12 +83,12 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         private final Promise<Channel> channelFuture = new DefaultPromise<Channel>(executor);
 
         @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        public void handlerAdded(ChannelHandlerContext ctx) {
             channelFuture.setSuccess(ctx.channel());
         }
 
         @Override
-        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(final ChannelHandlerContext ctx) {
             byte[] data = new byte[1024];
             random.nextBytes(data);
 
@@ -98,14 +98,14 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
 
             ctx.channel().writeAndFlush(buf).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     latch.countDown();
                 }
             });
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) {
             // discard
         }
 
