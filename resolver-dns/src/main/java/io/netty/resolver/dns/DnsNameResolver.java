@@ -51,6 +51,7 @@ import io.netty.resolver.HostsFileEntries;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.windows.WindowsResolverDnsServerAddressStreamProvider;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -63,7 +64,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Method;
 import java.net.IDN;
 import java.net.Inet4Address;
 import java.net.Inet6Address;

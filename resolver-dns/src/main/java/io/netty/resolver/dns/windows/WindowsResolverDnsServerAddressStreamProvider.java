@@ -13,10 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.resolver.dns;
+package io.netty.resolver.dns.windows;
 
-import io.netty.resolver.dns.windows.NetworkAdapter;
-import io.netty.resolver.dns.windows.WindowsAdapterInfo;
+import io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsServerAddressStream;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.internal.StringUtil;
 
 import java.net.InetSocketAddress;

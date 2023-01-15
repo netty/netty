@@ -21,7 +21,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.List;
 
-public final class WindowsAdapterInfo {
+final class WindowsAdapterInfo {
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
@@ -48,20 +48,20 @@ public final class WindowsAdapterInfo {
         NativeLibraryLoader.load(sharedLibName, cl);
     }
 
-    public static boolean isAvailable() {
+    static boolean isAvailable() {
         return UNAVAILABILITY_CAUSE == null;
     }
 
-    public static void ensureAvailability() {
+    static void ensureAvailability() {
         if (UNAVAILABILITY_CAUSE != null) {
             throw (Error) new UnsatisfiedLinkError(
                     "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
         }
     }
 
-    public static Throwable unavailabilityCause() {
+    static Throwable unavailabilityCause() {
         return UNAVAILABILITY_CAUSE;
     }
 
-    public static native List<NetworkAdapter> adapters();
+    static native List<NetworkAdapter> adapters();
 }

@@ -15,6 +15,7 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.resolver.dns.windows.WindowsResolverDnsServerAddressStreamProvider;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
