@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
-import java.util.List;
+import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,13 +32,13 @@ public class WindowsAdapterInfoTest {
         assertThat(WindowsAdapterInfo.isAvailable()).isTrue();
         assertThat(WindowsAdapterInfo.adapters()).isNotNull();
 
-        List<NetworkAdapter> adapters = WindowsAdapterInfo.adapters();
+        NetworkAdapter[] adapters = WindowsAdapterInfo.adapters();
 
         for (NetworkAdapter adapter : adapters) {
             System.out.println("=== Search Domains ===");
-            System.out.println(adapter.getSearchDomains());
+            System.out.println(Arrays.toString(adapter.getSearchDomains()));
             System.out.println("=== Nameservers ===");
-            System.out.println(adapter.getNameservers());
+            System.out.println(Arrays.toString(adapter.getNameservers()));
         }
     }
 }

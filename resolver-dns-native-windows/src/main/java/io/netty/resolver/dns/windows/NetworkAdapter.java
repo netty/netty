@@ -16,22 +16,21 @@
 package io.netty.resolver.dns.windows;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 
 final class NetworkAdapter {
-    private final List<InetSocketAddress> nameservers;
-    private final List<String> searchDomains;
+    private final InetSocketAddress[] nameservers;
+    private final String[] searchDomains;
 
-    NetworkAdapter(List<InetSocketAddress> nameservers, List<String> searchDomains) {
+    NetworkAdapter(InetSocketAddress[] nameservers, String[] searchDomains) {
         this.nameservers = nameservers;
         this.searchDomains = searchDomains;
     }
 
-    public List<InetSocketAddress> getNameservers() {
+    public InetSocketAddress[] getNameservers() {
         return nameservers;
     }
 
-    public List<String> getSearchDomains() {
+    public String[] getSearchDomains() {
         return searchDomains;
     }
 }

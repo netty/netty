@@ -22,6 +22,7 @@
 #include <Ws2ipdef.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
+#include <stdbool.h>
 
 #pragma comment(lib, "IPHLPAPI.lib")
 #pragma comment(lib, "ws2_32.lib")
@@ -36,10 +37,6 @@ static jclass networkAdapterClass = NULL;
 static jmethodID networkAdapterCtor = NULL;
 
 static jclass stringClass = NULL;
-
-static jclass linkedListClass = NULL;
-static jmethodID linkedListCtor = NULL;
-static jmethodID linkedListAdd = NULL;
 
 static jclass inetSocketAddressClass = NULL;
 static jmethodID inetSocketAddressCtor = NULL;
@@ -160,14 +157,21 @@ jobject sockAddrToJava(JNIEnv* env, LPSOCKADDR sockAddr) {
     return (*env)->NewObject(env, inetSocketAddressClass, inetSocketAddressCtor, host, port);
 }
 
-jobject dnsServersToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
-    jobject list = (*env)->NewObject(env, linkedListClass, linkedListCtor);
+jobjectArray dnsServersToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
+    jsize size = 0;
+    for (IP_ADAPTER_DNS_SERVER_ADDRESS* dnsServer = adapter->FirstDnsServerAddress;
+            dnsServer != NULL; dnsServer = dnsServer->Next) {
+        ++size;
+    }
 
-    if (list == NULL) {
-        throwNativeException(env, "Could not create LinkedList");
+    jobjectArray dnsServers = (*env)->NewObjectArray(env, size, inetSocketAddressClass, NULL);
+
+    if (dnsServers == NULL) {
+        throwNativeException(env, "Could not create dnsServers array");
         return NULL;
     }
 
+    jsize index = 0;
     for (IP_ADAPTER_DNS_SERVER_ADDRESS* dnsServer = adapter->FirstDnsServerAddress;
         dnsServer != NULL; dnsServer = dnsServer->Next) {
 
@@ -177,10 +181,11 @@ jobject dnsServersToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
             return NULL;
         }
 
-        (*env)->CallBooleanMethod(env, list, linkedListAdd, serverAddress);
+        (*env)->SetObjectArrayElement(env, dnsServers, index, serverAddress);
+        ++index;
     }
 
-    return list;
+    return dnsServers;
 }
 
 jstring wideCharToString(JNIEnv* env, const wchar_t* input) {
@@ -207,14 +212,27 @@ jstring wideCharToString(JNIEnv* env, const wchar_t* input) {
     return result;
 }
 
-jobject searchDomainsToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
-    jobject list = (*env)->NewObject(env, linkedListClass, linkedListCtor);
+jobjectArray searchDomainsToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
+    jsize size = 0;
 
-    if (list == NULL) {
-        throwNativeException(env, "Could not create LinkedList");
+    if (adapter->DnsSuffix[0] != '\0') {
+        size++;
+    }
+
+    for (PIP_ADAPTER_DNS_SUFFIX dnsSuffix = adapter->FirstDnsSuffix; dnsSuffix != NULL; dnsSuffix = dnsSuffix->Next) {
+        if (dnsSuffix->String[0] != '\0') {
+            size++;
+        }
+    }
+
+    jobjectArray searchDomains = (*env)->NewObjectArray(env, size, stringClass, NULL);
+
+    if (searchDomains == NULL) {
+        throwNativeException(env, "Could not create searchDomains");
         return NULL;
     }
 
+    int index = 0;
     if (adapter->DnsSuffix[0] != '\0') {
         jstring dnsSuffix = wideCharToString(env, adapter->DnsSuffix);
 
@@ -222,7 +240,8 @@ jobject searchDomainsToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
             return NULL;
         }
 
-        (*env)->CallBooleanMethod(env, list, linkedListAdd, dnsSuffix);
+        (*env)->SetObjectArrayElement(env, searchDomains, index, dnsSuffix);
+        ++index;
     }
 
     for (PIP_ADAPTER_DNS_SUFFIX dnsSuffix = adapter->FirstDnsSuffix; dnsSuffix != NULL; dnsSuffix = dnsSuffix->Next) {
@@ -233,15 +252,16 @@ jobject searchDomainsToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
                 return NULL;
             }
 
-            (*env)->CallBooleanMethod(env, list, linkedListAdd, dnsText);
+            (*env)->SetObjectArrayElement(env, searchDomains, index, dnsText);
+            ++index;
         }
     }
 
-    return list;
+    return searchDomains;
 }
 
 jobject adapterToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
-    jobject searchDomains = searchDomainsToJava(env, adapter);
+    jobjectArray searchDomains = searchDomainsToJava(env, adapter);
 
     if (searchDomains == NULL) {
         return NULL;
@@ -256,26 +276,36 @@ jobject adapterToJava(JNIEnv* env, IP_ADAPTER_ADDRESSES* adapter) {
     return (*env)->NewObject(env, networkAdapterClass, networkAdapterCtor, dnsServers, searchDomains);
 }
 
-static jobject windows_adapters(JNIEnv* env, jclass clazz) {
+bool isRelevantAdapter(IP_ADAPTER_ADDRESSES* adapter) {
+    return adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK;
+}
+
+static jobjectArray windows_adapters(JNIEnv* env, jclass clazz) {
     IP_ADAPTER_ADDRESSES* adapters;
 
     if (read_adapter_addresses(env, &adapters) != JNI_OK) {
         return NULL;
     }
 
-    jobject list = (*env)->NewObject(env, linkedListClass, linkedListCtor);
-
-    if (list == NULL) {
-        throwNativeException(env, "Could not create LinkedList");
-        goto error;
-    }
-
+    jsize adapterCount = 0;
     for (IP_ADAPTER_ADDRESSES* adapter = adapters; adapter != NULL; adapter = adapter->Next) {
-        if (adapter->OperStatus != IfOperStatusUp) {
+        if (!isRelevantAdapter(adapter)) {
             continue;
         }
 
-        if (adapter->IfType == IF_TYPE_SOFTWARE_LOOPBACK) {
+        adapterCount++;
+    }
+
+    jobjectArray javaAdapters = (*env)->NewObjectArray(env, adapterCount, networkAdapterClass, NULL);
+
+    if (javaAdapters == NULL) {
+        throwNativeException(env, "Could not create javaAdapters array");
+        goto error;
+    }
+
+    jsize index = 0;
+    for (IP_ADAPTER_ADDRESSES* adapter = adapters; adapter != NULL; adapter = adapter->Next) {
+        if (!isRelevantAdapter(adapter)) {
             continue;
         }
 
@@ -285,12 +315,14 @@ static jobject windows_adapters(JNIEnv* env, jclass clazz) {
             goto error;
         }
 
-        (*env)->CallBooleanMethod(env, list, linkedListAdd, result);
+        (*env)->SetObjectArrayElement(env, javaAdapters, index, result);
+
+        ++index;
     }
 
     free(adapters);
 
-    return list;
+    return javaAdapters;
 
 error:
     free(adapters);
@@ -335,16 +367,20 @@ jint loadMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig, jm
     return JNI_OK;
 }
 
-static JNINativeMethod* createDynamicMethodsTable() {
+static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * 1);
 
     if (dynamicMethods == NULL) {
         return NULL;
     }
 
+    char* dynamicTypeName = netty_jni_util_prepend(packagePrefix, "io/netty/resolver/dns/windows/NetworkAdapter;");
+    char* dynamicArrayTypeName = netty_jni_util_prepend("()[L", dynamicTypeName);
+    free(dynamicTypeName);
+
     JNINativeMethod* dynamicMethod = &dynamicMethods[0];
     dynamicMethod->name = "adapters";
-    dynamicMethod->signature = "()Ljava/util/List;";
+    dynamicMethod->signature = dynamicArrayTypeName;
     dynamicMethod->fnPtr = (void *) windows_adapters;
     return dynamicMethods;
 }
@@ -363,7 +399,7 @@ static jint register_natives(JNIEnv* env, const char* packagePrefix) {
             ADAPTER_INFO_CLASS,
             dynamicMethods, 1);
 
-    netty_jni_util_free_dynamic_methods_table(dynamicMethods, 1, 1);
+    netty_jni_util_free_dynamic_methods_table(dynamicMethods, 0, 1);
 
     return result == 0 ? JNI_OK : JNI_ERR;
 }
@@ -376,16 +412,12 @@ static void unload_jvm_references(JNIEnv* env) {
 
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
 
-    free(linkedListAdd);
-    free(linkedListCtor);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, linkedListClass);
-
     free(inetSocketAddressCtor);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, inetSocketAddressClass);
 }
 
 static jint netty_resolver_dns_native_windows_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
-    if (loadClass(env, "java/lang/RuntimeException", &nativeExceptionClass, packagePrefix) != JNI_OK) {
+    if (loadClass(env, "java/lang/RuntimeException", &nativeExceptionClass) != JNI_OK) {
         goto fail;
     }
 
@@ -393,19 +425,7 @@ static jint netty_resolver_dns_native_windows_JNI_OnLoad(JNIEnv* env, const char
         goto fail;
     }
 
-    if (loadMethod(env, networkAdapterClass, "<init>", "(Ljava/util/List;Ljava/util/List;)V", &networkAdapterCtor) != JNI_OK) {
-        goto fail;
-    }
-
-    if (loadClass(env, "java/util/LinkedList", &linkedListClass) != JNI_OK) {
-        goto fail;
-    }
-
-    if (loadMethod(env, linkedListClass, "<init>", "()V", &linkedListCtor) != JNI_OK) {
-        goto fail;
-    }
-
-    if (loadMethod(env, linkedListClass, "add", "(Ljava/lang/Object;)Z", &linkedListAdd) != JNI_OK) {
+    if (loadMethod(env, networkAdapterClass, "<init>", "([Ljava/net/InetSocketAddress;[Ljava/lang/String;)V", &networkAdapterCtor) != JNI_OK) {
         goto fail;
     }
 

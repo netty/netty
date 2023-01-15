@@ -32,8 +32,7 @@ public final class WindowsResolverDnsServerAddressStreamProvider implements DnsS
 
     private final Map<String, DnsServerAddresses> resolverMap;
 
-
-    private WindowsResolverDnsServerAddressStreamProvider(List<NetworkAdapter> adapters) {
+    private WindowsResolverDnsServerAddressStreamProvider(NetworkAdapter[] adapters) {
         this.resolverMap = buildMappings(adapters);
     }
 
@@ -45,12 +44,12 @@ public final class WindowsResolverDnsServerAddressStreamProvider implements DnsS
     public static List<String> getSearchDomains() {
         WindowsAdapterInfo.ensureAvailability();
 
-        List<NetworkAdapter> adapters = WindowsAdapterInfo.adapters();
+        NetworkAdapter[] adapters = WindowsAdapterInfo.adapters();
 
-        List<String> searchDomains = new ArrayList<>(adapters.size());
+        List<String> searchDomains = new ArrayList<String>(adapters.length);
 
         for (NetworkAdapter adapter : adapters) {
-            searchDomains.addAll(adapter.getSearchDomains());
+            Collections.addAll(searchDomains, adapter.getSearchDomains());
         }
 
         return searchDomains;
@@ -79,16 +78,16 @@ public final class WindowsResolverDnsServerAddressStreamProvider implements DnsS
         }
     }
 
-    private static Map<String, DnsServerAddresses> buildMappings(List<NetworkAdapter> adapters) {
-        if (adapters == null || adapters.isEmpty()) {
+    private static Map<String, DnsServerAddresses> buildMappings(NetworkAdapter[] adapters) {
+        if (adapters == null || adapters.length == 0) {
             return Collections.emptyMap();
         }
 
-        Map<String, DnsServerAddresses> resolverMap = new HashMap<>(adapters.size());
+        Map<String, DnsServerAddresses> resolverMap = new HashMap<String, DnsServerAddresses>(adapters.length);
         for (NetworkAdapter adapter: adapters) {
 
-            List<InetSocketAddress> nameservers = adapter.getNameservers();
-            if (nameservers == null || nameservers.isEmpty()) {
+            InetSocketAddress[] nameservers = adapter.getNameservers();
+            if (nameservers == null || nameservers.length == 0) {
                 continue;
             }
 
@@ -98,16 +97,15 @@ public final class WindowsResolverDnsServerAddressStreamProvider implements DnsS
                     domain = StringUtil.EMPTY_STRING;
                 }
 
-                List<InetSocketAddress> servers = adapter.getNameservers();
-                for (int a = 0; a < servers.size(); a++) {
-                    InetSocketAddress address = servers.get(a);
+                for (int a = 0; a < nameservers.length; a++) {
+                    InetSocketAddress address = nameservers[a];
                     // Check if the default port should be used
                     if (address.getPort() == 0) {
-                        servers.set(a, new InetSocketAddress(address.getAddress(), 53));
+                        nameservers[a] = new InetSocketAddress(address.getAddress(), 53);
                     }
                 }
 
-                resolverMap.put(domain, DnsServerAddresses.sequential(servers));
+                resolverMap.put(domain, DnsServerAddresses.sequential(nameservers));
             }
         }
         return resolverMap;
