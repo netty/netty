@@ -432,6 +432,16 @@ abstract class DnsResolveContext<T> {
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
                 parent.ch.eventLoop().newPromise();
 
+        final long queryStartTimeNanos;
+        final boolean isFeedbackAddressStream;
+        if (nameServerAddrStream instanceof DnsServerResponseFeedbackAddressStream) {
+            queryStartTimeNanos = System.nanoTime();
+            isFeedbackAddressStream = true;
+        } else {
+            queryStartTimeNanos = -1;
+            isFeedbackAddressStream = false;
+        }
+
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
                 parent.query0(nameServerAddr, question, additionals, flush, writePromise, queryPromise);
 
@@ -459,10 +469,22 @@ abstract class DnsResolveContext<T> {
                 final Throwable queryCause = future.cause();
                 try {
                     if (queryCause == null) {
+                        if (isFeedbackAddressStream) {
+                            final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
+                                    (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
+                            feedbackNameServerAddrStream.feedbackSuccess(nameServerAddr,
+                                    System.nanoTime() - queryStartTimeNanos);
+                        }
                         onResponse(nameServerAddrStream, nameServerAddrStreamIndex, question, future.getNow(),
                                    queryLifecycleObserver, promise);
                     } else {
                         // Server did not respond or I/O error occurred; try again.
+                        if (isFeedbackAddressStream) {
+                            final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
+                                    (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
+                            feedbackNameServerAddrStream.feedbackFailure(nameServerAddr, queryCause,
+                                    System.nanoTime() - queryStartTimeNanos);
+                        }
                         queryLifecycleObserver.queryFailed(queryCause);
                         query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
                               newDnsQueryLifecycleObserver(question), true, promise, queryCause);

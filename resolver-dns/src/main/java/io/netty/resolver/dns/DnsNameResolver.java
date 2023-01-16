@@ -71,7 +71,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -165,22 +164,15 @@ public class DnsNameResolver extends InetNameResolver {
      * Returns {@code true} if any {@link NetworkInterface} supports {@code IPv6}, {@code false} otherwise.
      */
     private static boolean anyInterfaceSupportsIpV6() {
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface iface = interfaces.nextElement();
-                Enumeration<InetAddress> addresses = iface.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    InetAddress inetAddress = addresses.nextElement();
-                    if (inetAddress instanceof Inet6Address && !inetAddress.isAnyLocalAddress() &&
+        for (NetworkInterface iface : NetUtil.NETWORK_INTERFACES) {
+            Enumeration<InetAddress> addresses = iface.getInetAddresses();
+            while (addresses.hasMoreElements()) {
+                InetAddress inetAddress = addresses.nextElement();
+                if (inetAddress instanceof Inet6Address && !inetAddress.isAnyLocalAddress() &&
                         !inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress()) {
-                        return true;
-                    }
+                    return true;
                 }
             }
-        } catch (SocketException e) {
-            logger.debug("Unable to detect if any interface supports IPv6, assuming IPv4-only", e);
-            // ignore
         }
         return false;
     }
