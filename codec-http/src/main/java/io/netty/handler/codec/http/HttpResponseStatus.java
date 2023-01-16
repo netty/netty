@@ -226,6 +226,13 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * 417 Expectation Failed
      */
     public static final HttpResponseStatus EXPECTATION_FAILED = newStatus(417, "Expectation Failed");
+    
+    /**
+     * 418 I'm a teapot
+     *
+     * @see <a href="https://save418.com/">Save 418</a>
+     */
+    public static final HttpResponseStatus IM_A_TEAPOT = newStatus(418, "I'm a teapot");
 
     /**
      * 421 Misdirected Request
