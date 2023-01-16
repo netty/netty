@@ -75,7 +75,7 @@
                   <nativeSourceDirectory>${combinedSources}</nativeSourceDirectory>
                   <libDirectory>${project.build.directory}/native-build</libDirectory>
                   <windowsBuildTool>msbuild</windowsBuildTool>
-                  <windowsPlatformToolset>v143</windowsPlatformToolset>
+                  <windowsPlatformToolset>v142</windowsPlatformToolset>
                   <windowsTargetPlatformVersion>10.0.19041.0</windowsTargetPlatformVersion>
                 </configuration>
                 <goals>
