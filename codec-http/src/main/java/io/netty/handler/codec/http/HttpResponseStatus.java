@@ -426,6 +426,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return REQUESTED_RANGE_NOT_SATISFIABLE;
         case 417:
             return EXPECTATION_FAILED;
+        case 418:
+            return IM_A_TEAPOT;
         case 421:
             return MISDIRECTED_REQUEST;
         case 422:
