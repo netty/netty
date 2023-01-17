@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -307,7 +308,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
+        assertThat(request.decoderResult().cause(), instanceOf(TooLongHttpLineException.class));
         assertFalse(channel.finish());
     }
 
