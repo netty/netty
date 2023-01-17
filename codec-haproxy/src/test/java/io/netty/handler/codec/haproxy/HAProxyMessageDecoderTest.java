@@ -34,6 +34,7 @@ import java.nio.ByteOrder;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,7 +58,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V1, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -78,7 +79,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V1, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -99,7 +100,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V1, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -359,7 +360,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -415,7 +416,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -495,7 +496,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -574,7 +575,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -630,7 +631,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
         assertEquals(HAProxyCommand.LOCAL, msg.command());
@@ -686,7 +687,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
@@ -882,7 +883,7 @@ public class HAProxyMessageDecoderTest {
         ch.writeInbound(copiedBuffer(header));
         Object msgObj = ch.readInbound();
         assertEquals(startChannels - 1, ch.pipeline().names().size());
-        assertTrue(msgObj instanceof HAProxyMessage);
+        assertThat(msgObj).isInstanceOf(HAProxyMessage.class);
         HAProxyMessage msg = (HAProxyMessage) msgObj;
         assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
         assertEquals(HAProxyCommand.PROXY, msg.command());
