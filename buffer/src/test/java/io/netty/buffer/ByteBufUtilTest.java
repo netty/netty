@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -617,7 +618,7 @@ public class ByteBufUtilTest {
     }
 
     private static void assertWrapped(ByteBuf buf) {
-        assertTrue(buf instanceof WrappedByteBuf);
+        assertThat(buf, instanceOf(WrappedByteBuf.class));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
