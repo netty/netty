@@ -175,24 +175,5 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
-          <!-- Generate the fallback JAR that does not contain the native library. -->
-          <execution>
-            <id>default-jar</id>
-            <configuration>
-              <excludes>
-                <exclude>META-INF/native/**</exclude>
-              </excludes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>
 
