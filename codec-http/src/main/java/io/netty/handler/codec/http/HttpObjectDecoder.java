@@ -799,11 +799,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected abstract HttpMessage createInvalidMessage();
 
     private static int getChunkSize(byte[] hex, int start, int length) {
-        // hex should contain neither ISO chars nor spaces ie we can save checking it
+        // byte[] is produced by LineParse::parseLine that already skip ISO CTRL and Whitespace chars
         int result = 0;
         for (int i = 0; i < length; i++) {
             final int digit = StringUtil.decodeHexNibble(hex[start + i]);
             if (digit == -1) {
+                // uncommon path
+                if (hex[start + i] == ';') {
+                    return result;
+                }
                 throw new NumberFormatException();
             }
             result *= 16;
