@@ -31,7 +31,7 @@ import static io.netty.buffer.PoolChunk.isSubpage;
 import static java.lang.Math.max;
 
 abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
-    static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
+    private static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
     enum SizeClass {
         Small,
