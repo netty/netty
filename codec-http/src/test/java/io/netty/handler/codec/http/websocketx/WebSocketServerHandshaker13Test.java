@@ -40,6 +40,7 @@ import org.junit.jupiter.api.function.Executable;
 import java.util.Iterator;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -188,7 +189,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
             // expected
         }
         ReferenceCounted closeMessage = ch.readOutbound();
-        assertThat(closeMessage, CoreMatchers.instanceOf(ByteBuf.class));
+        assertThat(closeMessage, instanceOf(ByteBuf.class));
         closeMessage.release();
         assertFalse(ch.finish());
     }
