@@ -160,10 +160,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         try {
-            if (parserScratchBuffer.refCnt() == 1) {
-                // the buffer is not meant to be shared
-                parserScratchBuffer.release();
-            }
+            parserScratchBuffer.release();
         } finally {
             super.handlerRemoved0(ctx);
         }
