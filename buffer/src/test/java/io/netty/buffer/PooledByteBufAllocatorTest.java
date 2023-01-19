@@ -126,7 +126,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testWithoutUseCacheForAllThreads() {
-        assertFalse(Thread.currentThread() instanceof FastThreadLocalThread);
+        assertThat(Thread.currentThread()).isNotInstanceOf(FastThreadLocalThread.class);
 
         PooledByteBufAllocator pool = new PooledByteBufAllocator(
                 /*preferDirect=*/ false,

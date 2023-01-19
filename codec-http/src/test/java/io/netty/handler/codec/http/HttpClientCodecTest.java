@@ -380,7 +380,7 @@ public class HttpClientCodecTest {
         HttpContent content = ch.readInbound();
         // HTTP 102 is not allowed to have content.
         assertThat(content.content().readableBytes(), is(0));
-        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
+        assertThat(content, instanceOf(LastHttpContent.class));
         content.release();
 
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
@@ -395,7 +395,7 @@ public class HttpClientCodecTest {
         content = ch.readInbound();
         // HTTP 200 has content.
         assertThat(content.content().readableBytes(), is(8));
-        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
+        assertThat(content, instanceOf(LastHttpContent.class));
         content.release();
 
         assertThat(ch.finish(), is(false));

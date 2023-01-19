@@ -34,6 +34,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -179,7 +180,7 @@ public class HttpServerUpgradeHandlerTest {
         assertNull(channel.pipeline().get("marker"));
 
         HttpRequest req = channel.readInbound();
-        assertFalse(req instanceof FullHttpRequest); // Should not be aggregated.
+        assertThat(req).isNotInstanceOf(FullHttpRequest.class); // Should not be aggregated.
         assertTrue(req.headers().contains(HttpHeaderNames.CONNECTION, "Upgrade", false));
         assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false));
         assertTrue(channel.readInbound() instanceof LastHttpContent);
