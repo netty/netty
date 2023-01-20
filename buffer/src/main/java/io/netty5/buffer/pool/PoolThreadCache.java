@@ -81,7 +81,7 @@ final class PoolThreadCache {
             arenaReferenceCounter = arena.numThreadCaches;
             arenaReferenceCounter.getAndIncrement();
         } else {
-            // No heapArea is configured so just null out all caches
+            // No heapArena is configured so just null out all caches
             this.arena = null;
             smallSubPageCaches = null;
             normalCaches = null;
@@ -104,14 +104,14 @@ final class PoolThreadCache {
     }
 
     private static MemoryRegionCache[] createNormalCaches(
-            int cacheSize, int maxCachedBufferCapacity, PoolArena area) {
+            int cacheSize, int maxCachedBufferCapacity, PoolArena arena) {
         if (cacheSize > 0 && maxCachedBufferCapacity > 0) {
-            int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
+            int max = Math.min(arena.chunkSize, maxCachedBufferCapacity);
 
             // Create as many normal caches as we support based on how many sizeIdx we have and what the upper
             // bound is that we want to cache in general.
             List<MemoryRegionCache> cache = new ArrayList<>() ;
-            for (int idx = area.numSmallSubpagePools; idx < area.nSizes && area.sizeIdx2size(idx) <= max ; idx++) {
+            for (int idx = arena.numSmallSubpagePools; idx < arena.nSizes && arena.sizeIdx2size(idx) <= max ; idx++) {
                 cache.add(new NormalMemoryRegionCache(cacheSize));
             }
             return cache.toArray(MemoryRegionCache[]::new);
@@ -139,8 +139,8 @@ final class PoolThreadCache {
     /**
      * Try to allocate a normal buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
      */
-    UntetheredMemory allocateNormal(PoolArena area, int size, int sizeIdx) {
-        return allocate(cacheForNormal(area, sizeIdx), size);
+    UntetheredMemory allocateNormal(PoolArena arena, int size, int sizeIdx) {
+        return allocate(cacheForNormal(arena, sizeIdx), size);
     }
 
     private UntetheredMemory allocate(MemoryRegionCache cache, int size) {
@@ -160,19 +160,19 @@ final class PoolThreadCache {
      * Add {@link PoolChunk} and {@code handle} to the cache if there is enough room.
      * Returns {@code true} if it fit into the cache {@code false} otherwise.
      */
-    boolean add(PoolArena area, PoolChunk chunk,
+    boolean add(PoolArena arena, PoolChunk chunk,
                 long handle, int normCapacity, SizeClass sizeClass) {
-        int sizeIdx = area.size2SizeIdx(normCapacity);
-        MemoryRegionCache cache = cache(area, sizeIdx, sizeClass);
+        int sizeIdx = arena.size2SizeIdx(normCapacity);
+        MemoryRegionCache cache = cache(arena, sizeIdx, sizeClass);
         if (cache == null) {
             return false;
         }
         return cache.add(chunk, handle, normCapacity);
     }
 
-    private MemoryRegionCache cache(PoolArena area, int sizeIdx, SizeClass sizeClass) {
+    private MemoryRegionCache cache(PoolArena arena, int sizeIdx, SizeClass sizeClass) {
         if (sizeClass == Normal) {
-            return cacheForNormal(area, sizeIdx);
+            return cacheForNormal(arena, sizeIdx);
         }
         if (sizeClass == Small) {
             return cacheForSmall(sizeIdx);
@@ -247,10 +247,10 @@ final class PoolThreadCache {
         return null;
     }
 
-    private MemoryRegionCache cacheForNormal(PoolArena area, int sizeIdx) {
-        if (area != null) {
-            // We need to substract area.numSmallSubpagePools as sizeIdx is the overall index for all sizes.
-            int idx = sizeIdx - area.numSmallSubpagePools;
+    private MemoryRegionCache cacheForNormal(PoolArena arena, int sizeIdx) {
+        if (arena != null) {
+            // We need to substract arena.numSmallSubpagePools as sizeIdx is the overall index for all sizes.
+            int idx = sizeIdx - arena.numSmallSubpagePools;
             return cache(normalCaches, idx);
         }
         return null;
