@@ -35,9 +35,12 @@ public abstract class AbstractQuicTest {
 
     @AfterAll
     public static void shutdownExecutor() {
-        for (Executor executor: executors) {
-            if (executor instanceof ExecutorService) {
-                ((ExecutorService) executor).shutdown();
+        // Executors might be null if ensureAvailability() throws
+        if (executors != null) {
+            for (Executor executor : executors) {
+                if (executor instanceof ExecutorService) {
+                    ((ExecutorService) executor).shutdown();
+                }
             }
         }
     }
