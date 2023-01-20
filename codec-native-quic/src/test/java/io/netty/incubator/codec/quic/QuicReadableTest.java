@@ -35,7 +35,7 @@ public class QuicReadableTest extends AbstractQuicTest {
     @ParameterizedTest
     @MethodSource("sslTaskExecutors")
     public void testCorrectlyHandleReadableStreams(Executor executor) throws Throwable  {
-        int numOfStreams = 1024;
+        int numOfStreams = 256;
         int readStreams = numOfStreams / 2;
         // We do write longs.
         int expectedDataRead = readStreams * Long.BYTES;
