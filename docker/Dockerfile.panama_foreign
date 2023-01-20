@@ -27,7 +27,7 @@ WORKDIR /root/build
 RUN git clone --depth 1 --branch foreign-memaccess+abi https://github.com/openjdk/panama-foreign.git panama-foreign
 WORKDIR /root/build/panama-foreign
 RUN chmod +x configure
-RUN scl enable devtoolset-7 './configure --with-debug-level=fastdebug --with-vendor-name=netty-build --enable-warnings-as-errors=no'
+RUN scl enable devtoolset-7 './configure --with-debug-level=fastdebug --with-vendor-name=netty-build --enable-warnings-as-errors=no --with-build-user=netty-build'
 RUN make images && mv build/linux-*-server-fastdebug/images/jdk /root/jdk && rm -fr *
 
 RUN echo 'export JAVA_HOME="/root/jdk"' >> ~/.bashrc
