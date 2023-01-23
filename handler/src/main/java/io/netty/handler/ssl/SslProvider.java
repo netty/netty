@@ -81,6 +81,23 @@ public enum SslProvider {
     }
 
     /**
+     * Returns {@code true} if the specified {@link SslProvider} supports the specified {@link SslContextOption},
+     * {@code false} otherwise.
+     */
+    public static boolean isOptionSupported(SslProvider sslProvider, SslContextOption<?> option) {
+        switch (sslProvider) {
+            case JDK:
+                // We currently don't support any SslContextOptions when using the JDK implementation
+                return false;
+            case OPENSSL:
+            case OPENSSL_REFCNT:
+                return OpenSsl.isOptionSupported(option);
+            default:
+                throw new Error("Unknown SslProvider: " + sslProvider);
+        }
+    }
+
+    /**
      * Returns {@code true} if the specified {@link SslProvider} enables
      * <a href="https://tools.ietf.org/html/rfc8446">TLS 1.3</a> by default, {@code false} otherwise.
      */

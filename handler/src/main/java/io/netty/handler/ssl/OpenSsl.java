@@ -725,6 +725,22 @@ public final class OpenSsl {
         return TLSV13_SUPPORTED;
     }
 
+    static boolean isOptionSupported(SslContextOption<?> option) {
+        if (isAvailable()) {
+            if (option == OpenSslContextOption.USE_TASKS) {
+                return true;
+            }
+            // Check for options that are only supported by BoringSSL atm.
+            if (isBoringSSL()) {
+                return option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD ||
+                        option == OpenSslContextOption.PRIVATE_KEY_METHOD ||
+                        option == OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS ||
+                        option == OpenSslContextOption.TLS_FALSE_START;
+            }
+        }
+        return false;
+    }
+
     private static Set<String> protocols(String property) {
         String protocolsString = SystemPropertyUtil.get(property, null);
         if (protocolsString != null) {
