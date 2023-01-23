@@ -55,7 +55,6 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         SCHEDULE_QUIET_PERIOD_INTERVAL = TimeUnit.SECONDS.toNanos(quietPeriod);
     }
 
-
     public static final GlobalEventExecutor INSTANCE = new GlobalEventExecutor();
 
     final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
