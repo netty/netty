@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * use a dedicated executor.
  */
 public final class GlobalEventExecutor extends AbstractScheduledEventExecutor implements OrderedEventExecutor {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(GlobalEventExecutor.class);
 
     private static final long SCHEDULE_QUIET_PERIOD_INTERVAL;
 
@@ -49,10 +50,11 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         if (quietPeriod <= 0) {
             quietPeriod = 1;
         }
+        logger.debug("-Dio.netty.globalEventExecutor.quietPeriodSeconds: {}", quietPeriod);
+
         SCHEDULE_QUIET_PERIOD_INTERVAL = TimeUnit.SECONDS.toNanos(quietPeriod);
     }
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(GlobalEventExecutor.class);
 
     public static final GlobalEventExecutor INSTANCE = new GlobalEventExecutor();
 
