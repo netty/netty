@@ -20,7 +20,7 @@ import javax.net.ssl.SSLHandshakeException;
 /**
  * A {@link SSLHandshakeException} that does not fill in the stack trace.
  */
-public final class StacklessSSLHandshakeException extends SSLHandshakeException {
+final class StacklessSSLHandshakeException extends SSLHandshakeException {
 
     private static final long serialVersionUID = -1244781947804415549L;
 
@@ -30,7 +30,7 @@ public final class StacklessSSLHandshakeException extends SSLHandshakeException 
      *
      * @param reason describes the problem.
      */
-    public StacklessSSLHandshakeException(String reason) {
+    StacklessSSLHandshakeException(String reason) {
         super(reason);
     }
 
