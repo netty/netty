@@ -47,6 +47,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -1067,8 +1068,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         // Add a supressed exception if the handshake was not completed yet.
         if (!isStateSet(STATE_HANDSHAKE_STARTED) || handshakePromise.isDone()) {
-            exception.addSuppressed(new StacklessSSLHandshakeException("Connection closed before " +
-                    "SSL/TLS handshake completed"));
+            ThrowableUtil.addSuppressed(exception,
+                    new StacklessSSLHandshakeException("Connection closed before SSL/TLS handshake completed"));
         }
 
         // Make sure to release SSLEngine,
