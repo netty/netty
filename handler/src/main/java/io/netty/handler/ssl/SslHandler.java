@@ -1069,7 +1069,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Add a supressed exception if the handshake was not completed yet.
         if (isStateSet(STATE_HANDSHAKE_STARTED) && !handshakePromise.isDone()) {
             ThrowableUtil.addSuppressed(exception,
-                    new StacklessSSLHandshakeException("Connection closed before SSL/TLS handshake completed"));
+                    new StacklessSSLHandshakeException("Connection closed while SSL/TLS handshake was in progress"));
         }
 
         // Make sure to release SSLEngine,
