@@ -41,7 +41,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Promise;
 
-import java.util.concurrent.ExecutionException;
+import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
@@ -55,8 +55,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class PcapWriteHandlerTest {
 
     @Test
-    public void udpV4() throws InterruptedException {
+    public void udpV4SharedOutputStreamTest() throws InterruptedException {
+        udpV4(true);
+    }
 
+    @Test
+    public void udpV4NonOutputStream() throws InterruptedException {
+        udpV4(false);
+    }
+
+    private static void udpV4(boolean sharedOutputStream) throws InterruptedException {
         ByteBuf byteBuf = Unpooled.buffer();
 
         InetSocketAddress srvReqAddr = new InetSocketAddress("127.0.0.1", 0);
@@ -82,7 +90,9 @@ public class PcapWriteHandlerTest {
         Bootstrap client = new Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioDatagramChannel.class)
-                .handler(PcapWriteHandler.builder().build(new ByteBufOutputStream(byteBuf)));
+                .handler(PcapWriteHandler.builder()
+                        .sharedOutputStream(sharedOutputStream)
+                        .build(new ByteBufOutputStream(byteBuf)));
 
         ChannelFuture channelFutureClient =
                 client.connect(channelFutureServer.channel().localAddress(), cltReqAddr).sync();
@@ -91,7 +101,7 @@ public class PcapWriteHandlerTest {
         assertTrue(clientChannel.writeAndFlush(Unpooled.wrappedBuffer("Meow".getBytes())).sync().isSuccess());
         assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
 
-        verifyUdpCapture(
+        verifyUdpCapture(!sharedOutputStream, // if sharedOutputStream is true, we don't verify the global headers.
                 byteBuf,
                 (InetSocketAddress) clientChannel.remoteAddress(),
                 (InetSocketAddress) clientChannel.localAddress()
@@ -100,7 +110,6 @@ public class PcapWriteHandlerTest {
 
     @Test
     public void embeddedUdp() {
-
         ByteBuf byteBuf = Unpooled.buffer();
 
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
@@ -116,12 +125,14 @@ public class PcapWriteHandlerTest {
         embeddedChannel.writeOutbound(Unpooled.wrappedBuffer("Meow".getBytes()));
         assertEquals(Unpooled.wrappedBuffer("Meow".getBytes()), embeddedChannel.readOutbound());
 
-        verifyUdpCapture(byteBuf, serverAddr, clientAddr);
+        verifyUdpCapture(true, byteBuf, serverAddr, clientAddr);
     }
 
-    private void verifyUdpCapture(ByteBuf byteBuf, InetSocketAddress remoteAddress, InetSocketAddress localAddress) {
-        // Verify Pcap Global Headers
-        verifyGlobalHeaders(byteBuf);
+    private static void verifyUdpCapture(boolean verifyGlobalHeaders, ByteBuf byteBuf,
+                                         InetSocketAddress remoteAddress, InetSocketAddress localAddress) {
+        if (verifyGlobalHeaders) {
+            verifyGlobalHeaders(byteBuf);
+        }
 
         // Verify Pcap Packet Header
         byteBuf.readInt(); // Just read, we don't care about timestamps for now
@@ -175,7 +186,16 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void tcpV4() throws InterruptedException, ExecutionException {
+    public void tcpV4SharedOutputStreamTest() throws Exception {
+        tcpV4(true);
+    }
+
+    @Test
+    public void tcpV4NonOutputStream() throws Exception {
+        tcpV4(false);
+    }
+
+    private static void tcpV4(final boolean sharedOutputStream) throws Exception {
         final ByteBuf byteBuf = Unpooled.buffer();
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
@@ -191,7 +211,8 @@ public class PcapWriteHandlerTest {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
-                        p.addLast(PcapWriteHandler.builder().build(new ByteBufOutputStream(byteBuf)));
+                        p.addLast(PcapWriteHandler.builder().sharedOutputStream(sharedOutputStream)
+                                .build(new ByteBufOutputStream(byteBuf)));
                         p.addLast(new ChannelInboundHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -256,6 +277,7 @@ public class PcapWriteHandlerTest {
         assertTrue(bossGroup.shutdownGracefully().sync().isSuccess());
 
         verifyTcpCapture(
+                !sharedOutputStream, // if sharedOutputStream is true, we don't verify the global headers.
                 byteBuf,
                 (InetSocketAddress) serverChannelFuture.channel().localAddress(),
                 (InetSocketAddress) clientChannelFuture.channel().localAddress()
@@ -279,15 +301,18 @@ public class PcapWriteHandlerTest {
         assertEquals(Unpooled.wrappedBuffer(payload), embeddedChannel.readInbound());
         embeddedChannel.writeOutbound(Unpooled.wrappedBuffer(payload));
         assertEquals(Unpooled.wrappedBuffer(payload), embeddedChannel.readOutbound());
-        embeddedChannel.close();
+        assertTrue(embeddedChannel.close().isSuccess());
 
-        verifyTcpCapture(byteBuf, serverAddr, clientAddr);
+        verifyTcpCapture(true, byteBuf, serverAddr, clientAddr);
     }
 
-    private void verifyTcpCapture(ByteBuf byteBuf, InetSocketAddress serverAddr, InetSocketAddress clientAddr) {
+    private static void verifyTcpCapture(boolean verifyGlobalHeaders, ByteBuf byteBuf,
+                                         InetSocketAddress serverAddr, InetSocketAddress clientAddr) {
         // note: right now, this method only checks the first packet, which is part of the fake three-way handshake.
 
-        verifyGlobalHeaders(byteBuf);
+        if (verifyGlobalHeaders) {
+            verifyGlobalHeaders(byteBuf);
+        }
 
         // Verify Pcap Packet Header
         byteBuf.readInt(); // Just read, we don't care about timestamps for now
@@ -333,5 +358,51 @@ public class PcapWriteHandlerTest {
         assertEquals(0, byteBuf.readInt());          // sigfigs
         assertEquals(0xffff, byteBuf.readInt());     // snaplen
         assertEquals(1, byteBuf.readInt());          // network
+    }
+
+    @Test
+    public void writerStateTest() throws Exception {
+        PcapWriteHandler pcapWriteHandler = PcapWriteHandler.builder()
+                .build(new OutputStream() {
+                    @Override
+                    public void write(int b) {
+                        // Discard everything
+                    }
+                });
+
+        // State is INIT because we haven't written anything yet
+        // and 'channelActive' is not called yet as this Handler
+        // is yet to be attached to `EmbeddedChannel`.
+        assertEquals(State.INIT, pcapWriteHandler.state());
+
+        // Create a new 'EmbeddedChannel' and add the 'PcapWriteHandler'
+        EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+        embeddedChannel.pipeline().addFirst(pcapWriteHandler);
+
+        // Write and read some data and verify it.
+        byte[] payload = "Meow".getBytes();
+        embeddedChannel.writeInbound(Unpooled.wrappedBuffer(payload));
+        assertEquals(Unpooled.wrappedBuffer(payload), embeddedChannel.readInbound());
+
+        embeddedChannel.writeOutbound(Unpooled.wrappedBuffer(payload));
+        assertEquals(Unpooled.wrappedBuffer(payload), embeddedChannel.readOutbound());
+
+        // State is now STARTED because we attached Handler to 'EmbeddedChannel'.
+        assertEquals(State.STARTED, pcapWriteHandler.state());
+
+        // Close the PcapWriter. This should trigger closure of PcapWriteHandler too.
+        pcapWriteHandler.pCapWriter().close();
+
+        // State should be changed to closed by now
+        assertEquals(State.CLOSED, pcapWriteHandler.state());
+
+        // Close PcapWriteHandler again. This should be a no-op.
+        pcapWriteHandler.close();
+
+        // State should still be CLOSED. No change.
+        assertEquals(State.CLOSED, pcapWriteHandler.state());
+
+        // Close the 'EmbeddedChannel'.
+        assertTrue(embeddedChannel.close().isSuccess());
     }
 }

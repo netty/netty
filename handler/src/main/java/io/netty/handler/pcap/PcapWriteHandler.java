@@ -184,9 +184,11 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *
      * @param outputStream OutputStream where Pcap data will be written.
      * @throws IOException if there is an error writing to the {@code OutputStream}
+     * @deprecated Use {@link PcapHeaders#writeGlobalHeader(OutputStream)} instead.
      */
+    @Deprecated
     public static void writeGlobalHeader(OutputStream outputStream) throws IOException {
-        outputStream.write(PcapHeaders.GLOBAL_HEADER);
+        PcapHeaders.writeGlobalHeader(outputStream);
     }
 
     private void initializeIfNecessary(ChannelHandlerContext ctx) {
@@ -194,25 +196,11 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             return;
         }
 
-        ByteBufAllocator byteBufAllocator = ctx.alloc();
-
-        /*
-         * If `writePcapGlobalHeader` is `true`, we'll write Pcap Global Header.
-         */
-        if (writePcapGlobalHeader) {
-
-            ByteBuf byteBuf = byteBufAllocator.buffer();
-            try {
-                this.pCapWriter = new PcapWriter(this, byteBuf);
-            } catch (IOException ex) {
-                ctx.channel().close();
-                ctx.fireExceptionCaught(ex);
-                logger.error("Caught Exception While Initializing PcapWriter, Closing Channel.", ex);
-            } finally {
-                byteBuf.release();
-            }
-        } else {
-            this.pCapWriter = new PcapWriter(this);
+        try {
+            pCapWriter = new PcapWriter(this);
+        } catch (IOException ex) {
+            ctx.fireExceptionCaught(new IllegalStateException("Failed to initialize PcapWriter", ex));
+            ctx.channel().close();
         }
 
         if (channelType == null) {
@@ -248,23 +236,23 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         if (channelType == ChannelType.TCP) {
             logger.debug("Initiating Fake TCP 3-Way Handshake");
 
-            ByteBuf tcpBuf = byteBufAllocator.buffer();
+            ByteBuf tcpBuf = ctx.alloc().buffer();
 
             try {
                 // Write SYN with Normal Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, 0, 0,
                         initiatorAddr.getPort(), handlerAddr.getPort(), TCPPacket.TCPFlag.SYN);
-                completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, byteBufAllocator, ctx);
+                completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, ctx.alloc(), ctx);
 
                 // Write SYN+ACK with Reversed Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, 0, 1,
                         handlerAddr.getPort(), initiatorAddr.getPort(), TCPPacket.TCPFlag.SYN, TCPPacket.TCPFlag.ACK);
-                completeTCPWrite(handlerAddr, initiatorAddr, tcpBuf, byteBufAllocator, ctx);
+                completeTCPWrite(handlerAddr, initiatorAddr, tcpBuf, ctx.alloc(), ctx);
 
                 // Write ACK with Normal Source and Destination Address
                 TCPPacket.writePacket(tcpBuf, null, 1, 1, initiatorAddr.getPort(),
                         handlerAddr.getPort(), TCPPacket.TCPFlag.ACK);
-                completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, byteBufAllocator, ctx);
+                completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, ctx.alloc(), ctx);
             } finally {
                 tcpBuf.release();
             }
@@ -639,6 +627,17 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         return state;
     }
 
+    void markClosed() {
+        if (state != State.CLOSED) {
+            state = State.CLOSED;
+        }
+    }
+
+    // Visible for testing only.
+    PcapWriter pCapWriter() {
+        return pCapWriter;
+    }
+
     private void logDiscard() {
         logger.warn("Discarding pcap write because channel type is unknown. The channel this handler is registered " +
                 "on is not a SocketChannel or DatagramChannel, so the inference does not work. Please call " +
@@ -673,7 +672,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         if (state == State.CLOSED) {
             logger.debug("PcapWriterHandler is already closed");
         } else {
-            state = State.CLOSED;
+            markClosed();
             pCapWriter.close();
             logger.debug("PcapWriterHandler is now closed");
         }

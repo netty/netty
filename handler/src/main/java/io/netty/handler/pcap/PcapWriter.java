@@ -33,35 +33,22 @@ final class PcapWriter implements Closeable {
     private final PcapWriteHandler pcapWriteHandler;
 
     /**
-     * Reference declared so we can use this as mutex in clean way
+     * Reference declared so that we can use this as mutex in clean way.
      */
     private final OutputStream outputStream;
 
     /**
-     * Pcap Global Header is not written on construction.
-     */
-    PcapWriter(PcapWriteHandler pcapWriteHandler) {
-        this.pcapWriteHandler = pcapWriteHandler;
-        this.outputStream = pcapWriteHandler.outputStream();
-    }
-
-    /**
-     * This uses {@link OutputStream} for writing Pcap.
-     * Pcap Global Header is also written on construction.
+     * This uses {@link OutputStream} for writing Pcap data.
      *
      * @throws IOException If {@link OutputStream#write(byte[])} throws an exception
      */
-    PcapWriter(PcapWriteHandler pcapWriteHandler, ByteBuf byteBuf) throws IOException {
+    PcapWriter(PcapWriteHandler pcapWriteHandler) throws IOException {
         this.pcapWriteHandler = pcapWriteHandler;
-        this.outputStream = pcapWriteHandler.outputStream();
+        outputStream = pcapWriteHandler.outputStream();
 
-        PcapHeaders.writeGlobalHeader(byteBuf);
-        if (pcapWriteHandler.sharedOutputStream()) {
-            synchronized (outputStream) {
-                byteBuf.readBytes(outputStream, byteBuf.readableBytes());
-            }
-        } else {
-            byteBuf.readBytes(outputStream, byteBuf.readableBytes());
+        // If OutputStream is not shared then we have to write Global Header.
+        if (!pcapWriteHandler.sharedOutputStream()) {
+            PcapHeaders.writeGlobalHeader(pcapWriteHandler.outputStream());
         }
     }
 
@@ -118,6 +105,7 @@ final class PcapWriter implements Closeable {
                 outputStream.flush();
                 outputStream.close();
             }
+            pcapWriteHandler.markClosed();
             logger.debug("PcapWriter is now closed");
         }
     }
