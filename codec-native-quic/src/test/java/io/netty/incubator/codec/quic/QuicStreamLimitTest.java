@@ -37,13 +37,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class QuicStreamLimitTest extends AbstractQuicTest {
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testStreamLimitEnforcedWhenCreatingViaClientBidirectional(Executor executor) throws Throwable {
         testStreamLimitEnforcedWhenCreatingViaClient(executor, QuicStreamType.BIDIRECTIONAL);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testStreamLimitEnforcedWhenCreatingViaClientUnidirectional(Executor executor) throws Throwable {
         testStreamLimitEnforcedWhenCreatingViaClient(executor, QuicStreamType.UNIDIRECTIONAL);
     }
@@ -115,17 +115,19 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testStreamLimitEnforcedWhenCreatingViaServerBidirectional(Executor executor) throws Throwable {
         testStreamLimitEnforcedWhenCreatingViaServer(executor, QuicStreamType.BIDIRECTIONAL);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testStreamLimitEnforcedWhenCreatingViaServerUnidirectional(Executor executor) throws Throwable {
         testStreamLimitEnforcedWhenCreatingViaServer(executor, QuicStreamType.UNIDIRECTIONAL);
     }
@@ -184,6 +186,8 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 }

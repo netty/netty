@@ -80,7 +80,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class QuicChannelConnectTest extends AbstractQuicTest {
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testConnectAndQLog(Executor executor) throws Throwable {
         Path path = Files.createTempFile("qlog", ".quic");
@@ -98,7 +98,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testConnectAndQLogDir(Executor executor) throws Throwable {
         Path path = Files.createTempDirectory("qlogdir-");
@@ -150,25 +150,27 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testKeylogEnabled(Executor executor) throws Throwable {
         testKeylog(executor, true);
         assertNotEquals(0, TestLogBackAppender.getLogs().size());
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testKeylogDisabled(Executor executor) throws Throwable {
         testKeylog(executor, false);
         assertEquals(0, TestLogBackAppender.getLogs().size());
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCustomKeylog(Executor executor) throws Throwable {
         AtomicBoolean called = new AtomicBoolean();
         testKeylog(executor, (BoringSSLKeylog) (engine, log) -> {
@@ -212,11 +214,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(sslTaskExecutor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testAddressValidation(Executor executor) throws Throwable {
         // Bind to something so we can use the port to connect too and so can ensure we really timeout.
         DatagramSocket socket = new DatagramSocket();
@@ -237,17 +241,19 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             socket.close();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectWithCustomIdLength(Executor executor) throws Throwable {
         testConnectWithCustomIdLength(executor, 10);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectWithCustomIdLengthOfZero(Executor executor) throws Throwable {
         testConnectWithCustomIdLength(executor, 0);
     }
@@ -280,6 +286,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+            shutdown(executor);
         }
     }
 
@@ -345,44 +352,44 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
             ChannelFuture closeFuture = channel.close().await();
             assertTrue(closeFuture.isSuccess());
-        }
-        finally {
+        } finally {
             clientQuicChannelHandler.assertState();
             channel.close().sync();
             server.close().sync();
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(3)
     public void testConnectWithNoDroppedPacketsAndRandomConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 0, QuicConnectionIdGenerator.randomGenerator());
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(5)
     public void testConnectWithDroppedPacketsAndRandomConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 2, QuicConnectionIdGenerator.randomGenerator());
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(3)
     public void testConnectWithNoDroppedPacketsAndSignConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 0, QuicConnectionIdGenerator.signGenerator());
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(5)
     public void testConnectWithDroppedPacketsAndSignConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 2, QuicConnectionIdGenerator.signGenerator());
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectTimeout(Executor executor) throws Throwable {
         // Bind to something so we can use the port to connect too and so can ensure we really timeout.
         DatagramSocket socket = new DatagramSocket();
@@ -402,11 +409,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             socket.close();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectAlreadyConnected(Executor executor) throws Throwable {
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
         ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
@@ -437,11 +446,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectWithoutTokenValidation(Executor executor) throws Throwable {
         int numBytes = 8;
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
@@ -495,11 +506,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testConnectAndGetAddressesAfterClose(Executor executor) throws Throwable {
         AtomicReference<QuicChannel> acceptedRef = new AtomicReference<>();
@@ -552,11 +565,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectAndStreamPriority(Executor executor) throws Throwable {
         int numBytes = 8;
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
@@ -597,17 +612,19 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testExtendedTrustManagerFailureOnTheClient(Executor executor) throws Throwable {
         testTrustManagerFailureOnTheClient(executor, true);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testTrustManagerFailureOnTheClient(Executor executor) throws Throwable {
         testTrustManagerFailureOnTheClient(executor, false);
     }
@@ -652,11 +669,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testALPNProtocolMissmatch(Executor executor) throws Throwable {
         CountDownLatch latch = new CountDownLatch(1);
         CountDownLatch eventLatch = new CountDownLatch(1);
@@ -707,11 +726,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectSuccessWhenTrustManagerBuildFromSameCert(Executor executor) throws Throwable {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(
@@ -742,11 +763,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectMutualAuthSuccess(Executor executor) throws Throwable {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(
@@ -780,11 +803,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectMutualAuthFailsIfClientNotSendCertificate(Executor executor) throws Throwable {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(
@@ -811,11 +836,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testSniMatch(Executor executor) throws Throwable {
         QuicSslContext defaultServerSslContext = QuicSslContextBuilder.forServer(
                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
@@ -878,17 +905,19 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testSniFallbackToDefault(Executor executor) throws Throwable {
         testSniFallbackToDefault(executor, true);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testNoSniFallbackToDefault(Executor executor) throws Throwable {
         testSniFallbackToDefault(executor, false);
     }
@@ -942,18 +971,20 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectKeyless(Executor executor) throws Throwable {
         testConnectKeyless0(executor, false);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testConnectKeylessSignFailure(Executor executor) throws Throwable {
         testConnectKeyless0(executor, true);
     }
@@ -1040,12 +1071,14 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(5)
     public void testSessionReusedOnClientSide(Executor executor) throws Exception {
         CountDownLatch serverSslCompletionEventLatch = new CountDownLatch(2);
@@ -1131,6 +1164,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 

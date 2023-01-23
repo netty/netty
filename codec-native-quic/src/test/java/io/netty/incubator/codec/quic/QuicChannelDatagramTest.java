@@ -50,13 +50,13 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testDatagramFlushInChannelRead(Executor executor) throws Throwable {
         testDatagram(executor, false);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testDatagramFlushInChannelReadComplete(Executor executor) throws Throwable {
         testDatagram(executor, true);
     }
@@ -154,29 +154,31 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testDatagramNoAutoReadMaxMessagesPerRead1(Executor executor) throws Throwable {
         testDatagramNoAutoRead(executor, 1, false);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testDatagramNoAutoReadMaxMessagesPerRead3(Executor executor) throws Throwable {
         testDatagramNoAutoRead(executor, 3, false);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testDatagramNoAutoReadMaxMessagesPerRead1OutSideEventLoop(Executor executor) throws Throwable {
         testDatagramNoAutoRead(executor, 1, true);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testDatagramNoAutoReadMaxMessagesPerRead3OutSideEventLoop(Executor executor) throws Throwable {
         testDatagramNoAutoRead(executor, 3, true);
     }
@@ -296,6 +298,8 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 }

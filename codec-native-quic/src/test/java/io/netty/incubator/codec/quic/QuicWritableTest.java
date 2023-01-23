@@ -43,14 +43,14 @@ public class QuicWritableTest extends AbstractQuicTest {
 
     @Disabled("Flaky, needs investigation")
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCorrectlyHandleWritabilityReadRequestedInReadComplete(Executor executor) throws Throwable {
         testCorrectlyHandleWritability(executor, true);
     }
 
     @Disabled("Flaky, needs investigation")
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCorrectlyHandleWritabilityReadRequestedInRead(Executor executor) throws Throwable {
         testCorrectlyHandleWritability(executor, false);
     }
@@ -160,11 +160,13 @@ public class QuicWritableTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testBytesUntilUnwritable(Executor executor) throws Throwable  {
         Promise<Void> writePromise = ImmediateEventExecutor.INSTANCE.newPromise();
@@ -288,6 +290,8 @@ public class QuicWritableTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 

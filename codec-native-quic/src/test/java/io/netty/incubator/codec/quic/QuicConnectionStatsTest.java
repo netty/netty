@@ -38,7 +38,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 public class QuicConnectionStatsTest extends AbstractQuicTest {
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testStatsAreCollected(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;
@@ -127,6 +127,8 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
         }
     }
 

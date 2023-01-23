@@ -35,7 +35,7 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
     private static final String ATTRIBUTE_VALUE = "Test";
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCreateStream(Executor executor) throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(executor, serverHandler,
@@ -72,11 +72,13 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCreateStreamViaBootstrap(Executor executor) throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(executor, serverHandler,
@@ -116,6 +118,8 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
             server.close().syncUninterruptibly();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 

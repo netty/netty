@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class QuicStreamTypeTest extends AbstractQuicTest {
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testUnidirectionalCreatedByClient(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;
@@ -90,7 +90,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testUnidirectionalCreatedByServer(Executor executor) throws Throwable {
         Channel server = null;
         Channel channel = null;

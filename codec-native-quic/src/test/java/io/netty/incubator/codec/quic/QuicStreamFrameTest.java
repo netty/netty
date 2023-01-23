@@ -34,13 +34,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class QuicStreamFrameTest extends AbstractQuicTest {
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCloseHalfClosureUnidirectional(Executor executor) throws Throwable {
         testCloseHalfClosure(executor, QuicStreamType.UNIDIRECTIONAL);
     }
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCloseHalfClosureBidirectional(Executor executor) throws Throwable {
         testCloseHalfClosure(executor, QuicStreamType.BIDIRECTIONAL);
     }
@@ -69,6 +69,8 @@ public class QuicStreamFrameTest extends AbstractQuicTest {
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
         }
     }
 

@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class QuicReadableTest extends AbstractQuicTest {
 
     @ParameterizedTest
-    @MethodSource("sslTaskExecutors")
+    @MethodSource("newSslTaskExecutors")
     public void testCorrectlyHandleReadableStreams(Executor executor) throws Throwable  {
         int numOfStreams = 256;
         int readStreams = numOfStreams / 2;
@@ -124,6 +124,8 @@ public class QuicReadableTest extends AbstractQuicTest {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
+
+            shutdown(executor);
         }
     }
 
