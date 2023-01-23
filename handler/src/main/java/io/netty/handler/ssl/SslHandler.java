@@ -1062,13 +1062,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         boolean handshakeFailed = handshakePromise.cause() != null;
 
-        final Exception exception;
-        if (handshakePromise.isDone()) {
-            exception = new ClosedChannelException();
-        } else {
-            // Closed before the handshake was done.
-            exception = new SSLHandshakeException("Connection closed during SSL handshake");
-            exception.initCause(new ClosedChannelException());
+        // Channel closed, we will generate 'ClosedChannelException' now.
+        ClosedChannelException exception = new ClosedChannelException();
+
+        // Add a supressed exception if the handshake was not completed yet.
+        if (!isStateSet(STATE_HANDSHAKE_STARTED) || handshakePromise.isDone()) {
+            exception.addSuppressed(new StacklessSSLHandshakeException("Connection closed before " +
+                    "SSL/TLS handshake completed"));
         }
 
         // Make sure to release SSLEngine,
