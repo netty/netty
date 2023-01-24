@@ -48,6 +48,7 @@ import org.junit.jupiter.api.Test;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -159,8 +160,10 @@ public class PcapWriteHandlerTest {
         assertEquals((byte) 0xff, ipv4Packet.readByte());      // TTL
         assertEquals((byte) 17, ipv4Packet.readByte());        // Protocol
         assertEquals(0, ipv4Packet.readShort());      // Checksum
+
         // Source IPv4 Address
         assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) localAddress.getAddress()), ipv4Packet.readInt());
+
         // Destination IPv4 Address
         assertEquals(NetUtil.ipv4AddressToInt((Inet4Address) remoteAddress.getAddress()), ipv4Packet.readInt());
 
@@ -362,7 +365,12 @@ public class PcapWriteHandlerTest {
 
     @Test
     public void writerStateTest() throws Exception {
+        final byte[] payload = "Meow".getBytes();
+        final InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+        final InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+
         PcapWriteHandler pcapWriteHandler = PcapWriteHandler.builder()
+                .forceTcpChannel(serverAddr, clientAddr, true)
                 .build(new OutputStream() {
                     @Override
                     public void write(int b) {
@@ -380,7 +388,6 @@ public class PcapWriteHandlerTest {
         embeddedChannel.pipeline().addFirst(pcapWriteHandler);
 
         // Write and read some data and verify it.
-        byte[] payload = "Meow".getBytes();
         embeddedChannel.writeInbound(Unpooled.wrappedBuffer(payload));
         assertEquals(Unpooled.wrappedBuffer(payload), embeddedChannel.readInbound());
 
@@ -395,6 +402,67 @@ public class PcapWriteHandlerTest {
 
         // State should be changed to closed by now
         assertEquals(State.CLOSED, pcapWriteHandler.state());
+
+        // Close PcapWriteHandler again. This should be a no-op.
+        pcapWriteHandler.close();
+
+        // State should still be CLOSED. No change.
+        assertEquals(State.CLOSED, pcapWriteHandler.state());
+
+        // Close the 'EmbeddedChannel'.
+        assertTrue(embeddedChannel.close().isSuccess());
+    }
+
+    @Test
+    public void pauseResumeTest() throws Exception {
+        final byte[] payload = "Meow".getBytes();
+        final InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+        final InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+
+        DiscardingStatsOutputStream discardingStatsOutputStream = new DiscardingStatsOutputStream();
+        PcapWriteHandler pcapWriteHandler = PcapWriteHandler.builder()
+                .forceTcpChannel(serverAddr, clientAddr, true)
+                .build(discardingStatsOutputStream);
+
+        // Create a new 'EmbeddedChannel' and add the 'PcapWriteHandler'
+        EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+        embeddedChannel.pipeline().addFirst(pcapWriteHandler);
+
+        // Verify that no writes have been called yet.
+        assertEquals(0, discardingStatsOutputStream.writesCalled());
+
+        for (int i = 0; i < 10; i++) {
+            embeddedChannel.writeInbound(Unpooled.wrappedBuffer(payload));
+        }
+
+        // Since we have written 10 times, we should have a value greater than 0.
+        // We can't say it will be 10 exactly because there will be pcap headers also.
+        final int initialWritesCalled = discardingStatsOutputStream.writesCalled();
+        assertThat(initialWritesCalled).isGreaterThan(0);
+
+        // Pause the Pcap
+        pcapWriteHandler.pause();
+        assertEquals(State.PAUSED, pcapWriteHandler.state());
+
+        // Write 100 times. No writes should be called in OutputStream.
+        for (int i = 0; i < 100; i++) {
+            embeddedChannel.writeInbound(Unpooled.wrappedBuffer(payload));
+        }
+
+        // Current stats and previous stats should be same.
+        assertEquals(initialWritesCalled, discardingStatsOutputStream.writesCalled());
+
+        // Let's resume the Pcap now.
+        pcapWriteHandler.resume();
+        assertEquals(State.STARTED, pcapWriteHandler.state());
+
+        // Write 100 times. Writes should be called in OutputStream now.
+        for (int i = 0; i < 100; i++) {
+            embeddedChannel.writeInbound(Unpooled.wrappedBuffer(payload));
+        }
+
+        // Verify we have written more than before.
+        assertThat(discardingStatsOutputStream.writesCalled()).isGreaterThan(initialWritesCalled);
 
         // Close PcapWriteHandler again. This should be a no-op.
         pcapWriteHandler.close();

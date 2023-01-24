@@ -124,7 +124,14 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      */
     private InetSocketAddress handlerAddr;
 
+    /**
+     * Set to {@code true} if this handler is registered on a server pipeline
+     */
     private boolean isServerPipeline;
+
+    /**
+     * Current of this {@link PcapWriteHandler}
+     */
     private State state = State.INIT;
 
     /**
@@ -165,18 +172,18 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         this.outputStream = checkNotNull(outputStream, "OutputStream");
         this.captureZeroByte = captureZeroByte;
         this.writePcapGlobalHeader = writePcapGlobalHeader;
-        this.sharedOutputStream = false;
+        sharedOutputStream = false;
     }
 
     private PcapWriteHandler(Builder builder, OutputStream outputStream) {
         this.outputStream = outputStream;
-        this.captureZeroByte = builder.captureZeroByte;
-        this.sharedOutputStream = builder.sharedOutputStream;
-        this.writePcapGlobalHeader = builder.writePcapGlobalHeader;
-        this.channelType = builder.channelType;
-        this.handlerAddr = builder.handlerAddr;
-        this.initiatorAddr = builder.initiatorAddr;
-        this.isServerPipeline = builder.isServerPipeline;
+        captureZeroByte = builder.captureZeroByte;
+        sharedOutputStream = builder.sharedOutputStream;
+        writePcapGlobalHeader = builder.writePcapGlobalHeader;
+        channelType = builder.channelType;
+        handlerAddr = builder.handlerAddr;
+        initiatorAddr = builder.initiatorAddr;
+        isServerPipeline = builder.isServerPipeline;
     }
 
     /**
@@ -184,24 +191,18 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      *
      * @param outputStream OutputStream where Pcap data will be written.
      * @throws IOException if there is an error writing to the {@code OutputStream}
-     * @deprecated Use {@link PcapHeaders#writeGlobalHeader(OutputStream)} instead.
      */
-    @Deprecated
     public static void writeGlobalHeader(OutputStream outputStream) throws IOException {
         PcapHeaders.writeGlobalHeader(outputStream);
     }
 
-    private void initializeIfNecessary(ChannelHandlerContext ctx) {
-        if (state == State.STARTED) {
+    private void initializeIfNecessary(ChannelHandlerContext ctx) throws Exception {
+        // If State is not 'INIT' then no need of initialization.
+        if (state != State.INIT) {
             return;
         }
 
-        try {
-            pCapWriter = new PcapWriter(this);
-        } catch (IOException ex) {
-            ctx.fireExceptionCaught(new IllegalStateException("Failed to initialize PcapWriter", ex));
-            ctx.channel().close();
-        }
+        pCapWriter = new PcapWriter(this);
 
         if (channelType == null) {
             // infer channel type
@@ -623,8 +624,30 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         return sharedOutputStream;
     }
 
-    State state() {
+    public State state() {
         return state;
+    }
+
+    /**
+     * Pause the {@link PcapWriteHandler} from writing packets to the {@link OutputStream}.
+     */
+    public void pause() {
+        if (state == State.STARTED) {
+            state = State.PAUSED;
+        } else {
+            throw new IllegalStateException("State must be 'STARTED' to pause but current state is: " + state);
+        }
+    }
+
+    /**
+     * Resume the {@link PcapWriteHandler} to writing packets to the {@link OutputStream}.
+     */
+    public void resume() {
+        if (state == State.PAUSED) {
+            state = State.STARTED;
+        } else {
+            throw new IllegalStateException("State must be 'PAUSED' to resume but current state is: " + state);
+        }
     }
 
     void markClosed() {
@@ -749,15 +772,15 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
          *
          * @param serverAddress The address of the TCP server (handler)
          * @param clientAddress The address of the TCP client (initiator)
-         * @param localIsServer Whether the handler is part of the server channel
+         * @param isServerPipeline Whether the handler is part of the server channel
          * @return this builder
          */
         public Builder forceTcpChannel(InetSocketAddress serverAddress, InetSocketAddress clientAddress,
-                                       boolean localIsServer) {
+                                       boolean isServerPipeline) {
             channelType = ChannelType.TCP;
             handlerAddr = checkNotNull(serverAddress, "serverAddress");
             initiatorAddr = checkNotNull(clientAddress, "clientAddress");
-            isServerPipeline = localIsServer;
+            this.isServerPipeline = isServerPipeline;
             return this;
         }
 

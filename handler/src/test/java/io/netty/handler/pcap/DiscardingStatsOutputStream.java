@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,28 +15,24 @@
  */
 package io.netty.handler.pcap;
 
-/**
- * The state of the {@link PcapWriteHandler}.
- */
-public enum State {
+import java.io.IOException;
+import java.io.OutputStream;
 
-    /**
-     * The handler is not active.
-     */
-    INIT,
+final class DiscardingStatsOutputStream extends OutputStream {
 
-    /**
-     * The handler is active.
-     */
-    STARTED,
+    private int writesCount;
 
-    /**
-     * The handler is paused. No Pcap data will be written.
-     */
-    PAUSED,
+    @Override
+    public void write(int b) throws IOException {
 
-    /**
-     * The handler is closed.
-     */
-    CLOSED
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) throws IOException {
+        writesCount++;
+    }
+
+    int writesCalled() {
+        return writesCount;
+    }
 }

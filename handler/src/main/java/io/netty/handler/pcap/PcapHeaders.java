@@ -34,20 +34,11 @@ final class PcapHeaders {
      *      <li> network </li>
      * </ol>
      */
-    static final byte[] GLOBAL_HEADER = new byte[]{-95, -78, -61, -44, 0, 2, 0, 4, 0, 0,
+    private static final byte[] GLOBAL_HEADER = {-95, -78, -61, -44, 0, 2, 0, 4, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, 0, 0, 1};
 
     private PcapHeaders() {
         // Prevent outside initialization
-    }
-
-    /**
-     * Write Pcap Global Header
-     *
-     * @param byteBuf byteBuf where we'll write header data
-     */
-    public static void writeGlobalHeader(ByteBuf byteBuf) {
-        byteBuf.writeBytes(GLOBAL_HEADER);
     }
 
     /**
@@ -56,7 +47,7 @@ final class PcapHeaders {
      * @param outputStream OutputStream where Pcap data will be written.
      * @throws IOException if there is an error writing to the {@code OutputStream}
      */
-    public static void writeGlobalHeader(OutputStream outputStream) throws IOException {
+    static void writeGlobalHeader(OutputStream outputStream) throws IOException {
         outputStream.write(GLOBAL_HEADER);
     }
 
