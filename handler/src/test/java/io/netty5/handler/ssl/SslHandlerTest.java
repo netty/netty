@@ -560,8 +560,8 @@ public class SslHandlerTest {
 
         assertFalse(ch.finishAndReleaseAll());
 
-        assertTrue(handler.handshakeFuture().cause() instanceof ClosedChannelException);
-        assertTrue(handler.sslCloseFuture().cause() instanceof ClosedChannelException);
+        assertThat(handler.handshakeFuture().cause(), instanceOf(ClosedChannelException.class));
+        assertThat(handler.sslCloseFuture().cause(), instanceOf(ClosedChannelException.class));
     }
 
     @Test
@@ -582,11 +582,11 @@ public class SslHandlerTest {
 
         SslCompletionEvent evt = events.take();
         assertTrue(evt instanceof SslHandshakeCompletionEvent);
-        assertTrue(evt.cause() instanceof ClosedChannelException);
+        assertThat(evt.cause(), instanceOf(ClosedChannelException.class));
 
         evt = events.take();
         assertTrue(evt instanceof SslCloseCompletionEvent);
-        assertTrue(evt.cause() instanceof ClosedChannelException);
+        assertThat(evt.cause(), instanceOf(ClosedChannelException.class));
         assertTrue(events.isEmpty());
     }
 
