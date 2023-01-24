@@ -38,7 +38,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Single-thread singleton {@link EventExecutor}.  It starts the thread automatically and stops it when there is no
- * task pending in the task queue for {@code io.netty.globalEventExecutor.quietPeriodSeconds} second
+ * task pending in the task queue for {@code io.netty5.globalEventExecutor.quietPeriodSeconds} second
  * (default is 1 second).  Please note it is not scalable to schedule large number of tasks to this executor;
  * use a dedicated executor.
  */
@@ -48,11 +48,11 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     private static final long SCHEDULE_QUIET_PERIOD_INTERVAL;
 
     static {
-        int quietPeriod = SystemPropertyUtil.getInt("io.netty.globalEventExecutor.quietPeriodSeconds", 1);
+        int quietPeriod = SystemPropertyUtil.getInt("io.netty5.globalEventExecutor.quietPeriodSeconds", 1);
         if (quietPeriod <= 0) {
             quietPeriod = 1;
         }
-        logger.debug("-Dio.netty.globalEventExecutor.quietPeriodSeconds: {}", quietPeriod);
+        logger.debug("-Dio.netty5.globalEventExecutor.quietPeriodSeconds: {}", quietPeriod);
 
         SCHEDULE_QUIET_PERIOD_INTERVAL = TimeUnit.SECONDS.toNanos(quietPeriod);
     }
