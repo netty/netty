@@ -23,7 +23,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -41,14 +40,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicWritableTest extends AbstractQuicTest {
 
-    @Disabled("Flaky, needs investigation")
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testCorrectlyHandleWritabilityReadRequestedInReadComplete(Executor executor) throws Throwable {
         testCorrectlyHandleWritability(executor, true);
     }
 
-    @Disabled("Flaky, needs investigation")
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testCorrectlyHandleWritabilityReadRequestedInRead(Executor executor) throws Throwable {

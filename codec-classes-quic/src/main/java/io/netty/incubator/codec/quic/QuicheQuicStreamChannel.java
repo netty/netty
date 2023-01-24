@@ -601,6 +601,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             readPending = true;
             if (readable) {
                 ((QuicStreamChannelUnsafe) unsafe()).recv();
+
+                // As the stream was readable, and we called recv() ourselves we also need to call
+                // connectionSendAndFlush(). This is needed as recv() might consume data and so a window update
+                // frame might be produced. If we miss to call connectionSendAndFlush() we might never send the update
+                // to the remote peer and so the remote peer might never attempt to send more data.
+                // See also https://docs.rs/quiche/latest/quiche/struct.Connection.html#method.send.
+                parent().connectionSendAndFlush();
             }
         }
 
