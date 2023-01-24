@@ -24,7 +24,7 @@ final class DiscardingStatsOutputStream extends OutputStream {
 
     @Override
     public void write(int b) throws IOException {
-
+        // NO-OP
     }
 
     @Override
