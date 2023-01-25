@@ -55,7 +55,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -794,7 +796,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         HttpResponse request = ch.readInbound();
         assertThat(request.status().codeAsText().toString(), is(statusCode));
         assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
-        assertFalse(request instanceof FullHttpRequest);
+        assertThat(request, is(not(instanceOf(FullHttpResponse.class))));
         assertFalse(HttpUtil.isTransferEncodingChunked(request));
 
         assertThat(ch.readInbound(), is(nullValue()));

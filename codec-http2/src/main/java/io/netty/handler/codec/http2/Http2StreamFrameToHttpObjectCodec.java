@@ -278,7 +278,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             char char0 = status.charAt(0);
             char char1 = status.charAt(1);
             char char2 = status.charAt(2);
-            return char0 >= '2' && char0 <= '3'
+            return (char0 == '2' || char0 == '3')
                 && char1 == '0'
                 && char2 == '4';
         }
