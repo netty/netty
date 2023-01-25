@@ -889,7 +889,6 @@ abstract class DnsResolveContext<T> {
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
         }
 
-
         if (found && !cnameNeedsFollow) {
             // If we found the correct result we can just stop here without following any extra CNAME records in the
             // response.

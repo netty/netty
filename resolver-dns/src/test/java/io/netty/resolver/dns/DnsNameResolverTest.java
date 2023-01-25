@@ -2403,12 +2403,10 @@ public class DnsNameResolverTest {
     //
     // This should only result in one query.
     // ;; ANSWER SECTION:
-    //somehost.netty.io.		594	IN	CNAME	cname.netty.io.
-    //cname.netty.io. 9042	IN	CNAME	cname2.netty.io.
-    //cname2.netty.io. 1312 IN CNAME	cname3.netty.io.io.
-    //cname3.netty.io. 20	IN	A	10.0.0.2
-    //
-    //
+    // somehost.netty.io.     594    IN    CNAME    cname.netty.io.
+    // cname.netty.io.        9042   IN    CNAME    cname2.netty.io.
+    // cname2.netty.io.       1312   IN    CNAME    cname3.netty.io.io.
+    // cname3.netty.io.       20     IN    A        10.0.0.2
     @Test
     public void testCNAMEFollowInResponseWithoutExtraQuery() throws IOException {
         AtomicInteger queryCount = new AtomicInteger();
