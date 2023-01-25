@@ -29,6 +29,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -44,6 +46,7 @@ import java.nio.channels.WritableByteChannel;
 @ChannelHandler.Sharable
 public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BrotliEncoder.class);
     private static final AttributeKey<Writer> ATTR = AttributeKey.valueOf("BrotliEncoderWriter");
 
     /**
@@ -255,6 +258,12 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                         finish(promise);
                     } catch (IOException ex) {
                         promise.setFailure(new IllegalStateException("Failed to finish encoding", ex));
+                    } finally {
+                        if (logger.isDebugEnabled()) {
+                            if (promise.cause() != null) {
+                                logger.debug("finish failure", promise.cause());
+                            }
+                        }
                     }
                 }
             });
