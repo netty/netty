@@ -190,7 +190,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
 
     private void onQueryWriteCompletion(ChannelFuture writeFuture) {
         if (!writeFuture.isSuccess()) {
-            tryFailure("failed to send a query via " + protocol(), writeFuture.cause(), false);
+            tryFailure("failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
             return;
         }
 
@@ -205,7 +205,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                         return;
                     }
 
-                    tryFailure("query via " + protocol() + " timed out after " +
+                    tryFailure("query '" + id + "' via " + protocol() + " timed out after " +
                             queryTimeoutMillis + " milliseconds", null, true);
                 }
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -247,7 +247,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
 
         final DnsNameResolverException e;
         if (timeout) {
-            // This was caused by an timeout so use DnsNameResolverTimeoutException to allow the user to
+            // This was caused by a timeout so use DnsNameResolverTimeoutException to allow the user to
             // handle it special (like retry the query).
             e = new DnsNameResolverTimeoutException(nameServerAddr, question(), buf.toString());
         } else {
