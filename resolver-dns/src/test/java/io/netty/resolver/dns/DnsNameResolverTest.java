@@ -2409,7 +2409,7 @@ public class DnsNameResolverTest {
     // cname3.netty.io.       20     IN    A        10.0.0.2
     @Test
     public void testCNAMEFollowInResponseWithoutExtraQuery() throws IOException {
-        AtomicInteger queryCount = new AtomicInteger();
+        final AtomicInteger queryCount = new AtomicInteger();
         TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
 
             @Override
