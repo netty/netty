@@ -2400,6 +2400,72 @@ public class DnsNameResolverTest {
         }
     }
 
+    //
+    // This should only result in one query.
+    // ;; ANSWER SECTION:
+    //somehost.netty.io.		594	IN	CNAME	cname.netty.io.
+    //cname.netty.io. 9042	IN	CNAME	cname2.netty.io.
+    //cname2.netty.io. 1312 IN CNAME	cname3.netty.io.io.
+    //cname3.netty.io. 20	IN	A	10.0.0.2
+    //
+    //
+    @Test
+    public void testCNAMEFollowInResponseWithoutExtraQuery() throws IOException {
+        AtomicInteger queryCount = new AtomicInteger();
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                queryCount.incrementAndGet();
+                if (question.getDomainName().equals("somehost.netty.io")) {
+                    Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
+                    Map<String, Object> map = new HashMap<String, Object>();
+                    map.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            question.getDomainName(), RecordType.CNAME, map));
+
+                    map = new HashMap<String, Object>();
+                    map.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname2.netty.io");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "cname.netty.io", RecordType.CNAME, map));
+
+                    map = new HashMap<String, Object>();
+                    map.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname3.netty.io");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "cname2.netty.io", RecordType.CNAME, map));
+
+                    Map<String, Object> map1 = new HashMap<String, Object>();
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.2");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                           "cname3.netty.io", RecordType.A, map1));
+                    return records;
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+
+            resolver = builder.build();
+            List<InetAddress> resolvedAddresses =
+                    resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 })));
+            assertEquals(1, queryCount.get());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
     @Test
     public void testFollowCNAMELoop() throws IOException {
         TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
