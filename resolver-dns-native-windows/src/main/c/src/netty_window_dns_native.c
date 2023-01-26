@@ -122,37 +122,37 @@ jobject sockAddrToJava(JNIEnv* env, LPSOCKADDR sockAddr) {
     unsigned short port;
     jstring host;
     
-	switch (sockAddr->sa_family) {
-	case AF_INET: {
-		char ip[INET_ADDRSTRLEN];
-		struct sockaddr_in* addr_in = (struct sockaddr_in*)sockAddr;
+    switch (sockAddr->sa_family) {
+    case AF_INET: {
+        char ip[INET_ADDRSTRLEN];
+        struct sockaddr_in* addr_in = (struct sockaddr_in*)sockAddr;
 
         if (inet_ntop(AF_INET, &addr_in->sin_addr, ip, sizeof(ip)) == NULL) {
             throwNativeException(env, "Could not convert Ipv4 to String");
             return NULL;
         }
 
-		port = ntohs(addr_in->sin_port);
-		host = (*env)->NewStringUTF(env, ip);
-		break;
-	}
-	case AF_INET6: {
-		char ip[INET6_ADDRSTRLEN];
-		struct sockaddr_in6* addr_in = (struct sockaddr_in6*)sockAddr;
+        port = ntohs(addr_in->sin_port);
+        host = (*env)->NewStringUTF(env, ip);
+        break;
+    }
+    case AF_INET6: {
+        char ip[INET6_ADDRSTRLEN];
+        struct sockaddr_in6* addr_in = (struct sockaddr_in6*)sockAddr;
 		
         if (inet_ntop(AF_INET6, &addr_in->sin6_addr, ip, sizeof(ip)) == NULL) {
             throwNativeException(env, "Could not convert Ipv6 to String");
             return NULL;
         }
 
-		port = ntohs(addr_in->sin6_port);
-		host = (*env)->NewStringUTF(env, ip);
-		break;
-	}
-	default:
-		throwNativeException(env, "Unknown address family %d", sockAddr->sa_family);
-		return NULL;
-	}
+        port = ntohs(addr_in->sin6_port);
+        host = (*env)->NewStringUTF(env, ip);
+        break;
+    }
+    default:
+        throwNativeException(env, "Unknown address family %d", sockAddr->sa_family);
+        return NULL;
+    }
 
     return (*env)->NewObject(env, inetSocketAddressClass, inetSocketAddressCtor, host, port);
 }
