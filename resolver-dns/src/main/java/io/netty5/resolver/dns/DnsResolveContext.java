@@ -772,6 +772,7 @@ abstract class DnsResolveContext<T> {
 
         boolean found = false;
         boolean completeEarly = this.completeEarly;
+        boolean cnameNeedsFollow = !cnames.isEmpty();
         for (int i = 0; i < answerCount; i ++) {
             final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
             final DnsRecordType type = r.type();
@@ -798,6 +799,8 @@ abstract class DnsResolveContext<T> {
                 do {
                     resolved = cnamesCopy.remove(resolved);
                     if (recordName.equals(resolved)) {
+                        // We followed a CNAME chain that was part of the response without any extra queries.
+                        cnameNeedsFollow = false;
                         break;
                     }
                 } while (resolved != null);
@@ -871,14 +874,14 @@ abstract class DnsResolveContext<T> {
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
         }
 
-        if (cnames.isEmpty()) {
-            if (found) {
-                if (completeEarly) {
-                    this.completeEarly = true;
-                }
-                queryLifecycleObserver.querySucceed();
-                return;
+        if (found && !cnameNeedsFollow) {
+            // If we found the correct result we can just stop here without following any extra CNAME records in the
+            // response.
+            if (completeEarly) {
+                this.completeEarly = true;
             }
+            queryLifecycleObserver.querySucceed();
+        } else if (cnames.isEmpty()) {
             queryLifecycleObserver.queryFailed(NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION);
         } else {
             queryLifecycleObserver.querySucceed();
