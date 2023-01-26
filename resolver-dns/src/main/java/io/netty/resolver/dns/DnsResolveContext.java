@@ -233,7 +233,8 @@ abstract class DnsResolveContext<T> {
                         }
                     } else {
                         if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, searchDomains));
+                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, expectedTypes,
+                                    searchDomains));
                         } else if (searchDomainIdx < searchDomains.length) {
                             Promise<List<T>> newPromise = parent.executor().newPromise();
                             newPromise.addListener(this);
@@ -241,7 +242,8 @@ abstract class DnsResolveContext<T> {
                         } else if (!startWithoutSearchDomain) {
                             internalResolve(hostname, promise);
                         } else {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, searchDomains));
+                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, expectedTypes,
+                                    searchDomains));
                         }
                     }
                 }
@@ -262,9 +264,11 @@ abstract class DnsResolveContext<T> {
     private static final class SearchDomainUnknownHostException extends UnknownHostException {
         private static final long serialVersionUID = -8573510133644997085L;
 
-        SearchDomainUnknownHostException(Throwable cause, String originalHostname, String[] searchDomains) {
-            super("Failed to resolve '" + originalHostname + "' and search domain query for configured domains" +
-                    " failed as well: " + Arrays.toString(searchDomains));
+        SearchDomainUnknownHostException(Throwable cause, String originalHostname,
+                DnsRecordType[] queryTypes, String[] searchDomains) {
+            super("Failed to resolve '" + originalHostname + "' " + Arrays.toString(queryTypes) +
+                    " and search domain query for configured domains failed as well: " +
+                    Arrays.toString(searchDomains));
             setStackTrace(cause.getStackTrace());
             // Preserve the cause
             initCause(cause.getCause());
@@ -1018,7 +1022,7 @@ abstract class DnsResolveContext<T> {
             queryLifecycleObserver.queryCancelled(allowedQueries);
         }
 
-        // We have at least one resolved record or tried CNAME as the last resort..
+        // We have at least one resolved record or tried CNAME as the last resort.
         finishResolve(promise, cause);
     }
 
@@ -1054,7 +1058,7 @@ abstract class DnsResolveContext<T> {
         final int tries = maxAllowedQueries - allowedQueries;
         final StringBuilder buf = new StringBuilder(64);
 
-        buf.append("Failed to resolve '").append(hostname).append('\'');
+        buf.append("Failed to resolve '").append(hostname).append("' ").append(Arrays.toString(expectedTypes));
         if (tries > 1) {
             if (tries < maxAllowedQueries) {
                 buf.append(" after ")
