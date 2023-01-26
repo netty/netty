@@ -49,11 +49,15 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -774,6 +778,26 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
         assertFalse(response instanceof FullHttpResponse);
         assertFalse(HttpUtil.isTransferEncodingChunked(response));
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @ParameterizedTest()
+    @ValueSource(strings = {"204", "304"})
+    public void testDecodeResponseHeadersContentAlwaysEmpty(String statusCode) {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.scheme(HttpScheme.HTTP.name());
+        headers.status(statusCode);
+
+        assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
+
+        HttpResponse request = ch.readInbound();
+        assertThat(request.status().codeAsText().toString(), is(statusCode));
+        assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
+        assertThat(request, is(not(instanceOf(FullHttpResponse.class))));
+        assertFalse(HttpUtil.isTransferEncodingChunked(request));
 
         assertThat(ch.readInbound(), is(nullValue()));
         assertFalse(ch.finish());
