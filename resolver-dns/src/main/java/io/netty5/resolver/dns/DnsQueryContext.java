@@ -182,7 +182,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     private void onQueryWriteCompletion(Future<?> writeFuture, Promise<Void> writePromise) {
         if (writeFuture.isFailed()) {
             writePromise.setFailure(writeFuture.cause());
-            tryFailure("failed to send a query via " + protocol(), writeFuture.cause(), false);
+            tryFailure("failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
             return;
         }
         writePromise.setSuccess(null);
@@ -195,7 +195,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                     return;
                 }
 
-                tryFailure("query via " + protocol() + " timed out after " +
+                tryFailure("query '" + id + "' via " + protocol() + " timed out after " +
                         queryTimeoutMillis + " milliseconds", null, true);
                 }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
         }
