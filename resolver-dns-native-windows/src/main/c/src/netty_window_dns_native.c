@@ -27,8 +27,6 @@
 #pragma comment(lib, "IPHLPAPI.lib")
 #pragma comment(lib, "ws2_32.lib")
 
-#define NETTY_JNI_UTIL_JNI_VERSION JNI_VERSION_1_6
-
 #define ADAPTER_INFO_CLASS "io/netty/resolver/dns/windows/WindowsAdapterInfo"
 
 static jclass nativeExceptionClass = NULL;
