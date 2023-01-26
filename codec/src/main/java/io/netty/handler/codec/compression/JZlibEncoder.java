@@ -367,7 +367,7 @@ public class JZlibEncoder extends ZlibEncoder {
             if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
                 promise.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
                 return promise;
-            } else if (z.next_out_index != 0) { // lgtm[java/constant-comparison]
+            } else if (z.next_out_index != 0) {
                 // Suppressed a warning above to be on the safe side
                 // even if z.next_out_index seems to be always 0 here
                 footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);

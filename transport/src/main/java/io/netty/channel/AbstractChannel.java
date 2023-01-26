@@ -1176,7 +1176,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
@@ -1192,7 +1192,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
@@ -1208,7 +1208,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }

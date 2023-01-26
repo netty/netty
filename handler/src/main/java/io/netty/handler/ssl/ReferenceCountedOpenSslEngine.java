@@ -1767,7 +1767,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
                     minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
                 }
-                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) { // lgtm[java/constant-comparison]
+                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
                     maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
                 }
             } else if (p.equals(SslProtocols.SSL_v3)) {

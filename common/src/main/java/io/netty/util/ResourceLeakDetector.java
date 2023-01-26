@@ -664,7 +664,7 @@ public class ResourceLeakDetector<T> {
                     // Suppress a warning about out of bounds access
                     // since the length of excludedMethods is always even, see addExclusions()
                     if (exclusions[k].equals(element.getClassName())
-                            && exclusions[k + 1].equals(element.getMethodName())) { // lgtm[java/index-out-of-bounds]
+                            && exclusions[k + 1].equals(element.getMethodName())) {
                         continue out;
                     }
                 }
