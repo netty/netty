@@ -136,8 +136,10 @@ public class FlowControlHandler implements ChannelHandler {
             // messages from upstream and once one arrives it need to be
             // relayed to downstream to keep the flow going.
             shouldConsume = true;
+            ctx.read(readBufferAllocator);
+        } else if (ctx.channel().getOption(ChannelOption.AUTO_READ) == Boolean.TRUE) {
+            ctx.read(readBufferAllocator);
         }
-        ctx.read(readBufferAllocator);
     }
 
     @Override

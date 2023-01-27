@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -376,6 +377,77 @@ public class FlowControlHandlerTest {
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
             assertTrue(peer.executor().submit(flow::isQueueEmpty).asStage().get());
+        } finally {
+            client.close();
+            server.close();
+        }
+    }
+
+    /**
+     * The {@link FlowControlHandler} will not pass read events onto the
+     * pipeline when the user is calling {@code read()} on their own if the
+     * queue is not empty and auto-reading is turned off for the channel.
+     */
+    @Test
+    public void testFlowAutoReadOffAndQueueNonEmpty() throws Exception {
+        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
+        final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
+        final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);
+
+        ChannelHandler handler = new ChannelHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                ctx.fireChannelActive();
+                peerRef.exchange(ctx.channel(), 1L, SECONDS);
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                msgRcvLatch1.countDown();
+                msgRcvLatch2.countDown();
+                msgRcvLatch3.countDown();
+            }
+        };
+
+        final FlowControlHandler flow = new FlowControlHandler();
+        Channel server = newServer(false, flow, handler);
+        Channel client = newClient(server.localAddress());
+        try {
+            // The client connection on the server side
+            Channel peer = peerRef.exchange(null, 1L, SECONDS);
+
+            // Write the first message
+            client.writeAndFlush(newOneMessage()).asStage().sync();
+
+            // channelRead(1)
+            peer.read();
+            assertTrue(msgRcvLatch1.await(1L, SECONDS));
+            assertFalse(peer.executor().submit(new Callable<Boolean>() {
+                @Override
+                public Boolean call() {
+                    return flow.isQueueEmpty();
+                }
+            }).asStage().get());
+
+            // Write the second message
+            client.writeAndFlush(newOneMessage())
+                .asStage().sync();
+
+            // channelRead(2)
+            peer.read();
+            assertTrue(msgRcvLatch2.await(1L, SECONDS));
+
+            // channelRead(3)
+            peer.read();
+            assertTrue(msgRcvLatch3.await(1L, SECONDS));
+
+            assertTrue(peer.executor().submit(new Callable<Boolean>() {
+                @Override
+                public Boolean call() {
+                    return flow.isQueueEmpty();
+                }
+            }).asStage().get());
         } finally {
             client.close();
             server.close();
