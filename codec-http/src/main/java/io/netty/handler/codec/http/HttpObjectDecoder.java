@@ -1072,7 +1072,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         @Override
         public ByteBuf parse(ByteBuf buffer) {
             // Suppress a warning because HeaderParser.reset() is supposed to be called
-            reset();    // lgtm[java/subtle-inherited-call]
+            reset();
             final int readableBytes = buffer.readableBytes();
             if (readableBytes == 0) {
                 return null;

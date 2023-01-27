@@ -143,7 +143,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         // Suppress a warning since the method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             setStackTrace(CANCELLATION_STACK);
             return this;
         }

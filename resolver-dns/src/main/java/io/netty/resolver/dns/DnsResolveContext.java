@@ -276,7 +276,7 @@ abstract class DnsResolveContext<T> {
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }

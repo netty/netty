@@ -228,8 +228,8 @@ public final class NetUtil {
         Process process = new ProcessBuilder("sysctl", sysctlKey).start();
         try {
             // Suppress warnings about resource leaks since the buffered reader is closed below
-            InputStream is = process.getInputStream();  // lgtm[java/input-resource-leak
-            InputStreamReader isr = new InputStreamReader(is);  // lgtm[java/input-resource-leak
+            InputStream is = process.getInputStream();
+            InputStreamReader isr = new InputStreamReader(is);
             BufferedReader br = new BufferedReader(isr);
             try {
                 String line = br.readLine();

@@ -92,7 +92,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
         try {
             // Suppress a warning about resource leak since oout is closed below
             ObjectOutputStream oout = new CompactObjectOutputStream(
-                    new ByteBufOutputStream(buf));  // lgtm[java/output-resource-leak]
+                    new ByteBufOutputStream(buf));
             try {
                 oout.writeObject(obj);
                 oout.flush();

@@ -138,7 +138,7 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
                 throw new IOException("The stream is closed");
             }
             // Suppress a warning since the stream is closed in the close() method
-            utf8out = out = new DataOutputStream(this); // lgtm[java/output-resource-leak]
+            utf8out = out = new DataOutputStream(this);
         }
         out.writeUTF(s);
     }
