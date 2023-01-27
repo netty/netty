@@ -28,6 +28,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Compress a {@link ByteBuf} with the Brotli compression.
@@ -45,12 +47,15 @@ import java.nio.channels.WritableByteChannel;
 public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
     private static final AttributeKey<Writer> ATTR = AttributeKey.valueOf("BrotliEncoderWriter");
+    private static final AttributeKey<ScheduledFuture> FORCE_CLOSE_FUTURE_ATTR = AttributeKey.valueOf(
+                                                                "BrotliEncoderForceCloseFuture");
 
     /**
      * Encoder flush method is package-private, so we have to
      * use reflection to call that method.
      */
     private static final Method FLUSH_METHOD;
+    private static final int THREAD_POOL_DELAY_SECONDS = 10;
 
     static {
         Method method;
@@ -66,6 +71,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     private final Encoder.Parameters parameters;
     private final boolean isSharable;
     private Writer writer;
+    private ScheduledFuture forceCloseFuture;
 
     /**
      * Create a new {@link BrotliEncoder} Instance with {@link BrotliOptions#DEFAULT}
@@ -128,12 +134,6 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        finish(ctx);
-        super.handlerRemoved(ctx);
-    }
-
-    @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
         // NO-OP
     }
@@ -172,6 +172,10 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      * @throws IOException If an error occurred during closure
      */
     public void finish(ChannelHandlerContext ctx) throws IOException {
+        finishEncode(ctx, ctx.newPromise());
+    }
+
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) throws IOException {
         Writer writer;
 
         if (isSharable) {
@@ -184,6 +188,53 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
             writer.close();
             this.writer = null;
         }
+        return promise;
+    }
+
+    @Override
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
+        f.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture f) throws Exception {
+                ctx.close(promise);
+            }
+        });
+
+        if (!f.isDone()) {
+            // Ensure the channel is closed even if the write operation completes in time.
+            ScheduledFuture sf = ctx.executor().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    if (!promise.isDone()) {
+                        ctx.close(promise);
+                    }
+                }
+            }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
+
+            if (isSharable) {
+                ctx.channel().attr(FORCE_CLOSE_FUTURE_ATTR).set(sf);
+            } else {
+                this.forceCloseFuture = sf;
+            }
+        }
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        ScheduledFuture forceClose = null;
+
+        if (isSharable) {
+            forceClose = ctx.channel().attr(FORCE_CLOSE_FUTURE_ATTR).getAndSet(null);
+        } else {
+            forceClose = this.forceCloseFuture;
+        }
+
+        if (forceClose != null) {
+            forceClose.cancel(false);
+        }
+
+        super.handlerRemoved(ctx);
     }
 
     /**
