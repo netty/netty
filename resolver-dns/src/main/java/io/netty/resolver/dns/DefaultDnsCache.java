@@ -329,6 +329,12 @@ public class DefaultDnsCache implements DnsCache {
         }
 
         @Override
+        public int hashCode() {
+            // Just delegate to super to make checkstyle happy
+            return super.hashCode();
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (o instanceof DnsCacheEntryList) {
                 // Fast-path.
