@@ -148,8 +148,7 @@ public final class BufferOutputStream extends OutputStream implements DataOutput
         }
         DataOutputStream out = utf8out;
         if (out == null) {
-            // Suppress a warning since the stream is closed in the close() method
-            utf8out = out = new DataOutputStream(this); // lgtm[java/output-resource-leak]
+            utf8out = out = new DataOutputStream(this);
         }
         out.writeUTF(s);
     }

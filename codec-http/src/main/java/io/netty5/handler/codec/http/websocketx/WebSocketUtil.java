@@ -36,9 +36,7 @@ final class WebSocketUtil {
         protected MessageDigest initialValue() throws Exception {
             try {
                 // Try to get a MessageDigest that uses SHA1.
-                // Suppress a warning about weak hash algorithm
-                // since it's defined in https://datatracker.ietf.org/doc/html/rfc6455#section-10.8.
-                return MessageDigest.getInstance("SHA-1"); // lgtm [java/weak-cryptographic-algorithm]
+                return MessageDigest.getInstance("SHA-1");
             } catch (NoSuchAlgorithmException e) {
                 // This shouldn't happen! How old is the computer ?
                 throw new InternalError("SHA-1 not supported on this platform - Outdated ?");

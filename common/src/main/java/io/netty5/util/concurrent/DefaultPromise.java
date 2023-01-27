@@ -179,9 +179,8 @@ public class DefaultPromise<V> implements Promise<V>, Future<V>,
     private static final class LeanCancellationException extends CancellationException {
         private static final long serialVersionUID = 2794674970981187807L;
 
-        // Suppress a warning since the method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             setStackTrace(CANCELLATION_STACK);
             return this;
         }

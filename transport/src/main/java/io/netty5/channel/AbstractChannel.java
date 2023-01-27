@@ -1805,9 +1805,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             initCause(exception);
         }
 
-        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
@@ -1821,9 +1820,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             initCause(exception);
         }
 
-        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
@@ -1837,9 +1835,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             initCause(exception);
         }
 
-        // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }

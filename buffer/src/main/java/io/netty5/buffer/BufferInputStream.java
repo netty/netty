@@ -89,9 +89,8 @@ public final class BufferInputStream extends InputStream implements DataInput {
         return Math.max(0, endIndex - buffer.readerOffset());
     }
 
-    // Suppress a warning since the class is not thread-safe
     @Override
-    public void mark(int readlimit) { // lgtm[java/non-sync-override]
+    public void mark(int readlimit) {
         markReaderOffset = buffer.readerOffset();
     }
 
@@ -123,9 +122,8 @@ public final class BufferInputStream extends InputStream implements DataInput {
         return len;
     }
 
-    // Suppress a warning since the class is not thread-safe
     @Override
-    public void reset() throws IOException { // lgtm[java/non-sync-override]
+    public void reset() throws IOException {
         buffer.readerOffset(markReaderOffset);
     }
 

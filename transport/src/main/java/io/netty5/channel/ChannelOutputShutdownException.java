@@ -44,8 +44,7 @@ public class ChannelOutputShutdownException extends IOException {
         return ThrowableUtil.unknownStackTrace(new ChannelOutputShutdownException() {
             @Override
             public Throwable fillInStackTrace() {
-                // Suppress a warning since this method doesn't need synchronization
-                return this; // lgtm [java/non-sync-override]
+                return this;
             }
         }, clazz, method);
     }
