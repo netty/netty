@@ -329,13 +329,12 @@ public class DefaultDnsCache implements DnsCache {
         }
 
         @Override
-        public int hashCode() {
-            return entries.hashCode();
-        }
-
-        @Override
         public boolean equals(Object o) {
-            return o instanceof DnsCacheEntryList && entries.equals(((DnsCacheEntryList) o).entries);
+            if (o instanceof DnsCacheEntryList) {
+                // Fast-path.
+                return entries.equals(((DnsCacheEntryList) o).entries);
+            }
+            return super.equals(o);
         }
     };
 }
