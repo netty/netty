@@ -645,6 +645,7 @@
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
     <module>resolver-dns-native-macos</module>
+    <module>resolver-dns-native-windows</module>
     <module>transport</module>
     <module>transport-native-unix-common-tests</module>
     <module>transport-native-unix-common</module>
