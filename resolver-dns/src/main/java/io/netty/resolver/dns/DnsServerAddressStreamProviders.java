@@ -15,7 +15,6 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.resolver.dns.windows.WindowsResolverDnsServerAddressStreamProvider;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -95,6 +94,7 @@ public final class DnsServerAddressStreamProviders {
     /**
      * A {@link DnsServerAddressStreamProvider} which inherits the DNS servers from your local host's configuration.
      * <p>
+     * Note that only macOS and Linux are currently supported.
      * @return A {@link DnsServerAddressStreamProvider} which inherits the DNS servers from your local host's
      * configuration.
      */
@@ -110,7 +110,6 @@ public final class DnsServerAddressStreamProviders {
                 // ignore
             }
         }
-
         return unixDefault();
     }
 
@@ -124,6 +123,8 @@ public final class DnsServerAddressStreamProviders {
         // We use 5 minutes which is the same as what OpenJDK is using in sun.net.dns.ResolverConfigurationImpl.
         private static final long REFRESH_INTERVAL = TimeUnit.MINUTES.toNanos(5);
 
+        // TODO(scott): how is this done on Windows? This may require a JNI call to GetNetworkParams
+        // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
         static final DnsServerAddressStreamProvider DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER =
                 new DnsServerAddressStreamProvider() {
                     private volatile DnsServerAddressStreamProvider currentProvider = provider();
@@ -144,8 +145,9 @@ public final class DnsServerAddressStreamProviders {
                     }
 
                     private DnsServerAddressStreamProvider provider() {
-                        return PlatformDependent.isWindows() ?
-                                WindowsResolverDnsServerAddressStreamProvider.loadConfig() :
+                        // If on windows just use the DefaultDnsServerAddressStreamProvider.INSTANCE as otherwise
+                        // we will log some error which may be confusing.
+                        return PlatformDependent.isWindows() ? DefaultDnsServerAddressStreamProvider.INSTANCE :
                                 UnixResolverDnsServerAddressStreamProvider.parseSilently();
                     }
                 };
