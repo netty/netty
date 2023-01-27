@@ -139,21 +139,7 @@ public class DefaultDnsCache implements DnsCache {
         if (entries == null || entries.isEmpty()) {
             return entries;
         }
-        return new AbstractList<DnsCacheEntry>() {
-            @Override
-            public DnsCacheEntry get(int index) {
-                DefaultDnsCacheEntry entry = (DefaultDnsCacheEntry) entries.get(index);
-                // As we dont know what exactly the user is doing with the returned exception (for example
-                // using addSuppressed(...) and so hold up a lot of memory until the entry expires) we do
-                // create a copy.
-                return entry.copyIfNeeded();
-            }
-
-            @Override
-            public int size() {
-                return entries.size();
-            }
-        };
+        return new DnsCacheEntryList(entries);
     }
 
     @Override
@@ -200,17 +186,32 @@ public class DefaultDnsCache implements DnsCache {
         private final String hostname;
         private final InetAddress address;
         private final Throwable cause;
+        private final int hash;
 
         DefaultDnsCacheEntry(String hostname, InetAddress address) {
             this.hostname = hostname;
             this.address = address;
             cause = null;
+            hash = System.identityHashCode(this);
         }
 
         DefaultDnsCacheEntry(String hostname, Throwable cause) {
             this.hostname = hostname;
             this.cause = cause;
             address = null;
+            hash = System.identityHashCode(this);
+        }
+
+        DefaultDnsCacheEntry(DefaultDnsCacheEntry entry) {
+            this.hostname = entry.hostname;
+            if (entry.cause == null) {
+                this.address = entry.address;
+                this.cause = null;
+            } else {
+                this.address = null;
+                this.cause = copyThrowable(entry.cause);
+            }
+            this.hash = entry.hash;
         }
 
         @Override
@@ -236,11 +237,21 @@ public class DefaultDnsCache implements DnsCache {
             }
         }
 
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return (obj instanceof DefaultDnsCacheEntry) && ((DefaultDnsCacheEntry) obj).hash == hash;
+        }
+
         DnsCacheEntry copyIfNeeded() {
             if (cause == null) {
                 return this;
             }
-            return new DefaultDnsCacheEntry(hostname, copyThrowable(cause));
+            return new DefaultDnsCacheEntry(this);
         }
     }
 
@@ -295,4 +306,36 @@ public class DefaultDnsCache implements DnsCache {
             }
         }
     }
+
+    private static final class DnsCacheEntryList extends AbstractList<DnsCacheEntry> {
+        private final List<? extends DnsCacheEntry> entries;
+
+        DnsCacheEntryList(List<? extends DnsCacheEntry> entries) {
+            this.entries = entries;
+        }
+
+        @Override
+        public DnsCacheEntry get(int index) {
+            DefaultDnsCacheEntry entry = (DefaultDnsCacheEntry) entries.get(index);
+            // As we dont know what exactly the user is doing with the returned exception (for example
+            // using addSuppressed(...) and so hold up a lot of memory until the entry expires) we do
+            // create a copy.
+            return entry.copyIfNeeded();
+        }
+
+        @Override
+        public int size() {
+            return entries.size();
+        }
+
+        @Override
+        public int hashCode() {
+            return entries.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof DnsCacheEntryList && entries.equals(((DnsCacheEntryList) o).entries);
+        }
+    };
 }
