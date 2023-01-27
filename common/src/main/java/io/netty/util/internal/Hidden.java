@@ -155,6 +155,10 @@ class Hidden {
                     "parseEtcResolverOptions");
 
             builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.windows.WindowsAdapterInfo",
+                    "loadNativeLibrary");
+
+            builder.allowBlockingCallsInside(
                     "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",
                     "parse");
 
