@@ -2336,6 +2336,71 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testTimeoutIpv4PreferredA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV4_PREFERRED, RecordType.A, RecordType.AAAA);
+    }
+    @Test
+    public void testTimeoutIpv4PreferredAAAA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV4_PREFERRED, RecordType.AAAA, RecordType.A);
+    }
+
+    @Test
+    public void testTimeoutIpv6PreferredA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV6_PREFERRED, RecordType.A, RecordType.AAAA);
+    }
+    @Test
+    public void testTimeoutIpv6PreferredAAAA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV6_PREFERRED, RecordType.AAAA, RecordType.A);
+    }
+
+    private static void testTimeoutOneQuery(ResolvedAddressTypes type, final RecordType recordType, RecordType dropType)
+            throws IOException {
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
+                Map<String, Object> map1 = new HashMap<String, Object>();
+                if (question.getRecordType() == RecordType.A) {
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.2");
+                } else {
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "::1");
+                }
+                records.add(new TestDnsServer.TestResourceRecord(
+                        question.getDomainName(), recordType, map1));
+                return records;
+            }
+        });
+        dnsServer2.start(dropType);
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .queryTimeoutMillis(500)
+                    .resolvedAddressTypes(type)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+
+            resolver = builder.build();
+            List<InetAddress> resolvedAddresses =
+                    resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            if (recordType == RecordType.A) {
+                assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 })));
+            } else {
+                assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(
+                        new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 })));
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @Test
     public void testDnsNameResolverBuilderCopy() {
         ChannelFactory<DatagramChannel> channelFactory =
                 new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class);
@@ -3010,7 +3075,7 @@ public class DnsNameResolverTest {
     public void testDropAAAA() throws IOException {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
-        dnsServer2.start(true);
+        dnsServer2.start(RecordType.AAAA);
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
@@ -3037,7 +3102,7 @@ public class DnsNameResolverTest {
     public void testDropAAAAResolveFast() throws IOException {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
-        dnsServer2.start(true);
+        dnsServer2.start(RecordType.AAAA);
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
@@ -3079,7 +3144,7 @@ public class DnsNameResolverTest {
                 return null;
             }
         });
-        dnsServer2.start(true);
+        dnsServer2.start(RecordType.AAAA);
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
@@ -3187,7 +3252,7 @@ public class DnsNameResolverTest {
             DnsNameResolverBuilder builder = newResolver();
 
             if (tcpFallback) {
-                dnsServer2.start(false, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+                dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
 
                 // If we are configured to use TCP as a fallback also bind a TCP socket
                 builder.socketChannelType(NioSocketChannel.class);
