@@ -18,9 +18,12 @@ package io.netty5.example.http.helloworld;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.handler.codec.compression.CompressionOptions;
+import io.netty5.handler.codec.http.HttpContentCompressor;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.HttpServerExpectContinueHandler;
 import io.netty5.handler.ssl.SslContext;
+
 
 public class HttpHelloWorldServerInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -37,6 +40,7 @@ public class HttpHelloWorldServerInitializer extends ChannelInitializer<SocketCh
             p.addLast(sslCtx.newHandler(ch.bufferAllocator()));
         }
         p.addLast(new HttpServerCodec());
+        p.addLast(new HttpContentCompressor((CompressionOptions[]) null));
         p.addLast(new HttpServerExpectContinueHandler());
         p.addLast(new HttpHelloWorldServerHandler());
     }

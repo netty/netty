@@ -23,6 +23,7 @@ import io.netty5.example.factorial.FactorialServerHandler;
 import io.netty5.example.factorial.NumberEncoder;
 import io.netty5.example.http.snoop.HttpSnoopServerHandler;
 import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.compression.CompressionOptions;
 import io.netty5.handler.codec.compression.ZlibCodecFactory;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.http.HttpContentCompressor;
@@ -127,7 +128,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
         ChannelPipeline p = ctx.pipeline();
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast("encoder", new HttpResponseEncoder());
-        p.addLast("deflater", new HttpContentCompressor());
+        p.addLast("deflater", new HttpContentCompressor((CompressionOptions []) null));
         p.addLast("handler", new HttpSnoopServerHandler());
         p.remove(this);
     }

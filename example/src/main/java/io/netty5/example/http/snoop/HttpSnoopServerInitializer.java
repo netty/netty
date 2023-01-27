@@ -41,7 +41,7 @@ public class HttpSnoopServerInitializer extends ChannelInitializer<SocketChannel
         //p.addLast(new HttpObjectAggregator(1048576));
         p.addLast(new HttpResponseEncoder());
         // Remove the following line if you don't want automatic content compression.
-        //p.addLast(new HttpContentCompressor());
+        //p.addLast(new HttpContentCompressor((CompressionOptions[]) null));
         p.addLast(new HttpSnoopServerHandler());
     }
 }
