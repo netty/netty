@@ -47,14 +47,6 @@ public final class CharsetUtil {
     };
 
     /**
-     * @deprecated Use {@link #encoder(Charset)}.
-     */
-    @Deprecated
-    public static CharsetEncoder getEncoder(Charset charset) {
-        return encoder(charset);
-    }
-
-    /**
      * Returns a new {@link CharsetEncoder} for the {@link Charset} with specified error actions.
      *
      * @param charset The specified charset
@@ -100,14 +92,6 @@ public final class CharsetUtil {
         e = encoder(charset, CodingErrorAction.REPLACE, CodingErrorAction.REPLACE);
         map.put(charset, e);
         return e;
-    }
-
-    /**
-     * @deprecated Use {@link #decoder(Charset)}.
-     */
-    @Deprecated
-    public static CharsetDecoder getDecoder(Charset charset) {
-        return decoder(charset);
     }
 
     /**
