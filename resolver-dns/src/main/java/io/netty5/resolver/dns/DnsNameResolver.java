@@ -990,7 +990,7 @@ public class DnsNameResolver extends InetNameResolver {
                                    final Promise<InetAddress> promise,
                                    DnsCache resolveCache) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
-        doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, true);
+        doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, completeOncePreferredResolved);
         allPromise.asFuture().addListener(future -> {
             if (future.isSuccess()) {
                 trySuccess(promise, future.getNow().get(0));
