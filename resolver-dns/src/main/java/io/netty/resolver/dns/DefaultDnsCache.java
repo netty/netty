@@ -202,7 +202,7 @@ public class DefaultDnsCache implements DnsCache {
             hash = System.identityHashCode(this);
         }
 
-        DefaultDnsCacheEntry(DefaultDnsCacheEntry entry) {
+        private DefaultDnsCacheEntry(DefaultDnsCacheEntry entry) {
             this.hostname = entry.hostname;
             if (entry.cause == null) {
                 this.address = entry.address;
