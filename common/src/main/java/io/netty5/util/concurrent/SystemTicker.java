@@ -34,6 +34,6 @@ enum SystemTicker implements Ticker {
 
     @Override
     public void sleep(long delay, TimeUnit unit) throws InterruptedException {
-        Thread.sleep(unit.toMillis(delay), (int) (delay % 1_000_000));
+        unit.sleep(delay);
     }
 }
