@@ -1022,7 +1022,7 @@ public class DnsNameResolver extends InetNameResolver {
                                    final Promise<InetAddress> promise,
                                    DnsCache resolveCache, boolean completeEarlyIfPossible) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
-        doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, true);
+        doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, completeEarlyIfPossible);
         allPromise.addListener(new FutureListener<List<InetAddress>>() {
             @Override
             public void operationComplete(Future<List<InetAddress>> future) {
