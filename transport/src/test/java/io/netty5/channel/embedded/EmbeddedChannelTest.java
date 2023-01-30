@@ -25,7 +25,9 @@ import io.netty5.channel.ChannelOutboundInvoker;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.MockTicker;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.concurrent.Ticker;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -487,8 +489,8 @@ public class EmbeddedChannelTest {
 
     @Test
     void testHasPendingTasks() {
-        EmbeddedChannel channel = new EmbeddedChannel();
-        channel.freezeTime();
+        MockTicker ticker = Ticker.newMockTicker();
+        EmbeddedChannel channel = new EmbeddedChannel(ticker);
         Runnable runnable = () -> { };
 
         // simple execute
@@ -501,7 +503,7 @@ public class EmbeddedChannelTest {
         assertFalse(channel.hasPendingTasks());
         channel.runPendingTasks();
         assertFalse(channel.hasPendingTasks());
-        channel.advanceTimeBy(1, TimeUnit.SECONDS);
+        ticker.advance(1, TimeUnit.SECONDS);
         assertTrue(channel.hasPendingTasks());
         channel.runPendingTasks();
         assertFalse(channel.hasPendingTasks());

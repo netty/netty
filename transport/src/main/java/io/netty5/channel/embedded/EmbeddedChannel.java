@@ -16,24 +16,25 @@
 package io.netty5.channel.embedded;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.buffer.internal.InternalBufferUtils;
-import io.netty5.channel.AdaptiveReadHandleFactory;
-import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.MaxMessagesWriteHandleFactory;
-import io.netty5.util.Resource;
+import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.channel.AbstractChannel;
+import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
+import io.netty5.util.concurrent.Ticker;
 import io.netty5.util.internal.RecyclableArrayList;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -42,7 +43,6 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty5.util.internal.PlatformDependent.throwException;
 import static java.util.Objects.requireNonNull;
@@ -77,6 +77,15 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     /**
+     * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
+     *
+     * @param ticker the {@link Ticker} that will be used for scheduling tasks.
+     */
+    public EmbeddedChannel(Ticker ticker) {
+        this(ticker, EMPTY_HANDLERS);
+    }
+
+    /**
      * Create a new instance with the specified ID and an empty pipeline.
      *
      * @param channelId the {@link ChannelId} that will be used to identify this channel
@@ -92,6 +101,16 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
         this(EmbeddedChannelId.INSTANCE, handlers);
+    }
+
+    /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
+     *
+     * @param ticker the {@link Ticker} that will be used for scheduling tasks.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(Ticker ticker, ChannelHandler... handlers) {
+        this(ticker, EmbeddedChannelId.INSTANCE, handlers);
     }
 
     /**
@@ -133,6 +152,18 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      * Create a new instance with the channel ID set to the given ID and the pipeline
      * initialized with the specified handlers.
      *
+     * @param ticker the {@link Ticker} that will be used for scheduling tasks.
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(Ticker ticker, ChannelId channelId, ChannelHandler... handlers) {
+        this(ticker, channelId, false, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
      * @param channelId the {@link ChannelId} that will be used to identify this channel
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
      *                      to {@link #close()}, {@code true} otherwise.
@@ -140,6 +171,20 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, ChannelHandler... handlers) {
         this(channelId, true, hasDisconnect, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param ticker the {@link Ticker} that will be used for scheduling tasks.
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(Ticker ticker, ChannelId channelId, boolean hasDisconnect, ChannelHandler... handlers) {
+        this(ticker, channelId, true, hasDisconnect, handlers);
     }
 
     /**
@@ -155,14 +200,31 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      */
     public EmbeddedChannel(ChannelId channelId, boolean register, boolean hasDisconnect,
                            ChannelHandler... handlers) {
-        this(null, channelId, register, hasDisconnect, handlers);
+        this(Ticker.systemTicker(), null, channelId, register, hasDisconnect, handlers);
     }
 
     /**
      * Create a new instance with the channel ID set to the given ID and the pipeline
      * initialized with the specified handlers.
      *
-     * @param parent    the parent {@link Channel} of this {@link EmbeddedChannel}.
+     * @param ticker the {@link Ticker} that will be used for scheduling tasks.
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+     *                 constructor. If {@code false} the user will need to call {@link #register()}.
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(Ticker ticker, ChannelId channelId, boolean register, boolean hasDisconnect,
+                           ChannelHandler... handlers) {
+        this(ticker, null, channelId, register, hasDisconnect, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param parent the parent {@link Channel} of this {@link EmbeddedChannel}.
      * @param channelId the {@link ChannelId} that will be used to identify this channel
      * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
      *                 constructor. If {@code false} the user will need to call {@link #register()}.
@@ -172,7 +234,25 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, new EmbeddedEventLoop(), hasDisconnect, new AdaptiveReadHandleFactory(),
+        this(Ticker.systemTicker(), parent, channelId, register, hasDisconnect, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param ticker the {@link Ticker} that will be used for scheduling tasks.
+     * @param parent the parent {@link Channel} of this {@link EmbeddedChannel}.
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+     *                 constructor. If {@code false} the user will need to call {@link #register()}.
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@code true} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(Ticker ticker, Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
+                           final ChannelHandler... handlers) {
+        super(parent, new EmbeddedEventLoop(ticker), hasDisconnect, new AdaptiveReadHandleFactory(),
                 new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), channelId);
         setup(register, handlers);
     }
@@ -576,33 +656,6 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
 
     private EmbeddedEventLoop embeddedEventLoop() {
         return (EmbeddedEventLoop) executor();
-    }
-    /**
-     * Advance the clock of the event loop of this channel by the given duration. Any scheduled tasks will execute
-     * sooner by the given time (but {@link #runScheduledPendingTasks()} still needs to be called).
-     */
-    public void advanceTimeBy(long duration, TimeUnit unit) {
-        embeddedEventLoop().advanceTimeBy(unit.toNanos(duration));
-    }
-
-    /**
-     * Freeze the clock of this channel's event loop. Any scheduled tasks that are not already due will not run on
-     * future {@link #runScheduledPendingTasks()} calls. While the event loop is frozen, it is still possible to
-     * {@link #advanceTimeBy(long, TimeUnit) advance time} manually so that scheduled tasks execute.
-     */
-    public void freezeTime() {
-        embeddedEventLoop().freezeTime();
-    }
-
-    /**
-     * Unfreeze an event loop that was {@link #freezeTime() frozen}. Time will continue at the point where
-     * {@link #freezeTime()} stopped it: if a task was scheduled ten minutes in the future and {@link #freezeTime()}
-     * was called, it will run ten minutes after this method is called again (assuming no
-     * {@link #advanceTimeBy(long, TimeUnit)} calls, and assuming pending scheduled tasks are run at that time using
-     * {@link #runScheduledPendingTasks()}).
-     */
-    public void unfreezeTime() {
-        embeddedEventLoop().unfreezeTime();
     }
 
     /**
