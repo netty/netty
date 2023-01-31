@@ -262,7 +262,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             logger.debug("Finished Fake TCP 3-Way Handshake");
         }
 
-        state.set(State.STARTED);
+        state.set(State.WRITING);
     }
 
     @Override
@@ -279,7 +279,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         }
 
         // Only write if State is STARTED
-        if (state.get() == State.STARTED) {
+        if (state.get() == State.WRITING) {
             if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, false);
             } else if (channelType == ChannelType.UDP) {
@@ -299,7 +299,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         }
 
         // Only write if State is STARTED
-        if (state.get() == State.STARTED) {
+        if (state.get() == State.WRITING) {
             if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, true);
             } else if (channelType == ChannelType.UDP) {
@@ -625,7 +625,15 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         return sharedOutputStream;
     }
 
-    public State state() {
+    /**
+     * Returns {@code true} if the {@link PcapWriteHandler} is currently
+     * writing packets to the {@link OutputStream} else returns {@code false}.
+     */
+    public boolean isWriting() {
+        return state.get() == State.WRITING;
+    }
+
+    State state() {
         return state.get();
     }
 
@@ -633,7 +641,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      * Pause the {@link PcapWriteHandler} from writing packets to the {@link OutputStream}.
      */
     public void pause() {
-        if (!state.compareAndSet(State.STARTED, State.PAUSED)) {
+        if (!state.compareAndSet(State.WRITING, State.PAUSED)) {
             throw new IllegalStateException("State must be 'STARTED' to pause but current state is: " + state);
         }
     }
@@ -642,7 +650,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      * Resume the {@link PcapWriteHandler} to writing packets to the {@link OutputStream}.
      */
     public void resume() {
-        if (!state.compareAndSet(State.PAUSED, State.STARTED)) {
+        if (!state.compareAndSet(State.PAUSED, State.WRITING)) {
             throw new IllegalStateException("State must be 'PAUSED' to resume but current state is: " + state);
         }
     }

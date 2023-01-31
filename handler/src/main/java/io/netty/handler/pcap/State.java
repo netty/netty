@@ -18,7 +18,7 @@ package io.netty.handler.pcap;
 /**
  * The state of the {@link PcapWriteHandler}.
  */
-public enum State {
+enum State {
 
     /**
      * The handler is not active.
@@ -26,9 +26,9 @@ public enum State {
     INIT,
 
     /**
-     * The handler is active.
+     * The handler is active and actively writing Pcap data.
      */
-    STARTED,
+    WRITING,
 
     /**
      * The handler is paused. No Pcap data will be written.

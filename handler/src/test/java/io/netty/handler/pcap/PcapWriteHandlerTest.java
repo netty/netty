@@ -395,7 +395,7 @@ public class PcapWriteHandlerTest {
         assertEquals(Unpooled.wrappedBuffer(payload), embeddedChannel.readOutbound());
 
         // State is now STARTED because we attached Handler to 'EmbeddedChannel'.
-        assertEquals(State.STARTED, pcapWriteHandler.state());
+        assertEquals(State.WRITING, pcapWriteHandler.state());
 
         // Close the PcapWriter. This should trigger closure of PcapWriteHandler too.
         pcapWriteHandler.pCapWriter().close();
@@ -454,7 +454,7 @@ public class PcapWriteHandlerTest {
 
         // Let's resume the Pcap now.
         pcapWriteHandler.resume();
-        assertEquals(State.STARTED, pcapWriteHandler.state());
+        assertEquals(State.WRITING, pcapWriteHandler.state());
 
         // Write 100 times. Writes should be called in OutputStream now.
         for (int i = 0; i < 100; i++) {
