@@ -3018,6 +3018,7 @@ public class DnsNameResolverTest {
                     .queryTimeoutMillis(10000)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .maxQueriesPerResolve(16)
+                    .completeOncePreferredResolved(true)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
             resolver = builder.build();
