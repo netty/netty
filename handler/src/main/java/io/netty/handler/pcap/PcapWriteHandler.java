@@ -36,6 +36,7 @@ import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -132,7 +133,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     /**
      * Current of this {@link PcapWriteHandler}
      */
-    private State state = State.INIT;
+    private AtomicReference<State> state = new AtomicReference<>(State.INIT);
 
     /**
      * Create new {@link PcapWriteHandler} Instance.
@@ -197,8 +198,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     private void initializeIfNecessary(ChannelHandlerContext ctx) throws Exception {
-        // If State is not 'INIT' then no need of initialization.
-        if (state != State.INIT) {
+        // If State is not 'INIT' then it means we're already initialized so then no need to initiaize again.
+        if (state.get() != State.INIT) {
             return;
         }
 
@@ -261,7 +262,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             logger.debug("Finished Fake TCP 3-Way Handshake");
         }
 
-        state = State.STARTED;
+        state.set(State.STARTED);
     }
 
     @Override
@@ -273,12 +274,12 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Initialize if needed
-        if (state == State.INIT) {
+        if (state.get() == State.INIT) {
             initializeIfNecessary(ctx);
         }
 
         // Only write if State is STARTED
-        if (state == State.STARTED) {
+        if (state.get() == State.STARTED) {
             if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, false);
             } else if (channelType == ChannelType.UDP) {
@@ -293,12 +294,12 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         // Initialize if needed
-        if (state == State.INIT) {
+        if (state.get() == State.INIT) {
             initializeIfNecessary(ctx);
         }
 
         // Only write if State is STARTED
-        if (state == State.STARTED) {
+        if (state.get() == State.STARTED) {
             if (channelType == ChannelType.TCP) {
                 handleTCP(ctx, msg, true);
             } else if (channelType == ChannelType.UDP) {
@@ -625,16 +626,14 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     public State state() {
-        return state;
+        return state.get();
     }
 
     /**
      * Pause the {@link PcapWriteHandler} from writing packets to the {@link OutputStream}.
      */
     public void pause() {
-        if (state == State.STARTED) {
-            state = State.PAUSED;
-        } else {
+        if (!state.compareAndSet(State.STARTED, State.PAUSED)) {
             throw new IllegalStateException("State must be 'STARTED' to pause but current state is: " + state);
         }
     }
@@ -643,16 +642,14 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      * Resume the {@link PcapWriteHandler} to writing packets to the {@link OutputStream}.
      */
     public void resume() {
-        if (state == State.PAUSED) {
-            state = State.STARTED;
-        } else {
+        if (!state.compareAndSet(State.PAUSED, State.STARTED)) {
             throw new IllegalStateException("State must be 'PAUSED' to resume but current state is: " + state);
         }
     }
 
     void markClosed() {
-        if (state != State.CLOSED) {
-            state = State.CLOSED;
+        if (state.get() != State.CLOSED) {
+            state.set(State.CLOSED);
         }
     }
 
@@ -692,7 +689,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
      */
     @Override
     public void close() throws IOException {
-        if (state == State.CLOSED) {
+        if (state.get() == State.CLOSED) {
             logger.debug("PcapWriterHandler is already closed");
         } else {
             markClosed();
