@@ -86,6 +86,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -3769,6 +3770,107 @@ public class DnsNameResolverTest {
             assertEquals(inetAddress, addr);
         } finally {
             resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveSearchDomainStopOnFirstSuccess() throws Exception {
+        final String addressString = "10.0.0.1";
+        final Queue<String> names = new ConcurrentLinkedQueue<String>();
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            private int called;
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                names.offer(question.getDomainName());
+                if (++called == 2) {
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+
+                    rm.setDnsType(question.getRecordType());
+                    rm.put(DnsAttribute.IP_ADDRESS, addressString);
+                    return Collections.singleton(rm.getEntry());
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = newResolver().searchDomains(
+                Arrays.asList("search1.netty.io", "search2.netty.io", "search3.netty.io"))
+                .ndots(2).nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .build();
+
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr = resolver.resolve("netty.io").sync().getNow();
+            assertEquals(inetAddress, addr);
+        } finally {
+            resolver.close();
+            dnsServer2.stop();
+            assertEquals("netty.io.search1.netty.io", names.poll());
+            assertEquals("netty.io.search2.netty.io", names.poll());
+            assertTrue(names.isEmpty());
+        }
+    }
+
+    @Test
+    public void testResolveTryWithoutSearchDomainFirst() throws Exception {
+        testResolveTryWithoutSearchDomainFirst(true);
+    }
+
+    @Test
+    public void testResolveTryWithoutSearchDomainFirstButContinue() throws Exception {
+        testResolveTryWithoutSearchDomainFirst(false);
+    }
+
+    private static void testResolveTryWithoutSearchDomainFirst(final boolean absoluteSuccess) throws Exception {
+        final String addressString = "10.0.0.1";
+        final Queue<String> names = new ConcurrentLinkedQueue<String>();
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            private int called;
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                names.offer(question.getDomainName());
+                ++called;
+                if ((absoluteSuccess && called == 1) || called == 3) {
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+
+                    rm.setDnsType(question.getRecordType());
+                    rm.put(DnsAttribute.IP_ADDRESS, addressString);
+                    return Collections.singleton(rm.getEntry());
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = newResolver().searchDomains(
+                        Arrays.asList("search1.netty.io", "search2.netty.io", "search3.netty.io"))
+                .ndots(1).nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .build();
+
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr = resolver.resolve("netty.io").sync().getNow();
+            assertEquals(inetAddress, addr);
+        } finally {
+            resolver.close();
+            dnsServer2.stop();
+            assertEquals("netty.io", names.poll());
+            if (!absoluteSuccess) {
+                assertEquals("netty.io.search1.netty.io", names.poll());
+                assertEquals("netty.io.search2.netty.io", names.poll());
+            }
+            assertTrue(names.isEmpty());
         }
     }
 
