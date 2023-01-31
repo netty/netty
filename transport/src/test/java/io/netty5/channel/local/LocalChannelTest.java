@@ -457,7 +457,8 @@ public class LocalChannelTest {
           .childHandler(new ChannelHandler() {
               @Override
               public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                  if (data.equals(msg)) {
+                  if (msg instanceof Buffer && data.equals(msg)) {
+                      ((Buffer) msg).close();
                       messageLatch.countDown();
                       ctx.writeAndFlush(data.copy());
                       ctx.close();
