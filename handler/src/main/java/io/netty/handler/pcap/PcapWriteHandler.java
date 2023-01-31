@@ -133,7 +133,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     /**
      * Current of this {@link PcapWriteHandler}
      */
-    private AtomicReference<State> state = new AtomicReference<>(State.INIT);
+    private final AtomicReference<State> state = new AtomicReference<State>(State.INIT);
 
     /**
      * Create new {@link PcapWriteHandler} Instance.
