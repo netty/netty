@@ -19,7 +19,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -33,7 +32,6 @@ import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
@@ -49,7 +47,6 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
-import static io.netty.handler.codec.compression.Lz4Constants.THREAD_POOL_DELAY_SECONDS;
 
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.
@@ -370,22 +367,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     @Override
     public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
 
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.close(promise);
-                }
-            }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
-        }
+        EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
     }
 
     private ChannelHandlerContext ctx() {
