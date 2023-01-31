@@ -379,7 +379,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      */
     protected final long delayNanos(long currentTimeNanos) {
         assert inEventLoop();
-        currentTimeNanos -= SystemTicker.START_TIME;
+        currentTimeNanos -= ticker().initialNanoTime();
         RunnableScheduledFuture<?> scheduledTask = peekScheduledTask();
         if (scheduledTask == null) {
             return SCHEDULE_PURGE_INTERVAL;
