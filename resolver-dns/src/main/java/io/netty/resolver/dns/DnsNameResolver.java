@@ -964,7 +964,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         if (!doResolveCached(hostname, additionals, promise, resolveCache)) {
-            doResolveUncached(hostname, additionals, promise, resolveCache, true);
+            doResolveUncached(hostname, additionals, promise, resolveCache, completeOncePreferredResolved);
         }
     }
 

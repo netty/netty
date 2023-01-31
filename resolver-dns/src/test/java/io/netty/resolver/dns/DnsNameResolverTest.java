@@ -3109,6 +3109,7 @@ public class DnsNameResolverTest {
                     .recursionDesired(false)
                     .queryTimeoutMillis(10000)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .completeOncePreferredResolved(true)
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
