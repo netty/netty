@@ -277,7 +277,7 @@ public abstract class Recycler<T> {
             this.chunkSize = chunkSize;
             batch = new ArrayDeque<DefaultHandle<T>>(chunkSize);
             Thread currentThread = Thread.currentThread();
-            owner =  !BATCH_FAST_TL_ONLY || currentThread instanceof FastThreadLocalThread ? currentThread : null;
+            owner = !BATCH_FAST_TL_ONLY || currentThread instanceof FastThreadLocalThread ? currentThread : null;
             if (BLOCKING_POOL) {
                 pooledHandles = new BlockingMessageQueue<DefaultHandle<T>>(maxCapacity);
             } else {
@@ -306,15 +306,13 @@ public abstract class Recycler<T> {
             Thread owner = this.owner;
             if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
                 accept(handle);
+            } else if (owner != null && owner.getState() == Thread.State.TERMINATED) {
+                this.owner = null;
+                pooledHandles = null;
             } else {
-                if (owner != null && owner.getState() == Thread.State.TERMINATED) {
-                    this.owner = null;
-                    pooledHandles = null;
-                } else {
-                    MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
-                    if (handles != null) {
-                        handles.relaxedOffer(handle);
-                    }
+                MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
+                if (handles != null) {
+                    handles.relaxedOffer(handle);
                 }
             }
         }
