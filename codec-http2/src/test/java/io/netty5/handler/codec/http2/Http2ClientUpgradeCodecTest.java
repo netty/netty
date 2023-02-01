@@ -34,7 +34,7 @@ public class Http2ClientUpgradeCodecTest {
     @Test
     public void testUpgradeToHttp2ConnectionHandler() throws Exception {
         testUpgrade(new Http2ConnectionHandlerBuilder().server(false).frameListener(
-            new Http2FrameAdapter()).build(), null);
+            new Http2FrameAdapter()).gracefulShutdownTimeoutMillis(0).build(), null);
     }
 
     @Test
