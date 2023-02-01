@@ -372,10 +372,14 @@ public final class HttpConversionUtil {
             out.method(request.method().asciiName());
             setHttp3Scheme(inHeaders, requestTargetUri, out);
 
-            if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
-                // Attempt to take from HOST header before taking from the request-line
-                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                setHttp3Authority((host == null || host.isEmpty()) ? requestTargetUri.getAuthority() : host, out);
+            // Attempt to take from HOST header before taking from the request-line
+            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+            if (host != null && !host.isEmpty()) {
+                setHttp3Authority(host, out);
+            } else {
+                if (!isOriginForm(request.uri()) && !isAsteriskForm(request.uri())) {
+                    setHttp3Authority(requestTargetUri.getAuthority(), out);
+                }
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;

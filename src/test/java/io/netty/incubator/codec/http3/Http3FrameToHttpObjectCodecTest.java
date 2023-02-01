@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -694,6 +695,23 @@ public class Http3FrameToHttpObjectCodecTest {
         }
 
         assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testHostTranslated() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world");
+        request.headers().add(HttpHeaderNames.HOST, "example.com");
+        assertTrue(ch.writeOutbound(request));
+
+        Http3HeadersFrame headersFrame = ch.readOutbound();
+        Http3Headers headers = headersFrame.headers();
+
+        assertThat(headers.scheme().toString(), is("https"));
+        assertThat(headers.authority().toString(), is("example.com"));
+        assertTrue(ch.isOutputShutdown());
+
         assertFalse(ch.finish());
     }
 }
