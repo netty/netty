@@ -41,6 +41,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.util.concurrent.PromiseCombiner;
 
 import java.net.SocketAddress;
 
@@ -134,7 +135,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             if (res.status().equals(HttpResponseStatus.CONTINUE)) {
                 if (res instanceof FullHttpResponse) {
                     final Http3Headers headers = toHttp3Headers(res);
-                    ctx.write(new DefaultHttp3HeadersFrame(headers));
+                    ctx.write(new DefaultHttp3HeadersFrame(headers), promise);
                     ((FullHttpResponse) res).release();
                     return;
                 } else {
@@ -144,9 +145,17 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             }
         }
 
+        // this combiner is created lazily if we need multiple write calls
+        PromiseCombiner combiner = null;
+
         if (msg instanceof HttpMessage) {
             Http3Headers headers = toHttp3Headers((HttpMessage) msg);
-            ctx.write(new DefaultHttp3HeadersFrame(headers));
+            DefaultHttp3HeadersFrame frame = new DefaultHttp3HeadersFrame(headers);
+
+            if (msg instanceof HttpContent && !promise.isVoid()) {
+                combiner = new PromiseCombiner(ctx.executor());
+            }
+            writeWithOptionalCombiner(ctx, frame, promise, combiner);
         }
 
         if (msg instanceof LastHttpContent) {
@@ -154,19 +163,47 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             boolean readable = last.content().isReadable();
             boolean hasTrailers = !last.trailingHeaders().isEmpty();
 
+            if (combiner == null && readable && hasTrailers && !promise.isVoid()) {
+                combiner = new PromiseCombiner(ctx.executor());
+            }
+
             if (readable) {
-                ctx.write(new DefaultHttp3DataFrame(last.content()));
+                writeWithOptionalCombiner(ctx, new DefaultHttp3DataFrame(last.content()), promise, combiner);
             }
             if (hasTrailers) {
                 Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                ctx.write(new DefaultHttp3HeadersFrame(headers));
+                writeWithOptionalCombiner(ctx, new DefaultHttp3HeadersFrame(headers), promise, combiner);
             }
             if (!readable) {
                 last.release();
             }
             ((QuicStreamChannel) ctx.channel()).shutdownOutput();
+            if (!readable && !hasTrailers && combiner == null) {
+                promise.trySuccess();
+            }
         } else if (msg instanceof HttpContent) {
-            ctx.write(new DefaultHttp3DataFrame(((HttpContent) msg).content()));
+            writeWithOptionalCombiner(ctx, new DefaultHttp3DataFrame(((HttpContent) msg).content()), promise, combiner);
+        }
+
+        if (combiner != null) {
+            combiner.finish(promise);
+        }
+    }
+
+    /**
+     * Write a message. If there is a combiner, add a new write promise to that combiner. If there is no combiner
+     * ({@code null}), use the {@code outerPromise} directly as the write promise.
+     */
+    private static void writeWithOptionalCombiner(
+            ChannelHandlerContext ctx,
+            Object msg,
+            ChannelPromise outerPromise,
+            PromiseCombiner combiner
+    ) {
+        if (combiner == null) {
+            ctx.write(msg, outerPromise);
+        } else {
+            combiner.add(ctx.write(msg));
         }
     }
 

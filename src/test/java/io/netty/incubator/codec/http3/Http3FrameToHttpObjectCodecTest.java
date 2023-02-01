@@ -18,6 +18,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -40,6 +41,8 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -551,6 +554,101 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headerFrame.headers().get("key").toString(), is("value"));
 
         assertTrue(ch.isOutputShutdown());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEncodeFullPromiseCompletes() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
+        ChannelFuture writeFuture = ch.writeOneOutbound(new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
+        ch.flushOutbound();
+        assertTrue(writeFuture.isSuccess());
+
+        Http3HeadersFrame headersFrame = ch.readOutbound();
+        Http3Headers headers = headersFrame.headers();
+
+        assertThat(headers.scheme().toString(), is("https"));
+        assertThat(headers.method().toString(), is("GET"));
+        assertThat(headers.path().toString(), is("/hello/world"));
+        assertTrue(ch.isOutputShutdown());
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEncodeEmptyLastPromiseCompletes() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
+        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
+        ChannelFuture f2 = ch.writeOneOutbound(new DefaultLastHttpContent());
+        ch.flushOutbound();
+        assertTrue(f1.isSuccess());
+        assertTrue(f2.isSuccess());
+
+        Http3HeadersFrame headersFrame = ch.readOutbound();
+        Http3Headers headers = headersFrame.headers();
+
+        assertThat(headers.scheme().toString(), is("https"));
+        assertThat(headers.method().toString(), is("GET"));
+        assertThat(headers.path().toString(), is("/hello/world"));
+        assertTrue(ch.isOutputShutdown());
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEncodeMultiplePromiseCompletes() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
+        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
+        ChannelFuture f2 = ch.writeOneOutbound(new DefaultLastHttpContent(
+                Unpooled.wrappedBuffer("foo".getBytes(StandardCharsets.UTF_8))));
+        ch.flushOutbound();
+        assertTrue(f1.isSuccess());
+        assertTrue(f2.isSuccess());
+
+        Http3HeadersFrame headersFrame = ch.readOutbound();
+        Http3Headers headers = headersFrame.headers();
+
+        assertThat(headers.scheme().toString(), is("https"));
+        assertThat(headers.method().toString(), is("GET"));
+        assertThat(headers.path().toString(), is("/hello/world"));
+        assertTrue(ch.isOutputShutdown());
+
+        Http3DataFrame dataFrame = ch.readOutbound();
+        assertEquals("foo", dataFrame.content().toString(StandardCharsets.UTF_8));
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEncodeTrailersCompletes() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
+        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
+        LastHttpContent last = new DefaultLastHttpContent(
+                Unpooled.wrappedBuffer("foo".getBytes(StandardCharsets.UTF_8)));
+        last.trailingHeaders().add("foo", "bar");
+        ChannelFuture f2 = ch.writeOneOutbound(last);
+        ch.flushOutbound();
+        assertTrue(f1.isSuccess());
+        assertTrue(f2.isSuccess());
+
+        Http3HeadersFrame headersFrame = ch.readOutbound();
+        Http3Headers headers = headersFrame.headers();
+
+        assertThat(headers.scheme().toString(), is("https"));
+        assertThat(headers.method().toString(), is("GET"));
+        assertThat(headers.path().toString(), is("/hello/world"));
+        assertTrue(ch.isOutputShutdown());
+
+        Http3DataFrame dataFrame = ch.readOutbound();
+        assertEquals("foo", dataFrame.content().toString(StandardCharsets.UTF_8));
+
+        Http3HeadersFrame trailingHeadersFrame = ch.readOutbound();
+        assertEquals("bar", trailingHeadersFrame.headers().get("foo").toString());
+
         assertFalse(ch.finish());
     }
 
