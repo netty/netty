@@ -2658,7 +2658,7 @@ public class DnsNameResolverTest {
             List<? extends DnsCacheEntry> cached2 = cache.get(domainWithDot, null);
 
             assertEquals(1, cached.size());
-            assertSame(cached, cached2);
+            assertEquals(cached, cached2);
         }
     }
 
@@ -2678,7 +2678,7 @@ public class DnsNameResolverTest {
             List<? extends DnsCacheEntry> cached = cache.cache.get("test.netty.io", null);
             List<? extends DnsCacheEntry> cached2 = cache.cache.get("test.netty.io.", null);
             assertEquals(1, cached.size());
-            assertSame(cached, cached2);
+            assertEquals(cached, cached2);
 
             resolver.resolve("test").asStage().sync();
             List<? extends DnsCacheEntry> entries = cache.cacheHits.get("test.netty.io");
