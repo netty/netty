@@ -69,7 +69,6 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     private final boolean isSharable;
     private Writer writer;
 
-
     /**
      * Create a new {@link BrotliEncoder} Instance with {@link BrotliOptions#DEFAULT}
      * and {@link #isSharable()} set to {@code true}

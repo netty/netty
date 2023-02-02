@@ -49,6 +49,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.nio.charset.StandardCharsets;
 
@@ -780,9 +781,13 @@ public class HttpContentCompressorTest {
         assertTrue(ch.finishAndReleaseAll());
     }
 
+    static boolean isBrotliAvailable() {
+        return Brotli.isAvailable();
+    }
+
     @Test
+    @EnabledIf("isBrotliAvailable")
     public void testBrotliFullHttpResponse() throws Exception {
-        assertTrue(Brotli.isAvailable());
         HttpContentCompressor compressor = new HttpContentCompressor((CompressionOptions[]) null);
         EmbeddedChannel ch = new EmbeddedChannel(compressor);
         assertTrue(ch.writeInbound(newBrotliRequest()));
@@ -820,8 +825,8 @@ public class HttpContentCompressorTest {
     }
 
     @Test
+    @EnabledIf("isBrotliAvailable")
     public void testBrotliChunkedContent() throws Exception {
-        assertTrue(Brotli.isAvailable());
         HttpContentCompressor compressor = new HttpContentCompressor((CompressionOptions[]) null);
         EmbeddedChannel ch = new EmbeddedChannel(compressor);
         assertTrue(ch.writeInbound(newBrotliRequest()));
