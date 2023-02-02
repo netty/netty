@@ -16,12 +16,14 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MessagePassingQueue;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -54,6 +56,7 @@ public abstract class Recycler<T> {
     private static final int RATIO;
     private static final int DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD;
     private static final boolean BLOCKING_POOL;
+    private static final boolean BATCH_FAST_TL_ONLY;
 
     static {
         // In the future, we might have different maxCapacity for different object types.
@@ -74,6 +77,7 @@ public abstract class Recycler<T> {
         RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
 
         BLOCKING_POOL = SystemPropertyUtil.getBoolean("io.netty.recycler.blocking", false);
+        BATCH_FAST_TL_ONLY = SystemPropertyUtil.getBoolean("io.netty.recycler.batchFastThreadLocalOnly", true);
 
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY_PER_THREAD == 0) {
@@ -81,11 +85,13 @@ public abstract class Recycler<T> {
                 logger.debug("-Dio.netty.recycler.ratio: disabled");
                 logger.debug("-Dio.netty.recycler.chunkSize: disabled");
                 logger.debug("-Dio.netty.recycler.blocking: disabled");
+                logger.debug("-Dio.netty.recycler.batchFastThreadLocalOnly: disabled");
             } else {
                 logger.debug("-Dio.netty.recycler.maxCapacityPerThread: {}", DEFAULT_MAX_CAPACITY_PER_THREAD);
                 logger.debug("-Dio.netty.recycler.ratio: {}", RATIO);
                 logger.debug("-Dio.netty.recycler.chunkSize: {}", DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD);
                 logger.debug("-Dio.netty.recycler.blocking: {}", BLOCKING_POOL);
+                logger.debug("-Dio.netty.recycler.batchFastThreadLocalOnly: {}", BATCH_FAST_TL_ONLY);
             }
         }
     }
@@ -104,6 +110,7 @@ public abstract class Recycler<T> {
             super.onRemoval(value);
             MessagePassingQueue<DefaultHandle<T>> handles = value.pooledHandles;
             value.pooledHandles = null;
+            value.owner = null;
             handles.clear();
         }
     };
@@ -195,9 +202,10 @@ public abstract class Recycler<T> {
         return true;
     }
 
+    @VisibleForTesting
     final int threadLocalSize() {
         LocalPool<T> localPool = threadLocal.getIfExists();
-        return localPool == null ? 0 : localPool.pooledHandles.size();
+        return localPool == null ? 0 : localPool.pooledHandles.size() + localPool.batch.size();
     }
 
     /**
@@ -255,14 +263,21 @@ public abstract class Recycler<T> {
         }
     }
 
-    private static final class LocalPool<T> {
+    private static final class LocalPool<T> implements MessagePassingQueue.Consumer<DefaultHandle<T>> {
         private final int ratioInterval;
+        private final int chunkSize;
+        private final ArrayDeque<DefaultHandle<T>> batch;
+        private volatile Thread owner;
         private volatile MessagePassingQueue<DefaultHandle<T>> pooledHandles;
         private int ratioCounter;
 
         @SuppressWarnings("unchecked")
         LocalPool(int maxCapacity, int ratioInterval, int chunkSize) {
             this.ratioInterval = ratioInterval;
+            this.chunkSize = chunkSize;
+            batch = new ArrayDeque<DefaultHandle<T>>(chunkSize);
+            Thread currentThread = Thread.currentThread();
+            owner = !BATCH_FAST_TL_ONLY || currentThread instanceof FastThreadLocalThread ? currentThread : null;
             if (BLOCKING_POOL) {
                 pooledHandles = new BlockingMessageQueue<DefaultHandle<T>>(maxCapacity);
             } else {
@@ -276,7 +291,10 @@ public abstract class Recycler<T> {
             if (handles == null) {
                 return null;
             }
-            DefaultHandle<T> handle = handles.relaxedPoll();
+            if (batch.isEmpty()) {
+                handles.drain(this, chunkSize);
+            }
+            DefaultHandle<T> handle = batch.pollFirst();
             if (null != handle) {
                 handle.toClaimed();
             }
@@ -285,9 +303,17 @@ public abstract class Recycler<T> {
 
         void release(DefaultHandle<T> handle) {
             handle.toAvailable();
-            MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
-            if (handles != null) {
-                handles.relaxedOffer(handle);
+            Thread owner = this.owner;
+            if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
+                accept(handle);
+            } else if (owner != null && owner.getState() == Thread.State.TERMINATED) {
+                this.owner = null;
+                pooledHandles = null;
+            } else {
+                MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
+                if (handles != null) {
+                    handles.relaxedOffer(handle);
+                }
             }
         }
 
@@ -298,13 +324,18 @@ public abstract class Recycler<T> {
             }
             return null;
         }
+
+        @Override
+        public void accept(DefaultHandle<T> e) {
+            batch.addLast(e);
+        }
     }
 
     /**
      * This is an implementation of {@link MessagePassingQueue}, similar to what might be returned from
      * {@link PlatformDependent#newMpscQueue(int)}, but intended to be used for debugging purpose.
      * The implementation relies on synchronised monitor locks for thread-safety.
-     * The {@code drain} and {@code fill} bulk operations are not supported by this implementation.
+     * The {@code fill} bulk operation is not supported by this implementation.
      */
     private static final class BlockingMessageQueue<T> implements MessagePassingQueue<T> {
         private final Queue<T> deque;
@@ -379,7 +410,12 @@ public abstract class Recycler<T> {
 
         @Override
         public int drain(Consumer<T> c, int limit) {
-            throw new UnsupportedOperationException();
+            T obj;
+            int i = 0;
+            for (; i < limit && (obj = poll()) != null; i++) {
+                c.accept(obj);
+            }
+            return i;
         }
 
         @Override
