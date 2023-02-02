@@ -28,6 +28,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
@@ -36,6 +37,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -87,6 +89,11 @@ public class DataCompressionHttp2Test {
     private Http2Connection clientConnection;
     private Http2ConnectionHandler clientHandler;
     private ByteArrayOutputStream serverOut;
+
+    @BeforeAll
+    public static void beforeAllTests() throws Throwable {
+        Brotli.ensureAvailability();
+    }
 
     @BeforeEach
     public void setup() throws InterruptedException, Http2Exception {

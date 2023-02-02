@@ -843,6 +843,11 @@
       </dependency>
       <dependency>
         <groupId>com.aayushatharva.brotli4j</groupId>
+        <artifactId>native-linux-armv7</artifactId>
+        <version>${brotli4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aayushatharva.brotli4j</groupId>
         <artifactId>native-osx-x86_64</artifactId>
         <version>${brotli4j.version}</version>
       </dependency>
