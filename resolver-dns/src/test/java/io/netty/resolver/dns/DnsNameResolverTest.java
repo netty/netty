@@ -3876,6 +3876,58 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testInflightQueries() throws Exception {
+        final String addressString = "10.0.0.1";
+        final AtomicInteger called = new AtomicInteger();
+        final CountDownLatch latch = new CountDownLatch(1);
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                called.incrementAndGet();
+                try {
+                    latch.await();
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+
+                    rm.setDnsType(question.getRecordType());
+                    rm.put(DnsAttribute.IP_ADDRESS, addressString);
+                    return Collections.singleton(rm.getEntry());
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = newResolver()
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .consolidateCacheSize(2)
+                .build();
+
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            Future<InetAddress> f = resolver.resolve("netty.io");
+            Future<InetAddress> f2 = resolver.resolve("netty.io");
+            assertFalse(f.isDone());
+            assertFalse(f2.isDone());
+
+            // Now unblock so we receive the response back for our query.
+            latch.countDown();
+
+            assertEquals(inetAddress, f.sync().getNow());
+            assertEquals(inetAddress, f2.sync().getNow());
+        } finally {
+            resolver.close();
+            dnsServer2.stop();
+            assertEquals(1, called.get());
+        }
+    }
+
+    @Test
     public void testAddressAlreadyInUse() throws Exception {
         DatagramSocket datagramSocket = new DatagramSocket();
         try {
