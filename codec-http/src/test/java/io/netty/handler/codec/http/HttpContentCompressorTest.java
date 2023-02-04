@@ -107,6 +107,34 @@ public class HttpContentCompressorTest {
     }
 
     @Test
+    public void testDetermineEncoding() throws Exception {
+        HttpContentCompressor compressor = new HttpContentCompressor((CompressionOptions[]) null);
+
+        String[] tests = {
+                // Accept-Encoding -> Content-Encoding
+                "", null,
+                ",", null,
+                "identity", null,
+                "unknown", null,
+                "*", "br",
+                "br", "br",
+                "br ; q=0.1", "br",
+                "unknown, br", "br",
+                "br, gzip", "br",
+                "gzip, br", "br",
+                "identity, br", "br",
+                "gzip", "gzip",
+                "gzip ; q=0.1", "gzip",
+        };
+        for (int i = 0; i < tests.length; i += 2) {
+            final String acceptEncoding = tests[i];
+            final String expectedEncoding = tests[i + 1];
+            final String targetEncoding = compressor.determineEncoding(acceptEncoding);
+            assertEquals(expectedEncoding, targetEncoding);
+        }
+    }
+
+    @Test
     public void testSplitContent() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
