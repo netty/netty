@@ -42,7 +42,7 @@ public final class DefaultBufferAllocators {
 
     static {
         String allocType = SystemPropertyUtil.get(
-                "io.netty5.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "pooled");
+                "io.netty5.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "adaptive");
         allocType = allocType.toLowerCase(Locale.US).trim();
         boolean directBufferPreferred = directBufferPreferred();
         String allocTypeForLogging = allocType;
