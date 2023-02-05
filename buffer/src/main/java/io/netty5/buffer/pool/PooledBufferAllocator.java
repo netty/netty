@@ -88,7 +88,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);
         } catch (Throwable t) {
             maxOrderFallbackCause = t;
-            defaultMaxOrder = 11;
+            defaultMaxOrder = 9;
         }
         DEFAULT_MAX_ORDER = defaultMaxOrder;
 
@@ -373,7 +373,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
     }
 
     /**
-     * Default maximum order - System Property: io.netty5.allocator.maxOrder - default 11
+     * Default maximum order - System Property: io.netty5.allocator.maxOrder - default 9
      */
     public static int defaultMaxOrder() {
         return DEFAULT_MAX_ORDER;
