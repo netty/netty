@@ -28,10 +28,13 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Queue;
 
 /**
  * This handler negotiates and initializes the WebSocket Extensions.
@@ -47,7 +50,8 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
     private final List<WebSocketServerExtensionHandshaker> extensionHandshakers;
 
-    private List<WebSocketServerExtension> validExtensions;
+    private final Queue<List<WebSocketServerExtension>> validExtensions =
+            new ArrayDeque<List<WebSocketServerExtension>>(4);
 
     /**
      * Constructor
@@ -63,6 +67,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
+            List<WebSocketServerExtension> validExtensionsList = null;
             HttpRequest request = (HttpRequest) msg;
 
             if (WebSocketExtensionUtil.isWebsocketUpgrade(request.headers())) {
@@ -85,15 +90,20 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                         }
 
                         if (validExtension != null && ((validExtension.rsv() & rsv) == 0)) {
-                            if (validExtensions == null) {
-                                validExtensions = new ArrayList<WebSocketServerExtension>(1);
+                            if (validExtensionsList == null) {
+                                validExtensionsList = new ArrayList<WebSocketServerExtension>(1);
                             }
                             rsv = rsv | validExtension.rsv();
-                            validExtensions.add(validExtension);
+                            validExtensionsList.add(validExtension);
                         }
                     }
                 }
             }
+
+            if (validExtensionsList == null) {
+                validExtensionsList = Collections.emptyList();
+            }
+            validExtensions.offer(validExtensionsList);
         }
 
         super.channelRead(ctx, msg);
@@ -102,11 +112,12 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof HttpResponse) {
+            List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
             HttpResponse httpResponse = (HttpResponse) msg;
             //checking the status is faster than looking at headers
             //so we do this first
             if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(httpResponse.status())) {
-                handlePotentialUpgrade(ctx, promise, httpResponse);
+                handlePotentialUpgrade(ctx, promise, httpResponse, validExtensionsList);
             }
         }
 
@@ -114,16 +125,16 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,
-                                        ChannelPromise promise, HttpResponse httpResponse) {
+                                        ChannelPromise promise, HttpResponse httpResponse,
+                                        final List<WebSocketServerExtension> validExtensionsList) {
         HttpHeaders headers = httpResponse.headers();
 
         if (WebSocketExtensionUtil.isWebsocketUpgrade(headers)) {
-
-            if (validExtensions != null) {
+            if (validExtensionsList != null && !validExtensionsList.isEmpty()) {
                 String headerValue = headers.getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
                 List<WebSocketExtensionData> extraExtensions =
                   new ArrayList<WebSocketExtensionData>(extensionHandshakers.size());
-                for (WebSocketServerExtension extension : validExtensions) {
+                for (WebSocketServerExtension extension : validExtensionsList) {
                     extraExtensions.add(extension.newReponseData());
                 }
                 String newHeaderValue = WebSocketExtensionUtil
@@ -132,7 +143,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                     @Override
                     public void operationComplete(ChannelFuture future) {
                         if (future.isSuccess()) {
-                            for (WebSocketServerExtension extension : validExtensions) {
+                            for (WebSocketServerExtension extension : validExtensionsList) {
                                 WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
                                 WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
                                 String name = ctx.name();
