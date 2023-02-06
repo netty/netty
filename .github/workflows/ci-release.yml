@@ -31,8 +31,9 @@ jobs:
           ref: main
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
+          distribution: zulu
           java-version: 8
 
       - name: Setup git configuration
@@ -96,6 +97,7 @@ jobs:
       - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
+          distribution: zulu
           java-version: 8
 
       - name: Setup git configuration
@@ -191,8 +193,9 @@ jobs:
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
+          distribution: zulu
           java-version: 8
 
       - name: Install stable toolchain
@@ -274,8 +277,9 @@ jobs:
         run: chmod 755 ./prepare-release-workspace/mvnw
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
+          distribution: zulu
           java-version: 8
 
       - name: Setup git configuration

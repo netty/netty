@@ -117,6 +117,7 @@ jobs:
       - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
+          distribution: zulu
           java-version: 8
 
       - name: Install stable toolchain
@@ -187,9 +188,10 @@ jobs:
         run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
 
       - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 1.8
+          distribution: zulu
+          java-version: 8
 
       - name: Install Android SDK platforms
         run: ${ANDROID_HOME}/tools/bin/sdkmanager "platforms;${{ env.SDK_VER }}"
