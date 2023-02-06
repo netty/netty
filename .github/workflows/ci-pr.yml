@@ -30,10 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     name: linux-x86_64 build
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: pr-linux-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -62,12 +62,12 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: test-results-pr-linux-x86_64
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: target
@@ -79,10 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     name: linux-aarch64 build
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: pr-linux-aarch64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -103,7 +103,7 @@ jobs:
       - name: Build project with leak detection
         run: docker-compose -f docker/docker-compose.centos-7-cross.yaml run cross-compile-aarch64-build
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: target
@@ -119,7 +119,7 @@ jobs:
       # failures sometimes due the fact that not enough memory could be reserved.
       RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 8
         uses: actions/setup-java@v1
@@ -149,7 +149,7 @@ jobs:
 
       # Cache .m2/repository
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: pr-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -161,12 +161,12 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: test-results-pr-windows-x86_64
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: build-pr-windows-target
@@ -186,13 +186,13 @@ jobs:
         run: echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/$NDK_VER" >> $GITHUB_ENV
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup ninja-build
         run: sudo apt-get install ninja-build
 
       - name: Setup go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
 
       - name: Install cargo-ndk
         uses: actions-rs/install@v0.1
@@ -218,7 +218,7 @@ jobs:
 
       # Cache .m2/repository
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: pr-android-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -228,7 +228,7 @@ jobs:
       - name: Build project
         run: ./mvnw -B -ntp --file pom.xml clean package -Dandroid
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: build-pr-android-target

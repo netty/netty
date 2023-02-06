@@ -43,10 +43,10 @@ jobs:
 
     name: stage-snapshot-${{ matrix.setup }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: stage-snapshot-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -82,7 +82,7 @@ jobs:
         run: docker-compose ${{ matrix.docker-compose-run }}
 
       - name: Upload local staging directory
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
@@ -96,7 +96,7 @@ jobs:
       # failures sometimes due the fact that not enough memory could be reserved.
       RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 8
         uses: actions/setup-java@v1
@@ -125,7 +125,7 @@ jobs:
           args: install ninja nasm
 
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: stage-snapshot-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -145,7 +145,7 @@ jobs:
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Upload local staging directory
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows-x86_64-local-staging
           path: local-staging
@@ -156,7 +156,7 @@ jobs:
     # Wait until we have staged everything
     needs: [stage-snapshot-linux, stage-snapshot-windows-x86_64]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 8
         uses: actions/setup-java@v1
@@ -164,7 +164,7 @@ jobs:
           java-version: 8
 
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: deploy-staged-snapshots-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -179,19 +179,19 @@ jobs:
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups and windows build. There is currently no way to pull this out of the config.
       - name: Download windows_x86_64 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: windows-x86_64-local-staging
           path: ~/windows-x86_64-local-staging
 
       - name: Download linux-aarch64 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: linux-aarch64-local-staging
           path: ~/linux-aarch64-local-staging
 
       - name: Download linux-x86_64 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: linux-x86_64-local-staging
           path: ~/linux-x86_64-local-staging
