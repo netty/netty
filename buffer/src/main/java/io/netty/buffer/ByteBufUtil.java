@@ -1068,6 +1068,9 @@ public final class ByteBufUtil {
      * It behaves like {@link #utf8MaxBytes(int)} applied to {@code seq} {@link CharSequence#length()}.
      */
     public static int utf8MaxBytes(CharSequence seq) {
+        if (seq instanceof AsciiString) {
+            return seq.length();
+        }
         return utf8MaxBytes(seq.length());
     }
 
@@ -1187,9 +1190,16 @@ public final class ByteBufUtil {
         }
     }
 
-    // Fast-Path implementation
     static int writeAscii(AbstractByteBuf buffer, int writerIndex, CharSequence seq, int len) {
+        if (seq instanceof AsciiString) {
+            writeAsciiString(buffer, writerIndex, (AsciiString) seq, 0, len);
+        } else {
+            writeAsciiCharSequence(buffer, writerIndex, seq, len);
+        }
+        return len;
+    }
 
+    private static int writeAsciiCharSequence(AbstractByteBuf buffer, int writerIndex, CharSequence seq, int len) {
         // We can use the _set methods as these not need to do any index checks and reference checks.
         // This is possible as we called ensureWritable(...) before.
         for (int i = 0; i < len; i++) {
