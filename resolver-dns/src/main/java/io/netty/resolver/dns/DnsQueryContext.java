@@ -237,11 +237,16 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
             return false;
         }
         final InetSocketAddress nameServerAddr = nameServerAddr();
+        final DnsQuestion question = question();
 
-        final StringBuilder buf = new StringBuilder(message.length() + 64);
+        final StringBuilder buf = new StringBuilder(message.length() + 128);
         buf.append('[')
+           .append(id)
+           .append(": ")
            .append(nameServerAddr)
            .append("] ")
+           .append(question)
+           .append(' ')
            .append(message)
            .append(" (no stack trace available)");
 
@@ -249,9 +254,9 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         if (timeout) {
             // This was caused by a timeout so use DnsNameResolverTimeoutException to allow the user to
             // handle it special (like retry the query).
-            e = new DnsNameResolverTimeoutException(nameServerAddr, question(), buf.toString());
+            e = new DnsNameResolverTimeoutException(nameServerAddr, question, buf.toString());
         } else {
-            e = new DnsNameResolverException(nameServerAddr, question(), buf.toString(), cause);
+            e = new DnsNameResolverException(nameServerAddr, question, buf.toString(), cause);
         }
         return promise.tryFailure(e);
     }
