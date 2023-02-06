@@ -16,9 +16,11 @@
 package io.netty5.handler.codec.http.websocketx.extensions;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.LastHttpContent;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -31,6 +33,7 @@ import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtens
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.newUpgradeRequest;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.newUpgradeResponse;
 import static io.netty5.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.webSocketExtensionDataMatcher;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -48,10 +51,17 @@ public class WebSocketServerExtensionHandlerTest {
             mock(WebSocketServerExtensionHandshaker.class, "mainHandshaker");
     WebSocketServerExtensionHandshaker fallbackHandshakerMock =
             mock(WebSocketServerExtensionHandshaker.class, "fallbackHandshaker");
+
+    WebSocketServerExtensionHandshaker main2HandshakerMock =
+            mock(WebSocketServerExtensionHandshaker.class, "main2Handshaker");
     WebSocketServerExtension mainExtensionMock =
             mock(WebSocketServerExtension.class, "mainExtension");
+
     WebSocketServerExtension fallbackExtensionMock =
             mock(WebSocketServerExtension.class, "fallbackExtension");
+
+    WebSocketServerExtension main2ExtensionMock =
+            mock(WebSocketServerExtension.class, "main2Extension");
 
     @Test
     public void testMainSuccess() {
@@ -208,5 +218,52 @@ public class WebSocketServerExtensionHandlerTest {
 
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown"));
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown2"));
+    }
+
+    @Test
+    public void testExtensionMultipleRequests() {
+        // initialize
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main")))
+                .thenReturn(mainExtensionMock);
+
+        when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
+        when(mainExtensionMock.newResponseData()).thenReturn(
+                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+        when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
+        when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
+
+        when(main2HandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main2")))
+                .thenReturn(main2ExtensionMock);
+
+        when(main2ExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
+        when(main2ExtensionMock.newResponseData()).thenReturn(
+                new WebSocketExtensionData("main2", Collections.<String, String>emptyMap()));
+        when(main2ExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
+        when(main2ExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
+
+        // execute
+        WebSocketServerExtensionHandler extensionHandler =
+                new WebSocketServerExtensionHandler(mainHandshakerMock, main2HandshakerMock);
+        EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
+
+        HttpRequest req = newUpgradeRequest("main");
+        assertTrue(ch.writeInbound(req));
+        assertTrue(ch.writeInbound(new EmptyLastHttpContent(ch.bufferAllocator())));
+
+        HttpRequest req2 = newUpgradeRequest("main2");
+        assertTrue(ch.writeInbound(req2));
+        assertTrue(ch.writeInbound(new EmptyLastHttpContent(ch.bufferAllocator())));
+
+        HttpResponse res = newUpgradeResponse(null);
+        assertTrue(ch.writeOutbound(res));
+        assertTrue(ch.writeOutbound(new EmptyLastHttpContent(ch.bufferAllocator())));
+
+        res = ch.readOutbound();
+        assertEquals("main", res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+        LastHttpContent content = ch.readOutbound();
+        content.close();
+
+        assertNull(ch.pipeline().context(extensionHandler));
+        assertTrue(ch.finishAndReleaseAll());
     }
 }
