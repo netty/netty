@@ -310,7 +310,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return 100 - freePercentage;
     }
 
-    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache cache) {
+    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolArenasCache cache) {
         final long handle;
         if (sizeIdx <= arena.smallMaxSizeIdx) {
             // small
@@ -582,7 +582,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void initBuf(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
-                 PoolThreadCache threadCache) {
+                 PoolArenasCache threadCache) {
         if (isSubpage(handle)) {
             initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
         } else {
@@ -593,7 +593,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void initBufWithSubpage(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
-                            PoolThreadCache threadCache) {
+                            PoolArenasCache threadCache) {
         int runOffset = runOffset(handle);
         int bitmapIdx = bitmapIdx(handle);
 

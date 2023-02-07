@@ -42,14 +42,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <a href="https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919">
  * Scalable memory allocation using jemalloc</a>.
  */
-final class PoolThreadCache {
+final class PoolThreadCache extends PoolArenasCache {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PoolThreadCache.class);
-    private static final int INTEGER_SIZE_MINUS_ONE = Integer.SIZE - 1;
-
-    final PoolArena<byte[]> heapArena;
-    final PoolArena<ByteBuffer> directArena;
-
     // Hold the caches for the different size classes, which are small and normal.
     private final MemoryRegionCache<byte[]>[] smallSubPageHeapCaches;
     private final MemoryRegionCache<ByteBuffer>[] smallSubPageDirectCaches;
@@ -67,10 +62,9 @@ final class PoolThreadCache {
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int smallCacheSize, int normalCacheSize, int maxCachedBufferCapacity,
                     int freeSweepAllocationThreshold) {
+        super(heapArena, directArena);
         checkPositiveOrZero(maxCachedBufferCapacity, "maxCachedBufferCapacity");
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
-        this.heapArena = heapArena;
-        this.directArena = directArena;
         if (directArena != null) {
             smallSubPageDirectCaches = createSubPageCaches(
                     smallCacheSize, directArena.numSmallSubpagePools);
@@ -140,14 +134,10 @@ final class PoolThreadCache {
         }
     }
 
-    // val > 0
-    static int log2(int val) {
-        return INTEGER_SIZE_MINUS_ONE - Integer.numberOfLeadingZeros(val);
-    }
-
     /**
      * Try to allocate a small buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
      */
+    @Override
     boolean allocateSmall(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int sizeIdx) {
         return allocate(cacheForSmall(area, sizeIdx), buf, reqCapacity);
     }
@@ -155,6 +145,7 @@ final class PoolThreadCache {
     /**
      * Try to allocate a normal buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
      */
+    @Override
     boolean allocateNormal(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int sizeIdx) {
         return allocate(cacheForNormal(area, sizeIdx), buf, reqCapacity);
     }
@@ -178,6 +169,7 @@ final class PoolThreadCache {
      * Returns {@code true} if it fit into the cache {@code false} otherwise.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
     boolean add(PoolArena<?> area, PoolChunk chunk, ByteBuffer nioBuffer,
                 long handle, int normCapacity, SizeClass sizeClass) {
         int sizeIdx = area.size2SizeIdx(normCapacity);
@@ -215,6 +207,7 @@ final class PoolThreadCache {
     /**
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */
+    @Override
     void free(boolean finalizer) {
         // As free() may be called either by the finalizer or by FastThreadLocal.onRemoval(...) we need to ensure
         // we only call this one time.
@@ -273,6 +266,7 @@ final class PoolThreadCache {
         return cache.free(finalizer);
     }
 
+    @Override
     void trim() {
         trim(smallSubPageDirectCaches);
         trim(normalDirectCaches);
