@@ -870,16 +870,22 @@ abstract class DnsResolveContext<T> {
                 completeEarly = isCompleteEarly(converted);
             }
 
-            // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
-            //
-            // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
-            // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
-            // for the extra memory copy and allocations in this cases later on.
-            if (finalResult == null) {
-                finalResult = new ArrayList<T>(8);
-                finalResult.add(converted);
-            } else if (isDuplicateAllowed() || !finalResult.contains(converted)) {
-                finalResult.add(converted);
+            // Check if the promise was done already, and only if not add things to the finalResult. Otherwise lets
+            // just release things after we cached it.
+            if (!promise.isDone()) {
+                // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
+                //
+                // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
+                // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
+                // for the extra memory copy and allocations in this cases later on.
+                if (finalResult == null) {
+                    finalResult = new ArrayList<T>(8);
+                    finalResult.add(converted);
+                } else if (isDuplicateAllowed() || !finalResult.contains(converted)) {
+                    finalResult.add(converted);
+                } else {
+                    shouldRelease = true;
+                }
             } else {
                 shouldRelease = true;
             }
@@ -1047,11 +1053,17 @@ abstract class DnsResolveContext<T> {
             if (!promise.isDone()) {
                 // Found at least one resolved record.
                 final List<T> result = filterResults(finalResult);
+                // Lets replace the previous stored result.
+                finalResult = Collections.emptyList();
                 if (!DnsNameResolver.trySuccess(promise, result)) {
                     for (T item : result) {
                         ReferenceCountUtil.safeRelease(item);
                     }
                 }
+            } else {
+                // This should always be the case as we replaced the list once notify the promise with an empty one
+                // and never add to it again.
+                assert finalResult.isEmpty();
             }
             return;
         }
