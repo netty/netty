@@ -57,6 +57,42 @@ public class ChannelOutboundBufferTest {
     }
 
     @Test
+    public void testNioBuffersCancelledRemoveBytes() {
+        TestChannel channel = new TestChannel();
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ByteBuf b1 = wrappedBuffer(new byte[] { 0 });
+        int r1 = b1.readableBytes();
+        ChannelPromise p1 = channel.newPromise();
+        buffer.addMessage(b1, r1, p1);
+
+        ByteBuf b2 = wrappedBuffer(new byte[] { 0, 1 });
+        int r2 = b2.readableBytes();
+        ChannelPromise p2 = channel.newPromise();
+        buffer.addMessage(b2, r2, p2);
+        p2.cancel(false);
+
+        ByteBuf b3 = wrappedBuffer(new byte[] { 0 });
+        int r3 = b3.readableBytes();
+        ChannelPromise p3 = channel.newPromise();
+        buffer.addMessage(b3, r3, p3);
+        buffer.addFlush();
+
+        ByteBuffer[] buffers = buffer.nioBuffers();
+        assertEquals(2, buffer.nioBufferCount());
+        assertNotNull(buffers);
+        assertEquals(r1, buffers[0].remaining());
+        assertEquals(r3, buffers[1].remaining());
+
+        buffer.removeBytes(r1 + r3);
+        assertEquals(0, b1.refCnt());
+        assertEquals(0, b2.refCnt());
+        assertEquals(0, b3.refCnt());
+
+        assertTrue(buffer.isEmpty());
+        release(buffer);
+    }
+
+    @Test
     public void testNioBuffersSingleBacked() {
         TestChannel channel = new TestChannel();
 
