@@ -31,18 +31,11 @@ jobs:
         with:
           ref: main
 
-<<<<<<< HEAD
       - name: Set up JDK 11
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-=======
-      - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '8'
->>>>>>> 8caf89e4f7 (Update GH actions version. (#13201))
+          java-version: '11'
 
       - name: Setup git configuration
         run: |
@@ -104,18 +97,11 @@ jobs:
       - name: Adjust mvnw permissions
         run: chmod 755 ./prepare-release-workspace/mvnw
 
-<<<<<<< HEAD
       - name: Set up JDK 11
-        uses: actions/setup-java@v1
-        with:
-          java-version: '11'
-=======
-      - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '8'
->>>>>>> 8caf89e4f7 (Update GH actions version. (#13201))
+          java-version: '11'
 
       - name: Setup git configuration
         run: |
