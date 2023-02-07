@@ -432,7 +432,7 @@
     <profile>
       <id>leak</id>
       <properties>
-        <argLine.leak>-Dio.netty5.leakDetectionLevel=paranoid -Dio.netty5.leakDetection.targetRecords=32 -Dio.netty5.buffer.lifecycleTracingEnabled=true</argLine.leak>
+        <argLine.leak>-Dio.netty5.leakDetection.level=paranoid -Dio.netty5.leakDetection.targetRecords=32 -Dio.netty5.buffer.lifecycleTracingEnabled=true</argLine.leak>
       </properties>
     </profile>
     <profile>
