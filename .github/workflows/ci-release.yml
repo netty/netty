@@ -32,9 +32,10 @@ jobs:
           ref: 4.1
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       - name: Setup git configuration
         run: |
@@ -97,9 +98,10 @@ jobs:
         run: chmod 755 ./prepare-release-workspace/mvnw
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       - name: Setup git configuration
         run: |
@@ -183,9 +185,10 @@ jobs:
         run: chmod 755 ./prepare-release-workspace/mvnw
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       - name: Setup git configuration
         run: |
