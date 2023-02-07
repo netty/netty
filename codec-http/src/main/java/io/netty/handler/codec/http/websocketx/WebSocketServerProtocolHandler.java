@@ -80,7 +80,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         private final HttpHeaders requestHeaders;
         private final String selectedSubprotocol;
 
-        HandshakeComplete(String requestUri, HttpHeaders requestHeaders, String selectedSubprotocol) {
+        public HandshakeComplete(String requestUri, HttpHeaders requestHeaders, String selectedSubprotocol) {
             this.requestUri = requestUri;
             this.requestHeaders = requestHeaders;
             this.selectedSubprotocol = selectedSubprotocol;
