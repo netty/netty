@@ -27,9 +27,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class BufferCopyBenchmark extends AbstractMicrobenchmark {
-    static {
-        System.setProperty("io.netty5.buffer.checkAccessible", "false");
-    }
 
     @Param({"7", "36", "128", "512" })
     private int size;
