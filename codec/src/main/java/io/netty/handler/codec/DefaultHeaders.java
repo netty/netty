@@ -1013,7 +1013,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     protected void validateValue(ValueValidator<V> validator, K name, V value) {
-        validator.validate(value);
+        try {
+            validator.validate(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Validation failed for header '" + name + "'", e);
+        }
     }
 
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {

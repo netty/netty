@@ -238,23 +238,25 @@ public class DefaultHttpHeadersTest {
     @Test
     public void setCharSequenceValidatesValue() {
         final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
-        assertThrows(IllegalArgumentException.class, new Executable() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 headers.set(HEADER_NAME, ILLEGAL_VALUE);
             }
         });
+        assertTrue(exception.getMessage().contains(HEADER_NAME));
     }
 
     @Test
     public void setIterableValidatesValue() {
         final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
-        assertThrows(IllegalArgumentException.class, new Executable() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 headers.set(HEADER_NAME, Collections.singleton(ILLEGAL_VALUE));
             }
         });
+        assertTrue(exception.getMessage().contains(HEADER_NAME));
     }
 
     @Test
