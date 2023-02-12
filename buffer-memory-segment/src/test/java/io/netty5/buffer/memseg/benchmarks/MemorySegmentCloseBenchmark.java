@@ -68,14 +68,14 @@ public class MemorySegmentCloseBenchmark {
     @Benchmark
     public MemorySegment nativeConfined() {
         try (Arena arena = Arena.openConfined()) {
-            return MemorySegment.allocateNative(size, arena.session());
+            return MemorySegment.allocateNative(size, arena.scope());
         }
     }
 
     @Benchmark
     public MemorySegment nativeShared() {
         try (Arena arena = Arena.openShared()) {
-            return MemorySegment.allocateNative(size, arena.session());
+            return MemorySegment.allocateNative(size, arena.scope());
         }
     }
 }
