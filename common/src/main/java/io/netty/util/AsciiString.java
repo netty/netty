@@ -94,7 +94,9 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     public AsciiString(byte[] value, int start, int length, boolean copy) {
         if (copy) {
-            this.value = Arrays.copyOfRange(value, start, start + length);
+            final byte[] rangedCopy = new byte[length];
+            System.arraycopy(value, start, rangedCopy, 0, rangedCopy.length);
+            this.value = rangedCopy;
             this.offset = 0;
         } else {
             if (isOutOfBounds(start, length, value.length)) {
