@@ -1015,10 +1015,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             final int readableBytes = buffer.readableBytes();
             final int readerIndex = buffer.readerIndex();
             final int maxBodySize = maxLength - size;
+            assert maxBodySize >= 0;
             // adding 2 to account for both CR (if present) and LF
-            final int maxBodySizeWithCRLF = maxBodySize + 2;
-            final int toProcess = Math.min(maxBodySizeWithCRLF, readableBytes);
+            // don't remove 2L: it's key to cover maxLength = Integer.MAX_VALUE
+            final long maxBodySizeWithCRLF = maxBodySize + 2L;
+            final int toProcess = (int) Math.min(maxBodySizeWithCRLF, readableBytes);
             final int toIndexExclusive = readerIndex + toProcess;
+            assert toIndexExclusive >= readerIndex;
             final int indexOfLf = buffer.indexOf(readerIndex, toIndexExclusive, HttpConstants.LF);
             if (indexOfLf == -1) {
                 if (readableBytes > maxBodySize) {
