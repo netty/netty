@@ -73,11 +73,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             try {
-                if (!GET.equals(req.method())) {
-                    sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN, ctx.alloc().buffer(0)));
-                    return;
-                }
-
                 final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
                         getWebSocketLocation(ctx.pipeline(), req, serverConfig.websocketPath()),
                         serverConfig.subprotocols(), serverConfig.decoderConfig());
