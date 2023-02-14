@@ -252,7 +252,15 @@ public abstract class Recycler<T> {
 
         void toClaimed() {
             assert state == STATE_AVAILABLE;
-            state = STATE_CLAIMED;
+            STATE_UPDATER.lazySet(this, STATE_CLAIMED);
+        }
+
+        void toOrderedAvailable() {
+            int prev = state;
+            if (prev == STATE_AVAILABLE) {
+                throw new IllegalStateException("Object has been recycled already.");
+            }
+            STATE_UPDATER.lazySet(this, STATE_AVAILABLE);
         }
 
         void toAvailable() {
@@ -302,9 +310,14 @@ public abstract class Recycler<T> {
         }
 
         void release(DefaultHandle<T> handle) {
-            handle.toAvailable();
-            Thread owner = this.owner;
-            if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
+            final Thread owner = this.owner;
+            final boolean releaseByOwner = owner != null && Thread.currentThread() == owner;
+            if (releaseByOwner) {
+                handle.toOrderedAvailable();
+            } else {
+                handle.toAvailable();
+            }
+            if (releaseByOwner && batch.size() < chunkSize) {
                 accept(handle);
             } else if (owner != null && owner.getState() == Thread.State.TERMINATED) {
                 this.owner = null;
