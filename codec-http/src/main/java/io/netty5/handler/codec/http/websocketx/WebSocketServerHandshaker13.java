@@ -21,6 +21,7 @@ import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 
@@ -133,6 +134,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     @Override
     protected FullHttpResponse newHandshakeResponse(BufferAllocator allocator, FullHttpRequest req,
                                                     HttpHeaders headers) {
+        HttpMethod method = req.method();
+        if (!HttpMethod.GET.equals(method)) {
+            throw new WebSocketServerHandshakeException("Invalid WebSocket handshake method: " + method, req);
+        }
+
         HttpHeaders reqHeaders = req.headers();
         if (!reqHeaders.contains(HttpHeaderNames.CONNECTION) ||
             !reqHeaders.containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)) {

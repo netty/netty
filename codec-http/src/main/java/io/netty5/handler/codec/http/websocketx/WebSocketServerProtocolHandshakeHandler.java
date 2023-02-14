@@ -19,7 +19,6 @@ import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -31,10 +30,7 @@ import io.netty5.util.concurrent.Promise;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.handler.codec.http.HttpMethod.GET;
-import static io.netty5.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty5.handler.codec.http.HttpUtil.isKeepAlive;
-import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
@@ -67,12 +63,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
             }
 
             try {
-                if (!GET.equals(req.method())) {
-                    sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN,
-                            ctx.bufferAllocator().allocate(0)));
-                    return;
-                }
-
                 final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
                         getWebSocketLocation(ctx.pipeline(), req, serverConfig.websocketPath()),
                         serverConfig.subprotocols(), serverConfig.decoderConfig());
