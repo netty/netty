@@ -112,7 +112,8 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
      * Resets the reference count to 1
      */
     public final void resetRefCnt(T instance) {
-        updater().set(instance, initialValue());
+        // no need of a volatile set, it should happen in a quiescent state
+        updater().lazySet(instance, initialValue());
     }
 
     public final T retain(T instance) {
