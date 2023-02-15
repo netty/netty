@@ -27,6 +27,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderValues.ZERO;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.util.AsciiString.contentEquals;
 import static java.util.Arrays.asList;
@@ -285,6 +291,21 @@ public class DefaultHttpHeadersTest {
 
         String[] namesArray = nettyHeaders.toArray(EmptyArrays.EMPTY_STRINGS);
         assertArrayEquals(namesArray, new String[] { HttpHeaderNames.CONTENT_LENGTH.toString() });
+    }
+
+    @Test
+    public void names() {
+        HttpHeaders headers = new DefaultHttpHeaders(true)
+                .add(ACCEPT, APPLICATION_JSON)
+                .add(CONTENT_LENGTH, ZERO)
+                .add(CONNECTION, CLOSE);
+        assertFalse(headers.isEmpty());
+        assertEquals(3, headers.size());
+        Set<String> names = headers.names();
+        assertEquals(3, names.size());
+        assertTrue(names.contains(ACCEPT.toString()));
+        assertTrue(names.contains(CONTENT_LENGTH.toString()));
+        assertTrue(names.contains(CONNECTION.toString()));
     }
 
     private static void assertDefaultValues(final DefaultHttpHeaders headers, final HeaderValue headerValue) {
