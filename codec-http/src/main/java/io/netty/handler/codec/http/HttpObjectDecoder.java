@@ -30,6 +30,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -150,7 +151,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private HttpMessage message;
     private long chunkSize;
     private long contentLength = Long.MIN_VALUE;
-    private volatile boolean resetRequested;
+    private final AtomicBoolean resetRequested = new AtomicBoolean();
 
     // These will be updated by splitHeader(...)
     private AsciiString name;
@@ -258,7 +259,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-        if (resetRequested) {
+        if (resetRequested.get()) {
             resetNow();
         }
 
@@ -463,7 +464,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         super.decodeLast(ctx, in, out);
 
-        if (resetRequested) {
+        if (resetRequested.get()) {
             // If a reset was requested by decodeLast() we need to do it now otherwise we may produce a
             // LastHttpContent while there was already one.
             resetNow();
@@ -569,7 +570,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * This method is useful for handling a rejected request with {@code Expect: 100-continue} header.
      */
     public void reset() {
-        resetRequested = true;
+        resetRequested.lazySet(true);
     }
 
     private void resetNow() {
@@ -589,7 +590,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
 
-        resetRequested = false;
+        resetRequested.lazySet(false);
         currentState = State.SKIP_CONTROL_CHARS;
     }
 
