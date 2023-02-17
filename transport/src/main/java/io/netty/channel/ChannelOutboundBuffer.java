@@ -243,9 +243,7 @@ public final class ChannelOutboundBuffer {
         ChannelPromise p = e.promise;
         long progress = e.progress + amount;
         e.progress = progress;
-        if (p == null) {
-            return;
-        }
+        assert p != null;
         final Class<?> promiseClass = p.getClass();
         // fast-path to save O(n) ChannelProgressivePromise's type check on OpenJDK
         if (promiseClass == VoidChannelPromise.class) {
