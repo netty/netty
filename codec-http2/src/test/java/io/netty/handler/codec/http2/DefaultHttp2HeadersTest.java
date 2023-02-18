@@ -17,6 +17,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -25,6 +26,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.util.AsciiString.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -173,6 +175,22 @@ public class DefaultHttp2HeadersTest {
         assertFalse(headers.contains("name1", "Value2"));
         assertTrue(headers.contains("2name", "Value3", true));
         assertFalse(headers.contains("2name", "Value3", false));
+    }
+
+    @Test
+    public void testContainsName() {
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.add(CONTENT_LENGTH, "36");
+        assertFalse(headers.contains("Content-Length"));
+        assertTrue(headers.contains("content-length"));
+        assertTrue(headers.contains(CONTENT_LENGTH));
+        headers.remove(CONTENT_LENGTH);
+        assertFalse(headers.contains("Content-Length"));
+        assertFalse(headers.contains("content-length"));
+        assertFalse(headers.contains(CONTENT_LENGTH));
+
+        assertFalse(headers.contains("non-existent-name"));
+        assertFalse(headers.contains(new AsciiString("non-existent-name")));
     }
 
     @Test
