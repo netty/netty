@@ -116,7 +116,7 @@ abstract class SizeClasses implements SizeClassesMetric {
     private final int[] size2idxTab;
 
     protected SizeClasses(int pageSize, int pageShifts, int chunkSize, int directMemoryCacheAlignment) {
-        int group = log2(chunkSize) + 1 - LOG2_QUANTUM;
+        int group = log2(chunkSize) - LOG2_QUANTUM - LOG2_SIZE_CLASS_GROUP + 1;
 
         //generate size classes
         //[index, log2Group, log2Delta, nDelta, isMultiPageSize, isSubPage, log2DeltaLookup]
