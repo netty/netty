@@ -22,8 +22,10 @@ import io.netty.util.internal.UnstableApi;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -211,7 +213,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         group.execute(command);
     }
 
-    private static final class NonStickyOrderedEventExecutor extends AbstractEventExecutor
+    static final class NonStickyOrderedEventExecutor extends AbstractEventExecutor
             implements Runnable, OrderedEventExecutor {
         private final EventExecutor executor;
         private final Queue<Runnable> tasks = PlatformDependent.newMpscQueue();
@@ -220,8 +222,10 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         private static final int SUBMITTED = 1;
         private static final int RUNNING = 2;
 
-        private final AtomicInteger state = new AtomicInteger();
+        final AtomicInteger state = new AtomicInteger();
         private final int maxTaskExecutePerRun;
+
+        private final Map<Thread, Boolean> threadMap = new ConcurrentHashMap<>();
 
         NonStickyOrderedEventExecutor(EventExecutor executor, int maxTaskExecutePerRun) {
             super(executor);
@@ -234,62 +238,66 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             if (!state.compareAndSet(SUBMITTED, RUNNING)) {
                 return;
             }
-            for (;;) {
-                int i = 0;
-                try {
-                    for (; i < maxTaskExecutePerRun; i++) {
-                        Runnable task = tasks.poll();
-                        if (task == null) {
-                            break;
+            Thread currentThread = Thread.currentThread();
+            threadMap.put(currentThread, true);
+            try {
+                for (; ; ) {
+                    int i = 0;
+                    try {
+                        for (; i < maxTaskExecutePerRun; i++) {
+                            Runnable task = tasks.poll();
+                            if (task == null) {
+                                break;
+                            }
+                            safeExecute(task);
                         }
-                        safeExecute(task);
-                    }
-                } finally {
-                    if (i == maxTaskExecutePerRun) {
-                        try {
-                            state.set(SUBMITTED);
-                            executor.execute(this);
-                            return; // done
-                        } catch (Throwable ignore) {
-                            // Reset the state back to running as we will keep on executing tasks.
-                            state.set(RUNNING);
-                            // if an error happened we should just ignore it and let the loop run again as there is not
-                            // much else we can do. Most likely this was triggered by a full task queue. In this case
-                            // we just will run more tasks and try again later.
-                        }
-                    } else {
-                        state.set(NONE);
-                        // After setting the state to NONE, look at the tasks queue one more time.
-                        // If it is empty, then we can return from this method.
-                        // Otherwise, it means the producer thread has called execute(Runnable)
-                        // and enqueued a task in between the tasks.poll() above and the state.set(NONE) here.
-                        // There are two possible scenarios when this happen
-                        //
-                        // 1. The producer thread sees state == NONE, hence the compareAndSet(NONE, SUBMITTED)
-                        //    is successfully setting the state to SUBMITTED. This mean the producer
-                        //    will call / has called executor.execute(this). In this case, we can just return.
-                        // 2. The producer thread don't see the state change, hence the compareAndSet(NONE, SUBMITTED)
-                        //    returns false. In this case, the producer thread won't call executor.execute.
-                        //    In this case, we need to change the state to RUNNING and keeps running.
-                        //
-                        // The above cases can be distinguished by performing a
-                        // compareAndSet(NONE, RUNNING). If it returns "false", it is case 1; otherwise it is case 2.
-                        if (tasks.isEmpty() || !state.compareAndSet(NONE, RUNNING)) {
-                            return; // done
+                    } finally {
+                        if (i == maxTaskExecutePerRun) {
+                            try {
+                                state.set(SUBMITTED);
+                                executor.execute(this);
+                                return; // done
+                            } catch (Throwable ignore) {
+                                // Reset the state back to running as we will keep on executing tasks.
+                                state.set(RUNNING);
+                                // if an error happened we should just ignore it and let the loop run again as there is not
+                                // much else we can do. Most likely this was triggered by a full task queue. In this case
+                                // we just will run more tasks and try again later.
+                            }
+                        } else {
+                            state.set(NONE);
+                            // After setting the state to NONE, look at the tasks queue one more time.
+                            // If it is empty, then we can return from this method.
+                            // Otherwise, it means the producer thread has called execute(Runnable)
+                            // and enqueued a task in between the tasks.poll() above and the state.set(NONE) here.
+                            // There are two possible scenarios when this happens
+                            //
+                            // 1. The producer thread sees state == NONE, hence the compareAndSet(NONE, SUBMITTED)
+                            //    is successfully setting the state to SUBMITTED. This mean the producer
+                            //    will call / has called executor.execute(this). In this case, we can just return.
+                            // 2. The producer thread don't see the state change, hence the compareAndSet(NONE, SUBMITTED)
+                            //    returns false. In this case, the producer thread won't call executor.execute.
+                            //    In this case, we need to change the state to RUNNING and keeps running.
+                            //
+                            // The above cases can be distinguished by performing a
+                            // compareAndSet(NONE, RUNNING). If it returns "false", it is case 1; otherwise it is case 2.
+                            if (tasks.isEmpty() || !state.compareAndSet(NONE, RUNNING)) {
+                                return; // done
+                            }
                         }
                     }
                 }
+            } finally {
+                threadMap.remove(currentThread);
             }
         }
 
         @Override
         public boolean inEventLoop(Thread thread) {
-            return false;
-        }
-
-        @Override
-        public boolean inEventLoop() {
-            return false;
+            if (state.get() != RUNNING) {
+                return false;
+            }
+            return this.threadMap.containsKey(thread);
         }
 
         @Override
