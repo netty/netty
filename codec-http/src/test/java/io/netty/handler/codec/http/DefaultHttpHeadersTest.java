@@ -310,6 +310,22 @@ public class DefaultHttpHeadersTest {
         assertTrue(names.contains(CONNECTION.toString()));
     }
 
+    @Test
+    public void testContainsName() {
+        HttpHeaders headers = new DefaultHttpHeaders(true)
+                .add(CONTENT_LENGTH, "36");
+        assertTrue(headers.contains("Content-Length"));
+        assertTrue(headers.contains("content-length"));
+        assertTrue(headers.contains(CONTENT_LENGTH));
+        headers.remove(CONTENT_LENGTH);
+        assertFalse(headers.contains("Content-Length"));
+        assertFalse(headers.contains("content-length"));
+        assertFalse(headers.contains(CONTENT_LENGTH));
+
+        assertFalse(headers.contains("non-existent-name"));
+        assertFalse(headers.contains(new AsciiString("non-existent-name")));
+    }
+
     private static void assertDefaultValues(final DefaultHttpHeaders headers, final HeaderValue headerValue) {
         assertTrue(contentEquals(headerValue.asList().get(0), headers.get(HEADER_NAME)));
         List<CharSequence> expected = headerValue.asList();
