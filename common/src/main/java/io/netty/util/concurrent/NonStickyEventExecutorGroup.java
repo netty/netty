@@ -223,6 +223,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         private final AtomicInteger state = new AtomicInteger();
         private final int maxTaskExecutePerRun;
 
+        private volatile Thread executingThread;
+
         NonStickyOrderedEventExecutor(EventExecutor executor, int maxTaskExecutePerRun) {
             super(executor);
             this.executor = executor;
@@ -234,6 +236,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             if (!state.compareAndSet(SUBMITTED, RUNNING)) {
                 return;
             }
+            executingThread = Thread.currentThread();
             for (;;) {
                 int i = 0;
                 try {
@@ -248,6 +251,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                     if (i == maxTaskExecutePerRun) {
                         try {
                             state.set(SUBMITTED);
+                            executingThread = null;
                             executor.execute(this);
                             return; // done
                         } catch (Throwable ignore) {
@@ -263,7 +267,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                         // If it is empty, then we can return from this method.
                         // Otherwise, it means the producer thread has called execute(Runnable)
                         // and enqueued a task in between the tasks.poll() above and the state.set(NONE) here.
-                        // There are two possible scenarios when this happen
+                        // There are two possible scenarios when this happens
                         //
                         // 1. The producer thread sees state == NONE, hence the compareAndSet(NONE, SUBMITTED)
                         //    is successfully setting the state to SUBMITTED. This mean the producer
@@ -275,6 +279,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                         // The above cases can be distinguished by performing a
                         // compareAndSet(NONE, RUNNING). If it returns "false", it is case 1; otherwise it is case 2.
                         if (tasks.isEmpty() || !state.compareAndSet(NONE, RUNNING)) {
+                            executingThread = null;
                             return; // done
                         }
                     }
@@ -284,12 +289,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
 
         @Override
         public boolean inEventLoop(Thread thread) {
-            return false;
-        }
-
-        @Override
-        public boolean inEventLoop() {
-            return false;
+            return executingThread == thread;
         }
 
         @Override
