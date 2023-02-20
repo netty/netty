@@ -23,6 +23,7 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.resolver.HostsFileEntriesResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.ObjectUtil;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -66,6 +67,8 @@ public final class DnsNameResolverBuilder {
     private String[] searchDomains;
     private int ndots = -1;
     private boolean decodeIdn = true;
+
+    private int maxNumConsolidation;
 
     /**
      * Creates a new builder.
@@ -467,6 +470,20 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * Set the maximum size of the cache that is used to consolidate lookups for different hostnames when in-flight.
+     * This means if multiple lookups are done for the same hostname and still in-flight only one actual query will
+     * be made and the result will be cascaded to the others.
+     *
+     * @param maxNumConsolidation the maximum lookups to consolidate (different hostnames), or {@code 0} if
+     *                            no consolidation should be performed.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder consolidateCacheSize(int maxNumConsolidation) {
+        this.maxNumConsolidation = ObjectUtil.checkPositiveOrZero(maxNumConsolidation, "maxNumConsolidation");
+        return this;
+    }
+
+    /**
      * Returns a new {@link DnsNameResolver} instance.
      *
      * @return a {@link DnsNameResolver}
@@ -508,7 +525,8 @@ public final class DnsNameResolverBuilder {
                 searchDomains,
                 ndots,
                 decodeIdn,
-                completeOncePreferredResolved);
+                completeOncePreferredResolved,
+                maxNumConsolidation);
     }
 
     /**
@@ -574,6 +592,7 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.decodeIdn(decodeIdn);
         copiedBuilder.completeOncePreferredResolved(completeOncePreferredResolved);
         copiedBuilder.localAddress(localAddress);
+        copiedBuilder.consolidateCacheSize(maxNumConsolidation);
         return copiedBuilder;
     }
 }

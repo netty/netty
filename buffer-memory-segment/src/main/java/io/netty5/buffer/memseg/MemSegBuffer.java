@@ -67,7 +67,7 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     static {
         try (Arena arena = Arena.openShared()) {
-            CLOSED_SEGMENT = MemorySegment.allocateNative(0, arena.session());
+            CLOSED_SEGMENT = MemorySegment.allocateNative(0, arena.scope());
         }
     }
 

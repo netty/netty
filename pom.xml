@@ -375,7 +375,7 @@
     <profile>
       <id>unsafeBuffer</id>
       <properties>
-        <argLine.java9.extras>-Dio.netty5.tryReflectionSetAccessible=true --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty5.buffer.api.MemoryManager=Unsafe</argLine.java9.extras>
+        <argLine.java9.extras>-Dio.netty5.tryReflectionSetAccessible=true --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty5.buffer.MemoryManager=Unsafe</argLine.java9.extras>
       </properties>
     </profile>
 
@@ -432,7 +432,7 @@
     <profile>
       <id>leak</id>
       <properties>
-        <argLine.leak>-Dio.netty5.leakDetectionLevel=paranoid -Dio.netty5.leakDetection.targetRecords=32 -Dio.netty5.buffer.lifecycleTracingEnabled=true</argLine.leak>
+        <argLine.leak>-Dio.netty5.leakDetection.level=paranoid -Dio.netty5.leakDetection.targetRecords=32 -Dio.netty5.buffer.lifecycleTracingEnabled=true</argLine.leak>
       </properties>
     </profile>
     <profile>
@@ -548,7 +548,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.56.Final</tcnative.version>
+    <tcnative.version>2.0.59.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>

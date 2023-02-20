@@ -19,20 +19,14 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 
 import java.nio.ByteBuffer;
 
 public class BufferBenchmark extends AbstractMicrobenchmark {
-    static {
-        System.setProperty("io.netty5.buffer.checkAccessible", "false");
-    }
-    private static final byte BYTE = '0';
 
-    @Param({ "true", "false" })
-    public String checkBounds;
+    private static final byte BYTE = '0';
 
     private ByteBuffer byteBuffer;
     private ByteBuffer directByteBuffer;
@@ -42,12 +36,11 @@ public class BufferBenchmark extends AbstractMicrobenchmark {
 
     @Setup
     public void setup() {
-        System.setProperty("io.netty5.buffer.checkBounds", checkBounds);
         byteBuffer = ByteBuffer.allocate(8);
         directByteBuffer = ByteBuffer.allocateDirect(8);
         buffer = BufferAllocator.onHeapUnpooled().allocate(8);
-        directBuffer = BufferAllocator.onHeapUnpooled().allocate(8);
-        directBufferPooled = BufferAllocator.onHeapPooled().allocate(8);
+        directBuffer = BufferAllocator.offHeapUnpooled().allocate(8);
+        directBufferPooled = BufferAllocator.offHeapPooled().allocate(8);
     }
 
     @TearDown
