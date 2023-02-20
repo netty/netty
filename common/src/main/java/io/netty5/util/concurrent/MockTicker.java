@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
  * or introducing flakiness due to non-deterministic nature of system clock.
  */
 public interface MockTicker extends Ticker {
+
     @Override
     default long initialNanoTime() {
         return 0;

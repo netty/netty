@@ -17,7 +17,10 @@ package io.netty5.util.concurrent;
 
 import java.util.concurrent.TimeUnit;
 
+import static java.util.Objects.requireNonNull;
+
 enum SystemTicker implements Ticker {
+
     INSTANCE;
 
     static final long START_TIME = System.nanoTime();
@@ -34,6 +37,7 @@ enum SystemTicker implements Ticker {
 
     @Override
     public void sleep(long delay, TimeUnit unit) throws InterruptedException {
+        requireNonNull(unit, "unit");
         unit.sleep(delay);
     }
 }

@@ -34,6 +34,7 @@ class DefaultMockTickerTest {
     void newMockTickerShouldReturnDefaultMockTicker() {
         assertTrue(Ticker.newMockTicker() instanceof DefaultMockTicker);
     }
+
     @Test
     void defaultValues() {
         final MockTicker ticker = Ticker.newMockTicker();
@@ -81,9 +82,9 @@ class DefaultMockTickerTest {
 
         // Time did not advance at all, and thus future will not complete.
         for (int i = 0; i < numWaiters; i++) {
-            final int finalI = i;
+            final int finalCnt = i;
             assertThrows(TimeoutException.class, () -> {
-                futures.get(finalI).get(1, TimeUnit.SECONDS);
+                futures.get(finalCnt).get(1, TimeUnit.SECONDS);
             });
         }
 
@@ -92,9 +93,9 @@ class DefaultMockTickerTest {
 
         // Still needs one more nanosecond.
         for (int i = 0; i < numWaiters; i++) {
-            final int finalI = i;
+            final int finalCnt = i;
             assertThrows(TimeoutException.class, () -> {
-                futures.get(finalI).get(1, TimeUnit.SECONDS);
+                futures.get(finalCnt).get(1, TimeUnit.SECONDS);
             });
         }
 

@@ -18,6 +18,7 @@ package io.netty5.util.concurrent;
 import java.util.concurrent.TimeUnit;
 
 public interface Ticker {
+
     /**
      * Returns the singleton {@link Ticker} that returns the values from the real system clock source.
      * However, note that this is not the same as {@link System#nanoTime()} because we apply a fixed offset

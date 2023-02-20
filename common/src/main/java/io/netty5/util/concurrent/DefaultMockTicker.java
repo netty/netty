@@ -22,6 +22,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link MockTicker} implementation.
@@ -40,6 +41,8 @@ final class DefaultMockTicker implements MockTicker {
     @Override
     public void sleep(long delay, TimeUnit unit) throws InterruptedException {
         checkPositiveOrZero(delay, "delay");
+        requireNonNull(unit, "unit");
+
         if (delay == 0) {
             return;
         }
@@ -59,6 +62,8 @@ final class DefaultMockTicker implements MockTicker {
     @Override
     public void advance(long amount, TimeUnit unit) {
         checkPositiveOrZero(amount, "amount");
+        requireNonNull(unit, "unit");
+
         if (amount == 0) {
             return;
         }
