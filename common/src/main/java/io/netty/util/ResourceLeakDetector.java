@@ -107,7 +107,7 @@ public class ResourceLeakDetector<T> {
             logger.debug("-Dio.netty.noResourceLeakDetection: {}", disabled);
             logger.warn(
                     "-Dio.netty.noResourceLeakDetection is deprecated. Use '-D{}={}' instead.",
-                    PROP_LEVEL, DEFAULT_LEVEL.name().toLowerCase());
+                    PROP_LEVEL, Level.DISABLED.name().toLowerCase());
         } else {
             disabled = false;
         }
