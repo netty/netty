@@ -41,10 +41,10 @@ jobs:
                 "password": "${{ secrets.SONATYPE_PASSWORD }}"
             }]
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Cache .m2/repository
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: deploy-cache-m2-repository-${{ hashFiles('**/pom.xml') }}

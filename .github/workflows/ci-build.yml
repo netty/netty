@@ -32,10 +32,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Cache .m2/repository
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: build-cache-m2-repository-${{ hashFiles('**/pom.xml') }}
@@ -59,7 +59,7 @@ jobs:
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build-leak.output
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: target
