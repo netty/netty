@@ -61,7 +61,7 @@ jobs:
             docker-cache-
 
       - name: Build docker image
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml build
+        run: docker-compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build
 
       - name: Deploy project snapshot to sonatype
-        run: docker-compose -f docker/docker-compose.centos-8.yaml -f docker/docker-compose.centos-8.18.yaml run deploy
+        run: docker-compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run deploy

@@ -3,13 +3,13 @@ version: "3"
 services:
 
   runtime-setup:
-    image: netty-codec-http3-centos8:default
+    image: netty-codec-http3-centos7:default
     build:
       context: ../
-      dockerfile: docker/Dockerfile.centos8
+      dockerfile: docker/Dockerfile.centos7
 
   common: &common
-    image: netty-codec-http3-centos8:default
+    image: netty-codec-http3-centos7:default
     depends_on: [runtime-setup]
     environment:
       - GPG_KEYNAME

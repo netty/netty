@@ -1,4 +1,4 @@
-FROM centos:8
+FROM centos:7
 
 ENV SOURCE_DIR /root/source
 
@@ -31,5 +31,5 @@ RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
 
 WORKDIR /opt
-RUN curl https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz | tar -xz
-RUN echo 'PATH=/opt/apache-maven-3.6.3/bin/:$PATH' >> ~/.bashrc
+RUN curl https://downloads.apache.org/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz | tar -xz
+RUN echo 'PATH=/opt/apache-maven-3.9.0/bin/:$PATH' >> ~/.bashrc
