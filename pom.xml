@@ -76,7 +76,8 @@
     <release.gpg.keyname />
     <release.gpg.passphrase />
     <test.argLine>-D_</test.argLine>
-    <skipH3Spec>false</skipH3Spec>
+    <!-- Will be enabled by a profile when running on x86_64-->
+    <skipH3Spec>true</skipH3Spec>
   </properties>
 
   <build>
@@ -165,21 +166,15 @@
             <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
             <logLevel>debug</logLevel>
           </systemPropertyVariables>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
           <argLine>${test.argLine}</argLine>
         </configuration>
         <dependencies>
           <dependency>
-            <groupId>org.apache.maven.surefire</groupId>
-            <artifactId>surefire-junit4</artifactId>
-            <version>2.22.1</version>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>${junit.version}</version>
           </dependency>
         </dependencies>
       </plugin>
@@ -334,6 +329,17 @@
         <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
       </properties>
     </profile>
+    <profile>
+      <id>x86_64</id>
+      <activation>
+        <os>
+          <arch>x86_64</arch>
+        </os>
+      </activation>
+      <properties>
+        <skipH3Spec>false</skipH3Spec>
+      </properties>
+    </profile>
   </profiles>
 
   <dependencies>
@@ -415,6 +421,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
       <version>${junit.version}</version>
@@ -443,11 +455,6 @@
       <artifactId>mockito-core</artifactId>
       <version>3.6.28</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.surefire</groupId>
-      <artifactId>surefire-junit4</artifactId>
-      <version>2.22.1</version>
     </dependency>
   </dependencies>
 </project>
