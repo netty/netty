@@ -357,10 +357,6 @@ static jbyteArray to_byte_array(JNIEnv* env, const uint8_t* bytes, size_t len) {
      return array;
 }
 
-
-// Returns the size of the send quantum, in bytes.
-size_t quiche_conn_send_quantum(quiche_conn *conn);
-
 static jint netty_quiche_conn_send_quantum(JNIEnv* env, jclass clazz, jlong conn) {
     return quiche_conn_send_quantum((quiche_conn *) conn);
 }
