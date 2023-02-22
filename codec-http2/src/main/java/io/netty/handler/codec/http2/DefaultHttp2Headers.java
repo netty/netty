@@ -24,6 +24,7 @@ import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.PATH;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseudoHeader;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
@@ -175,6 +176,11 @@ public class DefaultHttp2Headers
     protected void validateValue(ValueValidator<CharSequence> validator, CharSequence name, CharSequence value) {
         // This method has a noop override for backward compatibility, see https://github.com/netty/netty/pull/12975
         super.validateValue(validator, name, value);
+        // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+        if ((value == null || value.length() == 0) && hasPseudoHeaderFormat(name) && getPseudoHeader(name) == PATH) {
+            PlatformDependent.throwException(connectionError(
+                    PROTOCOL_ERROR, "HTTP/2 pseudo-header ':path' must not be empty.", name));
+        }
     }
 
     @Override

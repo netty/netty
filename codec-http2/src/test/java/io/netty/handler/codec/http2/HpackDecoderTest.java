@@ -863,4 +863,29 @@ public class HpackDecoderTest {
             in2.release();
         }
     }
+
+    @Test
+    public void testPseudoHeaderPathMustNotBeEmpty() throws Exception {
+        final ByteBuf in = Unpooled.buffer(200);
+        try {
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = new InOrderHttp2Headers();
+            toEncode.add(":path", "");
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            final Http2Headers decoded = new DefaultHttp2Headers();
+
+            Http2Exception.StreamException e = assertThrows(Http2Exception.StreamException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    hpackDecoder.decode(3, in, decoded, true);
+                }
+            });
+            assertThat(e.streamId(), is(3));
+            assertThat(e.error(), is(PROTOCOL_ERROR));
+        } finally {
+            in.release();
+        }
+    }
 }
