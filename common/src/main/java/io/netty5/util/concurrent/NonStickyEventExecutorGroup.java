@@ -24,6 +24,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static java.util.Objects.requireNonNull;
@@ -186,7 +187,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         private final AtomicInteger state = new AtomicInteger();
         private final int maxTaskExecutePerRun;
 
-        private volatile Thread executingThread;
+        private final AtomicReference<Thread> executingThread = new AtomicReference<Thread>();
 
         NonStickyOrderedEventExecutor(EventExecutor executor, int maxTaskExecutePerRun) {
             this.executor = executor;
@@ -198,7 +199,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             if (!state.compareAndSet(SUBMITTED, RUNNING)) {
                 return;
             }
-            executingThread = Thread.currentThread();
+            Thread current = Thread.currentThread();
+            executingThread.set(current);
             for (;;) {
                 int i = 0;
                 try {
@@ -213,7 +215,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                     if (i == maxTaskExecutePerRun) {
                         try {
                             state.set(SUBMITTED);
-                            executingThread = null;
+                            // Only set executingThread to null if no other thread did update it yet.
+                            executingThread.compareAndSet(current, null);
                             executor.execute(this);
                             return; // done
                         } catch (Throwable ignore) {
@@ -241,7 +244,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                         // The above cases can be distinguished by performing a
                         // compareAndSet(NONE, RUNNING). If it returns "false", it is case 1; otherwise it is case 2.
                         if (tasks.isEmpty() || !state.compareAndSet(NONE, RUNNING)) {
-                            executingThread = null;
+                            // Only set executingThread to null if no other thread did update it yet.
+                            executingThread.compareAndSet(current, null);
                             return; // done
                         }
                     }
@@ -251,7 +255,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
 
         @Override
         public boolean inEventLoop(Thread thread) {
-            return executingThread == thread;
+            return executingThread.get() == thread;
         }
 
         @Override
