@@ -254,7 +254,7 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
-            localPool.release(this);
+            localPool.release(this, true);
         }
 
         @Override
@@ -262,7 +262,7 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
-            localPool.unguardedRelease(this);
+            localPool.release(this, false);
         }
 
         T get() {
@@ -332,24 +332,12 @@ public abstract class Recycler<T> {
             return handle;
         }
 
-        void release(DefaultHandle<T> handle) {
-            handle.toAvailable();
-            Thread owner = this.owner;
-            if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
-                accept(handle);
-            } else if (owner != null && owner.getState() == Thread.State.TERMINATED) {
-                this.owner = null;
-                pooledHandles = null;
+        void release(DefaultHandle<T> handle, boolean guarded) {
+            if (guarded) {
+                handle.toAvailable();
             } else {
-                MessagePassingQueue<DefaultHandle<T>> handles = pooledHandles;
-                if (handles != null) {
-                    handles.relaxedOffer(handle);
-                }
+                handle.unguardedToAvailable();
             }
-        }
-
-        void unguardedRelease(DefaultHandle<T> handle) {
-            handle.unguardedToAvailable();
             Thread owner = this.owner;
             if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
                 accept(handle);
