@@ -903,7 +903,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
     @MethodSource("initialCombinations")
     void allocatingBuffersMustRecordLifecycleTrace(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
-             var ignoreLeakDetection = LeakDetection.onLeakDetected(info -> {}); // Ensure tracing is enabled.
+             var ignoreLeakDetection = LeakDetection.onLeakDetected(info -> { }); // Ensure tracing is enabled.
              Buffer buffer = allocator.allocate(32)) {
             buffer.touch("Second lifecycle event.");
             var tracePoints = InternalBufferUtils.collectLifecycleTrace((ResourceSupport<?, ?>) buffer);

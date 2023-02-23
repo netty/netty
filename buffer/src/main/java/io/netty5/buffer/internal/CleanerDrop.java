@@ -90,7 +90,6 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
 
     public Drop<T> forkWithoutTracingSplit() {
         return innerWrap(runner.drop.fork(), runner.manager, true);
-
     }
 
     @Override
