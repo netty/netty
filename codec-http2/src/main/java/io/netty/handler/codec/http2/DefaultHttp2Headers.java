@@ -177,9 +177,11 @@ public class DefaultHttp2Headers
         // This method has a noop override for backward compatibility, see https://github.com/netty/netty/pull/12975
         super.validateValue(validator, name, value);
         // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
-        if ((value == null || value.length() == 0) && hasPseudoHeaderFormat(name) && getPseudoHeader(name) == PATH) {
+        // pseudo headers must not be empty
+        if (nameValidator() == HTTP2_NAME_VALIDATOR && (value == null || value.length() == 0) &&
+                hasPseudoHeaderFormat(name)) {
             PlatformDependent.throwException(connectionError(
-                    PROTOCOL_ERROR, "HTTP/2 pseudo-header ':path' must not be empty.", name));
+                    PROTOCOL_ERROR, "HTTP/2 pseudo-header '%s' must not be empty.", name));
         }
     }
 
