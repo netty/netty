@@ -101,20 +101,19 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                     }
                 }
             }
-            tryExpandMagazines();
             expansions++;
-        } while (expansions < 3);
+        } while (expansions < 3 && tryExpandMagazines());
         // The magazines failed us. Allocate unpooled buffer.
         return manager.allocateShared(allocatorControl, size, standardDrop(manager), allocationType);
     }
 
-    private void tryExpandMagazines() {
+    private boolean tryExpandMagazines() {
         long writeLock = magazineExpandLock.tryWriteLock();
         if (writeLock != 0) {
             try {
                 Magazine[] mags = magazines;
                 if (mags.length >= MAX_STRIPES) {
-                    return;
+                    return true;
                 }
                 Magazine[] expanded = Arrays.copyOf(mags, mags.length * 2);
                 for (int i = mags.length, m = expanded.length; i < m; i++) {
@@ -125,6 +124,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 magazineExpandLock.unlockWrite(writeLock);
             }
         }
+        return true;
     }
 
     @Override
