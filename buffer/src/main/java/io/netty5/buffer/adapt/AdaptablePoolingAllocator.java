@@ -341,7 +341,13 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             if (drop instanceof ArcDrop) {
                 drop = ((ArcDrop<Buffer>) drop).unwrap();
             }
-            return CleanerDrop.wrap(ArcDrop.wrap(new PoolDrop(drop, this)), parent.manager);
+            drop = CleanerDrop.wrap(ArcDrop.wrap(new PoolDrop(drop, this)), parent.manager);
+            if (drop instanceof CleanerDrop) {
+                // Only avoid recording splits if we have a CleanerDrop here,
+                // because they're the only ones recording splits anyway.
+                drop = new NoSplitTracingDrop((CleanerDrop<Buffer>) drop);
+            }
+            return drop;
         }
 
         boolean trySetNextInLine(Buffer buffer) {
@@ -401,6 +407,34 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             if (memory == null) {
                 memory = magazine.parent.manager.unwrapRecoverableMemory(obj);
             }
+            drop.attach(obj);
+        }
+    }
+
+    private static final class NoSplitTracingDrop implements Drop<Buffer> {
+        private final CleanerDrop<Buffer> drop;
+
+        NoSplitTracingDrop(CleanerDrop<Buffer> drop) {
+            this.drop = drop;
+        }
+
+        @Override
+        public void drop(Buffer obj) {
+            drop.drop(obj);
+        }
+
+        @Override
+        public Drop<Buffer> fork() {
+            // Intentionally don't wrap the returned drop in a NoSplitTracingDrop.
+            // We do this because we don't want to record the splitting off of chunk buffers,
+            // in the lifecycle of the allocated buffers.
+            // Once the initial split has been made, we want to record all lifecycle events,
+            // including splits, in the allocated buffer.
+            return drop.forkWithoutTracingSplit();
+        }
+
+        @Override
+        public void attach(Buffer obj) {
             drop.attach(obj);
         }
     }

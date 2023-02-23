@@ -62,5 +62,16 @@ public interface LeakInfo extends Iterable<TracePoint> {
          * @return A {@link Throwable} with the stack trace of this trace point.
          */
         Throwable traceback();
+
+        /**
+         * Get the name of the type of event this trace point represents.
+         * <p>
+         * The specific names used are implementation defined, and should not be relied upon by client code.
+         * <p>
+         * The name should only be used for debugging purpose.
+         *
+         * @return The event type name.
+         */
+        String eventName();
     }
 }
