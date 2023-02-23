@@ -88,6 +88,11 @@ public final class CleanerDrop<T extends Buffer> implements Drop<T> {
         return drop;
     }
 
+    public Drop<T> forkWithoutTracingSplit() {
+        return innerWrap(runner.drop.fork(), runner.manager, true);
+
+    }
+
     @Override
     public String toString() {
         return "CleanerDrop(" + runner.drop + ')';

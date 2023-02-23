@@ -20,6 +20,7 @@ import io.netty5.buffer.BufferClosedException;
 import io.netty5.buffer.BufferComponent;
 import io.netty5.buffer.BufferReadOnlyException;
 import io.netty5.buffer.Drop;
+import io.netty5.buffer.LeakInfo;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.PlatformDependent;
@@ -34,6 +35,7 @@ import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 
@@ -208,6 +210,7 @@ public interface InternalBufferUtils {
         return bbsliceFallback(buffer, fromOffset, length);
     }
 
+    @SuppressWarnings("DataFlowIssue")
     private static ByteBuffer bbsliceJdk13(ByteBuffer buffer, int fromOffset, int length) {
         try {
             return (ByteBuffer) BB_SLICE_OFFSETS.invokeExact(buffer, fromOffset, length);
@@ -336,6 +339,10 @@ public interface InternalBufferUtils {
 
     static <E extends Throwable> E attachTrace(ResourceSupport<?, ?> obj, E throwable) {
         return ResourceSupport.getTracer(obj).attachTrace(throwable);
+    }
+
+    static Collection<LeakInfo.TracePoint> collectLifecycleTrace(ResourceSupport<?, ?> obj) {
+        return ResourceSupport.getTracer(obj).collectTraces();
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
