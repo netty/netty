@@ -223,7 +223,7 @@ public class QueryStringDecoder {
         return pathEndIdx;
     }
 
-    private static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit,
+    public static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit,
                                                           boolean semicolonIsNormalChar) {
         int len = s.length();
         if (from >= len) {
@@ -380,7 +380,7 @@ public class QueryStringDecoder {
         return strBuf.toString();
     }
 
-    private static int findPathEndIndex(String uri) {
+    public static int findPathEndIndex(String uri) {
         int len = uri.length();
         for (int i = 0; i < len; i++) {
             char c = uri.charAt(i);
