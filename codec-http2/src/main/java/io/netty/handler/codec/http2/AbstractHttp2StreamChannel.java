@@ -806,7 +806,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     }
                     // We need to double check that there is nothing left to flush such as a
                     // window update frame.
-                    flush();
+                    if (isActive()) {
+                        flush();
+                    }
                     break;
                 }
                 final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
