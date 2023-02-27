@@ -1322,7 +1322,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             var composite = new DefaultCompositeBuffer(allocator, received, drop);
             composite.readOnly = readOnly;
             composite.implicitCapacityLimit = implicitCapacityLimit;
-            drop.attach(composite);
             return composite;
         };
     }
