@@ -82,8 +82,9 @@ jobs:
     # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
-    - uses: actions/setup-java@v1
+    - uses: actions/setup-java@v3
       with:
+        distribution: 'zulu'
         java-version: '11' # The JDK version to make available on the path.
 
     - name: Compile project
