@@ -42,6 +42,9 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
     private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
+    private static final int BUFS_PER_CHUNK = 10; // For large buffers, aim to have about this many buffers per chunk.
+    private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
+    private static final int MAX_POOLABLE_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK; // Roughly 100 MiB.
 
     private final AllocationType allocationType;
     private final MemoryManager manager;
@@ -84,26 +87,28 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             throw allocatorClosedException();
         }
         InternalBufferUtils.assertValidBufferSize(size);
-        int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
-        int expansions = 0;
-        do {
-            Magazine[] mags = magazines;
-            int mask = mags.length - 1;
-            int index = (int) (threadId(Thread.currentThread()) & mask);
-            for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
-                Magazine mag = mags[index + i & mask];
-                long writeLock = mag.tryWriteLock();
-                if (writeLock != 0) {
-                    try {
-                        return mag.allocate(size, sizeBucket);
-                    } finally {
-                        mag.unlockWrite(writeLock);
+        if (size <= MAX_POOLABLE_SIZE) {
+            int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
+            int expansions = 0;
+            do {
+                Magazine[] mags = magazines;
+                int mask = mags.length - 1;
+                int index = (int) (threadId(Thread.currentThread()) & mask);
+                for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
+                    Magazine mag = mags[index + i & mask];
+                    long writeLock = mag.tryWriteLock();
+                    if (writeLock != 0) {
+                        try {
+                            return mag.allocate(size, sizeBucket);
+                        } finally {
+                            mag.unlockWrite(writeLock);
+                        }
                     }
                 }
-            }
-            expansions++;
-        } while (expansions < 3 && tryExpandMagazines());
-        // The magazines failed us. Allocate unpooled buffer.
+                expansions++;
+            } while (expansions < 3 && tryExpandMagazines());
+        }
+        // The magazines failed us, or the buffer is too big to be pooled. Allocate unpooled buffer.
         return manager.allocateShared(allocatorControl, size, standardDrop(manager), allocationType);
     }
 
@@ -239,7 +244,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 targetPercentile -= sums[sizeBucket];
             }
             int percentileSize = 1 << sizeBucket + HISTO_MIN_BUCKET_SHIFT;
-            int prefChunkSize = Math.max(percentileSize * 10, MIN_CHUNK_SIZE);
+            int prefChunkSize = Math.max(percentileSize * BUFS_PER_CHUNK, MIN_CHUNK_SIZE);
             localPrefChunkSize = prefChunkSize;
             for (Magazine mag : parent.magazines) {
                 prefChunkSize = Math.max(prefChunkSize, mag.localPrefChunkSize);
@@ -333,7 +338,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
 
         private Buffer newChunkAllocation(int promptingSize) {
-            int size = Math.max(promptingSize * 10, preferredChunkSize());
+            int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             return parent.manager.allocateShared(parent.allocatorControl, size, this::decorate, parent.allocationType);
         }
 
