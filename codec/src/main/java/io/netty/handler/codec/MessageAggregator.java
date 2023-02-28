@@ -431,6 +431,9 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if(this.aggregating){
+            super.exceptionCaught(ctx,new RemainLengthNotReadException("expected to aggregate more data, currently "+this.currentMessage.content().capacity()+" bits are accepted, but the channel has been closed. "));
+        }
         try {
             // release current message if it is not null as it may be a left-over
             super.channelInactive(ctx);
