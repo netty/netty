@@ -64,9 +64,10 @@ public final class Errors {
      * This eliminates the need to call back into JNI to get the right String message on an exception
      * and thus is faster.
      *
-     * The array length of 512 should be more then enough because errno.h only holds < 200 codes.
+     * Choose an array length which should give us enough space in the future even when more errno codes
+     * will be added.
      */
-    private static final String[] ERRORS = new String[512];
+    private static final String[] ERRORS = new String[2048];
 
     /**
      * <strong>Internal usage only!</strong>
@@ -81,7 +82,7 @@ public final class Errors {
         }
 
         public NativeIoException(String method, int expectedErr, boolean fillInStackTrace) {
-            super(method + "(..) failed: " + ERRORS[-expectedErr]);
+            super(method + "(..) failed: " + errnoString(-expectedErr));
             this.expectedErr = expectedErr;
             this.fillInStackTrace = fillInStackTrace;
         }
@@ -103,7 +104,7 @@ public final class Errors {
         private static final long serialVersionUID = -5532328671712318161L;
         private final int expectedErr;
         NativeConnectException(String method, int expectedErr) {
-            super(method + "(..) failed: " + ERRORS[-expectedErr]);
+            super(method + "(..) failed: " + errnoString(-expectedErr));
             this.expectedErr = expectedErr;
         }
 
@@ -142,6 +143,14 @@ public final class Errors {
         throw newConnectException0(method, err);
     }
 
+    private static String errnoString(int err) {
+        // Check first if we had it cached, if not we need to do a JNI call.
+        if (err < ERRORS.length - 1) {
+            return ERRORS[err];
+        }
+        return strError(err);
+    }
+
     private static IOException newConnectException0(String method, int err) {
         if (err == ERROR_ENETUNREACH_NEGATIVE) {
             return new NoRouteToHostException();
@@ -152,7 +161,7 @@ public final class Errors {
         if (err == ERRNO_ENOENT_NEGATIVE) {
             return new FileNotFoundException();
         }
-        return new ConnectException(method + "(..) failed: " + ERRORS[-err]);
+        return new ConnectException(method + "(..) failed: " + errnoString(-err));
     }
 
     public static NativeIoException newConnectionResetException(String method, int errnoNegative) {
