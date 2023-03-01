@@ -68,10 +68,6 @@ import static java.util.Objects.requireNonNull;
  * An NIO {@link io.netty5.channel.socket.DatagramChannel} that sends and receives an
  * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
  *
- * @see AddressedEnvelope
- * @see DatagramPacket
- *
- *
  * <h3>Available options</h3>
  *
  * In addition to the options provided by {@link io.netty5.channel.socket.DatagramChannel},
@@ -82,11 +78,14 @@ import static java.util.Objects.requireNonNull;
  * <th>{@link ChannelOption}</th>
  * <th>{@code INET}</th>
  * <th>{@code INET6}</th>
- * <th>{@code UNIX</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
  * <td>{@link NioChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr>
  * </table>
+ *
+ * @see AddressedEnvelope
+ * @see DatagramPacket
  */
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel<Channel, SocketAddress, SocketAddress>

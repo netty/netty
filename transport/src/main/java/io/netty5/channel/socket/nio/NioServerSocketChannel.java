@@ -61,7 +61,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * <th>{@link ChannelOption}</th>
  * <th>{@code INET}</th>
  * <th>{@code INET6}</th>
- * <th>{@code UNIX</th>
+ * <th>{@code UNIX}</th>
  * </tr><tr>
  * <td>{@link NioChannelOption}</td><td>X</td><td>X</td><td>X</td>
  * </tr>
