@@ -1367,6 +1367,33 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(flushSniffer.checkFlush());
     }
 
+    @Test
+    public void closeStreamWithoutFlush() {
+        Http2StreamChannel childChannel3 = newInboundStream(3, true, new LastInboundHandler());
+        Http2StreamChannel childChannel5 = newInboundStream(5, true, new LastInboundHandler());
+        FlushSniffer flushSniffer = new FlushSniffer();
+        parentChannel.pipeline().addFirst(flushSniffer);
+
+        //1. write data and batch flush
+        byte[] dataBuf = "test".getBytes();
+        childChannel5.write(new DefaultHttp2DataFrame(Unpooled.wrappedBuffer(dataBuf), false));
+        childChannel3.write(new DefaultHttp2DataFrame(Unpooled.wrappedBuffer(dataBuf), false));
+        childChannel3.flush();
+        assertTrue(flushSniffer.checkFlush());
+
+        //2. write end header frame
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.set("test", "test");
+        childChannel3.write(new DefaultHttp2HeadersFrame(headers, true));
+        childChannel5.write(new DefaultHttp2HeadersFrame(headers, true));
+
+        //do not auto flush, it will be 'false'
+        assertFalse(flushSniffer.checkFlush());
+        //batch flush
+        childChannel5.flush();
+        assertTrue(flushSniffer.checkFlush());
+    }
+
     private static void verifyFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,
                                                                 LastInboundHandler inboundHandler,
                                                                 int numFrames) {
