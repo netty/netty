@@ -106,7 +106,7 @@ jobs:
           git config --global user.name "Netty Project Bot"
 
       - name: Install SSH key
-        uses: shimataro/ssh-key-action@v3
+        uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
