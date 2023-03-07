@@ -22,14 +22,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.PortUnreachableException;
 import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Tells if <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-unix}</a> is
  * supported.
  */
 public final class Unix {
-    private static final AtomicBoolean registered = new AtomicBoolean();
+
 
     static {
         // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a

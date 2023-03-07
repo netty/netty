@@ -21,6 +21,34 @@
 #include "netty_unix_limits.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
+#include <stddef.h>
+
+#define STATICALLY_CLASSNAME "io/netty/channel/unix/NativeStaticallyReferencedJniMethods"
+
+static jint netty_unix_cmsghdrOffsetofCmsgLen(JNIEnv* env, jclass clazz) {
+    return offsetof(struct cmsghdr, cmsg_len);
+}
+
+static jint netty_unix_cmsghdrOffsetofCmsgLevel(JNIEnv* env, jclass clazz) {
+    return offsetof(struct cmsghdr, cmsg_level);
+}
+
+static jint netty_unix_cmsghdrOffsetofCmsgType(JNIEnv* env, jclass clazz) {
+    return offsetof(struct cmsghdr, cmsg_type);
+}
+
+static jint netty_unix_sizeofSizeT(JNIEnv* env, jclass clazz) {
+    return sizeof(size_t);
+}
+
+// JNI Method Registration Table Begin
+static const JNINativeMethod statically_referenced_fixed_method_table[] = {
+  { "sizeofSizeT", "()I", (void *) netty_unix_sizeofSizeT },
+  { "cmsghdrOffsetofCmsgLen", "()I", (void *) netty_unix_cmsghdrOffsetofCmsgLen },
+  { "cmsghdrOffsetofCmsgLevel", "()I", (void *) netty_unix_cmsghdrOffsetofCmsgLevel },
+  { "cmsghdrOffsetofCmsgType", "()I", (void *) netty_unix_cmsghdrOffsetofCmsgType }
+};
+static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            Unix to reflect that.
@@ -30,6 +58,16 @@ jint netty_unix_register(JNIEnv* env, const char* packagePrefix) {
     int filedescriptorOnLoadCalled = 0;
     int socketOnLoadCalled = 0;
     int bufferOnLoadCalled = 0;
+
+
+    // We must register the statically referenced methods first!
+    if (netty_jni_util_register_natives(env,
+            packagePrefix,
+            STATICALLY_CLASSNAME,
+            statically_referenced_fixed_method_table,
+            statically_referenced_fixed_method_table_size) != 0) {
+        goto error;
+    }
 
     // Load all c modules that we depend upon
     if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
