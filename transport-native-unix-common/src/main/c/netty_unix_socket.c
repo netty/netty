@@ -715,7 +715,7 @@ static jint netty_unix_socket_sendToAddress(JNIEnv* env, jclass clazz, jint fd, 
     return _sendTo(env, fd, ipv6, (void *) (intptr_t) memoryAddress, pos, limit, address, scopeId, port, flags);
 }
 
-static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jint flags) {
+static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jint flags, jlong msgControlAddress, jint msgControlLen) {
     struct sockaddr_storage addr;
     socklen_t addrSize;
     if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
@@ -727,7 +727,8 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
     m.msg_namelen = addrSize;
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
-
+    m.msg_control = (void*) msgControlAddress;
+    m.msg_controllen = (socklen_t) msgControlLen;
     ssize_t res;
     int err;
     do {
@@ -750,7 +751,7 @@ static jint netty_unix_socket_sendToAddressDomainSocket(JNIEnv* env, jclass claz
     return _sendToDomainSocket(env, fd, (void *) (intptr_t) memoryAddress, pos, limit, socketPath);
 }
 
-static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray socketPath) {
+static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray socketPath, jint flags, jlong msgControlAddress, jint msgControlLen) {
     struct sockaddr_un addr;
     jint socket_path_len;
 
@@ -769,11 +770,13 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
     m.msg_namelen = sizeof(struct sockaddr_un);
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
+    m.msg_control = (void*) msgControlAddress;
+    m.msg_controllen = (socklen_t) msgControlLen;
 
     ssize_t res;
     int err;
     do {
-        res = sendmsg(fd, &m, 0);
+        res = sendmsg(fd, &m, flags);
         // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
@@ -1158,10 +1161,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "newSocketDomainDgramFd", "()I", (void *) netty_unix_socket_newSocketDomainDgramFd },
   { "sendTo", "(IZLjava/nio/ByteBuffer;II[BIII)I", (void *) netty_unix_socket_sendTo },
   { "sendToAddress", "(IZJII[BIII)I", (void *) netty_unix_socket_sendToAddress },
-  { "sendToAddresses", "(IZJI[BIII)I", (void *) netty_unix_socket_sendToAddresses },
+  { "sendToAddresses", "(IZJI[BIIIJI)I", (void *) netty_unix_socket_sendToAddresses },
   { "sendToDomainSocket", "(ILjava/nio/ByteBuffer;II[B)I", (void *) netty_unix_socket_sendToDomainSocket },
   { "sendToAddressDomainSocket", "(IJII[B)I", (void *) netty_unix_socket_sendToAddressDomainSocket },
-  { "sendToAddressesDomainSocket", "(IJI[B)I", (void *) netty_unix_socket_sendToAddressesDomainSocket },
+  { "sendToAddressesDomainSocket", "(IJI[BIJI)I", (void *) netty_unix_socket_sendToAddressesDomainSocket },
   // "recvFrom" has a dynamic signature
   // "recvFromAddress" has a dynamic signature
   // "recvFromDomainSocket" has a dynamic signature
