@@ -20,6 +20,7 @@ package io.netty.buffer;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.buffer.PoolArena.SizeClass;
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
@@ -377,7 +378,7 @@ final class PoolThreadCache {
             boolean queued = queue.offer(entry);
             if (!queued) {
                 // If it was not possible to cache the chunk, immediately recycle the entry
-                entry.recycle();
+                entry.unguardedRecycle();
             }
 
             return queued;
@@ -392,7 +393,7 @@ final class PoolThreadCache {
                 return false;
             }
             initBuf(entry.chunk, entry.nioBuffer, entry.handle, buf, reqCapacity, threadCache);
-            entry.recycle();
+            entry.unguardedRecycle();
 
             // allocations is not thread-safe which is fine as this is only called from the same thread all time.
             ++ allocations;
@@ -451,14 +452,14 @@ final class PoolThreadCache {
         }
 
         static final class Entry<T> {
-            final Handle<Entry<?>> recyclerHandle;
+            final EnhancedHandle<Entry<?>> recyclerHandle;
             PoolChunk<T> chunk;
             ByteBuffer nioBuffer;
             long handle = -1;
             int normCapacity;
 
             Entry(Handle<Entry<?>> recyclerHandle) {
-                this.recyclerHandle = recyclerHandle;
+                this.recyclerHandle = (EnhancedHandle<Entry<?>>) recyclerHandle;
             }
 
             void recycle() {
@@ -466,6 +467,13 @@ final class PoolThreadCache {
                 nioBuffer = null;
                 handle = -1;
                 recyclerHandle.recycle(this);
+            }
+
+            void unguardedRecycle() {
+                chunk = null;
+                nioBuffer = null;
+                handle = -1;
+                recyclerHandle.unguardedRecycle(this);
             }
         }
 
