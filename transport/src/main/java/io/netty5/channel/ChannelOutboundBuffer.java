@@ -15,6 +15,7 @@
  */
 package io.netty5.channel;
 
+import io.netty5.util.Recycler.EnhancedHandle;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
@@ -396,7 +397,7 @@ final class ChannelOutboundBuffer {
     private static final class Entry {
         private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(Entry::new);
 
-        private final Handle<Entry> handle;
+        private final EnhancedHandle<Entry> handle;
         Entry next;
         Object msg;
         Promise<Void> promise;
@@ -404,7 +405,7 @@ final class ChannelOutboundBuffer {
         boolean cancelled;
 
         private Entry(Handle<Entry> handle) {
-            this.handle = handle;
+            this.handle = (EnhancedHandle<Entry>) handle;
         }
 
         static Entry newInstance(Object msg, int size, Promise<Void> promise) {
@@ -436,7 +437,7 @@ final class ChannelOutboundBuffer {
             promise = null;
             pendingSize = 0;
             cancelled = false;
-            handle.recycle(this);
+            handle.unguardedRecycle(this);
         }
 
         Entry recycleAndGetNext() {

@@ -20,9 +20,9 @@ import io.netty5.util.concurrent.FastThreadLocalThread;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
+import io.netty5.util.internal.UnstableApi;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
-
 import org.jctools.queues.MessagePassingQueue;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -41,9 +41,14 @@ import static java.lang.Math.min;
  */
 public abstract class Recycler<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
-    private static final Handle<?> NOOP_HANDLE = new Handle<>() {
+    private static final EnhancedHandle<?> NOOP_HANDLE = new EnhancedHandle<>() {
         @Override
         public void recycle(Object object) {
+            // NOOP
+        }
+
+        @Override
+        public void unguardedRecycle(final Object object) {
             // NOOP
         }
 
@@ -172,7 +177,16 @@ public abstract class Recycler<T> {
     @SuppressWarnings("ClassNameSameAsAncestorName") // Can't change this due to compatibility.
     public interface Handle<T> extends ObjectPool.Handle<T>  { }
 
-    private static final class DefaultHandle<T> implements Handle<T> {
+    @UnstableApi
+    public abstract static class EnhancedHandle<T> implements Handle<T> {
+
+        public abstract void unguardedRecycle(Object object);
+
+        private EnhancedHandle() {
+        }
+    }
+
+    private static final class DefaultHandle<T> extends EnhancedHandle<T> {
         private static final int STATE_CLAIMED = 0;
         private static final int STATE_AVAILABLE = 1;
         private static final AtomicIntegerFieldUpdater<DefaultHandle<?>> STATE_UPDATER;
@@ -195,7 +209,15 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
-            localPool.release(this);
+            localPool.release(this, true);
+        }
+
+        @Override
+        public void unguardedRecycle(Object object) {
+            if (object != value) {
+                throw new IllegalArgumentException("object does not belong to handle");
+            }
+            localPool.release(this, false);
         }
 
         T get() {
@@ -208,7 +230,7 @@ public abstract class Recycler<T> {
 
         void toClaimed() {
             assert state == STATE_AVAILABLE;
-            state = STATE_CLAIMED;
+            STATE_UPDATER.lazySet(this, STATE_CLAIMED);
         }
 
         void toAvailable() {
@@ -216,6 +238,14 @@ public abstract class Recycler<T> {
             if (prev == STATE_AVAILABLE) {
                 throw new IllegalStateException("Object has been recycled already.");
             }
+        }
+
+        void unguardedToAvailable() {
+            int prev = state;
+            if (prev == STATE_AVAILABLE) {
+                throw new IllegalStateException("Object has been recycled already.");
+            }
+            STATE_UPDATER.lazySet(this, STATE_AVAILABLE);
         }
     }
 
@@ -257,8 +287,12 @@ public abstract class Recycler<T> {
             return handle;
         }
 
-        void release(DefaultHandle<T> handle) {
-            handle.toAvailable();
+        void release(DefaultHandle<T> handle, boolean guarded) {
+            if (guarded) {
+                handle.toAvailable();
+            } else {
+                handle.unguardedToAvailable();
+            }
             Thread owner = this.owner;
             if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
                 accept(handle);

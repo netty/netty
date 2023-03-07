@@ -16,6 +16,7 @@
 package io.netty5.buffer.pool;
 
 import io.netty5.buffer.pool.PoolArena.SizeClass;
+import io.netty5.util.Recycler.EnhancedHandle;
 import io.netty5.util.internal.MathUtil;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
@@ -317,7 +318,7 @@ final class PoolThreadCache {
             boolean queued = queue.offer(entry);
             if (!queued) {
                 // If it was not possible to cache the chunk, immediately recycle the entry
-                entry.recycle();
+                entry.unguardedRecycle();
             }
 
             return queued;
@@ -332,7 +333,7 @@ final class PoolThreadCache {
                 return null;
             }
             UntetheredMemory buffer = allocBuf(entry.chunk, entry.handle, size, threadCache);
-            entry.recycle();
+            entry.unguardedRecycle();
 
             // allocations are not thread-safe which is fine as this is only called from the same thread all time.
             allocations++;
@@ -382,19 +383,25 @@ final class PoolThreadCache {
         }
 
         static final class Entry {
-            final Handle<Entry> recyclerHandle;
+            final EnhancedHandle<Entry> recyclerHandle;
             PoolChunk chunk;
             long handle = -1;
             int normCapacity;
 
             Entry(Handle<Entry> recyclerHandle) {
-                this.recyclerHandle = recyclerHandle;
+                this.recyclerHandle = (EnhancedHandle<Entry>) recyclerHandle;
             }
 
             void recycle() {
                 chunk = null;
                 handle = -1;
                 recyclerHandle.recycle(this);
+            }
+
+            void unguardedRecycle() {
+                chunk = null;
+                handle = -1;
+                recyclerHandle.unguardedRecycle(this);
             }
         }
 
