@@ -1037,11 +1037,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean connectionSendSegments(SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator) {
         List<ByteBuf> bufferList = new ArrayList<>(segmentedDatagramPacketAllocator.maxNumSegments());
         long connAddr = connection.address();
+        int maxDatagramSize = Quiche.quiche_conn_max_send_udp_payload_size(connAddr);
         boolean packetWasWritten = false;
         boolean close = false;
         try {
             for (;;) {
-                int len = calculateSendBufferLength(connAddr);
+                int len = calculateSendBufferLength(connAddr, maxDatagramSize);
                 ByteBuf out = alloc().directBuffer(len);
 
                 ByteBuffer sendInfo = connection.nextSendInfo();
@@ -1126,7 +1127,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             break;
                         case 1:
                             // Only one buffer in the out list, there is no need to use segments.
-                            boolean stop = writePacket(new DatagramPacket(bufferList.get(0), sendToAddress), len);
+                            boolean stop = writePacket
+                                    (new DatagramPacket(bufferList.get(0), sendToAddress), maxDatagramSize, len);
                             packetWasWritten = true;
                             if (stop) {
                                 // Nothing left in the window, continue later
@@ -1137,7 +1139,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             // Create a packet with segments in.
                             boolean stopWriting = writePacket(segmentedDatagramPacketAllocator.newPacket(
                                     Unpooled.wrappedBuffer(bufferList.toArray(
-                                            new ByteBuf[0])), segmentSize, sendToAddress), len);
+                                            new ByteBuf[0])), segmentSize, sendToAddress), maxDatagramSize, len);
                             packetWasWritten = true;
                             if (stopWriting) {
                                 // Nothing left in the window, continue later
@@ -1163,10 +1165,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         long connAddr = connection.address();
         boolean packetWasWritten = false;
         boolean close = false;
+        int maxDatagramSize = Quiche.quiche_conn_max_send_udp_payload_size(connAddr);
         for (;;) {
             ByteBuffer sendInfo = connection.nextSendInfo();
 
-            int len = calculateSendBufferLength(connAddr);
+            int len = calculateSendBufferLength(connAddr, maxDatagramSize);
             ByteBuf out = alloc().directBuffer(len);
             int writerIndex = out.writerIndex();
 
@@ -1202,7 +1205,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         new QuicConnectionEvent(oldRemote, remote));
             }
             out.writerIndex(writerIndex + written);
-            boolean stop = writePacket(new DatagramPacket(out, remote), len);
+            boolean stop = writePacket(new DatagramPacket(out, remote), maxDatagramSize, len);
             packetWasWritten = true;
             if (stop) {
                 // Nothing left in the window, continue later
@@ -1216,9 +1219,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return packetWasWritten;
     }
 
-    private boolean writePacket(DatagramPacket packet, int len) {
+    private boolean writePacket(DatagramPacket packet, int maxDatagramSize, int len) {
         ChannelFuture future = parent().write(packet);
-        if (isSendWindowUsed(len)) {
+        if (isSendWindowUsed(maxDatagramSize, len)) {
             // Nothing left in the window, continue later
             future.addListener(continueSendingListener);
             return true;
@@ -1226,12 +1229,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return false;
     }
 
-    private static boolean isSendWindowUsed(int len) {
-        return len < Quic.MAX_DATAGRAM_SIZE;
+    private static boolean isSendWindowUsed(int maxDatagramSize, int len) {
+        return len < maxDatagramSize;
     }
 
-    private static int calculateSendBufferLength(long connAddr) {
-        int len = Math.min(Quic.MAX_DATAGRAM_SIZE, Quiche.quiche_conn_send_quantum(connAddr));
+    private static int calculateSendBufferLength(long connAddr, int maxDatagramSize) {
+        int len = Math.min(maxDatagramSize, Quiche.quiche_conn_send_quantum(connAddr));
         if (len <= 0) {
             return 8;
         }

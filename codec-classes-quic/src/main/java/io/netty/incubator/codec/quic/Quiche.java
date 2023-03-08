@@ -512,6 +512,13 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.10.0/include/quiche.h#L328">
+     *     quiche_conn_max_send_udp_payload_size</a>.
+     */
+    static native int quiche_conn_max_send_udp_payload_size(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L115">quiche_config_new</a>.
      */
     static native long quiche_config_new(int version);
