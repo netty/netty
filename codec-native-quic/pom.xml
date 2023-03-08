@@ -133,7 +133,7 @@
       <properties>
         <jniLibName>netty_quiche_osx_aarch_64</jniLibName>
         <jni.classifier>osx-aarch_64</jni.classifier>
-        <javaModuleNameWithClassifier>osx.aarch_64</javaModuleNameWithClassifier>
+        <javaModuleNameClassifier>osx.aarch_64</javaModuleNameClassifier>
         <macosxDeploymentTarget>11.0</macosxDeploymentTarget>
         <extraCflags>-target arm64-apple-macos11</extraCflags>
         <extraCxxflags>-target arm64-apple-macos11</extraCxxflags>
@@ -163,7 +163,7 @@
       <properties>
         <jniLibName>netty_quiche_osx_x86_64</jniLibName>
         <jni.classifier>osx-x86_64</jni.classifier>
-        <javaModuleNameWithClassifier>osx.x86_64</javaModuleNameWithClassifier>
+        <javaModuleNameClassifier>osx.x86_64</javaModuleNameClassifier>
         <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
         <extraCflags>-target x86_64-apple-macos10.12 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
         <extraCxxflags>-target x86_64-apple-macos10.12</extraCxxflags>
@@ -476,7 +476,7 @@
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch64</bundleNativeCode>
         <jniLibName>netty_quiche_linux_aarch_64</jniLibName>
         <jni.classifier>linux-aarch_64</jni.classifier>
-        <javaModuleNameWithClassifier>linux.aarch_64</javaModuleNameWithClassifier>
+        <javaModuleNameClassifier>linux.aarch_64</javaModuleNameClassifier>
         <extraConfigureArg>--host=aarch64-linux-gnu</extraConfigureArg>
         <extraConfigureArg2>CC=aarch64-none-linux-gnu-gcc</extraConfigureArg2>
         <extraCmakeFlags>-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_C_COMPILER=aarch64-none-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-none-linux-gnu-g++</extraCmakeFlags>
