@@ -17,13 +17,13 @@ package io.netty.handler.ssl;
 
 
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -176,8 +176,6 @@ final class BouncyCastleAlpnSslUtils {
     }
 
     static void setApplicationProtocols(SSLEngine engine, List<String> supportedProtocols) {
-        SSLParameters parameters = engine.getSSLParameters();
-
         String[] protocolArray = supportedProtocols.toArray(EmptyArrays.EMPTY_STRINGS);
         try {
             Object bcSslParameters = GET_PARAMETERS.invoke(engine);
@@ -188,7 +186,9 @@ final class BouncyCastleAlpnSslUtils {
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
-        engine.setSSLParameters(parameters);
+        if (PlatformDependent.javaVersion() >= 9) {
+            JdkAlpnSslUtils.setApplicationProtocols(engine, supportedProtocols);
+        }
     }
 
     static String getHandshakeApplicationProtocol(SSLEngine sslEngine) {
