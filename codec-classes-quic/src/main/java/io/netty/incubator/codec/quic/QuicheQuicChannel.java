@@ -105,6 +105,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
+    private final ChannelFutureListener continueSendingListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture channelFuture) {
+            if (connectionSend()) {
+                flushParent();
+            }
+        }
+    };
+
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final long[] readableStreams = new long[128];
     private final long[] writableStreams = new long[128];
@@ -1032,7 +1041,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         boolean close = false;
         try {
             for (;;) {
-                ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+                int len = calculateSendBufferLength(connAddr);
+                ByteBuf out = alloc().directBuffer(len);
 
                 ByteBuffer sendInfo = connection.nextSendInfo();
                 InetSocketAddress sendToAddress = this.remote;
@@ -1116,15 +1126,23 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             break;
                         case 1:
                             // Only one buffer in the out list, there is no need to use segments.
-                            parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
+                            boolean stop = writePacket(new DatagramPacket(bufferList.get(0), sendToAddress), len);
                             packetWasWritten = true;
+                            if (stop) {
+                                // Nothing left in the window, continue later
+                                return true;
+                            }
                             break;
                         default:
                             // Create a packet with segments in.
-                            parent().write(segmentedDatagramPacketAllocator.newPacket(
+                            boolean stopWriting = writePacket(segmentedDatagramPacketAllocator.newPacket(
                                     Unpooled.wrappedBuffer(bufferList.toArray(
-                                            new ByteBuf[0])), segmentSize, sendToAddress));
+                                            new ByteBuf[0])), segmentSize, sendToAddress), len);
                             packetWasWritten = true;
+                            if (stopWriting) {
+                                // Nothing left in the window, continue later
+                                return true;
+                            }
                             break;
                     }
                     // We processed everything that was in the list, clear it.
@@ -1147,8 +1165,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         boolean close = false;
         for (;;) {
             ByteBuffer sendInfo = connection.nextSendInfo();
-            ByteBuf out = alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
+
+            int len = calculateSendBufferLength(connAddr);
+            ByteBuf out = alloc().directBuffer(len);
             int writerIndex = out.writerIndex();
+
             int written = Quiche.quiche_conn_send(
                     connAddr, Quiche.memoryAddress(out) + writerIndex, out.writableBytes(),
                     Quiche.memoryAddressWithPosition(sendInfo));
@@ -1181,14 +1202,40 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         new QuicConnectionEvent(oldRemote, remote));
             }
             out.writerIndex(writerIndex + written);
-            parent().write(new DatagramPacket(out, remote));
+            boolean stop = writePacket(new DatagramPacket(out, remote), len);
             packetWasWritten = true;
+            if (stop) {
+                // Nothing left in the window, continue later
+                break;
+            }
         }
         if (close) {
             // Close now... now way to recover.
             unsafe().close(newPromise());
         }
         return packetWasWritten;
+    }
+
+    private boolean writePacket(DatagramPacket packet, int len) {
+        ChannelFuture future = parent().write(packet);
+        if (isSendWindowUsed(len)) {
+            // Nothing left in the window, continue later
+            future.addListener(continueSendingListener);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isSendWindowUsed(int len) {
+        return len < Quic.MAX_DATAGRAM_SIZE;
+    }
+
+    private static int calculateSendBufferLength(long connAddr) {
+        int len = Math.min(Quic.MAX_DATAGRAM_SIZE, Quiche.quiche_conn_send_quantum(connAddr));
+        if (len <= 0) {
+            return 8;
+        }
+        return len;
     }
 
     /**
