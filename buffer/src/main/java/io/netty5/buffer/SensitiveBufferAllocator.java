@@ -129,7 +129,7 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
         public Drop<Buffer> fork() {
             // ZeroingDrop should be guarded by an ArcDrop, because we can only zero after we're sure
             // there is no more structural sharing of the memory!
-            throw new UnsupportedOperationException();
+            throw new IllegalStateException(this + " cannot fork. Must be guarded by an ArcDrop.");
         }
 
         @Override
