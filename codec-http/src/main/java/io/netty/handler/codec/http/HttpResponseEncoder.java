@@ -28,6 +28,10 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
+        // common fast path
+        if (msg.getClass() == DefaultFullHttpResponse.class) {
+            return true;
+        }
         return super.acceptOutboundMessage(msg) && !(msg instanceof HttpRequest);
     }
 
