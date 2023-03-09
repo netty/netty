@@ -1236,6 +1236,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static int calculateSendBufferLength(long connAddr, int maxDatagramSize) {
         int len = Math.min(maxDatagramSize, Quiche.quiche_conn_send_quantum(connAddr));
         if (len <= 0) {
+            // If there is no room left we just return some small number to reduce the risk of packet drop
+            // while still be able to attach the listener to the write future.
+            // We use the value of 8 because such an allocation will be cheap to serve from the
+            // PooledByteBufAllocator while still serve our need.
             return 8;
         }
         return len;
