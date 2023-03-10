@@ -41,10 +41,24 @@ class PooledDrop implements Drop<Buffer> {
 
     @Override
     public Drop<Buffer> fork() {
-        return new PooledDrop(chunk, threadCache, handle, normSize);
+        throw new IllegalStateException(this + " cannot fork. Must be guarded by an ArcDrop.");
     }
 
     @Override
     public void attach(Buffer obj) {
+        baseDrop.attach(chunk.base);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder()
+                .append("PooledDrop@")
+                .append(Integer.toHexString(System.identityHashCode(this)))
+                .append('(')
+                .append(chunk)
+                .append(", ")
+                .append(baseDrop)
+                .append(')');
+        return sb.toString();
     }
 }
