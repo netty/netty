@@ -384,7 +384,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             ctx.pipeline().addBefore(ctx.name(), WebSocketClientProtocolHandshakeHandler.class.getName(),
                 new WebSocketClientProtocolHandshakeHandler(handshaker, clientConfig.handshakeTimeoutMillis()));
         }
-        if (cp.get(Utf8FrameValidator.class) == null) {
+        if (clientConfig.withUTF8Validator() && cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
             ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());
