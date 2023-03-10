@@ -29,7 +29,6 @@ import java.nio.channels.ClosedChannelException;
  */
 public final class Unix {
 
-
     static {
         // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
         // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.

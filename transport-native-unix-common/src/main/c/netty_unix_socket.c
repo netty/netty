@@ -50,6 +50,12 @@ static jmethodID datagramSocketAddrMethodId = NULL;
 static jmethodID domainDatagramSocketAddrMethodId = NULL;
 static jmethodID inetSocketAddrMethodId = NULL;
 static jclass inetSocketAddressClass = NULL;
+
+static jclass controlMessageClass = NULL;
+static jfieldID controlMessageLevelField = NULL;
+static jfieldID controlMessageTypeField = NULL;
+static jfieldID controlMessageDataField = NULL;
+
 static const unsigned char wildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static const unsigned char ipv4MappedWildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 };
 static const unsigned char ipv4MappedAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff };
@@ -715,7 +721,7 @@ static jint netty_unix_socket_sendToAddress(JNIEnv* env, jclass clazz, jint fd, 
     return _sendTo(env, fd, ipv6, (void *) (intptr_t) memoryAddress, pos, limit, address, scopeId, port, flags);
 }
 
-static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jint flags, jlong msgControlAddress, jint msgControlLen) {
+static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jint flags, jobjectArray controlMessages) {
     struct sockaddr_storage addr;
     socklen_t addrSize;
     if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
@@ -727,8 +733,8 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
     m.msg_namelen = addrSize;
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
-    m.msg_control = (void*) msgControlAddress;
-    m.msg_controllen = (socklen_t) msgControlLen;
+    //m.msg_control = (void*) msgControlAddress;
+    //m.msg_controllen = (socklen_t) msgControlLen;
     ssize_t res;
     int err;
     do {
@@ -751,7 +757,7 @@ static jint netty_unix_socket_sendToAddressDomainSocket(JNIEnv* env, jclass claz
     return _sendToDomainSocket(env, fd, (void *) (intptr_t) memoryAddress, pos, limit, socketPath);
 }
 
-static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray socketPath, jint flags, jlong msgControlAddress, jint msgControlLen) {
+static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray socketPath, jint flags, jobjectArray controlMessages) {
     struct sockaddr_un addr;
     jint socket_path_len;
 
@@ -770,8 +776,8 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
     m.msg_namelen = sizeof(struct sockaddr_un);
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
-    m.msg_control = (void*) msgControlAddress;
-    m.msg_controllen = (socklen_t) msgControlLen;
+    //m.msg_control = (void*) msgControlAddress;
+    //m.msg_controllen = (socklen_t) msgControlLen;
 
     ssize_t res;
     int err;
@@ -1161,10 +1167,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "newSocketDomainDgramFd", "()I", (void *) netty_unix_socket_newSocketDomainDgramFd },
   { "sendTo", "(IZLjava/nio/ByteBuffer;II[BIII)I", (void *) netty_unix_socket_sendTo },
   { "sendToAddress", "(IZJII[BIII)I", (void *) netty_unix_socket_sendToAddress },
-  { "sendToAddresses", "(IZJI[BIIIJI)I", (void *) netty_unix_socket_sendToAddresses },
+  { "sendToAddresses", "(IZJI[BIII[Ljava/lang/Object;)I", (void *) netty_unix_socket_sendToAddresses },
   { "sendToDomainSocket", "(ILjava/nio/ByteBuffer;II[B)I", (void *) netty_unix_socket_sendToDomainSocket },
   { "sendToAddressDomainSocket", "(IJII[B)I", (void *) netty_unix_socket_sendToAddressDomainSocket },
-  { "sendToAddressesDomainSocket", "(IJI[BIJI)I", (void *) netty_unix_socket_sendToAddressesDomainSocket },
+  { "sendToAddressesDomainSocket", "(IJI[BI[Ljava/lang/Object;)I", (void *) netty_unix_socket_sendToAddressesDomainSocket },
   // "recvFrom" has a dynamic signature
   // "recvFromAddress" has a dynamic signature
   // "recvFromDomainSocket" has a dynamic signature
@@ -1298,6 +1304,14 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, inetSocketAddressClass, "java/net/InetSocketAddress", done);
     NETTY_JNI_UTIL_GET_METHOD(env, inetSocketAddressClass, inetSocketAddrMethodId, "<init>", "(Ljava/lang/String;I)V", done);
 
+
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/ControlMessage", nettyClassName, done);
+    NETTY_JNI_UTIL_LOAD_CLASS(env, controlMessageClass, nettyClassName, done);
+
+    NETTY_JNI_UTIL_GET_FIELD(env, controlMessageClass, controlMessageLevelField, "level", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, controlMessageClass, controlMessageTypeField, "type", "I", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, controlMessageClass, controlMessageDataField, "data", "[B", done);
+
     if ((mem = malloc(1)) == NULL) {
         goto done;
     }
@@ -1322,6 +1336,7 @@ void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, datagramSocketAddressClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, domainDatagramSocketAddressClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, inetSocketAddressClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, controlMessageClass);
 
     netty_jni_util_unregister_natives(env, packagePrefix, SOCKET_CLASSNAME);
 }

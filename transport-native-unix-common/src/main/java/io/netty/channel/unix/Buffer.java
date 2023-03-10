@@ -37,8 +37,11 @@ public final class Buffer {
      * Returns a new {@link ByteBuffer} which has the same {@link ByteOrder} as the native order of the machine.
      */
     public static ByteBuffer allocateDirectWithNativeOrder(int capacity) {
-        return ByteBuffer.allocateDirect(capacity).order(
-                PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        return toNativeOrder(ByteBuffer.allocateDirect(capacity));
+    }
+
+    public static ByteBuffer toNativeOrder(ByteBuffer buffer) {
+        return buffer.order(PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
     }
 
     /**
