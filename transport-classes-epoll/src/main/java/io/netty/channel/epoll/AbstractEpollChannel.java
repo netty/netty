@@ -388,7 +388,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
 
-        boolean hasControlMessages = (controlMessages != null && controlMessages.length > 0);
+        boolean hasControlMessages = controlMessages != null && controlMessages.length > 0;
         if (hasControlMessages || data.nioBufferCount() > 1) {
             EpollEventLoop epollEventLoop = (EpollEventLoop) eventLoop();
             IovArray array = epollEventLoop.cleanIovArray();
