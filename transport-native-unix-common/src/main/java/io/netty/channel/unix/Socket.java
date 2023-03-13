@@ -255,8 +255,8 @@ public class Socket extends FileDescriptor {
     }
 
     public final int sendToAddressesDomainSocket(long memoryAddress, int length, byte[] path, int flags,
-                                                 long controlMessagesAddress,
-                                                 int controlMessagesLength, Object[] controlMessages) throws IOException {
+                                                 long controlMessagesAddress, int controlMessagesLength,
+                                                 Object[] controlMessages) throws IOException {
         int res = sendToAddressesDomainSocket(fd, memoryAddress, length, path, flags,
                 controlMessagesAddress, controlMessagesLength, controlMessages);
         if (res >= 0) {
