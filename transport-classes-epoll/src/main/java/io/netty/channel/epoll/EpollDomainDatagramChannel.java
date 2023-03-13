@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.unix.ControlMessage;
+import io.netty.channel.unix.DirectMemory;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannelConfig;
 import io.netty.channel.unix.DomainDatagramPacket;
@@ -185,7 +186,8 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
 
         final long writtenBytes;
         if (controlMessages != null || data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+            EpollEventLoop epollEventLoop = (EpollEventLoop) eventLoop();
+            IovArray array = epollEventLoop.cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -194,8 +196,15 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                 assert controlMessages == null;
                 writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
             } else {
-                writtenBytes = socket.sendToAddressesDomainSocket(array.memoryAddress(0), cnt,
-                        remoteAddress.path().getBytes(CharsetUtil.UTF_8), 0, controlMessages);
+                if (controlMessages != null) {
+                    DirectMemory controlMessagesMemory = epollEventLoop.controlMessagesMemory();
+                    writtenBytes = socket.sendToAddressesDomainSocket(array.memoryAddress(0), cnt,
+                            remoteAddress.path().getBytes(CharsetUtil.UTF_8), 0,
+                            controlMessagesMemory.memoryAddress(), controlMessagesMemory.length(), controlMessages);
+                } else  {
+                    writtenBytes = socket.sendToAddressesDomainSocket(array.memoryAddress(0), cnt,
+                            remoteAddress.path().getBytes(CharsetUtil.UTF_8), 0, 0, 0, null);
+                }
             }
         } else if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
