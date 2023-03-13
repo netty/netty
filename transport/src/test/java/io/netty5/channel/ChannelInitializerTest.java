@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Iterator;
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ResourceLock("ChannelInitializerTest") // Run tests one at a time because the server address is shared.
 public class ChannelInitializerTest {
     private static final int TIMEOUT_MILLIS = 1000;
     private static final LocalAddress SERVER_ADDRESS = new LocalAddress(ChannelInitializerTest.class);
