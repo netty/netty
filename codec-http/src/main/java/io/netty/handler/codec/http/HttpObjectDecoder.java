@@ -799,16 +799,38 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
 
+    private static int skipWhiteSpaces(byte[] hex, int start, int length) {
+        for (int i = 0; i < length; i++) {
+            if (!isWhitespace(hex[start + i])) {
+                return i;
+            }
+        }
+        return length;
+    }
+
     private static int getChunkSize(byte[] hex, int start, int length) {
-        // byte[] is produced by LineParse::parseLine that already skip ISO CTRL and Whitespace chars
+        // trim the leading bytes if white spaces, if any
+        final int skipped = skipWhiteSpaces(hex, start, length);
+        if (skipped == length) {
+            // empty case
+            throw new NumberFormatException();
+        }
+        start = start + skipped;
+        length = length - skipped;
         int result = 0;
         for (int i = 0; i < length; i++) {
             final int digit = StringUtil.decodeHexNibble(hex[start + i]);
             if (digit == -1) {
                 // uncommon path
-                if (hex[start + i] == ';') {
+                final byte b = hex[start + i];
+                if (b == ';' || isControlOrWhitespaceAsciiChar(b)) {
+                    if (i == 0) {
+                        // empty case
+                        throw new NumberFormatException();
+                    }
                     return result;
                 }
+                // non-hex char fail-fast path
                 throw new NumberFormatException();
             }
             result *= 16;
@@ -1127,4 +1149,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return ISO_CONTROL_OR_WHITESPACE[128 + value];
         }
     };
+
+    private static boolean isControlOrWhitespaceAsciiChar(byte b) {
+        return ISO_CONTROL_OR_WHITESPACE[128 + b];
+    }
 }
