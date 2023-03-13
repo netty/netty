@@ -28,6 +28,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.ControlMessage;
 import io.netty.channel.unix.DatagramSocketAddress;
+import io.netty.channel.unix.DirectMemory;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
@@ -275,7 +276,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
 
         final long writtenBytes;
         if (controlMessages != null || data.nioBufferCount() > 1) {
-            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+            KQueueEventLoop kQueueEventLoop = (KQueueEventLoop) eventLoop();
+            IovArray array = kQueueEventLoop.cleanArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -284,8 +286,16 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                 assert controlMessages == null;
                 writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
             } else {
-                writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
-                        remoteAddress.getAddress(), remoteAddress.getPort(), 0, controlMessages);
+                if (controlMessages != null) {
+                    DirectMemory controlMessagesMemory = kQueueEventLoop.controlMessagesMemory();
+                    writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
+                            remoteAddress.getAddress(), remoteAddress.getPort(), 0,
+                            controlMessagesMemory.memoryAddress(), controlMessagesMemory.length(), controlMessages);
+                } else {
+                    writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
+                            remoteAddress.getAddress(), remoteAddress.getPort(), 0, 0,0, null);
+                }
+
             }
         } else if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();

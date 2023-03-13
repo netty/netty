@@ -213,11 +213,12 @@ public class Socket extends FileDescriptor {
 
     public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port, boolean fastOpen)
             throws IOException {
-        return sendToAddresses(memoryAddress, length, addr, port, fastOpen ? msgFastopen() : 0, null);
+        return sendToAddresses(memoryAddress, length, addr, port, fastOpen ? msgFastopen() : 0, 0, 0, null);
     }
 
     public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port, int flags,
-                                     Object[] controlMessages)
+                                     long controlMessagesAddress,
+                                     int controlMessagesLength, Object[] controlMessages)
             throws IOException {
         // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
         // to be called frequently
@@ -233,7 +234,7 @@ public class Socket extends FileDescriptor {
         }
 
         int res = sendToAddresses(fd, useIpv6(addr), memoryAddress, length, address, scopeId, port, flags,
-                controlMessages);
+                controlMessagesAddress, controlMessagesLength, controlMessages);
         if (res >= 0) {
             return res;
         }
@@ -250,12 +251,14 @@ public class Socket extends FileDescriptor {
     }
 
     public final int sendToAddressesDomainSocket(long memoryAddress, int length, byte[] path) throws IOException {
-        return sendToAddressesDomainSocket(memoryAddress, length, path, 0, null);
+        return sendToAddressesDomainSocket(memoryAddress, length, path, 0, 0, 0, null);
     }
 
     public final int sendToAddressesDomainSocket(long memoryAddress, int length, byte[] path, int flags,
-                                                 ControlMessage... controlMessages) throws IOException {
-        int res = sendToAddressesDomainSocket(fd, memoryAddress, length, path, flags, controlMessages);
+                                                 long controlMessagesAddress,
+                                                 int controlMessagesLength, Object[] controlMessages) throws IOException {
+        int res = sendToAddressesDomainSocket(fd, memoryAddress, length, path, flags,
+                controlMessagesAddress, controlMessagesLength, controlMessages);
         if (res >= 0) {
             return res;
         }
@@ -663,12 +666,14 @@ public class Socket extends FileDescriptor {
 
     private static native int sendToAddresses(
             int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port,
-            int flags, Object[] controlMessages);
+            int flags, long controlMessagesAddress,
+            int controlMessagesLength, Object[] controlMessages);
 
     private static native int sendToDomainSocket(int fd, ByteBuffer buf, int pos, int limit, byte[] path);
     private static native int sendToAddressDomainSocket(int fd, long memoryAddress, int pos, int limit, byte[] path);
     private static native int sendToAddressesDomainSocket(int fd, long memoryAddress, int length, byte[] path,
-                                                          int flags, Object[] controlMessages);
+                                                          int flags, long controlMessagesAddress,
+                                                          int controlMessagesLength, Object[] controlMessages);
 
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;

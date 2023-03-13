@@ -35,6 +35,7 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.ControlMessage;
+import io.netty.channel.unix.DirectMemory;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
@@ -387,8 +388,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
 
-        if ((controlMessages != null && controlMessages.length > 0) || data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+        boolean hasControlMessages = (controlMessages != null && controlMessages.length > 0);
+        if (hasControlMessages || data.nioBufferCount() > 1) {
+            EpollEventLoop epollEventLoop = (EpollEventLoop) eventLoop();
+            IovArray array = epollEventLoop.cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -397,8 +400,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 assert controlMessages == null;
                 return socket.writevAddresses(array.memoryAddress(0), cnt);
             }
+            if (hasControlMessages) {
+                DirectMemory controlMessagesMemory = epollEventLoop.controlMessagesMemory();
+                return socket.sendToAddresses(array.memoryAddress(0), cnt,
+                        remoteAddress.getAddress(), remoteAddress.getPort(), 0, controlMessagesMemory.memoryAddress(),
+                        controlMessagesMemory.length(), controlMessages);
+            }
             return socket.sendToAddresses(array.memoryAddress(0), cnt,
-                    remoteAddress.getAddress(), remoteAddress.getPort(), 0, controlMessages);
+                    remoteAddress.getAddress(), remoteAddress.getPort(), 0, 0, 0, null);
         }
 
         if (data.hasMemoryAddress()) {

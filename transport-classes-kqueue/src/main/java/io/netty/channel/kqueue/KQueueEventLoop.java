@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
+import io.netty.channel.unix.DirectMemory;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
@@ -73,6 +74,9 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
+    private DirectMemory controlMessagesMemory;
+
+
     KQueueEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                     SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
                     EventLoopTaskQueueFactory taskQueueFactory, EventLoopTaskQueueFactory tailTaskQueueFactory) {
@@ -101,6 +105,13 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             return newTaskQueue0(DEFAULT_MAX_PENDING_TASKS);
         }
         return queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
+    }
+
+    DirectMemory controlMessagesMemory() {
+        if (controlMessagesMemory == null) {
+            controlMessagesMemory = new DirectMemory(64 * 1024);
+        }
+        return controlMessagesMemory;
     }
 
     void add(AbstractKQueueChannel ch) {
@@ -377,6 +388,9 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             // Cleanup all native memory!
             changeList.free();
             eventList.free();
+            if (controlMessagesMemory != null) {
+                controlMessagesMemory.free();+
+            }
         }
     }
 

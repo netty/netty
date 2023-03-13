@@ -761,7 +761,8 @@ void netty_add_control_messages(JNIEnv* env, struct msghdr* m, jobjectArray cont
     }
 }
 
-static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jint flags, jobjectArray controlMessages) {
+static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jint flags,
+        jlong controlMessagesAddress, jint controlMessagesLen, jobjectArray controlMessages) {
     struct sockaddr_storage addr;
     socklen_t addrSize;
     if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
@@ -775,8 +776,10 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
 
     int controllen = netty_calculate_controllen(env, controlMessages);
     if (controllen != -1) {
-        // TODO: While this works I think we should replace this by some pre-allocated memory.
-        m.msg_control = malloc(controllen);
+        if (controllen > controlMessagesLen) {
+            return -EINVAL;
+        }
+        m.msg_control = (void *) controlMessagesAddress;
         m.msg_controllen = controllen;
         netty_add_control_messages(env, &m, controlMessages);
     }
@@ -787,8 +790,6 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
        res = sendmsg(fd, &m, flags);
        // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
-
-    free(m.msg_control);
 
     if (res < 0) {
         return -err;
@@ -805,7 +806,8 @@ static jint netty_unix_socket_sendToAddressDomainSocket(JNIEnv* env, jclass claz
     return _sendToDomainSocket(env, fd, (void *) (intptr_t) memoryAddress, pos, limit, socketPath);
 }
 
-static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray socketPath, jint flags, jobjectArray controlMessages) {
+static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass clazz, jint fd, jlong memoryAddress, jint length, jbyteArray socketPath, jint flags,
+        jlong controlMessagesAddress, jint controlMessagesLen, jobjectArray controlMessages) {
     struct sockaddr_un addr;
     jint socket_path_len;
 
@@ -827,8 +829,10 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
 
     int controllen = netty_calculate_controllen(env, controlMessages);
     if (controllen != -1) {
-        // TODO: While this works I think we should replace this by some pre-allocated memory.
-        m.msg_control = malloc(controllen);
+        if (controllen > controlMessagesLen) {
+            return -EINVAL;
+        }
+        m.msg_control = (void *) controlMessagesAddress;
         m.msg_controllen = controllen;
         netty_add_control_messages(env, &m, controlMessages);
     }
@@ -839,8 +843,6 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
         res = sendmsg(fd, &m, flags);
         // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
-
-    free(m.msg_control);
 
     (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
@@ -1223,10 +1225,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "newSocketDomainDgramFd", "()I", (void *) netty_unix_socket_newSocketDomainDgramFd },
   { "sendTo", "(IZLjava/nio/ByteBuffer;II[BIII)I", (void *) netty_unix_socket_sendTo },
   { "sendToAddress", "(IZJII[BIII)I", (void *) netty_unix_socket_sendToAddress },
-  { "sendToAddresses", "(IZJI[BIII[Ljava/lang/Object;)I", (void *) netty_unix_socket_sendToAddresses },
+  { "sendToAddresses", "(IZJI[BIIIJI[Ljava/lang/Object;)I", (void *) netty_unix_socket_sendToAddresses },
   { "sendToDomainSocket", "(ILjava/nio/ByteBuffer;II[B)I", (void *) netty_unix_socket_sendToDomainSocket },
   { "sendToAddressDomainSocket", "(IJII[B)I", (void *) netty_unix_socket_sendToAddressDomainSocket },
-  { "sendToAddressesDomainSocket", "(IJI[BI[Ljava/lang/Object;)I", (void *) netty_unix_socket_sendToAddressesDomainSocket },
+  { "sendToAddressesDomainSocket", "(IJI[BIJI[Ljava/lang/Object;)I", (void *) netty_unix_socket_sendToAddressesDomainSocket },
   // "recvFrom" has a dynamic signature
   // "recvFromAddress" has a dynamic signature
   // "recvFromDomainSocket" has a dynamic signature

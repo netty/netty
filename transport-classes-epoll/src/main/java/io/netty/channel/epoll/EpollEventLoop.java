@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
+import io.netty.channel.unix.DirectMemory;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
@@ -66,6 +67,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
     // These are initialized on first use
     private IovArray iovArray;
     private NativeDatagramPacketArray datagramPacketArray;
+
+    private DirectMemory controlMessagesMemory;
 
     private final SelectStrategy selectStrategy;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
@@ -182,6 +185,13 @@ class EpollEventLoop extends SingleThreadEventLoop {
             datagramPacketArray.clear();
         }
         return datagramPacketArray;
+    }
+
+    DirectMemory controlMessagesMemory() {
+        if (controlMessagesMemory == null) {
+            controlMessagesMemory = new DirectMemory(64 * 1024);
+        }
+        return controlMessagesMemory;
     }
 
     @Override
@@ -567,6 +577,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
             if (datagramPacketArray != null) {
                 datagramPacketArray.release();
                 datagramPacketArray = null;
+            }
+            if (controlMessagesMemory != null) {
+                controlMessagesMemory.free();
             }
             events.free();
         }
