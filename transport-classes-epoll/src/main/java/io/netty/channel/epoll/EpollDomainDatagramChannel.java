@@ -22,6 +22,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.unix.ControlMessage;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannelConfig;
 import io.netty.channel.unix.DomainDatagramPacket;
@@ -30,6 +31,7 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.channel.unix.UnixDatagramPacket;
 import io.netty.util.CharsetUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.StringUtil;
@@ -38,6 +40,7 @@ import io.netty.util.internal.UnstableApi;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDomainDgram;
 
@@ -157,12 +160,19 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         DomainSocketAddress remoteAddress;
+        ControlMessage[] controlMessages = null;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<ByteBuf, DomainSocketAddress> envelope =
                     (AddressedEnvelope<ByteBuf, DomainSocketAddress>) msg;
             data = envelope.content();
             remoteAddress = envelope.recipient();
+            if (msg instanceof UnixDatagramPacket) {
+                List<ControlMessage> messages = ((UnixDatagramPacket) msg).controlMessages();
+                if (!messages.isEmpty()) {
+                    controlMessages = messages.toArray(new ControlMessage[0]);
+                }
+            }
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -174,24 +184,25 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
         }
 
         final long writtenBytes;
-        if (data.hasMemoryAddress()) {
-            long memoryAddress = data.memoryAddress();
-            if (remoteAddress == null) {
-                writtenBytes = socket.sendAddress(memoryAddress, data.readerIndex(), data.writerIndex());
-            } else {
-                writtenBytes = socket.sendToAddressDomainSocket(memoryAddress, data.readerIndex(), data.writerIndex(),
-                        remoteAddress.path().getBytes(CharsetUtil.UTF_8));
-            }
-        } else if (data.nioBufferCount() > 1) {
+        if (controlMessages != null || data.nioBufferCount() > 1) {
             IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
 
             if (remoteAddress == null) {
+                assert controlMessages == null;
                 writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
             } else {
                 writtenBytes = socket.sendToAddressesDomainSocket(array.memoryAddress(0), cnt,
+                        remoteAddress.path().getBytes(CharsetUtil.UTF_8), 0, controlMessages);
+            }
+        } else if (data.hasMemoryAddress()) {
+            long memoryAddress = data.memoryAddress();
+            if (remoteAddress == null) {
+                writtenBytes = socket.sendAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+            } else {
+                writtenBytes = socket.sendToAddressDomainSocket(memoryAddress, data.readerIndex(), data.writerIndex(),
                         remoteAddress.path().getBytes(CharsetUtil.UTF_8));
             }
         } else {

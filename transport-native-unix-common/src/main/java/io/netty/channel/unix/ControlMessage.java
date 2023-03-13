@@ -15,23 +15,21 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public final class ControlMessage {
 
-    /* Set GSO segmentation size */
-    private static final int UDP_SEGMENT = 103;
-    private static final int SOL_UDP = 17;
-
     private final int level;
     private final int type;
     private final byte[] data;
 
-    private ControlMessage(int level, int type, byte[] data) {
+    public ControlMessage(int level, int type, byte[] data) {
         this.level = level;
         this.type = type;
-        this.data = data;
+        this.data = ObjectUtil.checkNotNull(data, "data");
     }
 
     public int length() {
@@ -75,11 +73,5 @@ public final class ControlMessage {
         result = 31 * result + type;
         result = 31 * result + Arrays.hashCode(data);
         return result;
-    }
-
-    public static ControlMessage udpSegment(int segmentSize) {
-        ByteBuffer buffer = Buffer.toNativeOrder(ByteBuffer.wrap(new byte[4]));
-        buffer.putInt(segmentSize).flip();
-        return new ControlMessage(SOL_UDP, UDP_SEGMENT, buffer.array());
     }
 }

@@ -34,6 +34,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.unix.ControlMessage;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
@@ -381,28 +382,31 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      * Write bytes to the socket, with or without a remote address.
      * Used for datagram and TCP client fast open writes.
      */
-    final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
+    final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen,
+                                  ControlMessage... controlMessages)
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
-        if (data.hasMemoryAddress()) {
-            long memoryAddress = data.memoryAddress();
-            if (remoteAddress == null) {
-                return socket.sendAddress(memoryAddress, data.readerIndex(), data.writerIndex());
-            }
-            return socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                    remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
-        }
 
-        if (data.nioBufferCount() > 1) {
+        if ((controlMessages != null && controlMessages.length > 0) || data.nioBufferCount() > 1) {
             IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
 
             if (remoteAddress == null) {
+                assert controlMessages == null;
                 return socket.writevAddresses(array.memoryAddress(0), cnt);
             }
             return socket.sendToAddresses(array.memoryAddress(0), cnt,
+                    remoteAddress.getAddress(), remoteAddress.getPort(), 0, controlMessages);
+        }
+
+        if (data.hasMemoryAddress()) {
+            long memoryAddress = data.memoryAddress();
+            if (remoteAddress == null) {
+                return socket.sendAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+            }
+            return socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
                     remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
         }
 

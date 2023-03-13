@@ -31,6 +31,8 @@ int netty_unix_socket_ipAddressLength(const struct sockaddr_storage* addr);
 int netty_unix_socket_getOption0(jint fd, int level, int optname, void* optval, socklen_t optlen);
 void netty_unix_socket_getOptionHandleError(JNIEnv* env, int err);
 
+int netty_calculate_controllen(JNIEnv* env, jobjectArray controlMessages);
+void netty_add_control_messages(JNIEnv* env, struct msghdr* m, jobjectArray controlMessages);
 
 // JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
 jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);

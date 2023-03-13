@@ -26,6 +26,8 @@ import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.unix.ControlMessage;
+import io.netty.channel.unix.UnixDatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastInetTest;
 import org.junit.jupiter.api.Test;
@@ -170,6 +172,80 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 buffer = Unpooled.directBuffer(bufferCapacity).writeZero(bufferCapacity);
             }
             cc.writeAndFlush(new io.netty.channel.unix.SegmentedDatagramPacket(buffer, segmentSize, addr)).sync();
+
+            if (!latch.await(10, TimeUnit.SECONDS)) {
+                Throwable error = errorRef.get();
+                if (error != null) {
+                    throw error;
+                }
+                fail();
+            }
+        } finally {
+            if (cc != null) {
+                cc.close().sync();
+            }
+            if (sc != null) {
+                sc.close().sync();
+            }
+        }
+    }
+    @Test
+    public void testUnixDatagramPacket(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testUnixDatagramPacket(bootstrap, bootstrap2, false);
+            }
+        });
+    }
+
+    private void testUnixDatagramPacket(Bootstrap sb, Bootstrap cb, boolean composite)
+            throws Throwable {
+        if (!(cb.group() instanceof EpollEventLoopGroup)) {
+            // Only supported for the native epoll transport.
+            return;
+        }
+        assumeTrue(EpollDatagramChannel.isSegmentedDatagramPacketSupported());
+        Channel sc = null;
+        Channel cc = null;
+
+        try {
+            cb.handler(new SimpleChannelInboundHandler<Object>() {
+                @Override
+                public void channelRead0(ChannelHandlerContext ctx, Object msgs) {
+                    // Nothing will be sent.
+                }
+            });
+
+            cc = cb.bind(newSocketAddress()).sync().channel();
+
+            final int numBuffers = 16;
+            final int segmentSize = 512;
+            int bufferCapacity = numBuffers * segmentSize;
+            final CountDownLatch latch = new CountDownLatch(numBuffers);
+            AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
+            sc = sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+                @Override
+                public void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
+                    if (packet.content().readableBytes() == segmentSize) {
+                        latch.countDown();
+                    }
+                }
+            }).bind(newSocketAddress()).sync().channel();
+
+            InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
+            final ByteBuf buffer;
+            if (composite) {
+                CompositeByteBuf compositeBuffer = Unpooled.compositeBuffer();
+                for (int i = 0; i < numBuffers; i++) {
+                    compositeBuffer.addComponent(true,
+                            Unpooled.directBuffer(segmentSize).writeZero(segmentSize));
+                }
+                buffer = compositeBuffer;
+            } else {
+                buffer = Unpooled.directBuffer(bufferCapacity).writeZero(bufferCapacity);
+            }
+            cc.writeAndFlush(new UnixDatagramPacket(buffer, addr, EpollControlMessages.udpSegment(segmentSize))).sync();
 
             if (!latch.await(10, TimeUnit.SECONDS)) {
                 Throwable error = errorRef.get();

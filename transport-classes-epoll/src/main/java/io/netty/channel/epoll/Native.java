@@ -31,16 +31,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollerr;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollet;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingRecvmmsg;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.tcpFastopenMode;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.tcpMd5SigMaxKeyLen;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.*;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
 
@@ -136,6 +127,9 @@ public final class Native {
             IS_SUPPORTING_TCP_FASTOPEN_SERVER;
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
+
+    static final int SOL_UDP = solUdp();
+    static final int UDP_SEGMENT = udpSegment();
 
     public static FileDescriptor newEventFd() {
         return new FileDescriptor(eventFd());

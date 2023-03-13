@@ -28,9 +28,11 @@ import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.unix.ControlMessage;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.channel.unix.UnixDatagramPacket;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
@@ -46,6 +48,7 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.List;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
 
@@ -399,12 +402,19 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         final InetSocketAddress remoteAddress;
+        ControlMessage[] controlMessages = null;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
                     (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
             data = envelope.content();
             remoteAddress = envelope.recipient();
+            if (msg instanceof UnixDatagramPacket) {
+                List<ControlMessage> messages = ((UnixDatagramPacket) msg).controlMessages();
+                if (!messages.isEmpty()) {
+                    controlMessages = messages.toArray(new ControlMessage[0]);
+                }
+            }
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -415,7 +425,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
-        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        return doWriteOrSendBytes(data, remoteAddress, false, controlMessages) > 0;
     }
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {

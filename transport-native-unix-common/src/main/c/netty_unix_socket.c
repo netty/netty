@@ -721,7 +721,7 @@ static jint netty_unix_socket_sendToAddress(JNIEnv* env, jclass clazz, jint fd, 
     return _sendTo(env, fd, ipv6, (void *) (intptr_t) memoryAddress, pos, limit, address, scopeId, port, flags);
 }
 
-static void netty_add_control_messages(JNIEnv* env, struct msghdr* m, jobjectArray controlMessages) {
+int netty_calculate_controllen(JNIEnv* env, jobjectArray controlMessages) {
     if (controlMessages != NULL) {
         jsize len = (*env)->GetArrayLength(env, controlMessages);
         if (len != 0) {
@@ -732,13 +732,16 @@ static void netty_add_control_messages(JNIEnv* env, struct msghdr* m, jobjectArr
                 jbyteArray data = (jbyteArray) (*env)->GetObjectField(env, cm, controlMessageDataField);
                 space += (*env)->GetArrayLength(env, data);
             }
+            return CMSG_SPACE(space);
+        }
+    }
+    return -1;
+}
 
-            // TODO: Better to malloc this one ?
-            char buf[CMSG_SPACE(space)];
-
-            m->msg_control = buf;
-            m->msg_controllen = sizeof(buf);
-
+void netty_add_control_messages(JNIEnv* env, struct msghdr* m, jobjectArray controlMessages) {
+    if (controlMessages != NULL) {
+        jsize len = (*env)->GetArrayLength(env, controlMessages);
+        if (len != 0) {
             struct cmsghdr *cmsg = CMSG_FIRSTHDR(m);
 
             for (int i = 0; i < len && cmsg != NULL; i++) {
@@ -748,7 +751,6 @@ static void netty_add_control_messages(JNIEnv* env, struct msghdr* m, jobjectArr
                 jbyteArray data = (jbyteArray) (*env)->GetObjectField(env, cm, controlMessageDataField);
                 int dataLen = (*env)->GetArrayLength(env, data);
                 cmsg->cmsg_len = CMSG_LEN(dataLen);
-
                 jbyte* b = (*env)->GetByteArrayElements(env, data, NULL);
                 memcpy(CMSG_DATA(cmsg), b, dataLen);
                 (*env)->ReleaseByteArrayElements(env, data, b, JNI_ABORT);
@@ -765,14 +767,19 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
     if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr, &addrSize) == -1) {
         return -1;
     }
-
     struct msghdr m = { 0 };
     m.msg_name = (void*) &addr;
     m.msg_namelen = addrSize;
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
 
-    netty_add_control_messages(env, &m, controlMessages);
+    int controllen = netty_calculate_controllen(env, controlMessages);
+    if (controllen != -1) {
+        // TODO: While this works I think we should replace this by some pre-allocated memory.
+        m.msg_control = malloc(controllen);
+        m.msg_controllen = controllen;
+        netty_add_control_messages(env, &m, controlMessages);
+    }
 
     ssize_t res;
     int err;
@@ -780,6 +787,8 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
        res = sendmsg(fd, &m, flags);
        // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
+
+    free(m.msg_control);
 
     if (res < 0) {
         return -err;
@@ -816,7 +825,13 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
 
-    netty_add_control_messages(env, &m, controlMessages);
+    int controllen = netty_calculate_controllen(env, controlMessages);
+    if (controllen != -1) {
+        // TODO: While this works I think we should replace this by some pre-allocated memory.
+        m.msg_control = malloc(controllen);
+        m.msg_controllen = controllen;
+        netty_add_control_messages(env, &m, controlMessages);
+    }
 
     ssize_t res;
     int err;
@@ -824,6 +839,8 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
         res = sendmsg(fd, &m, flags);
         // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
+
+    free(m.msg_control);
 
     (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 

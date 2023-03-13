@@ -635,6 +635,14 @@ static jint netty_epoll_native_offsetofEpollData(JNIEnv* env, jclass clazz) {
     return offsetof(struct epoll_event, data);
 }
 
+static jint netty_epoll_native_solUdp(JNIEnv* env, jclass clazz) {
+    return SOL_UDP;
+}
+
+static jint netty_epoll_native_udpSegment(JNIEnv* env, jclass clazz) {
+    return UDP_SEGMENT;
+}
+
 static jint netty_epoll_native_splice0(JNIEnv* env, jclass clazz, jint fd, jlong offIn, jint fdOut, jlong offOut, jlong len) {
     ssize_t res;
     int err;
@@ -684,7 +692,9 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "isSupportingSendmmsg", "()Z", (void *) netty_epoll_native_isSupportingSendmmsg },
   { "isSupportingRecvmmsg", "()Z", (void *) netty_epoll_native_isSupportingRecvmmsg },
   { "tcpFastopenMode", "()I", (void *) netty_epoll_native_tcpFastopenMode },
-  { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion }
+  { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion },
+  { "solUdp", "()I", (void *) netty_epoll_native_solUdp },
+  { "udpSegment", "()I", (void *) netty_epoll_native_udpSegment},
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
