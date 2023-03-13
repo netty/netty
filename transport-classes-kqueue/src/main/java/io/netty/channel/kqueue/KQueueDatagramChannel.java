@@ -26,10 +26,12 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.unix.ControlMessage;
 import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.channel.unix.UnixDatagramPacket;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -43,6 +45,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.List;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
 
@@ -247,12 +250,19 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     protected boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         InetSocketAddress remoteAddress;
+        ControlMessage[] controlMessages = null;
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
                     (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
             data = envelope.content();
             remoteAddress = envelope.recipient();
+            if (msg instanceof UnixDatagramPacket) {
+                List<ControlMessage> messages = ((UnixDatagramPacket) msg).controlMessages();
+                if (!messages.isEmpty()) {
+                   controlMessages = messages.toArray(new ControlMessage[0]);
+                }
+            }
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -264,7 +274,20 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         }
 
         final long writtenBytes;
-        if (data.hasMemoryAddress()) {
+        if (controlMessages != null || data.nioBufferCount() > 1) {
+            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+            array.add(data, data.readerIndex(), data.readableBytes());
+            int cnt = array.count();
+            assert cnt != 0;
+
+            if (remoteAddress == null) {
+                assert controlMessages == null;
+                writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
+            } else {
+                writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
+                        remoteAddress.getAddress(), remoteAddress.getPort(), 0, controlMessages);
+            }
+        } else if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
             if (remoteAddress == null) {
                 writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());

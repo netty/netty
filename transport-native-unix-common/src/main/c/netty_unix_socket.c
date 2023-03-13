@@ -721,6 +721,44 @@ static jint netty_unix_socket_sendToAddress(JNIEnv* env, jclass clazz, jint fd, 
     return _sendTo(env, fd, ipv6, (void *) (intptr_t) memoryAddress, pos, limit, address, scopeId, port, flags);
 }
 
+static void netty_add_control_messages(JNIEnv* env, struct msghdr* m, jobjectArray controlMessages) {
+    if (controlMessages != NULL) {
+        jsize len = (*env)->GetArrayLength(env, controlMessages);
+        if (len != 0) {
+            int space = 0;
+            // Loop over all to be able to correct calculate the space needed.
+            for (int i = 0; i < len; i++) {
+                jobject cm = (*env)->GetObjectArrayElement(env, controlMessages, i);
+                jbyteArray data = (jbyteArray) (*env)->GetObjectField(env, cm, controlMessageDataField);
+                space += (*env)->GetArrayLength(env, data);
+            }
+
+            // TODO: Better to malloc this one ?
+            char buf[CMSG_SPACE(space)];
+
+            m->msg_control = buf;
+            m->msg_controllen = sizeof(buf);
+
+            struct cmsghdr *cmsg = CMSG_FIRSTHDR(m);
+
+            for (int i = 0; i < len && cmsg != NULL; i++) {
+                jobject cm = (*env)->GetObjectArrayElement(env, controlMessages, i);
+                cmsg->cmsg_level = (*env)->GetIntField(env, cm, controlMessageLevelField);
+                cmsg->cmsg_type = (*env)->GetIntField(env, cm, controlMessageTypeField);
+                jbyteArray data = (jbyteArray) (*env)->GetObjectField(env, cm, controlMessageDataField);
+                int dataLen = (*env)->GetArrayLength(env, data);
+                cmsg->cmsg_len = CMSG_LEN(dataLen);
+
+                jbyte* b = (*env)->GetByteArrayElements(env, data, NULL);
+                memcpy(CMSG_DATA(cmsg), b, dataLen);
+                (*env)->ReleaseByteArrayElements(env, data, b, JNI_ABORT);
+
+                cmsg = CMSG_NXTHDR(m, cmsg);
+            }
+        }
+    }
+}
+
 static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jlong memoryAddress, jint length, jbyteArray address, jint scopeId, jint port, jint flags, jobjectArray controlMessages) {
     struct sockaddr_storage addr;
     socklen_t addrSize;
@@ -733,8 +771,9 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
     m.msg_namelen = addrSize;
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
-    //m.msg_control = (void*) msgControlAddress;
-    //m.msg_controllen = (socklen_t) msgControlLen;
+
+    netty_add_control_messages(env, &m, controlMessages);
+
     ssize_t res;
     int err;
     do {
@@ -776,8 +815,8 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
     m.msg_namelen = sizeof(struct sockaddr_un);
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
     m.msg_iovlen = length;
-    //m.msg_control = (void*) msgControlAddress;
-    //m.msg_controllen = (socklen_t) msgControlLen;
+
+    netty_add_control_messages(env, &m, controlMessages);
 
     ssize_t res;
     int err;
