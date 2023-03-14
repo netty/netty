@@ -815,8 +815,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // empty case
             throw new NumberFormatException();
         }
-        start = start + skipped;
-        length = length - skipped;
+        start += skipped;
+        length -= skipped;
         int result = 0;
         for (int i = 0; i < length; i++) {
             final int digit = StringUtil.decodeHexNibble(hex[start + i]);
