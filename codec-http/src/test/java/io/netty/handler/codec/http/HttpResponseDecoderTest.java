@@ -255,7 +255,7 @@ public class HttpResponseDecoderTest {
         assertFalse(lastContent.content().isReadable());
         lastContent.release();
 
-        ch.finish();
+        assertFalse(ch.finish());
         assertNull(ch.readInbound());
     }
 
