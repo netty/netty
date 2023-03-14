@@ -799,6 +799,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
 
+    /**
+     * It skips any whitespace char and return the number of skipped bytes.
+     */
     private static int skipWhiteSpaces(byte[] hex, int start, int length) {
         for (int i = 0; i < length; i++) {
             if (!isWhitespace(hex[start + i])) {
