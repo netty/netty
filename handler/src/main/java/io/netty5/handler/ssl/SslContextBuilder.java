@@ -309,7 +309,11 @@ public final class SslContextBuilder {
      * {@link #trustManager(TrustManagerFactory trustManagerFactory)} also apply here.
      */
     public SslContextBuilder trustManager(TrustManager trustManager) {
-        trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        if (trustManager != null) {
+            this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        } else {
+            this.trustManagerFactory = null;
+        }
         trustCertCollection = null;
         return this;
     }
