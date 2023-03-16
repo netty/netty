@@ -58,9 +58,9 @@ run curl https://sh.rustup.rs -sSf | sh -s -- -y
 RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
 WORKDIR /opt
-RUN curl https://downloads.apache.org/maven/maven-3/3.8.7/binaries/apache-maven-3.8.7-bin.tar.gz | tar -xz
-RUN echo 'PATH=/opt/apache-maven-3.8.7/bin/:$PATH' >> ~/.bashrc
+RUN curl https://dlcdn.apache.org/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz | tar -xz
+RUN echo 'PATH=/opt/apache-maven-3.9.0/bin/:$PATH' >> ~/.bashrc
 
 # Prepare our own build
-ENV PATH /opt/apache-maven-3.8.7/bin/:$PATH
+ENV PATH /opt/apache-maven-3.9.0/bin/:$PATH
 ENV JAVA_HOME /root/.sdkman/candidates/java/current

@@ -55,8 +55,8 @@ RUN echo '[target.aarch64-unknown-linux-gnu]' >> /root/.cargo/config
 RUN echo 'linker = "aarch64-none-linux-gnu-gcc"' >> /root/.cargo/config
 
 WORKDIR /opt
-RUN curl https://downloads.apache.org/maven/maven-3/3.8.7/binaries/apache-maven-3.8.7-bin.tar.gz | tar -xz
-RUN echo 'PATH=/opt/apache-maven-3.8.7/bin/:$PATH' >> ~/.bashrc
+RUN curl https://dlcdn.apache.org/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz | tar -xz
+RUN echo 'PATH=/opt/apache-maven-3.9.0/bin/:$PATH' >> ~/.bashrc
 
 # Prepare our own build
-ENV PATH /opt/apache-maven-3.8.7/bin/:$PATH
+ENV PATH /opt/apache-maven-3.9.0/bin/:$PATH
