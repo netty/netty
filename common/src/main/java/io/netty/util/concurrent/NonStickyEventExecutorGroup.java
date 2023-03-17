@@ -29,6 +29,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * {@link EventExecutorGroup} which will preserve {@link Runnable} execution order but makes no guarantees about what
@@ -223,6 +224,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         private final AtomicInteger state = new AtomicInteger();
         private final int maxTaskExecutePerRun;
 
+        private final AtomicReference<Thread> executingThread = new AtomicReference<Thread>();
+
         NonStickyOrderedEventExecutor(EventExecutor executor, int maxTaskExecutePerRun) {
             super(executor);
             this.executor = executor;
@@ -234,6 +237,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             if (!state.compareAndSet(SUBMITTED, RUNNING)) {
                 return;
             }
+            Thread current = Thread.currentThread();
+            executingThread.set(current);
             for (;;) {
                 int i = 0;
                 try {
@@ -248,6 +253,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                     if (i == maxTaskExecutePerRun) {
                         try {
                             state.set(SUBMITTED);
+                            // Only set executingThread to null if no other thread did update it yet.
+                            executingThread.compareAndSet(current, null);
                             executor.execute(this);
                             return; // done
                         } catch (Throwable ignore) {
@@ -263,7 +270,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                         // If it is empty, then we can return from this method.
                         // Otherwise, it means the producer thread has called execute(Runnable)
                         // and enqueued a task in between the tasks.poll() above and the state.set(NONE) here.
-                        // There are two possible scenarios when this happen
+                        // There are two possible scenarios when this happens
                         //
                         // 1. The producer thread sees state == NONE, hence the compareAndSet(NONE, SUBMITTED)
                         //    is successfully setting the state to SUBMITTED. This mean the producer
@@ -275,6 +282,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                         // The above cases can be distinguished by performing a
                         // compareAndSet(NONE, RUNNING). If it returns "false", it is case 1; otherwise it is case 2.
                         if (tasks.isEmpty() || !state.compareAndSet(NONE, RUNNING)) {
+                            // Only set executingThread to null if no other thread did update it yet.
+                            executingThread.compareAndSet(current, null);
                             return; // done
                         }
                     }
@@ -284,12 +293,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
 
         @Override
         public boolean inEventLoop(Thread thread) {
-            return false;
-        }
-
-        @Override
-        public boolean inEventLoop() {
-            return false;
+            return executingThread.get() == thread;
         }
 
         @Override

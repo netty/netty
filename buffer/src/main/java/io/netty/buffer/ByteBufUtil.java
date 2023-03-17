@@ -19,6 +19,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
@@ -1632,11 +1633,11 @@ public final class ByteBufUtil {
             return buf;
         }
 
-        private final Handle<ThreadLocalUnsafeDirectByteBuf> handle;
+        private final EnhancedHandle<ThreadLocalUnsafeDirectByteBuf> handle;
 
         private ThreadLocalUnsafeDirectByteBuf(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
-            this.handle = handle;
+            this.handle = (EnhancedHandle<ThreadLocalUnsafeDirectByteBuf>) handle;
         }
 
         @Override
@@ -1645,7 +1646,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                handle.recycle(this);
+                handle.unguardedRecycle(this);
             }
         }
     }
@@ -1666,11 +1667,11 @@ public final class ByteBufUtil {
             return buf;
         }
 
-        private final Handle<ThreadLocalDirectByteBuf> handle;
+        private final EnhancedHandle<ThreadLocalDirectByteBuf> handle;
 
         private ThreadLocalDirectByteBuf(Handle<ThreadLocalDirectByteBuf> handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
-            this.handle = handle;
+            this.handle = (EnhancedHandle<ThreadLocalDirectByteBuf>) handle;
         }
 
         @Override
@@ -1679,7 +1680,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                handle.recycle(this);
+                handle.unguardedRecycle(this);
             }
         }
     }

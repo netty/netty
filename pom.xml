@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.90.Final-SNAPSHOT</version>
+  <version>4.1.91.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -598,7 +598,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.56.Final</tcnative.version>
+    <tcnative.version>2.0.59.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -617,7 +617,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
-    <brotli4j.version>1.9.0</brotli4j.version>
+    <brotli4j.version>1.11.0</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>

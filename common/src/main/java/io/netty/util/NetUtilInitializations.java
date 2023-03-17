@@ -79,6 +79,12 @@ final class NetUtilInitializations {
             }
         } catch (SocketException e) {
             logger.warn("Failed to retrieve the list of available network interfaces", e);
+        } catch (NullPointerException e) {
+            if (!PlatformDependent.isAndroid()) {
+                throw e;
+            }
+            // Might happen on earlier version of Android.
+            // See https://developer.android.com/reference/java/net/NetworkInterface#getNetworkInterfaces()
         }
         return Collections.unmodifiableList(networkInterfaces);
     }

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
@@ -243,7 +244,16 @@ public final class ChannelOutboundBuffer {
         ChannelPromise p = e.promise;
         long progress = e.progress + amount;
         e.progress = progress;
-        if (p instanceof ChannelProgressivePromise) {
+        assert p != null;
+        final Class<?> promiseClass = p.getClass();
+        // fast-path to save O(n) ChannelProgressivePromise's type check on OpenJDK
+        if (promiseClass == VoidChannelPromise.class) {
+            return;
+        }
+        // this is going to save from type pollution due to https://bugs.openjdk.org/browse/JDK-8180450
+        if (p instanceof DefaultChannelProgressivePromise) {
+            ((DefaultChannelProgressivePromise) p).tryProgress(progress, e.total);
+        } else if (p instanceof ChannelProgressivePromise) {
             ((ChannelProgressivePromise) p).tryProgress(progress, e.total);
         }
     }
@@ -274,7 +284,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // recycle the entry
-        e.recycle();
+        e.unguardedRecycle();
 
         return true;
     }
@@ -310,7 +320,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // recycle the entry
-        e.recycle();
+        e.unguardedRecycle();
 
         return true;
     }
@@ -699,7 +709,7 @@ public final class ChannelOutboundBuffer {
                     ReferenceCountUtil.safeRelease(e.msg);
                     safeFail(e.promise, cause);
                 }
-                e = e.recycleAndGetNext();
+                e = e.unguardedRecycleAndGetNext();
             }
         } finally {
             inFail = false;
@@ -805,7 +815,7 @@ public final class ChannelOutboundBuffer {
             }
         });
 
-        private final Handle<Entry> handle;
+        private final EnhancedHandle<Entry> handle;
         Entry next;
         Object msg;
         ByteBuffer[] bufs;
@@ -818,7 +828,7 @@ public final class ChannelOutboundBuffer {
         boolean cancelled;
 
         private Entry(Handle<Entry> handle) {
-            this.handle = handle;
+            this.handle = (EnhancedHandle<Entry>) handle;
         }
 
         static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
@@ -849,7 +859,7 @@ public final class ChannelOutboundBuffer {
             return 0;
         }
 
-        void recycle() {
+        void unguardedRecycle() {
             next = null;
             bufs = null;
             buf = null;
@@ -860,12 +870,12 @@ public final class ChannelOutboundBuffer {
             pendingSize = 0;
             count = -1;
             cancelled = false;
-            handle.recycle(this);
+            handle.unguardedRecycle(this);
         }
 
-        Entry recycleAndGetNext() {
+        Entry unguardedRecycleAndGetNext() {
             Entry next = this.next;
-            recycle();
+            unguardedRecycle();
             return next;
         }
     }
