@@ -21,6 +21,7 @@ import io.netty5.channel.IoHandle;
 import io.netty5.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.concurrent.Ticker;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
@@ -30,24 +31,8 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Objects.requireNonNull;
 
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
-    /*
-     * When time is not {@link #timeFrozen frozen}, the base time to subtract from {@link System#nanoTime()}. When time
-     * is frozen, this variable is unused.
-     *
-     * Initialized to {@link #initialNanoTime()} so that until one of the time mutator methods is called,
-     * {@link #getCurrentTimeNanos()} matches the default behavior.
-     */
-    private long startTime = initialNanoTime();
-    /**
-     * When time is frozen, the timestamp returned by {@link #getCurrentTimeNanos()}. When unfrozen, this is unused.
-     */
-    private long frozenTimestamp;
-    /**
-     * Whether time is currently frozen.
-     */
-    private boolean timeFrozen;
-
     private final Queue<Runnable> tasks = new ArrayDeque<>(2);
+    private final Ticker ticker;
     boolean running;
     // Used to detect concurrent accesses:
     private Thread holder;
@@ -58,6 +43,19 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
             return (EmbeddedChannel) handle;
         }
         throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(handle) + " not supported");
+    }
+
+    EmbeddedEventLoop() {
+        this(Ticker.systemTicker());
+    }
+
+    EmbeddedEventLoop(Ticker ticker) {
+        this.ticker = requireNonNull(ticker, "ticker");
+    }
+
+    @Override
+    protected Ticker ticker() {
+        return ticker;
     }
 
     @Override
@@ -166,7 +164,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     long runScheduledTasks() {
         begin();
-        long time = getCurrentTimeNanos();
+        long time = ticker().nanoTime();
         boolean wasRunning = running;
         try {
             for (;;) {
@@ -203,60 +201,6 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
                 cancelScheduledTasks();
             } finally {
                 running = false;
-            }
-        } finally {
-            end();
-        }
-    }
-
-    @Override
-    protected long getCurrentTimeNanos() {
-        begin();
-        try {
-            if (timeFrozen) {
-                return frozenTimestamp;
-            }
-            return System.nanoTime() - startTime;
-        } finally {
-            end();
-        }
-    }
-
-    void advanceTimeBy(long nanos) {
-        begin();
-        try {
-            if (timeFrozen) {
-                frozenTimestamp += nanos;
-            } else {
-                // startTime is subtracted from nanoTime, so increasing the startTime will advance getCurrentTimeNanos
-                startTime -= nanos;
-            }
-        } finally {
-            end();
-        }
-    }
-
-    void freezeTime() {
-        begin();
-        try {
-            if (!timeFrozen) {
-                frozenTimestamp = getCurrentTimeNanos();
-                timeFrozen = true;
-            }
-        } finally {
-            end();
-        }
-    }
-
-    void unfreezeTime() {
-        begin();
-        try {
-            if (timeFrozen) {
-                // we want getCurrentTimeNanos to continue right where frozenTimestamp left off:
-                // getCurrentTimeNanos = nanoTime - startTime = frozenTimestamp
-                // then solve for startTime
-                startTime = System.nanoTime() - frozenTimestamp;
-                timeFrozen = false;
             }
         } finally {
             end();

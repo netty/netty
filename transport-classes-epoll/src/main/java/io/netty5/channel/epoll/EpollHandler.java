@@ -27,6 +27,7 @@ import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
+import io.netty5.util.concurrent.Ticker;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.logging.InternalLogger;
@@ -58,7 +59,7 @@ public class EpollHandler implements IoHandler {
     }
 
     // Pick a number that no task could have previously used.
-    private long prevDeadlineNanos = SingleThreadEventLoop.nanoTime() - 1;
+    private long prevDeadlineNanos = Ticker.systemTicker().nanoTime() - 1;
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;

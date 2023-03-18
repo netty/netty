@@ -86,9 +86,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 this, newPromise(), Executors.callable(() -> {
             // NOOP
         }, null),
-                // note: the getCurrentTimeNanos() call here only works because this is a final class, otherwise
+                // note: the ticker().nanoTime() call here only works because this is a final class, otherwise
                 // the method could be overridden leading to unsafe initialization here!
-                deadlineNanos(getCurrentTimeNanos(), SCHEDULE_QUIET_PERIOD_INTERVAL),
+                deadlineNanos(ticker().nanoTime(), SCHEDULE_QUIET_PERIOD_INTERVAL),
                 -SCHEDULE_QUIET_PERIOD_INTERVAL);
 
         scheduledTaskQueue().add(quietPeriodTask);
@@ -139,7 +139,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     private void fetchFromScheduledTaskQueue() {
-        long nanoTime = getCurrentTimeNanos();
+        long nanoTime = ticker().nanoTime();
         Runnable scheduledTask = pollScheduledTask(nanoTime);
         while (scheduledTask != null) {
             taskQueue.add(scheduledTask);

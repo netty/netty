@@ -250,7 +250,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     private boolean fetchFromScheduledTaskQueue() {
-        long nanoTime = getCurrentTimeNanos();
+        long nanoTime = ticker().nanoTime();
         RunnableScheduledFuture<?> scheduledTask  = pollScheduledTask(nanoTime);
         while (scheduledTask != null) {
             if (!taskQueue.offer(scheduledTask)) {
@@ -379,7 +379,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      */
     protected final long delayNanos(long currentTimeNanos) {
         assert inEventLoop();
-        currentTimeNanos -= START_TIME;
+        currentTimeNanos -= ticker().initialNanoTime();
         RunnableScheduledFuture<?> scheduledTask = peekScheduledTask();
         if (scheduledTask == null) {
             return SCHEDULE_PURGE_INTERVAL;
@@ -389,7 +389,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     /**
-     * Returns the absolute point in time (relative to {@link #getCurrentTimeNanos()} ()}) at which the next
+     * Returns the absolute point in time (relative to {@link #ticker().nanoTime()} ()}) at which the next
      * closest scheduled task should run or {@code -1} if none is scheduled at the mment.
      *
      * This method must be called from the {@link EventExecutor} thread.
@@ -410,7 +410,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      */
     protected final void updateLastExecutionTime() {
         assert inEventLoop();
-        lastExecutionTime = getCurrentTimeNanos();
+        lastExecutionTime = ticker().nanoTime();
     }
 
     /**
@@ -597,7 +597,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         cancelScheduledTasks();
 
         if (gracefulShutdownStartTime == 0) {
-            gracefulShutdownStartTime = getCurrentTimeNanos();
+            gracefulShutdownStartTime = ticker().nanoTime();
         }
 
         if (runAllTasks() || runShutdownHooks()) {
@@ -616,7 +616,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
             return false;
         }
 
-        final long nanoTime = getCurrentTimeNanos();
+        final long nanoTime = ticker().nanoTime();
 
         if (isShutdown() || nanoTime - gracefulShutdownStartTime > gracefulShutdownTimeout) {
             return true;

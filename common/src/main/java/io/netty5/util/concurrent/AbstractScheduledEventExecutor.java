@@ -31,7 +31,6 @@ import static java.util.concurrent.Executors.callable;
  * Abstract base class for {@link EventExecutor}s that want to support scheduling.
  */
 public abstract class AbstractScheduledEventExecutor extends AbstractEventExecutor {
-    static final long START_TIME = System.nanoTime();
 
     private static final Comparator<RunnableScheduledFutureNode<?>> SCHEDULED_FUTURE_TASK_COMPARATOR =
             Comparable::compareTo;
@@ -44,37 +43,10 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     /**
-     * The time elapsed since initialization of this class in nanoseconds. This may return a negative number just like
-     * {@link System#nanoTime()}.
+     * Return the {@link Ticker} that provides the time source.
      */
-    public static long nanoTime() {
-        return defaultCurrentTimeNanos();
-    }
-
-    /**
-     * The initial value used for delay and computations based upon a monatomic time source.
-     * @return initial value used for delay and computations based upon a monatomic time source.
-     */
-    protected static long initialNanoTime() {
-        return START_TIME;
-    }
-
-    /**
-     * Get the current time in nanoseconds by this executor's clock. This is not the same as {@link System#nanoTime()}
-     * for two reasons:
-     *
-     * <ul>
-     *     <li>We apply a fixed offset to the {@link System#nanoTime() nanoTime}</li>
-     *     <li>Implementations (in particular EmbeddedEventLoop) may use their own time source so they can control time
-     *     for testing purposes.</li>
-     * </ul>
-     */
-    protected long getCurrentTimeNanos() {
-        return defaultCurrentTimeNanos();
-    }
-
-    static long defaultCurrentTimeNanos() {
-        return System.nanoTime() - START_TIME;
+    protected Ticker ticker() {
+        return Ticker.systemTicker();
     }
 
     static long deadlineNanos(long nanoTime, long delay) {
@@ -123,12 +95,12 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * @see #pollScheduledTask(long)
      */
     protected final RunnableScheduledFuture<?> pollScheduledTask() {
-        return pollScheduledTask(getCurrentTimeNanos());
+        return pollScheduledTask(ticker().nanoTime());
     }
 
     /**
      * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}. You should use {@link
-     * #getCurrentTimeNanos()} to retrieve the correct {@code nanoTime}.
+     * #ticker().nanoTime()} to retrieve the correct {@code nanoTime}.
      * <p>
      * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
@@ -159,7 +131,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (scheduledTask == null) {
             return -1;
         }
-        return Math.max(0, scheduledTask.deadlineNanos() - getCurrentTimeNanos());
+        return Math.max(0, scheduledTask.deadlineNanos() - ticker().nanoTime());
     }
 
     final RunnableScheduledFuture<?> peekScheduledTask() {
@@ -179,7 +151,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         assert inEventLoop();
         Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null? null : scheduledTaskQueue.peek();
-        return scheduledTask != null && scheduledTask.deadlineNanos() <= getCurrentTimeNanos();
+        return scheduledTask != null && scheduledTask.deadlineNanos() <= ticker().nanoTime();
     }
 
     @Override
@@ -190,7 +162,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             delay = 0;
         }
         RunnableScheduledFuture<Void> task = newScheduledTaskFor(
-                callable(command, null), deadlineNanos(getCurrentTimeNanos(), unit.toNanos(delay)), 0);
+                callable(command, null), deadlineNanos(ticker().nanoTime(), unit.toNanos(delay)), 0);
         return schedule(task);
     }
 
@@ -202,7 +174,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             delay = 0;
         }
         RunnableScheduledFuture<V> task = newScheduledTaskFor(
-                callable, deadlineNanos(getCurrentTimeNanos(), unit.toNanos(delay)), 0);
+                callable, deadlineNanos(ticker().nanoTime(), unit.toNanos(delay)), 0);
         return schedule(task);
     }
 
@@ -221,7 +193,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
         RunnableScheduledFuture<Void> task = newScheduledTaskFor(
                 callable(command, null),
-                deadlineNanos(getCurrentTimeNanos(), unit.toNanos(initialDelay)), unit.toNanos(period));
+                deadlineNanos(ticker().nanoTime(), unit.toNanos(initialDelay)), unit.toNanos(period));
         return schedule(task);
     }
 
@@ -240,7 +212,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
         RunnableScheduledFuture<Void> task = newScheduledTaskFor(
                 callable(command, null),
-                deadlineNanos(getCurrentTimeNanos(), unit.toNanos(initialDelay)), -unit.toNanos(delay));
+                deadlineNanos(ticker().nanoTime(), unit.toNanos(initialDelay)), -unit.toNanos(delay));
         return schedule(task);
     }
 
