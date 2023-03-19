@@ -23,8 +23,8 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
+import org.slf4j.event.Level;
 
 /**
  * An HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
@@ -46,7 +46,7 @@ public final class Http2Server {
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(group)
                     .channel(NioServerSocketChannel.class)
-                    .handler(new LoggingHandler(LogLevel.INFO))
+                    .handler(new LoggingHandler(Level.INFO))
                     .childHandler(new Http2ServerInitializer());
 
             Channel ch = b.bind(port).asStage().get();

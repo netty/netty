@@ -17,21 +17,19 @@ package io.netty5.channel.local;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.buffer.internal.InternalBufferUtils;
-import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.util.ReferenceCounted;
-import io.netty5.util.Resource;
-import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
@@ -46,7 +44,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  */
 public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddress, LocalAddress>
         implements LocalChannelUnsafe {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(LocalChannel.class);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");

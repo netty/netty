@@ -18,8 +18,8 @@ package io.netty5.resolver;
 
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.FutureListener;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.net.SocketAddress;
@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  */
 public abstract class AddressResolverGroup<T extends SocketAddress> implements Closeable {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AddressResolverGroup.class);
+    private static final Logger logger = LoggerFactory.getLogger(AddressResolverGroup.class);
 
     /**
      * Note that we do not use a {@link ConcurrentMap} here because it is usually expensive to instantiate a resolver.

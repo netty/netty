@@ -19,9 +19,9 @@ import io.netty5.util.NetUtilInitializations.NetworkIfaceAndInetAddress;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -139,9 +139,10 @@ public final class NetUtil {
     /**
      * The logger being used by this class
      */
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtil.class);
+    private static final Logger logger;
 
     static {
+        logger = LoggerFactory.getLogger(NetUtil.class);
         logger.debug("-Djava.net.preferIPv4Stack: {}", IPV4_PREFERRED);
         logger.debug("-Djava.net.preferIPv6Addresses: {}", IPV6_ADDRESSES_PREFERRED);
 

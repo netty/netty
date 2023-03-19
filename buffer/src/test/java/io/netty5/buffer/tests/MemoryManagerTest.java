@@ -20,11 +20,11 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.BufferReadOnlyException;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.buffer.internal.ResourceSupport;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MemoryManagerTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(MemoryManagerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(MemoryManagerTest.class);
     private static final Memoize<MemoryManager[]> MANAGERS = new Memoize<>(() -> {
         List<Throwable> failedManagers = new ArrayList<>();
         List<MemoryManager> loadableManagers = new ArrayList<>();

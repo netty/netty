@@ -20,8 +20,8 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
@@ -45,8 +45,7 @@ import static java.util.Objects.requireNonNull;
  * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public final class ReferenceCountedOpenSslServerContext extends ReferenceCountedOpenSslContext {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(ReferenceCountedOpenSslServerContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReferenceCountedOpenSslServerContext.class);
     private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
 

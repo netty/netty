@@ -23,8 +23,8 @@ import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
     static final ReadBufferAllocator DEFAULT_READ_BUFFER_ALLOCATOR = BufferAllocator::allocate;
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultChannelPipeline.class);
     private static final String HEAD_NAME = generateName0(HeadHandler.class);
     private static final String TAIL_NAME = generateName0(TailHandler.class);
 

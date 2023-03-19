@@ -21,11 +21,11 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.example.telnet.TelnetServer;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.slf4j.event.Level;
 
 /**
  * Simple SSL chat server modified from {@link TelnetServer}.
@@ -45,7 +45,7 @@ public final class SecureChatServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(LogLevel.INFO))
+             .handler(new LoggingHandler(Level.INFO))
              .childHandler(new SecureChatServerInitializer(sslCtx));
 
             b.bind(PORT).asStage().get().closeFuture().asStage().sync();

@@ -100,23 +100,8 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.lmax</groupId>
-      <artifactId>disruptor</artifactId>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>

@@ -18,8 +18,8 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.internal.ObjectUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link DecoratingHttp2ConnectionEncoder} which guards against a remote peer that will trigger a massive amount
@@ -27,7 +27,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
  * This encoder will tear-down the connection once we reached the configured limit to reduce the risk of DDOS.
  */
 final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncoder {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ControlFrameLimitEncoder.class);
+    private static final Logger logger = LoggerFactory.getLogger(Http2ControlFrameLimitEncoder.class);
 
     private final int maxOutstandingControlFrames;
     private Http2LifecycleManager lifecycleManager;

@@ -16,8 +16,8 @@
 package io.netty5.util.internal;
 
 import io.netty5.util.concurrent.FastThreadLocal;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -56,9 +56,10 @@ public final class StringUtil {
 
     private static final int STRING_BUILDER_INITIAL_SIZE;
     private static final int STRING_BUILDER_MAX_SIZE;
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StringUtil.class);
+    private static final Logger logger;
 
     static {
+        logger = LoggerFactory.getLogger(StringUtil.class);
         // Generate the lookup table that converts a byte into a 2-digit hexadecimal integer.
         for (int i = 0; i < BYTE2HEX_PAD.length; i++) {
             String str = Integer.toHexString(i);

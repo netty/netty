@@ -20,8 +20,8 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.ReflectionUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -37,7 +37,7 @@ import java.lang.reflect.Field;
  */
 public abstract class SslMasterKeyHandler implements ChannelHandler {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslMasterKeyHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(SslMasterKeyHandler.class);
 
     /**
      * The JRE SSLSessionImpl cannot be imported
@@ -172,7 +172,7 @@ public abstract class SslMasterKeyHandler implements ChannelHandler {
     }
 
     /**
-     * Record the session identifier and master key to the {@link InternalLogger} named {@code io.netty5.wireshark}.
+     * Record the session identifier and master key to the {@link Logger} named {@code io.netty5.wireshark}.
      * ex. {@code RSA Session-ID:XXX Master-Key:YYY}
      * This format is understood by Wireshark 1.6.0.
      * https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=686d4cabb41185591c361f9ec6b709034317144b
@@ -180,8 +180,7 @@ public abstract class SslMasterKeyHandler implements ChannelHandler {
      */
     private static final class WiresharkSslMasterKeyHandler extends SslMasterKeyHandler {
 
-        private static final InternalLogger wireshark_logger =
-                InternalLoggerFactory.getInstance("io.netty5.wireshark");
+        private static final Logger wiresharkLogger = LoggerFactory.getLogger("io.netty5.wireshark");
 
         @Override
         protected void accept(SecretKey masterKey, SSLSession session) {
@@ -189,7 +188,7 @@ public abstract class SslMasterKeyHandler implements ChannelHandler {
                 throw new IllegalArgumentException("An invalid length master key was provided.");
             }
             final byte[] sessionId = session.getId();
-            wireshark_logger.warn("RSA Session-ID:{} Master-Key:{}",
+            wiresharkLogger.warn("RSA Session-ID:{} Master-Key:{}",
                                   BufferUtil.hexDump(sessionId).toLowerCase(),
                                   BufferUtil.hexDump(masterKey.getEncoded()).toLowerCase());
         }

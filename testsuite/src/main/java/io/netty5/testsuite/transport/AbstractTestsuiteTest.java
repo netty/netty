@@ -20,14 +20,14 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.testsuite.transport.TestsuitePermutation.AllocatorConfig;
 import io.netty5.testsuite.util.TestUtils;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?, ?>> {
-    protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
     protected volatile T cb;
 
     protected abstract List<TestsuitePermutation.BootstrapFactory<T>> newFactories();

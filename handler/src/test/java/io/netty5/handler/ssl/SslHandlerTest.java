@@ -52,13 +52,13 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.ImmediateExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -598,7 +598,7 @@ public class SslHandlerTest {
         final CountDownLatch latch = new CountDownLatch(2);
         final CountDownLatch latch2 = new CountDownLatch(2);
         final BlockingQueue<Object> events = new LinkedBlockingQueue<>();
-        final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
+        final Logger logger = LoggerFactory.getLogger(getClass());
         Channel serverChannel = null;
         Channel clientChannel = null;
         EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());

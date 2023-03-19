@@ -21,8 +21,8 @@ import io.netty5.util.internal.MathUtil;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +42,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 final class PoolThreadCache {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PoolThreadCache.class);
+    private static final Logger logger = LoggerFactory.getLogger(PoolThreadCache.class);
     private static final int INTEGER_SIZE_MINUS_ONE = Integer.SIZE - 1;
 
     final AtomicInteger arenaReferenceCounter;

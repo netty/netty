@@ -22,8 +22,8 @@ import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 
@@ -52,7 +52,7 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2ConnectionDecoder.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHttp2ConnectionDecoder.class);
     private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
     private Http2LifecycleManager lifecycleManager;

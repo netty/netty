@@ -17,8 +17,8 @@ package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.ThrowableUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
@@ -40,9 +40,8 @@ import static java.util.Objects.requireNonNull;
 public class DefaultPromise<V> implements Promise<V>, Future<V>,
                                           FutureCompletionStage<V>, java.util.concurrent.Future<V> {
     public static final String REJECTED_EXECUTION_LOGGER_NAME = DefaultPromise.class.getName() + ".rejectedExecution";
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
-    private static final InternalLogger rejectedExecutionLogger =
-            InternalLoggerFactory.getInstance(REJECTED_EXECUTION_LOGGER_NAME);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultPromise.class);
+    private static final Logger rejectedExecutionLogger = LoggerFactory.getLogger(REJECTED_EXECUTION_LOGGER_NAME);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");

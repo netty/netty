@@ -22,8 +22,8 @@ import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -34,8 +34,7 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("unchecked")
 @UnstableApi
 public abstract class AbstractCoalescingBufferQueue {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
-            AbstractCoalescingBufferQueue.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractCoalescingBufferQueue.class);
     private final ArrayDeque<Object> bufAndListenerPairs;
     private int readableBytes;
 

@@ -16,9 +16,9 @@
 package io.netty5.handler.ssl.util;
 
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.TestOnly;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
@@ -38,7 +38,7 @@ import java.security.cert.X509Certificate;
 @TestOnly
 public final class InsecureTrustManagerFactory extends SimpleTrustManagerFactory {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(InsecureTrustManagerFactory.class);
+    private static final Logger logger = LoggerFactory.getLogger(InsecureTrustManagerFactory.class);
 
     public static final TrustManagerFactory INSTANCE = new InsecureTrustManagerFactory();
 

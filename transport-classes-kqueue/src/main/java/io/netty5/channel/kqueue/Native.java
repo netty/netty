@@ -23,8 +23,8 @@ import io.netty5.util.internal.ClassInitializerUtil;
 import io.netty5.util.internal.NativeLibraryLoader;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.ThrowableUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -54,9 +54,10 @@ import static io.netty5.channel.unix.Errors.newIOException;
  * <p><strong>Internal usage only!</strong>
  */
 final class Native {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
+    private static final Logger logger;
 
     static {
+        logger = LoggerFactory.getLogger(Native.class);
         // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
         // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
 

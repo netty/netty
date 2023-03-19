@@ -24,8 +24,8 @@ import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThrowableUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.concurrent.Callable;
@@ -58,7 +58,7 @@ import static java.util.Objects.requireNonNull;
 
 final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelHandlerContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultChannelHandlerContext.class);
 
     /**
      * Neither {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}
@@ -1286,7 +1286,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private boolean saveCurrentPendingBytesIfNeededInbound() {
         IllegalStateException e = saveCurrentPendingBytesIfNeeded();
         if (e != null) {
-            logger.error(e);
+            logger.error("Failed to save current pending bytes.", e);
             return false;
         }
         return true;
@@ -1295,7 +1295,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Future<Void> saveCurrentPendingBytesIfNeededOutbound() {
         IllegalStateException e = saveCurrentPendingBytesIfNeeded();
         if (e != null) {
-            logger.error(e);
+            logger.error("Failed to save current pending bytes.", e);
             return newFailedFuture(e);
         }
         return null;
@@ -1344,7 +1344,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void updatePendingBytesIfNeeded() {
         IllegalStateException exception = saveAndUpdatePendingBytes();
         if (exception != null) {
-            logger.error(exception);
+            logger.error("Failed to update pending bytes.", exception);
         }
     }
 
@@ -1468,7 +1468,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                     } finally {
                         if (e != null) {
                             Resource.dispose(value);
-                            logger.error(e);
+                            logger.error("Failed to dispose {}.", value, e);
                             throw e;
                         }
                     }
@@ -1492,7 +1492,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                 try {
                     task.run();
                     if (e != null) {
-                        logger.error(e);
+                        logger.error("Failed to save current pending bytes.", e);
                         throw e;
                     }
                 } finally {

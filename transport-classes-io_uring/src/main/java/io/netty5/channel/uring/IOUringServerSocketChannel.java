@@ -31,8 +31,8 @@ import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -50,7 +50,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
 public final class IOUringServerSocketChannel extends AbstractIOUringChannel<UnixChannel>
         implements ServerSocketChannel {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(IOUringDatagramChannel.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IOUringDatagramChannel.class);
     private static final short IS_ACCEPT = 1;
     private final ByteBuffer sockaddrMemory;
     private final long sockaddrPtr;
@@ -175,7 +175,7 @@ public final class IOUringServerSocketChannel extends AbstractIOUringChannel<Uni
     }
 
     @Override
-    protected InternalLogger logger() {
+    protected Logger logger() {
         return LOGGER;
     }
 

@@ -22,9 +22,9 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.example.util.ServerUtil;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
+import org.slf4j.event.Level;
 
 /**
  * An HTTP server which serves Web Socket requests at:
@@ -60,7 +60,7 @@ public final class WebSocketServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(LogLevel.INFO))
+             .handler(new LoggingHandler(Level.INFO))
              .childHandler(new WebSocketServerInitializer(sslCtx));
 
             Channel ch = b.bind(PORT).asStage().get();

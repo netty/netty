@@ -16,27 +16,27 @@
 package io.netty5.channel.embedded;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.buffer.internal.InternalBufferUtils;
-import io.netty5.channel.AdaptiveReadHandleFactory;
-import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.MaxMessagesWriteHandleFactory;
-import io.netty5.util.Resource;
+import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.channel.AbstractChannel;
+import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelId;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.internal.RecyclableArrayList;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -58,7 +58,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
     private enum State { OPEN, ACTIVE, CLOSED }
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(EmbeddedChannel.class);
 
     private final FutureListener<Void> recordExceptionListener = this::recordException;
 

@@ -21,8 +21,8 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  * based on the first message received.
  */
 public class OptionalSslHandler extends ByteToMessageDecoder {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OptionalSslHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(OptionalSslHandler.class);
 
     private final SslContext sslContext;
 

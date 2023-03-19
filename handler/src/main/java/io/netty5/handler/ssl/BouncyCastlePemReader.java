@@ -15,8 +15,20 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.openssl.PEMDecryptorProvider;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8DecryptorProviderBuilder;
+import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
+import org.bouncycastle.operator.InputDecryptorProvider;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
+import org.bouncycastle.pkcs.PKCSException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -30,24 +42,10 @@ import java.security.PrivateKey;
 import java.security.PrivilegedAction;
 import java.security.Provider;
 
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
-import org.bouncycastle.openssl.PEMDecryptorProvider;
-import org.bouncycastle.openssl.PEMEncryptedKeyPair;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8DecryptorProviderBuilder;
-import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
-import org.bouncycastle.operator.InputDecryptorProvider;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
-import org.bouncycastle.pkcs.PKCSException;
-
-
 final class BouncyCastlePemReader {
     private static final String BC_PROVIDER = "org.bouncycastle.jce.provider.BouncyCastleProvider";
     private static final String BC_PEMPARSER = "org.bouncycastle.openssl.PEMParser";
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(BouncyCastlePemReader.class);
 
     private static volatile Throwable unavailabilityCause;
     private static volatile Provider bcProvider;

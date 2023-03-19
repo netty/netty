@@ -19,8 +19,8 @@ import io.netty5.util.NetUtil;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
@@ -37,8 +37,7 @@ import static io.netty5.resolver.dns.DnsServerAddresses.sequential;
  * This may use the JDK's blocking DNS resolution to bootstrap the default DNS server addresses.
  */
 public final class DefaultDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DefaultDnsServerAddressStreamProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDnsServerAddressStreamProvider.class);
     private static final String DEFAULT_FALLBACK_SERVER_PROPERTY = "io.netty5.resolver.dns.defaultNameServerFallback";
     public static final DefaultDnsServerAddressStreamProvider INSTANCE = new DefaultDnsServerAddressStreamProvider();
 

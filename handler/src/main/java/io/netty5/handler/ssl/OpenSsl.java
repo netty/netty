@@ -25,8 +25,8 @@ import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateException;
@@ -54,7 +54,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  */
 public final class OpenSsl {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSsl.class);
+    private static final Logger logger = LoggerFactory.getLogger(OpenSsl.class);
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static final List<String> DEFAULT_CIPHERS;
@@ -430,7 +430,7 @@ public final class OpenSsl {
         }
     }
 
-    static String checkTls13Ciphers(InternalLogger logger, String ciphers) {
+    static String checkTls13Ciphers(Logger logger, String ciphers) {
         if (IS_BORINGSSL && !ciphers.isEmpty()) {
             assert EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length > 0;
             Set<String> boringsslTlsv13Ciphers = new HashSet<>(EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length);

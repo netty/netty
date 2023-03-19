@@ -21,10 +21,10 @@ import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MessagePassingQueue;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -40,7 +40,7 @@ import static java.lang.Math.min;
  * @param <T> the type of the pooled object
  */
 public abstract class Recycler<T> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
+    private static final Logger logger = LoggerFactory.getLogger(Recycler.class);
     private static final EnhancedHandle<?> NOOP_HANDLE = new EnhancedHandle<>() {
         @Override
         public void recycle(Object object) {

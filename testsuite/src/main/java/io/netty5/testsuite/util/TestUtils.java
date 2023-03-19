@@ -15,9 +15,9 @@
  */
 package io.netty5.testsuite.util;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
 
@@ -40,7 +40,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class TestUtils {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TestUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(TestUtils.class);
 
     private static final Method hotspotMXBeanDumpHeap;
     private static final Object hotspotMXBean;

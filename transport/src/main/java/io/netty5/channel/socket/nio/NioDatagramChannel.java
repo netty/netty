@@ -16,25 +16,24 @@
 package io.netty5.channel.socket.nio;
 
 import io.netty5.buffer.Buffer;
-
-import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.channel.MaxMessagesWriteHandleFactory;
-import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.FixedReadHandleFactory;
+import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -90,7 +89,7 @@ import static java.util.Objects.requireNonNull;
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel<Channel, SocketAddress, SocketAddress>
         implements io.netty5.channel.socket.DatagramChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(NioDatagramChannel.class);
 
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private static final String EXPECTED_TYPES =

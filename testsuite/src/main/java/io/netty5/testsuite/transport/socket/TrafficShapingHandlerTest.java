@@ -28,8 +28,6 @@ import io.netty5.handler.traffic.TrafficCounter;
 import io.netty5.util.concurrent.DefaultEventExecutorGroup;
 import io.netty5.util.concurrent.EventExecutorGroup;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -38,6 +36,8 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -56,9 +56,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD)
 public class TrafficShapingHandlerTest extends AbstractSocketTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficShapingHandlerTest.class);
-    private static final InternalLogger loggerServer = InternalLoggerFactory.getInstance("ServerTSH");
-    private static final InternalLogger loggerClient = InternalLoggerFactory.getInstance("ClientTSH");
+    private static final Logger logger = LoggerFactory.getLogger(TrafficShapingHandlerTest.class);
+    private static final Logger loggerServer = LoggerFactory.getLogger("ServerTSH");
+    private static final Logger loggerClient = LoggerFactory.getLogger("ClientTSH");
 
     static final int messageSize = 1024;
     static final int bandwidthFactor = 12;

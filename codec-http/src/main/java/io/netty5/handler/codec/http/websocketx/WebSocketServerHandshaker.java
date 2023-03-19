@@ -40,8 +40,8 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
@@ -54,7 +54,7 @@ import static java.util.Objects.requireNonNull;
  * Base class for server side web socket opening and closing handshakes
  */
 public abstract class WebSocketServerHandshaker {
-    protected static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker.class);
+    protected static final Logger logger = LoggerFactory.getLogger(WebSocketServerHandshaker.class);
 
     private final String uri;
 

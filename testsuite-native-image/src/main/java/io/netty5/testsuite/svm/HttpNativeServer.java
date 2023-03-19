@@ -22,8 +22,8 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
+import org.slf4j.event.Level;
 
 /**
  * An HTTP server that sends back the content of the received HTTP request
@@ -48,7 +48,7 @@ public final class HttpNativeServer {
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(LogLevel.INFO))
+             .handler(new LoggingHandler(Level.INFO))
              .childHandler(new HttpNativeServerInitializer());
 
             Channel channel = b.bind(0).asStage().get();

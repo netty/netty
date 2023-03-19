@@ -24,8 +24,8 @@ import io.netty5.util.internal.NativeLibraryLoader;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.ThrowableUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -52,8 +52,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
 
     private static final Throwable UNAVAILABILITY_CAUSE;
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(MacOSDnsServerAddressStreamProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(MacOSDnsServerAddressStreamProvider.class);
 
     // Let's refresh every 10 seconds.
     private static final long REFRESH_INTERVAL = TimeUnit.SECONDS.toNanos(10);

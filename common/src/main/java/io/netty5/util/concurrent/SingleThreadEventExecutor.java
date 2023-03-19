@@ -17,10 +17,10 @@ package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThreadExecutorMap;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Async.Execute;
 import org.jetbrains.annotations.Async.Schedule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.Thread.State;
 import java.util.ArrayList;
@@ -49,8 +49,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     protected static final int DEFAULT_MAX_PENDING_EXECUTOR_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty5.eventexecutor.maxPendingTasks", Integer.MAX_VALUE));
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
+    private static final Logger logger = LoggerFactory.getLogger(SingleThreadEventExecutor.class);
 
     private static final int ST_NOT_STARTED = 1;
     private static final int ST_STARTED = 2;

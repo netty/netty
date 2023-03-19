@@ -29,10 +29,10 @@ import io.netty5.example.util.ServerUtil;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.handler.codec.string.StringDecoder;
 import io.netty5.handler.codec.string.StringEncoder;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.stream.ChunkedWriteHandler;
+import org.slf4j.event.Level;
 
 import java.nio.charset.StandardCharsets;
 
@@ -57,7 +57,7 @@ public final class FileServer {
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
-             .handler(new LoggingHandler(LogLevel.INFO))
+             .handler(new LoggingHandler(Level.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {

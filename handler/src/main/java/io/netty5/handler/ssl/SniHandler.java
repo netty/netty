@@ -24,8 +24,8 @@ import io.netty5.util.Mapping;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.util.Objects.requireNonNull;
 
@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  * which certificate to choose for the host name.</p>
  */
 public class SniHandler extends AbstractSniHandler<SslContext> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SniHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(SniHandler.class);
     private static final Selection EMPTY_SELECTION = new Selection(null, null);
 
     protected final AsyncMapping<String, SslContext> mapping;

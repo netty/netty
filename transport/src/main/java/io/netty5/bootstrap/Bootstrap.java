@@ -28,8 +28,8 @@ import io.netty5.resolver.DefaultAddressResolverGroup;
 import io.netty5.resolver.NameResolver;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFactory<? extends Channel>> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
+    private static final Logger logger = LoggerFactory.getLogger(Bootstrap.class);
 
     private static final AddressResolverGroup<?> DEFAULT_RESOLVER = DefaultAddressResolverGroup.INSTANCE;
 

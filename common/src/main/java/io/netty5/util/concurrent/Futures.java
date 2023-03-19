@@ -15,8 +15,8 @@
  */
 package io.netty5.util.concurrent;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.function.Function;
@@ -32,7 +32,7 @@ import static java.util.Objects.requireNonNull;
  * @implNote The operations themselves are implemented as static inner classes instead of lambdas to aid debugging.
  */
 final class Futures {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Futures.class);
+    private static final Logger logger = LoggerFactory.getLogger(Futures.class);
     private static final PassThrough<?> PASS_THROUGH = new PassThrough<>();
     private static final PropagateCancel PROPAGATE_CANCEL = new PropagateCancel();
 

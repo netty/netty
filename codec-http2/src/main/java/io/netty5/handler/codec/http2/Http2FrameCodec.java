@@ -16,8 +16,6 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.handler.codec.http2.headers.Http2Headers;
-import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -27,20 +25,21 @@ import io.netty5.handler.codec.http2.Http2Connection.PropertyKey;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
 import io.netty5.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.TestOnly;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static io.netty5.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;
-import static io.netty5.util.internal.logging.InternalLogLevel.DEBUG;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
@@ -148,7 +147,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 @UnstableApi
 public class Http2FrameCodec extends Http2ConnectionHandler {
 
-    private static final InternalLogger LOG = InternalLoggerFactory.getInstance(Http2FrameCodec.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Http2FrameCodec.class);
 
     protected final PropertyKey streamKey;
     private final PropertyKey upgradeKey;
@@ -566,7 +565,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         // - fireUserEventTriggered(Http2ResetFrame), see Http2MultiplexHandler#channelRead(...)
         // - by failing write promise
         // Receiver of the error is responsible for correct handling of this exception.
-        LOG.log(DEBUG, "Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
+        LOG.debug("Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
     }
 
     @Override

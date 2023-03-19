@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.example.http2.helloworld.server;
 
 import io.netty5.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder;
@@ -22,7 +21,7 @@ import io.netty5.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty5.handler.codec.http2.Http2FrameLogger;
 import io.netty5.handler.codec.http2.Http2Settings;
 
-import static io.netty5.handler.logging.LogLevel.INFO;
+import static org.slf4j.event.Level.INFO;
 
 public final class HelloWorldHttp2HandlerBuilder
         extends AbstractHttp2ConnectionHandlerBuilder<HelloWorldHttp2Handler, HelloWorldHttp2HandlerBuilder> {

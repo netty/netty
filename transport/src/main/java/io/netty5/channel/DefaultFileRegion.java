@@ -17,8 +17,8 @@ package io.netty5.channel;
 
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.IllegalReferenceCountException;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultFileRegion.class);
     private final File f;
     private final long position;
     private final long count;

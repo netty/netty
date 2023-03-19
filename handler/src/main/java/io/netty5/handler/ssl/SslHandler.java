@@ -15,14 +15,11 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.channel.ChannelOutboundInvoker;
-import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.buffer.StandardAllocationTypes;
 import io.netty5.channel.AbstractCoalescingBufferQueue;
 import io.netty5.channel.Channel;
@@ -30,11 +27,14 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelOutboundInvoker;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.DefaultPromise;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
@@ -44,8 +44,8 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -160,8 +160,7 @@ import static java.util.Objects.requireNonNull;
  * <a href="https://github.com/netty/netty/issues/832">#832</a> in our issue tracker.
  */
 public class SslHandler extends ByteToMessageDecoder {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SslHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(SslHandler.class);
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
             "^.*(?:Socket|Datagram)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
@@ -626,7 +625,7 @@ public class SslHandler extends ByteToMessageDecoder {
     public Future<Void> write(final ChannelHandlerContext ctx, Object msg) {
         if (!(msg instanceof Buffer)) {
             UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, Buffer.class);
-            logger.warn(exception);
+            logger.warn("Message type not supported", exception);
             SilentDispose.dispose(msg, logger);
             return ctx.newFailedFuture(exception);
         }

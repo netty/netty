@@ -28,8 +28,8 @@ import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -45,7 +45,7 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public final class KQueueHandler implements IoHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(KQueueHandler.class);
     private static final AtomicIntegerFieldUpdater<KQueueHandler> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(KQueueHandler.class, "wakenUp");
     private static final int KQUEUE_WAKE_UP_IDENT = 0;

@@ -25,8 +25,8 @@ import io.netty5.util.internal.ObjectPool.Handle;
 import io.netty5.util.internal.PromiseNotificationUtil;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -55,7 +55,7 @@ final class ChannelOutboundBuffer {
     static final int CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD =
             SystemPropertyUtil.getInt("io.netty5.transport.outboundBufferEntrySizeOverhead", 96);
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChannelOutboundBuffer.class);
 
     private final EventExecutor executor;
 

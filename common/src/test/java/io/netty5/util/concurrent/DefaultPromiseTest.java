@@ -16,11 +16,11 @@
 
 package io.netty5.util.concurrent;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultPromiseTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromiseTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultPromiseTest.class);
     private static int stackOverflowDepth;
 
     @BeforeAll

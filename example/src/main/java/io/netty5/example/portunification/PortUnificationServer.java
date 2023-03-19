@@ -22,11 +22,11 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.slf4j.event.Level;
 
 /**
  * Serves two protocols (HTTP and Factorial) using only one port, enabling
@@ -51,7 +51,7 @@ public final class PortUnificationServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(LogLevel.INFO))
+             .handler(new LoggingHandler(Level.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {

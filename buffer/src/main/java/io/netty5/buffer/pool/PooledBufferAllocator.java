@@ -32,8 +32,8 @@ import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThreadExecutorMap;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,7 +47,7 @@ import static java.util.Objects.requireNonNull;
 
 public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMetricProvider {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledBufferAllocator.class);
+    private static final Logger logger = LoggerFactory.getLogger(PooledBufferAllocator.class);
     private static final int DEFAULT_NUM_HEAP_ARENA;
     private static final int DEFAULT_NUM_DIRECT_ARENA;
 

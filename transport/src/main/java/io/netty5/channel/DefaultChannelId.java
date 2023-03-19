@@ -19,8 +19,8 @@ package io.netty5.channel;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.util.internal.MacAddressUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,7 +36,7 @@ public final class DefaultChannelId implements ChannelId {
 
     private static final long serialVersionUID = 3884076183504074063L;
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelId.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultChannelId.class);
     private static final byte[] MACHINE_ID;
     private static final int PROCESS_ID_LEN = 4;
     private static final int PROCESS_ID;

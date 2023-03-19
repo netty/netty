@@ -19,8 +19,8 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  * Compresses a {@link Buffer} using the deflate algorithm.
  */
 public final class ZlibCompressor implements Compressor {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ZlibCompressor.class);
+    private static final Logger logger = LoggerFactory.getLogger(ZlibCompressor.class);
 
     /**
      * Maximum initial size for temporary heap buffers used for the compressed output. Buffer may still grow beyond

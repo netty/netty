@@ -16,17 +16,18 @@
 package io.netty5.util;
 
 import io.netty5.util.internal.ObjectUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Collection of method to handle objects that may implement {@link ReferenceCounted}.
  */
 public final class ReferenceCountUtil {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountUtil.class);
+    private static final Logger logger;
 
     static {
+        logger = LoggerFactory.getLogger(ReferenceCountUtil.class);
         ResourceLeakDetector.addExclusions(ReferenceCountUtil.class, "touch");
     }
 

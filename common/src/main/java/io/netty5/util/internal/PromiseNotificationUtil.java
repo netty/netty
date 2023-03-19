@@ -16,7 +16,7 @@
 package io.netty5.util.internal;
 
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
+import org.slf4j.Logger;
 
 /**
  * Internal utilities to notify {@link Promise}s.
@@ -28,7 +28,7 @@ public final class PromiseNotificationUtil {
     /**
      * Try to cancel the {@link Promise} and log if {@code logger} is not {@code null} in case this fails.
      */
-    public static void tryCancel(Promise<?> p, InternalLogger logger) {
+    public static void tryCancel(Promise<?> p, Logger logger) {
         if (!p.cancel() && logger != null) {
             Throwable err = p.cause();
             if (err == null) {
@@ -44,7 +44,7 @@ public final class PromiseNotificationUtil {
     /**
      * Try to mark the {@link Promise} as success and log if {@code logger} is not {@code null} in case this fails.
      */
-    public static <V> void trySuccess(Promise<? super V> p, V result, InternalLogger logger) {
+    public static <V> void trySuccess(Promise<? super V> p, V result, Logger logger) {
         if (!p.trySuccess(result) && logger != null) {
             Throwable err = p.cause();
             if (err == null) {
@@ -60,7 +60,7 @@ public final class PromiseNotificationUtil {
     /**
      * Try to mark the {@link Promise} as failure and log if {@code logger} is not {@code null} in case this fails.
      */
-    public static void tryFailure(Promise<?> p, Throwable cause, InternalLogger logger) {
+    public static void tryFailure(Promise<?> p, Throwable cause, Logger logger) {
         if (!p.tryFailure(cause) && logger != null) {
             Throwable err = p.cause();
             if (err == null) {

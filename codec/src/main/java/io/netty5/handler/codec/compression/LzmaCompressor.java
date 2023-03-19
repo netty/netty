@@ -15,14 +15,14 @@
  */
 package io.netty5.handler.codec.compression;
 
-import io.netty5.buffer.BufferInputStream;
-import io.netty5.buffer.BufferOutputStream;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import io.netty5.buffer.BufferInputStream;
+import io.netty5.buffer.BufferOutputStream;
 import lzma.sdk.lzma.Base;
 import lzma.sdk.lzma.Encoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +38,7 @@ import static lzma.sdk.lzma.Encoder.EMatchFinderTypeBT4;
  * or documents in <a href="https://www.7-zip.org/sdk.html">LZMA SDK</a> archive.
  */
 public final class LzmaCompressor implements Compressor {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LzmaCompressor.class);
+    private static final Logger logger = LoggerFactory.getLogger(LzmaCompressor.class);
 
     private static final int MEDIUM_DICTIONARY_SIZE = 1 << 16;
 

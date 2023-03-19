@@ -27,8 +27,8 @@ import io.netty5.channel.ServerChannelWriteHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -72,7 +72,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(NioServerSocketChannel.class);
 
     private static final Method OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY =
             NioChannelUtil.findOpenMethod("openServerSocketChannel");

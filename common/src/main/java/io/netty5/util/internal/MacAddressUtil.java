@@ -17,9 +17,9 @@
 package io.netty5.util.internal;
 
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -34,7 +34,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static io.netty5.util.internal.EmptyArrays.EMPTY_BYTES;
 
 public final class MacAddressUtil {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(MacAddressUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(MacAddressUtil.class);
 
     private static final int EUI64_MAC_ADDRESS_LENGTH = 8;
     private static final int EUI48_MAC_ADDRESS_LENGTH = 6;

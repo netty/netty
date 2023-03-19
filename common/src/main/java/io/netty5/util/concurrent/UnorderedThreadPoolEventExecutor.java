@@ -15,9 +15,9 @@
  */
 package io.netty5.util.concurrent;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.TestOnly;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -39,8 +39,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  */
 @SuppressWarnings("unchecked")
 public final class UnorderedThreadPoolEventExecutor implements EventExecutor {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
-            UnorderedThreadPoolEventExecutor.class);
+    private static final Logger logger = LoggerFactory.getLogger(UnorderedThreadPoolEventExecutor.class);
 
     private final Promise<Void> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
     private final InnerScheduledThreadPoolExecutor executor;

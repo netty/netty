@@ -17,12 +17,12 @@
 package io.netty5.handler.codec.compression;
 
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class Zstd {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Zstd.class);
+    private static final Logger logger = LoggerFactory.getLogger(Zstd.class);
     private static final Throwable cause;
 
     static {

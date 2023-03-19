@@ -31,9 +31,9 @@ import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import org.junit.jupiter.api.Test;
+import org.slf4j.event.Level;
 
 import java.net.InetSocketAddress;
 
@@ -54,12 +54,12 @@ public class EchoIT {
                   .channel(NioServerSocketChannel.class)
                   .childOption(ChannelOption.BUFFER_ALLOCATOR, DefaultBufferAllocators.preferredAllocator())
                   .option(ChannelOption.SO_BACKLOG, 100)
-                  .handler(new LoggingHandler(LogLevel.INFO))
+                  .handler(new LoggingHandler(Level.INFO))
                   .childHandler(new ChannelInitializer<SocketChannel>() {
                       @Override
                       public void initChannel(SocketChannel ch) throws Exception {
                           ChannelPipeline p = ch.pipeline();
-                          p.addLast(new LoggingHandler(LogLevel.INFO));
+                          p.addLast(new LoggingHandler(Level.INFO));
                           p.addLast(serverHandler);
                       }
                   });
@@ -79,7 +79,7 @@ public class EchoIT {
                      @Override
                      public void initChannel(SocketChannel ch) throws Exception {
                          ChannelPipeline p = ch.pipeline();
-                         p.addLast(new LoggingHandler(LogLevel.INFO));
+                         p.addLast(new LoggingHandler(Level.INFO));
                          p.addLast(new EchoClientHandler());
                      }
                  });

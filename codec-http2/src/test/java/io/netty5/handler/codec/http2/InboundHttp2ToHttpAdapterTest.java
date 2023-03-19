@@ -39,7 +39,6 @@ import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
@@ -47,6 +46,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.slf4j.event.Level;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,8 +65,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 /**
  * Testing the {@link InboundHttp2ToHttpAdapter} and base class {@link InboundHttp2ToHttpAdapter} for HTTP/2
@@ -604,7 +602,7 @@ public class InboundHttp2ToHttpAdapterTest {
                    .gracefulShutdownTimeoutMillis(0)
                    .build();
                 p.addLast(clientHandler);
-                p.addLast(new LoggingHandler(LogLevel.INFO));
+                p.addLast(new LoggingHandler(Level.INFO));
 
                 clientDelegator = new HttpResponseDelegator(clientListener, clientLatch, clientLatch2);
                 p.addLast(clientDelegator);

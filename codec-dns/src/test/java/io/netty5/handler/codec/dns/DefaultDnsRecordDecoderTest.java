@@ -18,16 +18,16 @@ package io.netty5.handler.codec.dns;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class DefaultDnsRecordDecoderTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultDnsRecordDecoderTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDnsRecordDecoderTest.class);
 
     @Test
     public void testDecodeName() {

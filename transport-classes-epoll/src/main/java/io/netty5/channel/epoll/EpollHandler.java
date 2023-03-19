@@ -29,9 +29,9 @@ import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -49,9 +49,10 @@ public class EpollHandler implements IoHandler {
     private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
             SystemPropertyUtil.getLong("io.netty5.channel.epoll.epollWaitThreshold", 10);
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollHandler.class);
+    private static final Logger logger;
 
     static {
+        logger = LoggerFactory.getLogger(EpollHandler.class);
         // Ensure JNI is initialized by the time this class is loaded by this time!
         // We use unix-common methods in this class which are backed by JNI methods.
         Epoll.ensureAvailability();

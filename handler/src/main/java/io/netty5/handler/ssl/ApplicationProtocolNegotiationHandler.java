@@ -23,8 +23,8 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.internal.RecyclableArrayList;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
 
@@ -67,8 +67,7 @@ import static java.util.Objects.requireNonNull;
  */
 public abstract class ApplicationProtocolNegotiationHandler implements ChannelHandler {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(ApplicationProtocolNegotiationHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(ApplicationProtocolNegotiationHandler.class);
 
     private final String fallbackProtocol;
     private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();

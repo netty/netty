@@ -43,11 +43,11 @@ import io.netty5.util.Send;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.ResourcesUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLException;
@@ -630,8 +630,7 @@ public class ParameterizedSslHandlerTest {
     }
 
     private static final class ReentryWriteSslHandshakeHandler extends SimpleChannelInboundHandler<Buffer> {
-        private static final InternalLogger LOGGER =
-                InternalLoggerFactory.getInstance(ReentryWriteSslHandshakeHandler.class);
+        private static final Logger LOGGER = LoggerFactory.getLogger(ReentryWriteSslHandshakeHandler.class);
         private final String toWrite;
         private final StringBuilder readQueue;
         private final CountDownLatch doneLatch;
@@ -677,7 +676,7 @@ public class ParameterizedSslHandlerTest {
         }
 
         private void appendError(Throwable cause) {
-            LOGGER.error(new Exception("Caught possible write failure in ParameterizedSslHandlerTest.", cause));
+            LOGGER.error("Caught possible write failure in ParameterizedSslHandlerTest.", cause);
             readQueue.append("failed to write '").append(toWrite).append("': ");
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();

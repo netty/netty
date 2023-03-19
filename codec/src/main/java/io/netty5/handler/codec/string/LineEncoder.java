@@ -22,8 +22,8 @@ import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -57,7 +57,7 @@ import static java.util.Objects.requireNonNull;
  * </pre>
  */
 public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LineEncoder.class);
+    private static final Logger logger = LoggerFactory.getLogger(LineEncoder.class);
 
     private final Charset charset;
     private final byte[] lineSeparator;

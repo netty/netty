@@ -17,8 +17,8 @@ package io.netty5.resolver;
 
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -162,7 +162,7 @@ public final class HostsFileEntriesProvider {
 
         private static final Pattern WHITESPACES = Pattern.compile("[ \t]+");
 
-        private static final InternalLogger logger = InternalLoggerFactory.getInstance(Parser.class);
+        private static final Logger logger = LoggerFactory.getLogger(Parser.class);
 
         static final ParserImpl INSTANCE = new ParserImpl();
 

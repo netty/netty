@@ -20,12 +20,12 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.LeakInfo;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.util.Send;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.Notification;
 import javax.management.NotificationBroadcaster;
@@ -214,7 +214,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             if (foundIntendedLeak) {
                 consumer.accept(leak);
             } else if (warnOnUnrecognized) {
-                InternalLogger logger = InternalLoggerFactory.getInstance(BufferLeakDetectionTest.class);
+                Logger logger = LoggerFactory.getLogger(BufferLeakDetectionTest.class);
                 logger.warn("Found leaked object \"{}\" that did not match hint \"{}\".",
                             leak.objectDescription(), hint);
             }

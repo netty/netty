@@ -15,8 +15,8 @@
  */
 package io.netty5.util.concurrent;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -27,7 +27,7 @@ import static java.util.Objects.requireNonNull;
  * Abstract base class for {@link EventExecutor} implementations.
  */
 public abstract class AbstractEventExecutor implements EventExecutor {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEventExecutor.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractEventExecutor.class);
     static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
     static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
 

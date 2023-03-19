@@ -58,8 +58,8 @@ import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.TooLongFrameException;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
@@ -68,7 +68,7 @@ import java.util.Objects;
  */
 public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements WebSocketFrameDecoder {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket13FrameDecoder.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebSocket13FrameDecoder.class);
     private static final byte OPCODE_CONT = 0x0;
     private static final byte OPCODE_TEXT = 0x1;
     private static final byte OPCODE_BINARY = 0x2;

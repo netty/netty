@@ -16,8 +16,8 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.util.internal.SocketUtils;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.Context;
 import javax.naming.NamingException;
@@ -30,8 +30,7 @@ import java.util.Hashtable;
 import java.util.List;
 
 final class DirContextUtils {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DirContextUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(DirContextUtils.class);
 
     private DirContextUtils() { }
 

@@ -38,9 +38,9 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -58,7 +58,7 @@ import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
 abstract class AbstractIOUringChannel<P extends UnixChannel>
         extends AbstractChannel<P, SocketAddress, SocketAddress>
         implements UnixChannel {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(AbstractIOUringChannel.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIOUringChannel.class);
     private static final int MAX_READ_AHEAD_PACKETS = 8;
 
     static final FutureContextListener<Buffer, Void> CLOSE_BUFFER = (b, f) -> SilentDispose.dispose(b, LOGGER);
@@ -552,7 +552,7 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         return getClass().getSimpleName() + "(fd: " + socket.intValue() + ')' + super.toString();
     }
 
-    protected abstract InternalLogger logger();
+    protected abstract Logger logger();
 
     @SuppressWarnings("unchecked")
     @Override

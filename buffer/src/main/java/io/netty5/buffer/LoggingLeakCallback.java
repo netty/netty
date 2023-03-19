@@ -15,8 +15,8 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.function.Consumer;
 
@@ -29,7 +29,7 @@ import java.util.function.Consumer;
  * Note that asynchronous and fast logging should be preferred, since the callback may run inside a cleaner-thread.
  */
 public final class LoggingLeakCallback implements Consumer<LeakInfo> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LoggingLeakCallback.class);
+    private static final Logger logger = LoggerFactory.getLogger(LoggingLeakCallback.class);
     private static final LoggingLeakCallback instance = new LoggingLeakCallback();
 
     /**

@@ -22,17 +22,16 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.unix.UnixChannelOption;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.NetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.ResourceLeakDetector;
-import io.netty5.util.internal.logging.InternalLogLevel;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -51,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class EpollReuseAddrTest {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollReuseAddrTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EpollReuseAddrTest.class);
 
     private static final int MAJOR;
     private static final int MINOR;
@@ -81,7 +80,7 @@ public class EpollReuseAddrTest {
                 BUGFIX = 0;
             }
         } else {
-            LOGGER.log(InternalLogLevel.INFO, "Unable to parse kernel version: " + kernelVersion);
+            LOGGER.info("Unable to parse kernel version: {}", kernelVersion);
             MAJOR = 0;
             MINOR = 0;
             BUGFIX = 0;
@@ -102,7 +101,7 @@ public class EpollReuseAddrTest {
 
     private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?, ?> bootstrap)
             throws Exception {
-        bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
+        bootstrap.handler(new LoggingHandler(Level.ERROR));
         Channel channel = bootstrap.bind().asStage().get();
         try {
             bootstrap.bind(channel.localAddress()).asStage().sync();

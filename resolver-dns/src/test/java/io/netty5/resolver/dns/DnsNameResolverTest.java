@@ -48,8 +48,6 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.apache.directory.server.dns.DnsException;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
 import org.apache.directory.server.dns.messages.DnsMessage;
@@ -68,6 +66,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.net.BindException;
@@ -142,7 +142,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class DnsNameResolverTest {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
+    private static final Logger logger = LoggerFactory.getLogger(DnsNameResolver.class);
     private static final long DEFAULT_TEST_TIMEOUT_MS = 30000;
 
     // Using the top-100 web sites ranked in Alexa.com (Oct 2014)

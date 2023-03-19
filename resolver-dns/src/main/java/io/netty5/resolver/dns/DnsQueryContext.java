@@ -30,8 +30,8 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +40,7 @@ import static java.util.Objects.requireNonNull;
 
 abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsQueryContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(DnsQueryContext.class);
 
     private final DnsNameResolver parent;
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;

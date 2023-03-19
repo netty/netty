@@ -23,8 +23,8 @@ import io.netty5.util.concurrent.PromiseCombiner;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -35,7 +35,7 @@ import static java.util.Objects.requireNonNull;
  * A queue of write operations which are pending for later execution.
  */
 public final class PendingWriteQueue {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PendingWriteQueue.class);
+    private static final Logger logger = LoggerFactory.getLogger(PendingWriteQueue.class);
     // Assuming a 64-bit JVM:
     //  - 16 bytes object header
     //  - 4 reference fields

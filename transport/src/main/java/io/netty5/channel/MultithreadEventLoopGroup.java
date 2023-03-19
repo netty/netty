@@ -23,8 +23,8 @@ import io.netty5.util.concurrent.RejectedExecutionHandlers;
 import io.netty5.util.concurrent.ThreadPerTaskExecutor;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +38,7 @@ import java.util.concurrent.ThreadFactory;
  */
 public class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(MultithreadEventLoopGroup.class);
+    private static final Logger logger = LoggerFactory.getLogger(MultithreadEventLoopGroup.class);
 
     public static final int DEFAULT_EVENT_LOOP_THREADS;
 

@@ -17,8 +17,8 @@ package io.netty5.resolver.dns;
 
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -44,8 +44,7 @@ import static java.util.Objects.requireNonNull;
  * /etc/resolver</a> to respect the system default domain servers.
  */
 public final class UnixResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(UnixResolverDnsServerAddressStreamProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(UnixResolverDnsServerAddressStreamProvider.class);
 
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
     private static final String RES_OPTIONS = System.getenv("RES_OPTIONS");

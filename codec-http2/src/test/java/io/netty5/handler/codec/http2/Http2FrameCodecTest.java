@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.EventLoop;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
@@ -31,7 +30,6 @@ import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http2.Http2Exception.StreamException;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ReferenceCounted;
@@ -41,10 +39,10 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ReflectionUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.event.Level;
 
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
@@ -123,7 +121,7 @@ public class Http2FrameCodecTest {
     private void setUp(Http2FrameCodecBuilder frameCodecBuilder, Http2Settings initialRemoteSettings) throws Exception {
         frameWriter = Http2TestUtil.mockedFrameWriter();
 
-        frameCodec = frameCodecBuilder.frameWriter(frameWriter).frameLogger(new Http2FrameLogger(LogLevel.TRACE))
+        frameCodec = frameCodecBuilder.frameWriter(frameWriter).frameLogger(new Http2FrameLogger(Level.TRACE))
                 .initialSettings(initialRemoteSettings).build();
         inboundHandler = new LastInboundHandler();
 

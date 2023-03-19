@@ -18,16 +18,16 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.CompositeBuffer;
-import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.MessageAggregator;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.Send;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -92,7 +92,7 @@ import static java.util.Objects.requireNonNullElse;
  */
 public class HttpObjectAggregator<C extends HttpContent<C>>
         extends MessageAggregator<HttpObject, HttpMessage, HttpContent<C>, FullHttpMessage<?>> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpObjectAggregator.class);
+    private static final Logger logger = LoggerFactory.getLogger(HttpObjectAggregator.class);
 
     private final boolean closeOnExpectationFailed;
 

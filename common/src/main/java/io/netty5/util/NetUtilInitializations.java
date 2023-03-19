@@ -17,8 +17,8 @@ package io.netty5.util;
 
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -35,7 +35,7 @@ final class NetUtilInitializations {
     /**
      * The logger being used by this class
      */
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtilInitializations.class);
+    private static final Logger logger = LoggerFactory.getLogger(NetUtilInitializations.class);
 
     private NetUtilInitializations() {
     }

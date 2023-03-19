@@ -23,8 +23,8 @@ import io.netty5.handler.codec.base64.Base64Dialect;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
@@ -47,7 +47,7 @@ import static java.util.Arrays.asList;
  * Constants for SSL packets.
  */
 final class SslUtils {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(SslUtils.class);
 
     // See https://tools.ietf.org/html/rfc8446#appendix-B.4
     static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<>(

@@ -22,7 +22,7 @@ import io.netty5.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty5.handler.codec.http2.Http2FrameLogger;
 import io.netty5.handler.codec.http2.Http2Settings;
 
-import static io.netty5.handler.logging.LogLevel.INFO;
+import static org.slf4j.event.Level.INFO;
 
 public final class HelloWorldHttp2HandlerBuilder
         extends AbstractHttp2ConnectionHandlerBuilder<HelloWorldHttp2Handler, HelloWorldHttp2HandlerBuilder> {

@@ -20,26 +20,15 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.ErrorHandler;
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.appender.DefaultErrorHandler;
-import org.apache.logging.log4j.core.config.AppenderRef;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.config.LoggerConfig;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.junit.jupiter.api.parallel.Isolated;
 import org.mockito.ArgumentMatcher;
+import org.slf4j.Logger;
+import org.slf4j.Marker;
+import org.slf4j.event.Level;
+import org.slf4j.helpers.FormattingTuple;
+import org.slf4j.helpers.MessageFormatter;
 
-import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -56,23 +45,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Verifies the correct functionality of the {@link LoggingHandler}.
- * <p>
- * Test is {@link Isolated} because it modifies the shared, static logging configuration.
  */
-@Isolated
 public class LoggingHandlerTest {
+    private static final class TestLogger implements Logger {
+        public static final String NAME = "TestLogger";
+        private final ArrayList<String> lines = new ArrayList<>();
 
-    private static final String LOGGER_NAME = LoggingHandler.class.getName();
-
-    private static final class TestAppender implements Appender {
-        public static final String NAME = "TestAppender";
-
-        private ArrayList<String> lines = new ArrayList<>();
-
-        @Override
-        public void append(LogEvent event) {
+        public void append(String format, Object... args) {
             synchronized (lines) {
-                lines.add(event.getMessage().getFormattedMessage());
+                FormattingTuple formattingTuple = MessageFormatter.arrayFormat(format, args);
+                lines.add(formattingTuple.getMessage());
             }
         }
 
@@ -81,60 +63,304 @@ public class LoggingHandlerTest {
             return NAME;
         }
 
-        public AppenderRef ref() {
-            return AppenderRef.createAppenderRef(getName(), null, null);
-        }
-
         @Override
-        public Layout<? extends Serializable> getLayout() {
-            return null;
-        }
-
-        @Override
-        public boolean ignoreExceptions() {
-            return false;
-        }
-
-        @Override
-        public ErrorHandler getHandler() {
-            return new DefaultErrorHandler(this);
-        }
-
-        @Override
-        public void setHandler(ErrorHandler handler) {
-        }
-
-        @Override
-        public State getState() {
-            return State.STARTED;
-        }
-
-        @Override
-        public void initialize() {
-        }
-
-        @Override
-        public void start() {
-        }
-
-        @Override
-        public void stop() {
-        }
-
-        @Override
-        public boolean isStarted() {
+        public boolean isTraceEnabled() {
             return true;
         }
 
         @Override
-        public boolean isStopped() {
-            return false;
+        public void trace(String msg) {
+            append(msg);
         }
 
-        public void clear() {
-            synchronized (lines) {
-                lines.clear();
-            }
+        @Override
+        public void trace(String format, Object arg) {
+            append(format, arg);
+        }
+
+        @Override
+        public void trace(String format, Object first, Object second) {
+            append(format, first, second);
+        }
+
+        @Override
+        public void trace(String format, Object... arguments) {
+            append(format, arguments);
+        }
+
+        @Override
+        public void trace(String msg, Throwable t) {
+            append(msg, t);
+        }
+
+        @Override
+        public boolean isTraceEnabled(Marker marker) {
+            return true;
+        }
+
+        @Override
+        public void trace(Marker marker, String msg) {
+            trace(msg);
+        }
+
+        @Override
+        public void trace(Marker marker, String format, Object arg) {
+            trace(format, arg);
+        }
+
+        @Override
+        public void trace(Marker marker, String format, Object first, Object second) {
+            trace(format, first, second);
+        }
+
+        @Override
+        public void trace(Marker marker, String format, Object... argArray) {
+            trace(format, argArray);
+        }
+
+        @Override
+        public void trace(Marker marker, String msg, Throwable t) {
+            trace(msg, t);
+        }
+
+        @Override
+        public boolean isDebugEnabled() {
+            return true;
+        }
+
+        @Override
+        public void debug(String msg) {
+            append(msg);
+        }
+
+        @Override
+        public void debug(String format, Object arg) {
+            append(format, arg);
+        }
+
+        @Override
+        public void debug(String format, Object first, Object second) {
+            append(format, first, second);
+        }
+
+        @Override
+        public void debug(String format, Object... arguments) {
+            append(format, arguments);
+        }
+
+        @Override
+        public void debug(String msg, Throwable t) {
+            append(msg, t);
+        }
+
+        @Override
+        public boolean isDebugEnabled(Marker marker) {
+            return true;
+        }
+
+        @Override
+        public void debug(Marker marker, String msg) {
+            debug(msg);
+        }
+
+        @Override
+        public void debug(Marker marker, String format, Object arg) {
+            debug(format, arg);
+        }
+
+        @Override
+        public void debug(Marker marker, String format, Object first, Object second) {
+            debug(format, first, second);
+        }
+
+        @Override
+        public void debug(Marker marker, String format, Object... arguments) {
+            debug(format, arguments);
+        }
+
+        @Override
+        public void debug(Marker marker, String msg, Throwable t) {
+            debug(msg, t);
+        }
+
+        @Override
+        public boolean isInfoEnabled() {
+            return true;
+        }
+
+        @Override
+        public void info(String msg) {
+            append(msg);
+        }
+
+        @Override
+        public void info(String format, Object arg) {
+            append(format, arg);
+        }
+
+        @Override
+        public void info(String format, Object first, Object second) {
+            append(format, first, second);
+        }
+
+        @Override
+        public void info(String format, Object... arguments) {
+            append(format, arguments);
+        }
+
+        @Override
+        public void info(String msg, Throwable t) {
+            append(msg, t);
+        }
+
+        @Override
+        public boolean isInfoEnabled(Marker marker) {
+            return true;
+        }
+
+        @Override
+        public void info(Marker marker, String msg) {
+            info(msg);
+        }
+
+        @Override
+        public void info(Marker marker, String format, Object arg) {
+            info(format, arg);
+        }
+
+        @Override
+        public void info(Marker marker, String format, Object first, Object second) {
+            info(format, first, second);
+        }
+
+        @Override
+        public void info(Marker marker, String format, Object... arguments) {
+            info(format, arguments);
+        }
+
+        @Override
+        public void info(Marker marker, String msg, Throwable t) {
+            info(msg, t);
+        }
+
+        @Override
+        public boolean isWarnEnabled() {
+            return true;
+        }
+
+        @Override
+        public void warn(String msg) {
+            append(msg);
+        }
+
+        @Override
+        public void warn(String format, Object arg) {
+            append(format, arg);
+        }
+
+        @Override
+        public void warn(String format, Object... arguments) {
+            append(format, arguments);
+        }
+
+        @Override
+        public void warn(String format, Object first, Object second) {
+            append(format, first, second);
+        }
+
+        @Override
+        public void warn(String msg, Throwable t) {
+            append(msg, t);
+        }
+
+        @Override
+        public boolean isWarnEnabled(Marker marker) {
+            return true;
+        }
+
+        @Override
+        public void warn(Marker marker, String msg) {
+            warn(msg);
+        }
+
+        @Override
+        public void warn(Marker marker, String format, Object arg) {
+            warn(format, arg);
+        }
+
+        @Override
+        public void warn(Marker marker, String format, Object first, Object second) {
+            warn(format, first, second);
+        }
+
+        @Override
+        public void warn(Marker marker, String format, Object... arguments) {
+            warn(format, arguments);
+        }
+
+        @Override
+        public void warn(Marker marker, String msg, Throwable t) {
+            warn(msg, t);
+        }
+
+        @Override
+        public boolean isErrorEnabled() {
+            return true;
+        }
+
+        @Override
+        public void error(String msg) {
+            append(msg);
+        }
+
+        @Override
+        public void error(String format, Object arg) {
+            append(format, arg);
+        }
+
+        @Override
+        public void error(String format, Object first, Object second) {
+            append(format, first, second);
+        }
+
+        @Override
+        public void error(String format, Object... arguments) {
+            append(format, arguments);
+        }
+
+        @Override
+        public void error(String msg, Throwable t) {
+            append(msg, t);
+        }
+
+        @Override
+        public boolean isErrorEnabled(Marker marker) {
+            return true;
+        }
+
+        @Override
+        public void error(Marker marker, String msg) {
+            error(msg);
+        }
+
+        @Override
+        public void error(Marker marker, String format, Object arg) {
+            error(format, arg);
+        }
+
+        @Override
+        public void error(Marker marker, String format, Object first, Object second) {
+            error(format, first, second);
+        }
+
+        @Override
+        public void error(Marker marker, String format, Object... arguments) {
+            error(format, arguments);
+        }
+
+        @Override
+        public void error(Marker marker, String msg, Throwable t) {
+            error(msg, t);
         }
 
         public void verify(ArgumentMatcher<String> matcher) {
@@ -177,65 +403,36 @@ public class LoggingHandlerTest {
     }
 
     /**
-     * Custom log4j appender which gets used to match on log messages.
+     * Custom Logger which gets used to match on log messages.
      */
-    private static final TestAppender appender = new TestAppender();
-
-    @BeforeAll
-    public static void setUpLogger() {
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        Configuration configuration = ctx.getConfiguration();
-        configuration.addAppender(appender);
-        LoggerConfig loggerConfig = LoggerConfig.newBuilder()
-                .withConfig(configuration)
-                .withLoggerName(LOGGER_NAME)
-                .withLevel(Level.DEBUG)
-                .withRefs(new AppenderRef[]{appender.ref()})
-                .build();
-        loggerConfig.addAppender(appender, null, null);
-        configuration.addLogger(LOGGER_NAME, loggerConfig);
-        ctx.updateLoggers();
-    }
-
-    @AfterAll
-    public static void remoteTestLogger() {
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        Configuration configuration = ctx.getConfiguration();
-        configuration.removeLogger(LOGGER_NAME);
-        ctx.updateLoggers();
-    }
-
-    @BeforeEach
-    public void setup() {
-        appender.clear();
-    }
+    private static final TestLogger appender = new TestLogger();
 
     @Test
     public void shouldNotAcceptNullLogLevel() {
         assertThrows(NullPointerException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                LogLevel level = null;
-                new LoggingHandler(level);
+                Level level = null;
+                newLoggingHandler(level);
             }
         });
     }
 
     @Test
     public void shouldApplyCustomLogLevel() {
-        LoggingHandler handler = new LoggingHandler(LogLevel.INFO);
-        assertEquals(LogLevel.INFO, handler.level());
+        LoggingHandler handler = newLoggingHandler(Level.INFO);
+        assertEquals(Level.INFO, handler.level());
     }
 
     @Test
     public void shouldLogChannelActive() {
-        new EmbeddedChannel(new LoggingHandler());
+        new EmbeddedChannel(newLoggingHandler());
         appender.verify(new RegexLogMatcher(".+ACTIVE"));
     }
 
     @Test
     public void shouldLogChannelWritabilityChanged() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         // this is used to switch the channel to become unwritable
         channel.setOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(5, 10));
         channel.write("hello");
@@ -249,27 +446,27 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelRegistered() {
-        new EmbeddedChannel(new LoggingHandler());
+        new EmbeddedChannel(newLoggingHandler());
         appender.verify(new RegexLogMatcher(".+REGISTERED$"));
     }
 
     @Test
     public void shouldLogChannelClose() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.close().asStage().await();
         appender.verify(new RegexLogMatcher(".+CLOSE$"));
     }
 
     @Test
     public void shouldLogChannelConnect() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.connect(new InetSocketAddress(80)).asStage().await();
         appender.verify(new RegexLogMatcher(".+CONNECT: 0.0.0.0/0.0.0.0:80$"));
     }
 
     @Test
     public void shouldLogChannelConnectWithLocalAddress() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.connect(new InetSocketAddress(80), new InetSocketAddress(81)).asStage().await();
         appender.verify(new RegexLogMatcher(
                 "^\\[id: 0xembedded, L:embedded - R:embedded\\] CONNECT: 0.0.0.0/0.0.0.0:80, 0.0.0.0/0.0.0.0:81$"));
@@ -277,7 +474,7 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelDisconnect() throws Exception {
-        EmbeddedChannel channel = new DisconnectingEmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new DisconnectingEmbeddedChannel(newLoggingHandler());
         channel.connect(new InetSocketAddress(80)).asStage().await();
         channel.disconnect().asStage().await();
         appender.verify(new RegexLogMatcher(".+DISCONNECT$"));
@@ -285,14 +482,14 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelInactive() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.pipeline().fireChannelInactive();
         appender.verify(new RegexLogMatcher(".+INACTIVE$"));
     }
 
     @Test
     public void shouldLogChannelBind() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.bind(new InetSocketAddress(80));
         appender.verify(new RegexLogMatcher(".+BIND: 0.0.0.0/0.0.0.0:80$"));
     }
@@ -301,7 +498,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogChannelUserEvent() throws Exception {
         String userTriggered = "iAmCustom!";
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.pipeline().fireChannelInboundEvent(new String(userTriggered));
         appender.verify(new RegexLogMatcher(".+USER_EVENT: " + userTriggered + '$'));
     }
@@ -310,7 +507,7 @@ public class LoggingHandlerTest {
     public void shouldLogChannelException() throws Exception {
         String msg = "illegalState";
         Throwable cause = new IllegalStateException(msg);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.pipeline().fireChannelExceptionCaught(cause);
         appender.verify(new RegexLogMatcher(
                 ".+EXCEPTION: " + cause.getClass().getCanonicalName() + ": " + msg));
@@ -319,7 +516,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogDataWritten() throws Exception {
         String msg = "hello";
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.writeOutbound(msg);
         appender.verify(new RegexLogMatcher(".+WRITE: " + msg));
         appender.verify(new RegexLogMatcher(".+FLUSH"));
@@ -328,7 +525,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogNonByteBufDataRead() throws Exception {
         String msg = "hello";
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.writeInbound(msg);
         appender.verify(new RegexLogMatcher(".+READ: " + msg));
 
@@ -340,7 +537,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogBufferDataRead() throws Exception {
         try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
-            EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+            EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
             channel.writeInbound(msg.copy());
             appender.verify(new RegexLogMatcher(".+READ: " + msg.readableBytes() + 'B', true));
 
@@ -354,7 +551,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogBufferDataReadWithSimpleFormat() throws Exception {
         try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
-            EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
+            EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler(Level.DEBUG, BufferFormat.SIMPLE));
             channel.writeInbound(msg.copy());
             appender.verify(new RegexLogMatcher(".+READ: " + msg.readableBytes() + 'B', false));
 
@@ -368,7 +565,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogEmptyBufferDataRead() throws Exception {
         try (Buffer msg = preferredAllocator().allocate(0)) {
-            EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+            EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
             channel.writeInbound(msg.copy());
             appender.verify(new RegexLogMatcher(".+READ: 0B", false));
 
@@ -381,9 +578,31 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogChannelReadComplete() throws Exception {
         Buffer msg = preferredAllocator().allocate(0);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler());
         channel.writeInbound(msg);
         appender.verify(new RegexLogMatcher(".+READ COMPLETE$"));
+    }
+
+    private LoggingHandler newLoggingHandler() {
+        return newLoggingHandler(LoggingHandler.DEFAULT_LEVEL);
+    }
+
+    private LoggingHandler newLoggingHandler(Level level) {
+        return newLoggingHandler(level, BufferFormat.HEX_DUMP);
+    }
+
+    private LoggingHandler newLoggingHandler(Level level, BufferFormat bufferFormat) {
+        return new LoggingHandler(level, bufferFormat) {
+            @Override
+            protected Logger getLogger(Class<?> clazz) {
+                return appender;
+            }
+
+            @Override
+            protected Logger getLogger(String name) {
+                return appender;
+            }
+        };
     }
 
     /**

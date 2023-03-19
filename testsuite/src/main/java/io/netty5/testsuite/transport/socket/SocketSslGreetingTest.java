@@ -24,7 +24,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.SslContext;
@@ -34,12 +33,13 @@ import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
@@ -61,9 +61,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class SocketSslGreetingTest extends AbstractSocketTest {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocketSslGreetingTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(SocketSslGreetingTest.class);
 
-    private static final LogLevel LOG_LEVEL = LogLevel.TRACE;
+    private static final Level LOG_LEVEL = Level.TRACE;
     private static final File CERT_FILE;
     private static final File KEY_FILE;
 
