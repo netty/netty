@@ -1,6 +1,7 @@
 FROM centos:7.6.1810
 
 ARG GCC_VERSION=10.2-2020.11
+ENV MAVEN_VERSION 3.9.1
 ENV SOURCE_DIR /root/source
 ENV WORKSPACE_DIR /root/workspace
 ENV PROJECT_DIR /root/workspace/project
@@ -27,7 +28,8 @@ RUN yum install -y \
  perl \
  tar \
  unzip \
- wget
+ wget \
+ zip
 
 
 RUN mkdir $SOURCE_DIR
@@ -54,9 +56,14 @@ RUN /root/.cargo/bin/rustup target add aarch64-unknown-linux-gnu
 RUN echo '[target.aarch64-unknown-linux-gnu]' >> /root/.cargo/config
 RUN echo 'linker = "aarch64-none-linux-gnu-gcc"' >> /root/.cargo/config
 
-WORKDIR /opt
-RUN curl https://dlcdn.apache.org/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz | tar -xz
-RUN echo 'PATH=/opt/apache-maven-3.9.0/bin/:$PATH' >> ~/.bashrc
+# Downloading and installing SDKMAN!
+RUN curl -s "https://get.sdkman.io" | bash
+
+# Installing Java and Maven, removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install maven $MAVEN_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
 
 # Prepare our own build
-ENV PATH /opt/apache-maven-3.9.0/bin/:$PATH
+ENV PATH /root/.sdkman/candidates/maven/current:$PATH
