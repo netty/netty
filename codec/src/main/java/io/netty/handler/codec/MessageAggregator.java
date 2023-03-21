@@ -63,6 +63,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     private ChannelFutureListener continueResponseWriteListener;
 
     private boolean aggregating;
+    private boolean handleIncompleteAggregateDuringClose = true;
 
     /**
      * Creates a new instance.
@@ -241,6 +242,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 final ChannelFuture future = ctx.writeAndFlush(continueResponse).addListener(listener);
 
                 if (closeAfterWrite) {
+                    handleIncompleteAggregateDuringClose = false;
                     future.addListener(ChannelFutureListener.CLOSE);
                     return;
                 }
@@ -398,6 +400,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     private void invokeHandleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
         handlingOversizedMessage = true;
         currentMessage = null;
+        handleIncompleteAggregateDuringClose = false;
         try {
             handleOversizedMessage(ctx, oversized);
         } finally {
@@ -431,7 +434,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (this.aggregating) {
+        if (aggregating && handleIncompleteAggregateDuringClose) {
             ctx.fireExceptionCaught(
                     new PrematureChannelClosureException("Channel closed while still aggregating message"));
         }
