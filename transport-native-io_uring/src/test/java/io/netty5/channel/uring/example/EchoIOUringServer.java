@@ -23,8 +23,8 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.uring.IOUring;
 import io.netty5.channel.uring.IOUringServerSocketChannel;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
-import org.slf4j.event.Level;
 
 //temporary prototype example
 public class EchoIOUringServer {
@@ -38,7 +38,7 @@ public class EchoIOUringServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
                     .channel(IOUringServerSocketChannel.class)
-                    .handler(new LoggingHandler(Level.INFO))
+                    .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {

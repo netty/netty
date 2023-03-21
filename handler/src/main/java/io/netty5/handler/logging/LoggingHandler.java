@@ -35,7 +35,7 @@ import static java.util.Objects.requireNonNull;
  */
 @SuppressWarnings("StringBufferReplaceableByString")
 public class LoggingHandler implements ChannelHandler {
-    public static final Level DEFAULT_LEVEL = Level.DEBUG;
+    public static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 
     protected final Logger logger;
     protected final Level level;
@@ -65,7 +65,7 @@ public class LoggingHandler implements ChannelHandler {
      *
      * @param level the log level
      */
-    public LoggingHandler(Level level) {
+    public LoggingHandler(LogLevel level) {
         this(level, BufferFormat.HEX_DUMP);
     }
 
@@ -76,8 +76,8 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      * @param bufferFormat the ByteBuf format
      */
-    public LoggingHandler(Level level, BufferFormat bufferFormat) {
-        this.level = requireNonNull(level, "level");
+    public LoggingHandler(LogLevel level, BufferFormat bufferFormat) {
+        this.level = requireNonNull(level, "level").toInternalLevel();
         this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = getLogger(getClass());
     }
@@ -98,7 +98,7 @@ public class LoggingHandler implements ChannelHandler {
      * @param clazz the class type to generate the logger for
      * @param level the log level
      */
-    public LoggingHandler(Class<?> clazz, Level level) {
+    public LoggingHandler(Class<?> clazz, LogLevel level) {
         this(clazz, level, BufferFormat.HEX_DUMP);
     }
 
@@ -109,9 +109,9 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      * @param bufferFormat the ByteBuf format
      */
-    public LoggingHandler(Class<?> clazz, Level level, BufferFormat bufferFormat) {
+    public LoggingHandler(Class<?> clazz, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(clazz, "clazz");
-        this.level = requireNonNull(level, "level");
+        this.level = requireNonNull(level, "level").toInternalLevel();
         this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = getLogger(clazz);
     }
@@ -131,7 +131,7 @@ public class LoggingHandler implements ChannelHandler {
      * @param name the name of the class to use for the logger
      * @param level the log level
      */
-    public LoggingHandler(String name, Level level) {
+    public LoggingHandler(String name, LogLevel level) {
         this(name, level, BufferFormat.HEX_DUMP);
     }
 
@@ -142,9 +142,9 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      * @param bufferFormat the ByteBuf format
      */
-    public LoggingHandler(String name, Level level, BufferFormat bufferFormat) {
+    public LoggingHandler(String name, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(name, "name");
-        this.level = requireNonNull(level, "level");
+        this.level = requireNonNull(level, "level").toInternalLevel();
         this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = getLogger(name);
     }
@@ -171,8 +171,8 @@ public class LoggingHandler implements ChannelHandler {
     /**
      * Returns the {@link Level} that this handler uses to log
      */
-    public Level level() {
-        return level;
+    public LogLevel level() {
+        return LogLevel.from(level);
     }
 
     /**

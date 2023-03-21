@@ -22,11 +22,11 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.slf4j.event.Level;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -45,7 +45,7 @@ public class PollRemoveTest {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup)
                     .channel(clazz)
-                    .handler(new LoggingHandler(Level.TRACE))
+                    .handler(new LoggingHandler(LogLevel.TRACE))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) { }

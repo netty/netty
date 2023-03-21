@@ -21,8 +21,8 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
-import org.slf4j.event.Level;
 
 public final class HexDumpProxy {
 
@@ -40,7 +40,7 @@ public final class HexDumpProxy {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(Level.INFO))
+             .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new HexDumpProxyInitializer(REMOTE_HOST, REMOTE_PORT))
              .childOption(ChannelOption.AUTO_READ, false)
              .bind(LOCAL_PORT).asStage().get().closeFuture().asStage().sync();

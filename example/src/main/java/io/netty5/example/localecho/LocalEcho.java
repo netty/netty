@@ -25,9 +25,9 @@ import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.local.LocalServerChannel;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.concurrent.Future;
-import org.slf4j.event.Level;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -52,14 +52,14 @@ public final class LocalEcho {
               .handler(new ChannelInitializer<LocalServerChannel>() {
                   @Override
                   public void initChannel(LocalServerChannel ch) throws Exception {
-                      ch.pipeline().addLast(new LoggingHandler(Level.INFO));
+                      ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                   }
               })
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
                       ch.pipeline().addLast(
-                              new LoggingHandler(Level.INFO),
+                              new LoggingHandler(LogLevel.INFO),
                               new LocalEchoServerHandler());
                   }
               });
@@ -71,7 +71,7 @@ public final class LocalEcho {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
                       ch.pipeline().addLast(
-                              new LoggingHandler(Level.INFO),
+                              new LoggingHandler(LogLevel.INFO),
                               new LocalEchoClientHandler());
                   }
               });

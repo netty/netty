@@ -21,9 +21,9 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.example.util.ServerUtil;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
-import org.slf4j.event.Level;
 
 /**
  * Receives a sequence of integers from a {@link FactorialClient} to calculate
@@ -43,7 +43,7 @@ public final class FactorialServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(Level.INFO))
+             .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new FactorialServerInitializer(sslCtx));
 
             b.bind(PORT).asStage().get().closeFuture().asStage().sync();

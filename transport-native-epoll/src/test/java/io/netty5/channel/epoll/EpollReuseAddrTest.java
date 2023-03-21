@@ -22,6 +22,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.unix.UnixChannelOption;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.NetUtil;
 import io.netty5.util.Resource;
@@ -31,7 +32,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -101,7 +101,7 @@ public class EpollReuseAddrTest {
 
     private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?, ?> bootstrap)
             throws Exception {
-        bootstrap.handler(new LoggingHandler(Level.ERROR));
+        bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
         Channel channel = bootstrap.bind().asStage().get();
         try {
             bootstrap.bind(channel.localAddress()).asStage().sync();

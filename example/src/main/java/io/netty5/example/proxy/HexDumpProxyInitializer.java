@@ -17,8 +17,8 @@ package io.netty5.example.proxy;
 
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
-import org.slf4j.event.Level;
 
 public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -33,7 +33,7 @@ public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) {
         ch.pipeline().addLast(
-                new LoggingHandler(Level.INFO),
+                new LoggingHandler(LogLevel.INFO),
                 new HexDumpProxyFrontendHandler(remoteHost, remotePort));
     }
 }

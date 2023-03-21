@@ -22,6 +22,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.codec.http2.Http2SecurityUtil;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.ApplicationProtocolConfig;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
@@ -30,7 +31,6 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import org.slf4j.event.Level;
 
 public final class Http2StaticFileServer {
 
@@ -57,7 +57,7 @@ public final class Http2StaticFileServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
-                    .handler(new LoggingHandler(Level.INFO))
+                    .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new Http2StaticFileServerInitializer(sslCtx));
 
             Channel ch = b.bind(PORT).asStage().get();

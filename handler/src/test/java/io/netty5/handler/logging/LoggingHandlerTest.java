@@ -25,7 +25,6 @@ import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentMatcher;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
-import org.slf4j.event.Level;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
@@ -412,7 +411,7 @@ public class LoggingHandlerTest {
         assertThrows(NullPointerException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                Level level = null;
+                LogLevel level = null;
                 newLoggingHandler(level);
             }
         });
@@ -420,8 +419,8 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldApplyCustomLogLevel() {
-        LoggingHandler handler = newLoggingHandler(Level.INFO);
-        assertEquals(Level.INFO, handler.level());
+        LoggingHandler handler = newLoggingHandler(LogLevel.INFO);
+        assertEquals(LogLevel.INFO, handler.level());
     }
 
     @Test
@@ -551,7 +550,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogBufferDataReadWithSimpleFormat() throws Exception {
         try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
-            EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler(Level.DEBUG, BufferFormat.SIMPLE));
+            EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
             channel.writeInbound(msg.copy());
             appender.verify(new RegexLogMatcher(".+READ: " + msg.readableBytes() + 'B', false));
 
@@ -587,11 +586,11 @@ public class LoggingHandlerTest {
         return newLoggingHandler(LoggingHandler.DEFAULT_LEVEL);
     }
 
-    private LoggingHandler newLoggingHandler(Level level) {
+    private LoggingHandler newLoggingHandler(LogLevel level) {
         return newLoggingHandler(level, BufferFormat.HEX_DUMP);
     }
 
-    private LoggingHandler newLoggingHandler(Level level, BufferFormat bufferFormat) {
+    private LoggingHandler newLoggingHandler(LogLevel level, BufferFormat bufferFormat) {
         return new LoggingHandler(level, bufferFormat) {
             @Override
             protected Logger getLogger(Class<?> clazz) {

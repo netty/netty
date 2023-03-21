@@ -24,6 +24,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.codec.http2.Http2SecurityUtil;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.ApplicationProtocolConfig;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -35,7 +36,6 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import org.slf4j.event.Level;
 
 import static io.netty5.handler.ssl.SslProvider.isAlpnSupported;
 
@@ -79,7 +79,7 @@ public final class Http2Server {
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.group(group)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(Level.INFO))
+             .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new Http2ServerInitializer(sslCtx));
 
             Channel ch = b.bind(PORT).asStage().get();

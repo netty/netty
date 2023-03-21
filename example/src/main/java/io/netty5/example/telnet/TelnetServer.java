@@ -21,9 +21,9 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.example.util.ServerUtil;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
-import org.slf4j.event.Level;
 
 /**
  * Simplistic telnet server.
@@ -43,7 +43,7 @@ public final class TelnetServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .handler(new LoggingHandler(Level.INFO))
+             .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new TelnetServerInitializer(sslCtx));
 
             b.bind(PORT).asStage().get().closeFuture().asStage().sync();

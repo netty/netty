@@ -43,9 +43,9 @@ import io.netty5.handler.codec.dns.TcpDnsQueryDecoder;
 import io.netty5.handler.codec.dns.TcpDnsQueryEncoder;
 import io.netty5.handler.codec.dns.TcpDnsResponseDecoder;
 import io.netty5.handler.codec.dns.TcpDnsResponseEncoder;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.NetUtil;
-import org.slf4j.event.Level;
 
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -63,7 +63,7 @@ public final class TcpDnsServer {
                 .group(new MultithreadEventLoopGroup(1, ioHandlerFactory),
                        new MultithreadEventLoopGroup(ioHandlerFactory))
                 .channel(NioServerSocketChannel.class)
-                .handler(new LoggingHandler(Level.INFO))
+                .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {

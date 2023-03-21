@@ -26,9 +26,9 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.HttpRequestDecoder;
 import io.netty5.handler.codec.http.HttpResponseEncoder;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.concurrent.Future;
-import org.slf4j.event.Level;
 
 /**
  * Demonstrates an http server using Netty to display a bunch of images, simulate
@@ -49,7 +49,7 @@ public final class HttpServer {
         ServerBootstrap b = new ServerBootstrap();
         b.option(ChannelOption.SO_BACKLOG, 1024);
 
-        b.group(group).channel(NioServerSocketChannel.class).handler(new LoggingHandler(Level.INFO))
+        b.group(group).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO))
         .childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
