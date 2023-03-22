@@ -26,6 +26,10 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+
 /**
  * An HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
  * server with the example client.
@@ -64,6 +68,18 @@ public final class Http2Server {
         } else {
             port = 9000;
         }
+        Class<Http2Server> serverClass = Http2Server.class;
+        URLClassLoader classLoader = (URLClassLoader) serverClass.getClassLoader();
+        URL[] urLs = classLoader.getURLs();
+        try (URLClassLoader cl = new URLClassLoader(urLs)) { // Drop the parent classloader.
+            Class<?> mainClass = cl.loadClass(serverClass.getName());
+            Method start = mainClass.getMethod("start", int.class);
+            start.invoke(null, port);
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public static void start(int port) throws Exception {
         new Http2Server(port).run();
     }
 }
