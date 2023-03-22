@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -31,6 +32,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import org.junit.jupiter.api.function.Executable;
 
 public class MessageAggregatorTest {
     private static final class ReadCounter extends ChannelOutboundHandlerAdapter {
@@ -61,7 +63,6 @@ public class MessageAggregatorTest {
             Unpooled.copiedBuffer(string, CharsetUtil.US_ASCII));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testReadFlowManagement() throws Exception {
         ReadCounter counter = new ReadCounter();
@@ -92,5 +93,45 @@ public class MessageAggregatorTest {
         assertEquals(all, out);
         assertTrue(all.release() && out.release());
         assertFalse(embedded.finish());
+    }
+
+    @Test
+    public void testCloseWhileAggregating() throws Exception {
+        ReadCounter counter = new ReadCounter();
+        ByteBufHolder first = new TestMessage(Unpooled.copiedBuffer("first", CharsetUtil.US_ASCII));
+
+        MockMessageAggregator agg = spy(MockMessageAggregator.class);
+        when(agg.isStartMessage(first)).thenReturn(true);
+        when(agg.isLastContentMessage(first)).thenReturn(false);
+
+        final EmbeddedChannel embedded = new EmbeddedChannel(counter, agg);
+        embedded.config().setAutoRead(false);
+
+        assertFalse(embedded.writeInbound(first));
+
+        assertEquals(2, counter.value);
+        assertThrows(PrematureChannelClosureException.class, new Executable() {
+            @Override
+            public void execute() {
+                embedded.finish();
+            }
+        });
+        assertEquals(0, first.refCnt());
+    }
+
+    private static final class TestMessage extends DefaultByteBufHolder implements DecoderResultProvider {
+        TestMessage(ByteBuf data) {
+            super(data);
+        }
+
+        @Override
+        public DecoderResult decoderResult() {
+            return DecoderResult.SUCCESS;
+        }
+
+        @Override
+        public void setDecoderResult(DecoderResult result) {
+            // NOOP
+        }
     }
 }
