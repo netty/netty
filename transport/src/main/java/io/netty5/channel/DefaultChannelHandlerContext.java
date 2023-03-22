@@ -980,7 +980,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private Future<Void> handleOutboundHandlerException(Throwable cause, boolean closeDidThrow) {
         String msg = handler() + " threw an exception while handling an outbound event. This is most likely a bug";
 
-        logger.warn("{}. This is most likely a bug, closing the channel.", msg, cause);
+        logger.warn("{}. Closing the channel.", msg, cause);
         if (closeDidThrow) {
             // Close itself did throw, just call close() directly and so have the next handler invoked. If we would
             // call close() on the Channel we would risk an infinite-loop.
