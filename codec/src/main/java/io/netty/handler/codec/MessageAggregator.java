@@ -105,7 +105,6 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
         // NOTE: It's tempting to make this check only if aggregating is false. There are however
         // side conditions in decode(...) in respect to large messages.
         if (isStartMessage(in)) {
-            aggregating = true;
             return true;
         } else {
             return aggregating && isContentMessage(in);
@@ -205,9 +204,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     @Override
     protected void decode(final ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
-        assert aggregating;
-
         if (isStartMessage(msg)) {
+            aggregating = true;
             handlingOversizedMessage = false;
             if (currentMessage != null) {
                 currentMessage.release();
