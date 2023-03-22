@@ -17,6 +17,8 @@ package io.netty5.handler.codec;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.BufferHolder;
+import io.netty5.buffer.BufferStub;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -25,13 +27,17 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.charset.StandardCharsets;
 
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class MessageAggregatorTest {
     private static final class ReadCounter implements ChannelHandler {
@@ -153,6 +159,41 @@ public class MessageAggregatorTest {
                 assertTrue(out.isAccessible());
             }
             assertFalse(embedded.finish());
+        }
+    }
+
+    @Test
+    public void testCloseWhileAggregating() {
+        try (BufferAllocator allocator = BufferAllocator.offHeapPooled()) {
+            ReadCounter counter = new ReadCounter();
+            TestMessage first = new TestMessage(message(allocator, "first"));
+
+            MockMessageAggregator agg = new MockMessageAggregator(first.copy(), message(allocator, "last"));
+
+            final EmbeddedChannel embedded = new EmbeddedChannel(counter, agg);
+            embedded.setOption(ChannelOption.AUTO_READ, false);
+
+            assertFalse(embedded.writeInbound(first));
+
+            assertEquals(2, counter.value);
+            assertThrows(PrematureChannelClosureException.class, embedded::finish);
+            assertFalse(first.isAccessible());
+        }
+    }
+
+    private static final class TestMessage extends BufferStub implements DecoderResultProvider {
+        TestMessage(Buffer data) {
+            super(data);
+        }
+
+        @Override
+        public DecoderResult decoderResult() {
+            return DecoderResult.success();
+        }
+
+        @Override
+        public void setDecoderResult(DecoderResult result) {
+            // NOOP
         }
     }
 }
