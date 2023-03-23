@@ -1467,8 +1467,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                         return value;
                     } finally {
                         if (e != null) {
+                            String valueStr = String.valueOf(value);
                             Resource.dispose(value);
-                            logger.error("Failed to dispose {}.", value, e);
+                            logger.error("Failed to dispose {}.", valueStr, e);
                             throw e;
                         }
                     }
