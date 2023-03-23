@@ -76,8 +76,8 @@ public class FastThreadLocalThread extends Thread {
      */
     final InternalThreadLocalMap threadLocalMap() {
         if (this != Thread.currentThread() && logger.isWarnEnabled()) {
-            logger.atWarn().setCause(new RuntimeException()).log("It's not thread-safe to get 'threadLocalMap' " +
-                    "which doesn't belong to the caller thread");
+            logger.warn("It's not thread-safe to get 'threadLocalMap' which doesn't belong to the caller thread",
+                    new IllegalStateException("Unsafe threadLocalMap access"));
         }
         return threadLocalMap;
     }
@@ -88,8 +88,8 @@ public class FastThreadLocalThread extends Thread {
      */
     final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
         if (this != Thread.currentThread() && logger.isWarnEnabled()) {
-            logger.atWarn().setCause(new RuntimeException()).log("It's not thread-safe to set 'threadLocalMap' " +
-                    "which doesn't belong to the caller thread");
+            logger.warn("It's not thread-safe to get 'threadLocalMap' which doesn't belong to the caller thread",
+                    new IllegalStateException("Unsafe threadLocalMap access"));
         }
         this.threadLocalMap = threadLocalMap;
     }
