@@ -68,6 +68,15 @@ public final class Http2Server {
         } else {
             port = 9000;
         }
+
+        // We are supposed to be running with a classloader that presents us with the Maven test-classpath,
+        // which we do: the h2spec-maven-plugin has set us up with a URLClassLoader that contain this classpath
+        // in its list of URLs.
+        // However, this classloader also has the Maven internal classloader as a parent, and that means some
+        // dependencies, such as SLF4J, will be provided by the Maven process rather than our test-classpath.
+        // Maven uses a different major version of SLF4J than we do, so this will cause us problems.
+        // To fix this, we need to re-create the URLClassLoader *without* the current parent classloader.
+        // That way, we will not have our class-world polluted by whatever stuff Maven is using.
         Class<Http2Server> serverClass = Http2Server.class;
         URLClassLoader classLoader = (URLClassLoader) serverClass.getClassLoader();
         URL[] urLs = classLoader.getURLs();
