@@ -157,6 +157,7 @@ final class OpenJdkSelfSignedCertGenerator {
         CERT_IMPL_GET_METHOD = certImplGetMethod;
         CERT_IMPL_SIGN_METHOD = certImplSignMethod;
     }
+
     @SuppressJava6Requirement(reason = "Usage guarded by dependency check")
     static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
                              String algorithm) throws Exception {
