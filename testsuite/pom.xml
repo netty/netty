@@ -114,6 +114,13 @@
       <artifactId>logback-classic</artifactId>
       <scope>compile</scope>
     </dependency>
+
+    <!-- For SelfSignedCertificate usage on JDK20+ -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <properties>

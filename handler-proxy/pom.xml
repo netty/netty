@@ -76,6 +76,12 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
+    <!-- For SelfSignedCertificate usage on JDK20+ -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
     <dependency>
