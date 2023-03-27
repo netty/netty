@@ -15,25 +15,24 @@
  */
 package io.netty5.handler.ssl;
 
-import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
-import io.netty5.channel.ReadBufferAllocator;
-import io.netty5.util.Resource;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.DecoderException;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link ByteToMessageDecoder} which allows to be notified once a full {@code ClientHello} was received.
  */
 public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SslClientHelloHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(SslClientHelloHandler.class);
 
     private boolean handshakeFailed;
     private boolean suppressRead;

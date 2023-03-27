@@ -22,8 +22,8 @@ import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -43,7 +43,7 @@ import static io.netty5.handler.codec.http2.Http2FrameTypes.SETTINGS;
 @UnstableApi
 public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.UpgradeCodec {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ServerUpgradeCodec.class);
+    private static final Logger logger = LoggerFactory.getLogger(Http2ServerUpgradeCodec.class);
     private static final List<CharSequence> REQUIRED_UPGRADE_HEADERS =
             Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
     private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];

@@ -15,8 +15,6 @@
  */
 package io.netty5.util.internal;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
@@ -28,6 +26,8 @@ import org.jctools.queues.unpadded.SpscLinkedUnpaddedQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -75,7 +75,7 @@ import static java.lang.Math.min;
  */
 public final class PlatformDependent {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
+    private static final Logger logger = LoggerFactory.getLogger(PlatformDependent.class);
 
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");

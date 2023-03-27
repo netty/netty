@@ -18,11 +18,11 @@ package io.netty5.channel.uring;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class IOUring {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUring.class);
+    private static final Logger logger = LoggerFactory.getLogger(IOUring.class);
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {

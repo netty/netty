@@ -30,11 +30,11 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
@@ -53,8 +53,7 @@ import static org.mockito.Mockito.when;
 
 public class Http2StreamChannelBootstrapTest {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(Http2StreamChannelBootstrapTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(Http2StreamChannelBootstrapTest.class);
 
     private volatile Channel serverConnectedChannel;
 
@@ -129,7 +128,7 @@ public class Http2StreamChannelBootstrapTest {
             try {
                 channel.close().asStage().sync();
             } catch (Exception e) {
-                logger.error(e);
+                logger.error("Failed to close channel {}.", channel, e);
             }
         }
     }

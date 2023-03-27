@@ -17,8 +17,8 @@ package io.netty5.handler.codec.http2;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -44,8 +44,7 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DefaultHttp2RemoteFlowController.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHttp2RemoteFlowController.class);
     private static final int MIN_WRITABLE_CHUNK = 32 * 1024;
     private final Http2Connection connection;
     private final Http2Connection.PropertyKey stateKey;

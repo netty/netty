@@ -23,9 +23,9 @@ import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -39,7 +39,7 @@ import static java.util.Objects.requireNonNull;
  * {@link IoHandler} which is implemented in terms of the Linux-specific {@code io_uring} API.
  */
 final class IOUringHandler implements IoHandler, CompletionCallback {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(IOUringHandler.class);
     private static final short RING_CLOSE = 1;
 
     private final RingBuffer ringBuffer;

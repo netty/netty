@@ -33,8 +33,8 @@ import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.util.concurrent.DefaultThreadFactory;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class SocketTestPermutation {
     static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty5.testsuite.badPort", 65535);
 
     static {
-        InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
+        Logger logger = LoggerFactory.getLogger(SocketConnectionAttemptTest.class);
         logger.debug("-Dio.netty5.testsuite.badHost: {}", BAD_HOST);
         logger.debug("-Dio.netty5.testsuite.badPort: {}", BAD_PORT);
     }

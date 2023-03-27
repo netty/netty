@@ -15,8 +15,8 @@
  */
 package io.netty5.buffer.internal;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -28,9 +28,10 @@ final class JniBufferAccess {
     static final boolean IS_AVAILABLE;
     static final MethodHandle MEMORY_ADDRESS;
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JniBufferAccess.class);
+    private static final Logger logger;
 
     static {
+        logger = LoggerFactory.getLogger(JniBufferAccess.class);
         boolean isAvailable = false;
         MethodHandle memoryAddress = null;
         try {

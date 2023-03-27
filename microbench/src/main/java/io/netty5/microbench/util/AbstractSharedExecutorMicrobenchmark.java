@@ -19,9 +19,9 @@ import io.netty5.channel.EventLoop;
 import io.netty5.util.concurrent.AbstractEventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.openjdk.jmh.annotations.Fork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +63,7 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
      */
     public static final class DelegateHarnessExecutor extends AbstractEventExecutor {
         private static EventLoop executor;
-        private final InternalLogger logger = InternalLoggerFactory.getInstance(DelegateHarnessExecutor.class);
+        private final Logger logger = LoggerFactory.getLogger(DelegateHarnessExecutor.class);
 
         public DelegateHarnessExecutor(int maxThreads, String prefix) {
             logger.debug("Using DelegateHarnessExecutor executor {}", this);

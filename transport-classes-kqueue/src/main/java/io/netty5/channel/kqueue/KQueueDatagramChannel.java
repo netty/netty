@@ -41,8 +41,8 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -91,7 +91,7 @@ import static java.util.Objects.requireNonNull;
 @UnstableApi
 public final class KQueueDatagramChannel
         extends AbstractKQueueChannel<UnixChannel> implements DatagramChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDatagramChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(KQueueDatagramChannel.class);
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();

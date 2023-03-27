@@ -18,12 +18,12 @@ package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.Brotli4jLoader;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class Brotli {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Brotli.class);
+    private static final Logger logger = LoggerFactory.getLogger(Brotli.class);
     private static final ClassNotFoundException CNFE;
     private static Throwable cause;
 

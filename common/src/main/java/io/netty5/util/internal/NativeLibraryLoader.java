@@ -15,8 +15,8 @@
  */
 package io.netty5.util.internal;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -48,7 +48,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class NativeLibraryLoader {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NativeLibraryLoader.class);
+    private static final Logger logger = LoggerFactory.getLogger(NativeLibraryLoader.class);
 
     private static final String NATIVE_RESOURCE_HOME = "META-INF/native/";
     private static final File WORKDIR;

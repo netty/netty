@@ -15,9 +15,9 @@
  */
 package io.netty5.util.internal;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
@@ -39,7 +39,7 @@ import java.util.NoSuchElementException;
  */
 final class PlatformDependent0 {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
+    private static final Logger logger = LoggerFactory.getLogger(PlatformDependent0.class);
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final long INT_ARRAY_BASE_OFFSET;

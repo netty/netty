@@ -15,17 +15,17 @@
  */
 package io.netty5.handler.flow;
 
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.MessageToByteEncoder;
 import io.netty5.util.Resource;
-import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.internal.ObjectPool;
 import io.netty5.util.internal.ObjectPool.Handle;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -65,7 +65,7 @@ import java.util.Queue;
  * @see ChannelOption#AUTO_READ)
  */
 public class FlowControlHandler implements ChannelHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(FlowControlHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(FlowControlHandler.class);
 
     private final boolean releaseMessages;
 

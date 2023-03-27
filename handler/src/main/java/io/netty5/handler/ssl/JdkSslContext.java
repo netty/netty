@@ -17,8 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManagerFactory;
@@ -56,7 +56,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class JdkSslContext extends SslContext {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkSslContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(JdkSslContext.class);
 
     static final String PROTOCOL = "TLS";
     private static final String[] DEFAULT_PROTOCOLS;

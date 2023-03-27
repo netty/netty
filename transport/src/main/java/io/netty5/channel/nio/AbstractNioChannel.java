@@ -18,15 +18,15 @@ package io.netty5.channel.nio;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.channel.ReadHandleFactory;
-import io.netty5.channel.WriteHandleFactory;
-import io.netty5.util.Resource;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.EventLoop;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.WriteHandleFactory;
+import io.netty5.util.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -42,8 +42,7 @@ import java.nio.channels.Selector;
 public abstract class AbstractNioChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
         extends AbstractChannel<P, L, R> {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(AbstractNioChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractNioChannel.class);
 
     private final SelectableChannel ch;
     private final int readInterestOp;

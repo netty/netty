@@ -19,8 +19,8 @@ import io.netty5.buffer.MemoryManager;
 import io.netty5.buffer.bytebuffer.ByteBufferMemoryManager;
 import io.netty5.buffer.unsafe.UnsafeMemoryManager;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -40,7 +40,7 @@ public final class MemoryManagerOverride {
     private static MemoryManager createDefaultMemoryManagerInstance() {
         String systemProperty = "io.netty5.buffer.MemoryManager";
         String configured = System.getProperty(systemProperty);
-        InternalLogger logger = InternalLoggerFactory.getInstance(MemoryManagerOverride.class);
+        Logger logger = LoggerFactory.getLogger(MemoryManagerOverride.class);
         if (configured != null) {
             Optional<MemoryManager> candidateManager = MemoryManager.lookupImplementation(configured);
             if (candidateManager.isPresent()) {

@@ -26,8 +26,8 @@ import io.netty5.util.Attribute;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -50,8 +50,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositive;
  * </ul>
  */
 public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(AbstractTrafficShapingHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractTrafficShapingHandler.class);
     /**
      * Default delay between two checks: 1s
      */

@@ -27,8 +27,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +36,8 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,7 +72,7 @@ import static org.mockito.Mockito.when;
  */
 @SuppressWarnings("unchecked")
 public class StreamBufferingEncoderTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamBufferingEncoderTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(StreamBufferingEncoderTest.class);
 
     private StreamBufferingEncoder encoder;
 

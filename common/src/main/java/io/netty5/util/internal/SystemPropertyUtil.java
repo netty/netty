@@ -15,8 +15,8 @@
  */
 package io.netty5.util.internal;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -28,7 +28,7 @@ import static io.netty5.util.internal.ObjectUtil.checkNonEmpty;
  */
 public final class SystemPropertyUtil {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SystemPropertyUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(SystemPropertyUtil.class);
 
     /**
      * Returns {@code true} if and only if the system property with the specified {@code key}

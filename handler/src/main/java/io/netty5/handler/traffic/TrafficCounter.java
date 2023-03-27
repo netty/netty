@@ -18,8 +18,8 @@ package io.netty5.handler.traffic;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.EventExecutorGroup;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +40,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class TrafficCounter {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TrafficCounter.class);
+    private static final Logger logger = LoggerFactory.getLogger(TrafficCounter.class);
 
     /**
      * @return the time in ms using nanoTime, so not real EPOCH time but elapsed time in ms.

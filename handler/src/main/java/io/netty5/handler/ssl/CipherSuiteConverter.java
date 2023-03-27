@@ -16,9 +16,9 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.TestOnly;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ import static java.util.Collections.singletonMap;
 @UnstableApi
 public final class CipherSuiteConverter {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CipherSuiteConverter.class);
+    private static final Logger logger = LoggerFactory.getLogger(CipherSuiteConverter.class);
 
     /**
      * A_B_WITH_C_D, where:

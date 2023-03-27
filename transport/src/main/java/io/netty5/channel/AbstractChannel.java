@@ -26,8 +26,8 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -71,7 +71,7 @@ import static java.util.Objects.requireNonNull;
 public abstract class AbstractChannel<P extends Channel, L extends SocketAddress, R extends SocketAddress>
         extends DefaultAttributeMap implements Channel {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractChannel.class);
     private static final MessageSizeEstimator DEFAULT_MSG_SIZE_ESTIMATOR = DefaultMessageSizeEstimator.DEFAULT;
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;

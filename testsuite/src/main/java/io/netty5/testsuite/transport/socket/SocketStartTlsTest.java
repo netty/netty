@@ -35,12 +35,12 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 import java.io.File;
@@ -60,7 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SocketStartTlsTest extends AbstractSocketTest {
     private static final String PARAMETERIZED_NAME = "{index}: serverEngine = {0}, clientEngine = {1}";
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocketStartTlsTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(SocketStartTlsTest.class);
 
     private static final LogLevel LOG_LEVEL = LogLevel.TRACE;
     private static final File CERT_FILE;

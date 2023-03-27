@@ -39,9 +39,9 @@ import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -57,7 +57,7 @@ import java.util.function.ObjLongConsumer;
 import static java.util.Objects.requireNonNull;
 
 public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixChannel> implements DatagramChannel {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(IOUringDatagramChannel.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IOUringDatagramChannel.class);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -117,7 +117,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
     }
 
     @Override
-    protected InternalLogger logger() {
+    protected Logger logger() {
         return LOGGER;
     }
 

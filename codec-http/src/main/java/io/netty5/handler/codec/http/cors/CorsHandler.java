@@ -28,14 +28,12 @@ import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.StringJoiner;
 
 import static io.netty5.handler.codec.http.HttpMethod.OPTIONS;
@@ -52,7 +50,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class CorsHandler implements ChannelHandler {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(CorsHandler.class);
     private static final String ANY_ORIGIN = "*";
     private static final String NULL_ORIGIN = "null";
     private CorsConfig config;

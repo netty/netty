@@ -18,8 +18,8 @@ package io.netty5.util;
 
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
@@ -98,9 +98,10 @@ public class ResourceLeakDetector<T> {
 
     private static Level level;
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
+    private static final Logger logger;
 
     static {
+        logger = LoggerFactory.getLogger(ResourceLeakDetector.class);
         String levelStr = SystemPropertyUtil.get(PROP_LEVEL, DEFAULT_LEVEL.name());
         Level level = Level.parseLevel(levelStr);
 

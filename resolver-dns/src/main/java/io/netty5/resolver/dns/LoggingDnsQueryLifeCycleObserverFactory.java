@@ -16,10 +16,9 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.handler.codec.dns.DnsQuestion;
-import io.netty5.handler.logging.LogLevel;
-import io.netty5.util.internal.logging.InternalLogLevel;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,24 +30,23 @@ import static java.util.Objects.requireNonNull;
  * cause of resolution failure.
  */
 public final class LoggingDnsQueryLifeCycleObserverFactory implements DnsQueryLifecycleObserverFactory {
-    private static final InternalLogger DEFAULT_LOGGER =
-            InternalLoggerFactory.getInstance(LoggingDnsQueryLifeCycleObserverFactory.class);
-    private final InternalLogger logger;
-    private final InternalLogLevel level;
+    private static final Logger DEFAULT_LOGGER = LoggerFactory.getLogger(LoggingDnsQueryLifeCycleObserverFactory.class);
+    private final Logger logger;
+    private final Level level;
 
     /**
-     * Create {@link DnsQueryLifecycleObserver} instances that log events at the default {@link LogLevel#DEBUG} level.
+     * Create {@link DnsQueryLifecycleObserver} instances that log events at the default {@link Level#DEBUG} level.
      */
     public LoggingDnsQueryLifeCycleObserverFactory() {
-        this(LogLevel.DEBUG);
+        this(Level.DEBUG);
     }
 
     /**
      * Create {@link DnsQueryLifecycleObserver} instances that log events at the given log level.
      * @param level The log level to use for logging resolver events.
      */
-    public LoggingDnsQueryLifeCycleObserverFactory(LogLevel level) {
-        this.level = checkAndConvertLevel(level);
+    public LoggingDnsQueryLifeCycleObserverFactory(Level level) {
+        this.level = requireNonNull(level, "level");
         logger = DEFAULT_LOGGER;
     }
 
@@ -58,9 +56,9 @@ public final class LoggingDnsQueryLifeCycleObserverFactory implements DnsQueryLi
      * @param classContext The class context for the logger to use.
      * @param level The log level to use for logging resolver events.
      */
-    public LoggingDnsQueryLifeCycleObserverFactory(Class<?> classContext, LogLevel level) {
-        this.level = checkAndConvertLevel(level);
-        logger = InternalLoggerFactory.getInstance(requireNonNull(classContext, "classContext"));
+    public LoggingDnsQueryLifeCycleObserverFactory(Class<?> classContext, Level level) {
+        this.level = requireNonNull(level, "level");
+        logger = LoggerFactory.getLogger(requireNonNull(classContext, "classContext"));
     }
 
     /**
@@ -69,13 +67,9 @@ public final class LoggingDnsQueryLifeCycleObserverFactory implements DnsQueryLi
      * @param name The name for the logger to use.
      * @param level The log level to use for logging resolver events.
      */
-    public LoggingDnsQueryLifeCycleObserverFactory(String name, LogLevel level) {
-        this.level = checkAndConvertLevel(level);
-        logger = InternalLoggerFactory.getInstance(requireNonNull(name, "name"));
-    }
-
-    private static InternalLogLevel checkAndConvertLevel(LogLevel level) {
-        return requireNonNull(level, "level").toInternalLevel();
+    public LoggingDnsQueryLifeCycleObserverFactory(String name, Level level) {
+        this.level = requireNonNull(level, "level");
+        logger = LoggerFactory.getLogger(requireNonNull(name, "name"));
     }
 
     @Override

@@ -25,8 +25,8 @@ import io.netty5.buffer.SensitiveBufferAllocator;
 import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.buffer.tests.Fixture.Properties;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
@@ -63,7 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class BufferTestSupport {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BufferTestSupport.class);
+    private static final Logger logger = LoggerFactory.getLogger(BufferTestSupport.class);
     public static ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {

@@ -32,10 +32,10 @@ import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.TestOnly;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.ExtendedSSLSession;
@@ -99,7 +99,7 @@ import static javax.net.ssl.SSLEngineResult.Status.OK;
 public class ReferenceCountedOpenSslEngine extends SSLEngine
         implements ReferenceCounted, ApplicationProtocolAccessor, VectoredUnwrap {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountedOpenSslEngine.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReferenceCountedOpenSslEngine.class);
     private static final ByteBuffer EMPTY = ByteBuffer.allocateDirect(0);
     private static final ResourceLeakDetector<ReferenceCountedOpenSslEngine> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslEngine.class);

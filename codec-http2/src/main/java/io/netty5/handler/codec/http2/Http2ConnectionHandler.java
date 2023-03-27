@@ -14,9 +14,9 @@
  */
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -28,8 +28,8 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
@@ -62,7 +62,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @UnstableApi
 public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(Http2ConnectionHandler.class);
 
     private static final Http2Headers HEADERS_TOO_LARGE_HEADERS = Http2Headers.newHeaders(false).status(
             HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText());

@@ -18,8 +18,8 @@ package io.netty5.channel.socket.nio;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
@@ -35,7 +35,7 @@ import java.nio.channels.spi.SelectorProvider;
 import java.nio.file.Path;
 
 final class NioChannelUtil {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioChannelUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(NioChannelUtil.class);
 
     private static final MethodHandle OF_METHOD_HANDLE;
     private static final MethodHandle GET_PATH_METHOD_HANDLE;

@@ -17,8 +17,8 @@ package io.netty5.channel;
 
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 final class ChannelHandlerMask {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelHandlerMask.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChannelHandlerMask.class);
 
     // Using to mask which methods must be called for a ChannelHandler.
     static final int MASK_CHANNEL_EXCEPTION_CAUGHT = 1;

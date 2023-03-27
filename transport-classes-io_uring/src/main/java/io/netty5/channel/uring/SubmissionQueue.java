@@ -16,8 +16,8 @@
 package io.netty5.channel.uring;
 
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.StringJoiner;
 import java.util.function.IntSupplier;
@@ -26,7 +26,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 final class SubmissionQueue {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SubmissionQueue.class);
+    private static final Logger logger = LoggerFactory.getLogger(SubmissionQueue.class);
 
     private static final long SQE_SIZE = 64;
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?

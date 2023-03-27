@@ -16,8 +16,8 @@
 package io.netty5.channel.nio;
 
 import io.netty5.channel.IoHandle;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  * the {@link SelectableChannel}.
  */
 public final class NioSelectableChannelHandle<S extends SelectableChannel> implements IoHandle {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSelectableChannelHandle.class);
+    private static final Logger logger = LoggerFactory.getLogger(NioSelectableChannelHandle.class);
 
     private final S channel;
     private final int interestOps;

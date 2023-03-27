@@ -29,8 +29,8 @@ import io.netty5.channel.ServerChannelFactory;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -47,7 +47,7 @@ import static java.util.Objects.requireNonNull;
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel,
         ServerChannelFactory<? extends ServerChannel>> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
+    private static final Logger logger = LoggerFactory.getLogger(ServerBootstrap.class);
 
     // The order in which child ChannelOptions are applied is important they may depend on each other for validation
     // purposes.

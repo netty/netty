@@ -35,8 +35,8 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -52,7 +52,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class IOUringSocketChannel extends AbstractIOUringChannel<IOUringServerSocketChannel>
         implements SocketChannel {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(IOUringDatagramChannel.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IOUringDatagramChannel.class);
     private static final short IS_WRITE = 0;
     private static final short IS_CONNECT = 1;
 
@@ -284,7 +284,7 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel<IOUringSe
     }
 
     @Override
-    protected InternalLogger logger() {
+    protected Logger logger() {
         return LOGGER;
     }
 

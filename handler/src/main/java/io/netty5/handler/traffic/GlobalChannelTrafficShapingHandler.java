@@ -24,8 +24,8 @@ import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.EventExecutorGroup;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.AbstractCollection;
 import java.util.ArrayDeque;
@@ -88,8 +88,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * This will not shutdown the {@link EventExecutor} as it may be shared, so you need to do this by your own.
  */
 public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(GlobalChannelTrafficShapingHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(GlobalChannelTrafficShapingHandler.class);
     /**
      * All queues per channel
      */

@@ -15,7 +15,7 @@
  */
 package io.netty5.util.concurrent;
 
-import io.netty5.util.internal.logging.InternalLogger;
+import org.slf4j.Logger;
 
 import java.util.Arrays;
 import java.util.EventListener;
@@ -57,7 +57,7 @@ final class DefaultFutureListeners {
     }
 
     @SuppressWarnings("unchecked")
-    public <V> void notifyListeners(DefaultPromise<V> promise, InternalLogger logger) {
+    public <V> void notifyListeners(DefaultPromise<V> promise, Logger logger) {
         int size = this.size;
         Object[] listeners = this.listeners;
         for (int i = 0, len = size << 1; i < len; i += 2) {

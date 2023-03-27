@@ -17,8 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 
 final class JdkAlpnSslUtils {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkAlpnSslUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(JdkAlpnSslUtils.class);
     private static final MethodHandle SET_APPLICATION_PROTOCOLS;
     private static final MethodHandle GET_APPLICATION_PROTOCOL;
     private static final MethodHandle GET_HANDSHAKE_APPLICATION_PROTOCOL;

@@ -32,8 +32,8 @@ import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,8 +87,7 @@ public final class EpollServerSocketChannel
         extends AbstractEpollChannel<UnixChannel>
         implements ServerSocketChannel {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
-            EpollServerSocketChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(EpollServerSocketChannel.class);
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
 

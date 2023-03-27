@@ -23,8 +23,8 @@ import io.netty5.util.internal.NativeLibraryLoader;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThrowableUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +34,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 final class Native {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
+    private static final Logger logger = LoggerFactory.getLogger(Native.class);
     static final int DEFAULT_RING_SIZE = Math.max(64, SystemPropertyUtil.getInt("io.netty5.iouring.ringSize", 4096));
     static final int DEFAULT_IOSEQ_ASYNC_THRESHOLD =
             Math.max(0, SystemPropertyUtil.getInt("io.netty5.iouring.iosqeAsyncThreshold", 25));

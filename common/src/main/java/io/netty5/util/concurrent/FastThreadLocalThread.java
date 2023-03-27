@@ -16,15 +16,15 @@
 package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
  */
 public class FastThreadLocalThread extends Thread {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(FastThreadLocalThread.class);
+    private static final Logger logger = LoggerFactory.getLogger(FastThreadLocalThread.class);
 
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
@@ -76,8 +76,8 @@ public class FastThreadLocalThread extends Thread {
      */
     final InternalThreadLocalMap threadLocalMap() {
         if (this != Thread.currentThread() && logger.isWarnEnabled()) {
-            logger.warn(new RuntimeException("It's not thread-safe to get 'threadLocalMap' " +
-                    "which doesn't belong to the caller thread"));
+            logger.warn("It's not thread-safe to get 'threadLocalMap' which doesn't belong to the caller thread",
+                    new IllegalStateException("Unsafe threadLocalMap access"));
         }
         return threadLocalMap;
     }
@@ -88,8 +88,8 @@ public class FastThreadLocalThread extends Thread {
      */
     final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
         if (this != Thread.currentThread() && logger.isWarnEnabled()) {
-            logger.warn(new RuntimeException("It's not thread-safe to set 'threadLocalMap' " +
-                    "which doesn't belong to the caller thread"));
+            logger.warn("It's not thread-safe to get 'threadLocalMap' which doesn't belong to the caller thread",
+                    new IllegalStateException("Unsafe threadLocalMap access"));
         }
         this.threadLocalMap = threadLocalMap;
     }

@@ -42,7 +42,7 @@ public final class HttpNativeServer {
         EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
         // Control status.
-        boolean serverStartSucess = false;
+        boolean serverStartSuccess = false;
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
@@ -54,12 +54,12 @@ public final class HttpNativeServer {
             Channel channel = b.bind(0).asStage().get();
             System.err.println("Server started, will shutdown now.");
             channel.close().asStage().sync();
-            serverStartSucess = true;
+            serverStartSuccess = true;
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
         // return the right system exit code to signal success
-        System.exit(serverStartSucess ? 0 : 1);
+        System.exit(serverStartSuccess ? 0 : 1);
     }
 }

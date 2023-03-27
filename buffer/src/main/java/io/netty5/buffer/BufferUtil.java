@@ -20,8 +20,8 @@ import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -35,7 +35,7 @@ import static io.netty5.util.internal.StringUtil.NEWLINE;
  */
 public final class BufferUtil {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BufferUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(BufferUtil.class);
 
     private static final int MAX_CHAR_BUFFER_SIZE;
     private static final int THREAD_LOCAL_BUFFER_SIZE;

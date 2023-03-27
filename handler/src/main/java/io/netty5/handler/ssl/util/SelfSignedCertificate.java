@@ -19,9 +19,9 @@ import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.base64.Base64;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.TestOnly;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -61,7 +61,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 @TestOnly
 public final class SelfSignedCertificate {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SelfSignedCertificate.class);
+    private static final Logger logger = LoggerFactory.getLogger(SelfSignedCertificate.class);
 
     /** Current time minus 1 year, just in case software clock goes back due to time synchronization */
     private static final Date DEFAULT_NOT_BEFORE = new Date(SystemPropertyUtil.getLong(

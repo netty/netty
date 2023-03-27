@@ -26,8 +26,8 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedReadHandleFactory;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.handler.codec.dns.DatagramDnsQueryEncoder;
@@ -55,8 +55,8 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.IDN;
 import java.net.Inet4Address;
@@ -80,10 +80,9 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty5.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty5.util.NetUtil.addressType;
+import static io.netty5.util.NetUtil.isFamilySupported;
 import static io.netty5.util.NetUtil.localHost;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
-import static io.netty5.util.NetUtil.isFamilySupported;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -91,7 +90,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class DnsNameResolver extends InetNameResolver {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
+    private static final Logger logger = LoggerFactory.getLogger(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
     private static final String WINDOWS_HOST_NAME;
     private static final InetAddress LOCALHOST_ADDRESS;

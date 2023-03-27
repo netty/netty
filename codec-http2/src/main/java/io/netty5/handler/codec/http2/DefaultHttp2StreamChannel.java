@@ -18,30 +18,30 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.AdaptiveReadHandleFactory;
-import io.netty5.channel.ChannelOption;
-import io.netty5.channel.ChannelOutputShutdownException;
-import io.netty5.channel.ChannelShutdownDirection;
-import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelId;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelOutputShutdownException;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.MessageSizeEstimator;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
-import io.netty5.util.Resource;
 import io.netty5.util.DefaultAttributeMap;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.ThrowableUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -77,7 +77,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         return true;
     };
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2StreamChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHttp2StreamChannel.class);
 
     /**
      * Number of bytes to consider non-payload messages. 9 is arbitrary, but also the minimum size of an HTTP/2 frame.

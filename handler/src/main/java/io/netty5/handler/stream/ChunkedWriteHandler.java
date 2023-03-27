@@ -24,8 +24,8 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -66,8 +66,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositive;
  */
 public class ChunkedWriteHandler implements ChannelHandler {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChunkedWriteHandler.class);
 
     private final Queue<PendingWrite> queue = new ArrayDeque<>();
     private volatile ChannelHandlerContext ctx;

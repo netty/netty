@@ -16,10 +16,10 @@
 
 package io.netty5.handler.ssl;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 @Isolated
 public class CipherSuiteConverterTest {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CipherSuiteConverterTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(CipherSuiteConverterTest.class);
 
     @Test
     public void testJ2OMappings() throws Exception {

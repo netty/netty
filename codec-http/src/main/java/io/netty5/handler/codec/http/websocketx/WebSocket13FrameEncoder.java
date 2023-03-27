@@ -57,8 +57,8 @@ import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.MessageToMessageEncoder;
 import io.netty5.handler.codec.TooLongFrameException;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -70,7 +70,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket13FrameEncoder.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebSocket13FrameEncoder.class);
     private static final byte OPCODE_CONT = 0x0;
     private static final byte OPCODE_TEXT = 0x1;
     private static final byte OPCODE_BINARY = 0x2;

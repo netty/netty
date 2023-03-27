@@ -15,16 +15,16 @@
 
 package io.netty5.handler.codec.http2;
 
-import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Iterator;
@@ -60,7 +60,7 @@ import static io.netty5.handler.codec.http2.Http2Exception.connectionError;
  */
 @UnstableApi
 public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamBufferingEncoder.class);
+    private static final Logger logger = LoggerFactory.getLogger(StreamBufferingEncoder.class);
 
     /**
      * Thrown if buffered streams are terminated due to this encoder being closed.

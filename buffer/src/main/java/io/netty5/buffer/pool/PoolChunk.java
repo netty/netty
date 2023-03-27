@@ -24,8 +24,8 @@ import io.netty5.buffer.internal.CleanerDrop;
 import io.netty5.buffer.internal.DropCaptor;
 import io.netty5.util.internal.LongLongHashMap;
 import io.netty5.util.internal.LongPriorityQueue;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.PriorityQueue;
 import java.util.concurrent.locks.ReentrantLock;
@@ -140,7 +140,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  */
 final class PoolChunk implements PoolChunkMetric {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(PoolChunk.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PoolChunk.class);
     private static final int SIZE_BIT_LENGTH = 15;
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;

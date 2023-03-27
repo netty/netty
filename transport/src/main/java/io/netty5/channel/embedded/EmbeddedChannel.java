@@ -36,8 +36,8 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Ticker;
 import io.netty5.util.internal.RecyclableArrayList;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -58,7 +58,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
     private enum State { OPEN, ACTIVE, CLOSED }
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(EmbeddedChannel.class);
 
     private final FutureListener<Void> recordExceptionListener = this::recordException;
 

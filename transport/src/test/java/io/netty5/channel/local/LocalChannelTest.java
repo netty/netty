@@ -39,14 +39,14 @@ import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.RejectedExecutionHandler;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
@@ -71,7 +71,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class LocalChannelTest {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannelTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(LocalChannelTest.class);
 
     private static EventLoopGroup group1;
     private static EventLoopGroup group2;

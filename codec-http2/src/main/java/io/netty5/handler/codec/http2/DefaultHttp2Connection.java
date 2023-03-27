@@ -23,8 +23,8 @@ import io.netty5.util.collection.IntObjectMap.PrimitiveEntry;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.UnstableApi;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -59,7 +59,7 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public class DefaultHttp2Connection implements Http2Connection {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2Connection.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHttp2Connection.class);
     // Fields accessed by inner classes
     final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
     final PropertyKeyRegistry propertyKeyRegistry = new PropertyKeyRegistry();

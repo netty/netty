@@ -40,7 +40,7 @@ import io.netty5.handler.ssl.SslContext;
 
 import java.net.InetSocketAddress;
 
-import static io.netty5.handler.logging.LogLevel.INFO;
+import static org.slf4j.event.Level.INFO;
 
 /**
  * Configures the client pipeline to support HTTP/2 frames.

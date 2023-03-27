@@ -18,8 +18,8 @@ package io.netty5.buffer.internal;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.FastThreadLocalThread;
 import io.netty5.util.internal.SystemPropertyUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.ref.Cleaner;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,7 +51,7 @@ final class CleanerPool {
     /**
      * Our logger.
      */
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerPool.class);
+    private static final Logger logger = LoggerFactory.getLogger(CleanerPool.class);
 
     /**
      * System property name used to configure the shared Cleaner pool size. External (non-event-loop) threads

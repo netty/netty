@@ -15,14 +15,12 @@
  */
 package io.netty5.handler.ssl;
 
-
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.security.AccessController;
@@ -33,7 +31,7 @@ import java.util.function.BiFunction;
 import static io.netty5.handler.ssl.SslUtils.getSSLContext;
 
 final class BouncyCastleAlpnSslUtils {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastleAlpnSslUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(BouncyCastleAlpnSslUtils.class);
 
     private static final Method SET_PARAMETERS;
     private static final Method GET_PARAMETERS;

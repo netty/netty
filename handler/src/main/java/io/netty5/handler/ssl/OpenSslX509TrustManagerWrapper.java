@@ -17,8 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -41,8 +41,7 @@ import java.security.cert.X509Certificate;
  * <a href="https://bugs.openjdk.java.net/projects/JDK/issues/JDK-8210843">JDK-8210843</a>.
  */
 final class OpenSslX509TrustManagerWrapper {
-    private static final InternalLogger LOGGER = InternalLoggerFactory
-            .getInstance(OpenSslX509TrustManagerWrapper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OpenSslX509TrustManagerWrapper.class);
     private static final TrustManagerWrapper WRAPPER;
 
     static {

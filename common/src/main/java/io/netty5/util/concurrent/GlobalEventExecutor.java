@@ -17,11 +17,11 @@ package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThreadExecutorMap;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Async.Execute;
 import org.jetbrains.annotations.Async.Schedule;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * use a dedicated executor.
  */
 public final class GlobalEventExecutor extends AbstractScheduledEventExecutor implements OrderedEventExecutor {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(GlobalEventExecutor.class);
+    private static final Logger logger = LoggerFactory.getLogger(GlobalEventExecutor.class);
 
     private static final long SCHEDULE_QUIET_PERIOD_INTERVAL;
 

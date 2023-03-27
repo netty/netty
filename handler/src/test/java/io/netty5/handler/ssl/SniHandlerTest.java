@@ -19,7 +19,6 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -42,18 +41,19 @@ import io.netty5.util.DomainNameMapping;
 import io.netty5.util.DomainNameMappingBuilder;
 import io.netty5.util.Mapping;
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ResourcesUtil;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -69,7 +69,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -83,7 +82,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 public class SniHandlerTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SniHandlerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(SniHandlerTest.class);
 
     private static ApplicationProtocolConfig newApnConfig() {
         return new ApplicationProtocolConfig(

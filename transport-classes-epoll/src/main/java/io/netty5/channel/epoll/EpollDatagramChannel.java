@@ -16,37 +16,37 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.buffer.Buffer;
+import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.DefaultBufferAddressedEnvelope;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.channel.ReadHandleFactory;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainDatagramSocketAddress;
-import io.netty5.channel.unix.IntegerUnixChannelOption;
-import io.netty5.channel.unix.RawUnixChannelOption;
-import io.netty5.channel.unix.UnixChannel;
-import io.netty5.channel.unix.UnixChannelOption;
-import io.netty5.util.Resource;
-import io.netty5.channel.AddressedEnvelope;
-import io.netty5.channel.DefaultBufferAddressedEnvelope;
-import io.netty5.channel.EventLoop;
-import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.Errors.NativeIoException;
+import io.netty5.channel.unix.IntegerUnixChannelOption;
+import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.SegmentedDatagramPacket;
+import io.netty5.channel.unix.UnixChannel;
+import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.channel.unix.UnixChannelUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.RecyclableArrayList;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -95,7 +95,7 @@ import static java.util.Objects.requireNonNull;
  * </table>
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel> implements DatagramChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(EpollDatagramChannel.class);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +

@@ -15,8 +15,8 @@
  */
 package io.netty5.util.concurrent;
 
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  * that all queued {@link Runnable} objects have the chance to be run.
  */
 public final class ImmediateEventExecutor extends AbstractEventExecutor {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ImmediateEventExecutor.class);
+    private static final Logger logger = LoggerFactory.getLogger(ImmediateEventExecutor.class);
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
     /**
      * A Runnable will be queued if we are executing a Runnable. This is to prevent a {@link StackOverflowError}.

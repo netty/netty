@@ -20,11 +20,11 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for {@link CoalescingBufferQueue}.
  */
 public class CoalescingBufferQueueTest {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CoalescingBufferQueueTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(CoalescingBufferQueueTest.class);
 
     private Buffer cat;
     private Buffer mouse;

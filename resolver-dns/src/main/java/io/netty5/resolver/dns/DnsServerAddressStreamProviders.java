@@ -16,8 +16,8 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -33,8 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class DnsServerAddressStreamProviders {
 
-    private static final InternalLogger LOGGER =
-            InternalLoggerFactory.getInstance(DnsServerAddressStreamProviders.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DnsServerAddressStreamProviders.class);
     private static final MethodHandle STREAM_PROVIDER_CONSTRUCTOR_HANDLE;
     private static final String MACOS_PROVIDER_CLASS_NAME =
             "io.netty5.resolver.dns.macos.MacOSDnsServerAddressStreamProvider";

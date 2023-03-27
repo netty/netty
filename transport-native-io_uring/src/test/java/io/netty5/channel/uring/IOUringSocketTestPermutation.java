@@ -32,8 +32,8 @@ import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty5.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty5.testsuite.transport.socket.SocketTestPermutation;
 import io.netty5.util.concurrent.DefaultThreadFactory;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -54,7 +54,7 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultithreadEventLoopGroup(
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true), IOUring.newFactory());
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringSocketTestPermutation.class);
+    private static final Logger logger = LoggerFactory.getLogger(IOUringSocketTestPermutation.class);
 
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {

@@ -17,8 +17,8 @@ package io.netty5.channel;
 
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A special {@link ChannelHandler} which offers an easy way to initialize a {@link Channel} once it was
@@ -47,7 +47,7 @@ import io.netty5.util.internal.logging.InternalLoggerFactory;
  */
 public abstract class ChannelInitializer<C extends Channel> implements ChannelHandler {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChannelInitializer.class);
 
     @Override
     public boolean isSharable() {

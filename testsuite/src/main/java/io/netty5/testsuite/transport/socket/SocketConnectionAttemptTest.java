@@ -26,10 +26,10 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SocketUtils;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.slf4j.LoggerFactory;
 
 import java.net.ConnectException;
 import java.net.Socket;
@@ -140,8 +140,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     private static class TestHandler implements ChannelHandler {
         @Override
         public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            InternalLoggerFactory.getInstance(
-                    SocketConnectionAttemptTest.class).warn("Unexpected exception:", cause);
+            LoggerFactory.getLogger(SocketConnectionAttemptTest.class).warn("Unexpected exception:", cause);
         }
     }
 }

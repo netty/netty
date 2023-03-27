@@ -17,7 +17,6 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.util.Resource;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.CorruptedFrameException;
@@ -31,6 +30,7 @@ import io.netty5.handler.codec.dns.DnsResponse;
 import io.netty5.handler.codec.dns.DnsResponseCode;
 import io.netty5.handler.codec.dns.DnsSection;
 import io.netty5.util.NetUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
@@ -38,9 +38,9 @@ import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.ThrowableUtil;
-import io.netty5.util.internal.logging.InternalLogger;
-import io.netty5.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -63,7 +63,7 @@ import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
 abstract class DnsResolveContext<T> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolveContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(DnsResolveContext.class);
 
     private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION =
             DnsResolveContextException.newStatic("No answer found and NXDOMAIN response code returned",
