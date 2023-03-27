@@ -25,15 +25,6 @@ the 'license' directory of the distribution file, for the license terms of the
 components that this product depends on.
 
 -------------------------------------------------------------------------------
-This product contains the extensions to Java Collections Framework which has
-been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
-
-  * LICENSE:
-    * license/LICENSE.jsr166y.txt (Public Domain)
-  * HOMEPAGE:
-    * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
-    * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
-
 This product contains a modified version of Robert Harder's Public Domain
 Base64 Encoder and Decoder, which can be obtained at:
 
@@ -99,7 +90,7 @@ pure Java, which can be obtained at:
   * LICENSE:
     * license/LICENSE.jzlib.txt (BSD style License)
   * HOMEPAGE:
-    * http://www.jcraft.com/jzlib/
+    * https://www.jcraft.com/jzlib/
 
 This product optionally depends on 'Compress-LZF', a Java library for encoding and
 decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
@@ -165,14 +156,6 @@ benchmarking framework, which can be obtained at:
     * license/LICENSE.caliper.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://github.com/google/caliper
-
-This product optionally depends on 'Aalto XML', an ultra-high performance
-non-blocking XML processor, which can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.aalto-xml.txt (Apache License 2.0)
-  * HOMEPAGE:
-    * https://wiki.fasterxml.com/AaltoHome
 
 This product contains a modified version of 'HPACK', a Java implementation of
 the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
