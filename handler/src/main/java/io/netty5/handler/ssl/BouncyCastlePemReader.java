@@ -77,10 +77,10 @@ final class BouncyCastlePemReader {
             public Void run() {
                 try {
                     ClassLoader classLoader = getClass().getClassLoader();
-                    // Check for bcprov-jdk15on:
+                    // Check for bcprov-jdk18on:
                     Class<Provider> bcProviderClass =
                             (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
-                    // Check for bcpkix-jdk15on:
+                    // Check for bcpkix-jdk18on:
                     Class.forName(BC_PEMPARSER, true, classLoader);
                     bcProvider = bcProviderClass.getConstructor().newInstance();
                     logger.debug("Bouncy Castle provider available");
