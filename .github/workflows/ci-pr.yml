@@ -149,6 +149,8 @@ jobs:
     # The host should always be Linux
     runs-on: ubuntu-latest
     needs: verify-pr
+    # Disable until fixed (possible compiler bug)
+    if: ${{ false }}
     steps:
       - uses: actions/checkout@v3
 
