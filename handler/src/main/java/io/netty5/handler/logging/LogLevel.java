@@ -83,13 +83,12 @@ public enum LogLevel {
     }
 
     /**
-     * For internal use only.
-     *
-     * <p/>Converts the specified {@link LogLevel} to its {@link Level} variant.
+     * Convert this specified {@link LogLevel} to the level-type Netty uses internally.
      *
      * @return the converted level.
      */
-    Level toInternalLevel() {
-        return internalLevel;
+    @SuppressWarnings("unchecked")
+    public <T> T unwrap() {
+        return (T) internalLevel;
     }
 }

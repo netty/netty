@@ -19,6 +19,7 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.internal.UnstableApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,20 +42,20 @@ public class Http2FrameLogger {
     private final Logger logger;
     private final Level level;
 
-    public Http2FrameLogger(Level level) {
+    public Http2FrameLogger(LogLevel level) {
         this(requireNonNull(level, "level"), LoggerFactory.getLogger(Http2FrameLogger.class));
     }
 
-    public Http2FrameLogger(Level level, String name) {
+    public Http2FrameLogger(LogLevel level, String name) {
         this(requireNonNull(level, "level"), LoggerFactory.getLogger(requireNonNull(name, "name")));
     }
 
-    public Http2FrameLogger(Level level, Class<?> clazz) {
+    public Http2FrameLogger(LogLevel level, Class<?> clazz) {
         this(requireNonNull(level, "level"), LoggerFactory.getLogger(requireNonNull(clazz, "clazz")));
     }
 
-    private Http2FrameLogger(Level level, Logger logger) {
-        this.level = level;
+    private Http2FrameLogger(LogLevel level, Logger logger) {
+        this.level = level.unwrap();
         this.logger = logger;
     }
 

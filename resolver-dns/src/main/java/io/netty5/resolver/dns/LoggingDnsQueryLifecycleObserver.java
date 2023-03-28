@@ -17,6 +17,7 @@ package io.netty5.resolver.dns;
 
 import io.netty5.handler.codec.dns.DnsQuestion;
 import io.netty5.handler.codec.dns.DnsResponseCode;
+import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
@@ -32,10 +33,10 @@ final class LoggingDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private final DnsQuestion question;
     private InetSocketAddress dnsServerAddress;
 
-    LoggingDnsQueryLifecycleObserver(DnsQuestion question, Logger logger, Level level) {
+    LoggingDnsQueryLifecycleObserver(DnsQuestion question, Logger logger, LogLevel level) {
         this.question = requireNonNull(question, "question");
         this.logger = requireNonNull(logger, "logger");
-        this.level = requireNonNull(level, "level");
+        this.level = requireNonNull(level, "level").unwrap();
     }
 
     @Override

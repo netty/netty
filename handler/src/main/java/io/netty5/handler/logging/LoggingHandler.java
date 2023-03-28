@@ -77,7 +77,7 @@ public class LoggingHandler implements ChannelHandler {
      * @param bufferFormat the ByteBuf format
      */
     public LoggingHandler(LogLevel level, BufferFormat bufferFormat) {
-        this.level = requireNonNull(level, "level").toInternalLevel();
+        this.level = requireNonNull(level, "level").unwrap();
         this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = getLogger(getClass());
     }
@@ -111,7 +111,7 @@ public class LoggingHandler implements ChannelHandler {
      */
     public LoggingHandler(Class<?> clazz, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(clazz, "clazz");
-        this.level = requireNonNull(level, "level").toInternalLevel();
+        this.level = requireNonNull(level, "level").unwrap();
         this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = getLogger(clazz);
     }
@@ -144,7 +144,7 @@ public class LoggingHandler implements ChannelHandler {
      */
     public LoggingHandler(String name, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(name, "name");
-        this.level = requireNonNull(level, "level").toInternalLevel();
+        this.level = requireNonNull(level, "level").unwrap();
         this.bufferFormat = requireNonNull(bufferFormat, "bufferFormat");
         logger = getLogger(name);
     }
@@ -169,7 +169,7 @@ public class LoggingHandler implements ChannelHandler {
     }
 
     /**
-     * Returns the {@link Level} that this handler uses to log
+     * Returns the {@link LogLevel} that this handler uses to log
      */
     public LogLevel level() {
         return LogLevel.from(level);
