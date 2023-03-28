@@ -33,6 +33,10 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.crac.CheckpointException;
+import org.crac.Context;
+import org.crac.Core;
+import org.crac.Resource;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -45,7 +49,7 @@ import static java.lang.Math.min;
 /**
  * {@link EventLoop} which uses epoll under the covers. Only works on Linux!
  */
-class EpollEventLoop extends SingleThreadEventLoop {
+class EpollEventLoop extends SingleThreadEventLoop implements Resource {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
     private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
             SystemPropertyUtil.getLong("io.netty.channel.epoll.epollWaitThreshold", 10);
@@ -56,9 +60,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
         Epoll.ensureAvailability();
     }
 
-    private final FileDescriptor epollFd;
-    private final FileDescriptor eventFd;
-    private final FileDescriptor timerFd;
+    private FileDescriptor epollFd;
+    private FileDescriptor eventFd;
+    private FileDescriptor timerFd;
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
@@ -102,6 +106,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
             allowGrowing = false;
             events = new EpollEventArray(maxEvents);
         }
+        openFileDescriptors();
+
+        Core.getGlobalContext().register(this);
+    }
+
+    private void openFileDescriptors() {
         boolean success = false;
         FileDescriptor epollFd = null;
         FileDescriptor eventFd = null;
@@ -524,40 +534,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
     @Override
     protected void cleanup() {
         try {
-            // Ensure any in-flight wakeup writes have been performed prior to closing eventFd.
-            while (pendingWakeup) {
-                try {
-                    int count = epollWaitTimeboxed();
-                    if (count == 0) {
-                        // We timed-out so assume that the write we're expecting isn't coming
-                        break;
-                    }
-                    for (int i = 0; i < count; i++) {
-                        if (events.fd(i) == eventFd.intValue()) {
-                            pendingWakeup = false;
-                            break;
-                        }
-                    }
-                } catch (IOException ignore) {
-                    // ignore
-                }
-            }
-            try {
-                eventFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the event fd.", e);
-            }
-            try {
-                timerFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the timer fd.", e);
-            }
-
-            try {
-                epollFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the epoll fd.", e);
-            }
+            closeFileDescriptors();
         } finally {
             // release native memory
             if (iovArray != null) {
@@ -570,5 +547,76 @@ class EpollEventLoop extends SingleThreadEventLoop {
             }
             events.free();
         }
+    }
+
+    private void closeFileDescriptors() {
+        // Ensure any in-flight wakeup writes have been performed prior to closing eventFd.
+        while (pendingWakeup) {
+            try {
+                int count = epollWaitTimeboxed();
+                if (count == 0) {
+                    // We timed-out so assume that the write we're expecting isn't coming
+                    break;
+                }
+                for (int i = 0; i < count; i++) {
+                    if (events.fd(i) == eventFd.intValue()) {
+                        pendingWakeup = false;
+                        break;
+                    }
+                }
+            } catch (IOException ignore) {
+                // ignore
+            }
+        }
+        try {
+            eventFd.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close the event fd.", e);
+        }
+        try {
+            timerFd.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close the timer fd.", e);
+        }
+
+        try {
+            epollFd.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close the epoll fd.", e);
+        }
+    }
+
+    @Override
+    public synchronized void beforeCheckpoint(Context<? extends Resource> context) throws CheckpointException {
+        execute(new Runnable() {
+            @Override
+            public void run() {
+                EpollEventLoop self = EpollEventLoop.this;
+                self.closeFileDescriptors();
+                synchronized (self) {
+                    self.notify();
+                    try {
+                        // We will block the eventloop thread here to prevent
+                        // any further operations until we restore it.
+                        self.wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrupted waiting for restore", e);
+                    }
+                }
+            }
+        });
+        try {
+            wait();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CheckpointException("Interrupted waiting for the eventloop to close");
+        }
+    }
+
+    @Override
+    public synchronized void afterRestore(Context<? extends Resource> context) {
+        openFileDescriptors();
+        notify();
     }
 }

@@ -51,6 +51,11 @@
       <artifactId>netty-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.github.crac</groupId>
+      <artifactId>org-crac</artifactId>
+      <version>${crac.version}</version>
+    </dependency>
   </dependencies>
 
 
