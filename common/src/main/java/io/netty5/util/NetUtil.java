@@ -133,8 +133,7 @@ public final class NetUtil {
     /**
      * {@code true} if an IPv6 address should be preferred when a host has both an IPv4 address and an IPv6 address.
      */
-    private static final boolean IPV6_ADDRESSES_PREFERRED =
-            SystemPropertyUtil.getBoolean("java.net.preferIPv6Addresses", false);
+    private static final boolean IPV6_ADDRESSES_PREFERRED;
 
     /**
      * The logger being used by this class
@@ -143,8 +142,15 @@ public final class NetUtil {
 
     static {
         logger = LoggerFactory.getLogger(NetUtil.class);
+        String prefer = SystemPropertyUtil.get("java.net.preferIPv6Addresses", "false");
+        if ("true".equalsIgnoreCase(prefer.trim())) {
+            IPV6_ADDRESSES_PREFERRED = true;
+        } else {
+            // Let's just use false in this case as only true is "forcing" ipv6.
+            IPV6_ADDRESSES_PREFERRED = false;
+        }
         logger.debug("-Djava.net.preferIPv4Stack: {}", IPV4_PREFERRED);
-        logger.debug("-Djava.net.preferIPv6Addresses: {}", IPV6_ADDRESSES_PREFERRED);
+        logger.debug("-Djava.net.preferIPv6Addresses: {}", prefer);
 
         NETWORK_INTERFACES = NetUtilInitializations.networkInterfaces();
 
