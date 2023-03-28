@@ -149,6 +149,8 @@ jobs:
     # The host should always be Linux
     runs-on: ubuntu-latest
     needs: verify-pr
+    # Disable until fixed (possible compiler bug)
+    if: ${{ false }}
     steps:
       - uses: actions/checkout@v3
 
@@ -214,9 +216,9 @@ jobs:
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-leak"
-          - setup: linux-x86_64-java19
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml run build-leak"
+          - setup: linux-x86_64-java20
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.20.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.20.yaml run build-leak"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
