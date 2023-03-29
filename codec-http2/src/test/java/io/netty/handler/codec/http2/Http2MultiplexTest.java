@@ -161,7 +161,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 any(ByteBuf.class), any(ChannelPromise.class));
     }
 
-    private Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
+    Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
         return newInboundStream(streamId, endStream, null, childHandler);
     }
 
