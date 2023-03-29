@@ -47,11 +47,22 @@
 #define QUICHE_CLASSNAME "io/netty/incubator/codec/quic/Quiche"
 #define LIBRARYNAME "netty_quiche"
 
-static jclass    quiche_logger_class;
-static jmethodID quiche_logger_class_log;
-static jobject   quiche_logger;
+static jclass    quiche_logger_class = NULL;
+static jmethodID quiche_logger_class_log = NULL;
+static jobject   quiche_logger = NULL;
 static JavaVM     *global_vm = NULL;
+
+static jclass integer_class = NULL;
+static jmethodID integer_class_init = NULL;
+
+static jclass boolean_class = NULL;
+static jmethodID boolean_class_valueof = NULL;
+
+static jclass object_class = NULL;
+
+
 static char const* staticPackagePrefix = NULL;
+
 
 jint quic_get_java_env(JNIEnv **env)
 {
@@ -395,6 +406,27 @@ static jint netty_quiche_conn_send(JNIEnv* env, jclass clazz, jlong conn, jlong 
 
 static void netty_quiche_conn_free(JNIEnv* env, jclass clazz, jlong conn) {
     quiche_conn_free((quiche_conn *) conn);
+}
+
+static jobjectArray netty_quiche_conn_peer_error0(JNIEnv* env, jclass clazz, jlong conn) {
+    bool is_app = false;
+    uint64_t error_code = 0;
+    const uint8_t *reason = NULL;
+    size_t reason_len = 0;
+
+    bool peer_error = quiche_conn_peer_error((quiche_conn *) conn,
+                            &is_app,
+                            &error_code,
+                            &reason,
+                            &reason_len);
+    if (peer_error) {
+        jobjectArray array = (*env)->NewObjectArray(env, 3, object_class, NULL);
+        (*env)->SetObjectArrayElement(env, array, 0, (*env)->CallStaticObjectMethod(env, boolean_class, boolean_class_valueof, is_app ? JNI_TRUE : JNI_FALSE));
+        (*env)->SetObjectArrayElement(env, array, 1, (*env)->NewObject(env, integer_class, integer_class_init, (jint) error_code));
+        (*env)->SetObjectArrayElement(env, array, 2, to_byte_array(env, reason, reason_len));
+        return array;
+    }
+    return NULL;
 }
 
 static jlong netty_quiche_conn_peer_streams_left_bidi(JNIEnv* env, jclass clazz, jlong conn) {
@@ -787,6 +819,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_recv", "(JJIJ)I", (void *) netty_quiche_conn_recv },
   { "quiche_conn_send", "(JJIJ)I", (void *) netty_quiche_conn_send },
   { "quiche_conn_free", "(J)V", (void *) netty_quiche_conn_free },
+  { "quiche_conn_peer_error0", "(J)[Ljava/lang/Object;", (void *) netty_quiche_conn_peer_error0 },
   { "quiche_conn_peer_streams_left_bidi", "(J)J", (void *) netty_quiche_conn_peer_streams_left_bidi },
   { "quiche_conn_peer_streams_left_uni", "(J)J", (void *) netty_quiche_conn_peer_streams_left_uni },
   { "quiche_conn_stream_priority", "(JJBZ)I", (void *) netty_quiche_conn_stream_priority },
@@ -901,6 +934,16 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     }
     nativeRegistered = 1;
 
+    NETTY_JNI_UTIL_LOAD_CLASS(env, integer_class, "java/lang/Integer", done);
+    NETTY_JNI_UTIL_GET_METHOD(env, integer_class, integer_class_init, "<init>", "(I)V", done);
+
+    NETTY_JNI_UTIL_LOAD_CLASS(env, boolean_class, "java/lang/Boolean", done);
+    if ((boolean_class_valueof = (*env)->GetStaticMethodID(env, boolean_class, "valueOf", "(Z)Ljava/lang/Boolean;")) == NULL) {
+        goto done;
+    }
+
+    NETTY_JNI_UTIL_LOAD_CLASS(env, object_class, "java/lang/Object", done);
+
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/QuicheLogger", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, quiche_logger_class, name, done);
     NETTY_JNI_UTIL_GET_METHOD(env, quiche_logger_class, quiche_logger_class_log, "log", "(Ljava/lang/String;)V", done);
@@ -928,6 +971,10 @@ done:
         }
 
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, integer_class);
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, boolean_class);
+        NETTY_JNI_UTIL_UNLOAD_CLASS(env, object_class);
+
         netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     }
     return ret;
@@ -937,6 +984,9 @@ static void netty_quiche_JNI_OnUnload(JNIEnv* env) {
     netty_boringssl_JNI_OnUnload(env, staticPackagePrefix);
 
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, integer_class);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, boolean_class);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, object_class);
 
     netty_jni_util_unregister_natives(env, staticPackagePrefix, STATICALLY_CLASSNAME);
     netty_jni_util_unregister_natives(env, staticPackagePrefix, QUICHE_CLASSNAME);

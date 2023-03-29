@@ -335,6 +335,16 @@ final class Quiche {
      */
     static native void quiche_conn_free(long connAddr);
 
+    static QuicConnectionCloseEvent quiche_conn_peer_error(long connAddr) {
+        Object[] error =  quiche_conn_peer_error0(connAddr);
+        if (error == null) {
+            return null;
+        }
+        return new QuicConnectionCloseEvent((Boolean) error[0], (Integer) error[1], (byte[]) error[2]);
+    }
+
+    private static native Object[] quiche_conn_peer_error0(long connAddr);
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L330">
      *     quiche_conn_peer_streams_left_bidi</a>.
