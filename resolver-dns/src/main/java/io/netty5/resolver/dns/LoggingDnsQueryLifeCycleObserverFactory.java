@@ -35,7 +35,7 @@ public final class LoggingDnsQueryLifeCycleObserverFactory implements DnsQueryLi
     private final LogLevel level;
 
     /**
-     * Create {@link DnsQueryLifecycleObserver} instances that log events at the default {@link io.netty5.handler.logging.LogLevel#DEBUG} level.
+     * Create {@link DnsQueryLifecycleObserver} instances that log events at the default {@link LogLevel#DEBUG} level.
      */
     public LoggingDnsQueryLifeCycleObserverFactory() {
         this(LogLevel.DEBUG);
