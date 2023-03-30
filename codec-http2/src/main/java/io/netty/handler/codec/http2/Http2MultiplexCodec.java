@@ -208,7 +208,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         try {
             channel.pipeline().fireExceptionCaught(cause.getCause());
         } finally {
-            channel.unsafe().closeForcibly();
+            // Close with the correct error that causes this stream exception.
+            // See https://github.com/netty/netty/issues/13235#issuecomment-1441994672
+            channel.closeWithError(cause.error());
         }
     }
 
