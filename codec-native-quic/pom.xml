@@ -57,7 +57,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>3b1e5b21977d5b4838362c460444dc758487397c</quicheCommitSha>
+    <quicheCommitSha>de1e245169bee2ce9d4061fa7ddf025b4a73fcec</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
