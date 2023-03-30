@@ -72,11 +72,17 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        // fast-path
+        // JDK type checks vs non-implemented interfaces costs O(N), where
+        // N is the number of interfaces already implemented by the concrete type that's being tested.
+        // The only requirement for this call is to make HttpRequest(s) implementors to call onHttpRequestChannelRead
+        // and super.channelRead the others, but due to the O(n) cost we perform few fast-path for commonly met
+        // singleton and/or concrete types, to save performing such slow type checks.
         if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
             if (msg instanceof DefaultHttpRequest) {
+                // fast-path
                 onHttpRequestChannelRead(ctx, (DefaultHttpRequest) msg);
             } else if (msg instanceof HttpRequest) {
+                // slow path
                 onHttpRequestChannelRead(ctx, (HttpRequest) msg);
             } else {
                 super.channelRead(ctx, msg);
