@@ -357,6 +357,24 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
+    public void contentLengthNotMatchRstStreamWithProtocolError() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 10);
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        frameInboundWriter.writeInboundData(3, bb(8), 0, true);
+        assertThrows(StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertNotNull(inboundHandler.readInbound());
+        assertFalse(channel.isActive());
+        verify(frameWriter).writeRstStream(eqCodecCtx(), eq(3),
+                eq(Http2Error.PROTOCOL_ERROR.code()), anyChannelPromise());
+    }
+
+    @Test
     public void framesShouldBeMultiplexed() {
         LastInboundHandler handler1 = new LastInboundHandler();
         Http2StreamChannel channel1 = newInboundStream(3, false, handler1);

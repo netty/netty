@@ -274,7 +274,9 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             try {
                 childChannel.pipeline().fireExceptionCaught(cause.getCause());
             } finally {
-                childChannel.unsafe().closeForcibly();
+                // Close with the correct error that causes this stream exception.
+                // See https://github.com/netty/netty/issues/13235#issuecomment-1441994672
+                childChannel.closeWithError(exception.error());
             }
             return;
         }
