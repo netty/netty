@@ -872,7 +872,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 final int endOffset = offset + length;
                 if (jdkCompatibilityMode ||
                         // If the handshake was not finished before we entered the method, we also ensure we only
-                        // unwrap one record . We do this to ensure we not produce any extra data before the caller
+                        // wrap one record. We do this to ensure we not produce any extra data before the caller
                         // of the method is able to observe handshake completion and react on it.
                         oldHandshakeState != HandshakeState.FINISHED) {
                     int srcsLen = 0;
@@ -1180,7 +1180,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // [1] https://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html
             if (jdkCompatibilityMode ||
                     // If the handshake was not finished before we entered the method, we also ensure we only
-                    // unwrap one record . We do this to ensure we not produce any extra data before the caller
+                    // unwrap one record. We do this to ensure we not produce any extra data before the caller
                     // of the method is able to observe handshake completion and react on it.
                     oldHandshakeState != HandshakeState.FINISHED) {
                 if (len < SSL_RECORD_HEADER_LENGTH) {
