@@ -387,6 +387,24 @@ public class Http2MultiplexTest {
     }
 
     @Test
+    public void contentLengthNotMatchRstStreamWithProtocolError() throws Exception {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        request.add(HttpHeaderNames.CONTENT_LENGTH, "10");
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        frameInboundWriter.writeInboundData(3, bb(8), 0, true);
+        assertThrows(StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertNotNull(inboundHandler.readInbound());
+        assertFalse(channel.isActive());
+        verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eq(3),
+                eq(Http2Error.PROTOCOL_ERROR.code()));
+    }
+
+    @Test
     public void framesShouldBeMultiplexed() throws Exception {
         LastInboundHandler handler1 = new LastInboundHandler();
         Http2StreamChannel channel1 = newInboundStream(3, false, handler1);

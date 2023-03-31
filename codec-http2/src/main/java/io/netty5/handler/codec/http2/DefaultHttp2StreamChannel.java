@@ -439,6 +439,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         notifyReadComplete(readHandle(), false);
     }
 
+    void closeWithError(Http2Error error) {
+        assert executor().inEventLoop();
+        closeTransport(error, newPromise());
+    }
+
     private void connectTransport(final SocketAddress remoteAddress,
                         SocketAddress localAddress, Promise<Void> promise) {
         if (!promise.setUncancellable()) {
@@ -487,7 +492,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         closeTransport(promise);
     }
 
-    private void closeTransport(final Promise<Void> promise) {
+    private void closeTransport(Promise<Void> promise) {
+        closeTransport(Http2Error.CANCEL, promise);
+    }
+
+    private void closeTransport(Http2Error error, final Promise<Void> promise) {
         if (!promise.setUncancellable()) {
             return;
         }
@@ -513,7 +522,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         // Only ever send a reset frame if the connection is still alive and if the stream was created before
         // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
         if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
-            Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
+            Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
             writeTransport(resetFrame, newPromise());
             flush();
         }
