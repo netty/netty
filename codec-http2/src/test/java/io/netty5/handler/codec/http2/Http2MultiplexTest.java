@@ -42,6 +42,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -1370,6 +1371,60 @@ public class Http2MultiplexTest {
                 .writeWindowUpdate(any(ChannelHandlerContext.class), eq(childChannel.stream().id()),
                         eq(32 * 1024));
         assertTrue(flushSniffer.checkFlush());
+    }
+
+    @Test
+    public void sslExceptionTriggersChildChannelException() throws Exception {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+        final RuntimeException testExc = new RuntimeException(new SSLException("foo"));
+        channel.parent().pipeline().addLast(new ChannelHandler() {
+            @Override
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                if (cause != testExc) {
+                    ChannelHandler.super.channelExceptionCaught(ctx, cause);
+                }
+            }
+        });
+        channel.parent().pipeline().fireChannelExceptionCaught(testExc);
+
+        assertTrue(channel.isActive());
+        RuntimeException exc = assertThrows(RuntimeException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(testExc, exc);
+    }
+
+    @Test
+    public void customExceptionForwarding() throws Exception {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+        final RuntimeException testExc = new RuntimeException("xyz");
+        channel.parent().pipeline().addLast(new ChannelHandler() {
+            @Override
+            public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                if (cause != testExc) {
+                    ChannelHandler.super.channelExceptionCaught(ctx, cause);
+                } else {
+                    ctx.pipeline().fireChannelExceptionCaught(new Http2MultiplexActiveStreamsException(cause));
+                }
+            }
+        });
+        channel.parent().pipeline().fireChannelExceptionCaught(testExc);
+
+        assertTrue(channel.isActive());
+        RuntimeException exc = assertThrows(RuntimeException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(testExc, exc);
     }
 
     private static void verifyFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,
