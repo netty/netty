@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.ThrowableUtil;
+
 import javax.net.ssl.SSLHandshakeException;
 
 /**
@@ -24,13 +26,7 @@ final class StacklessSSLHandshakeException extends SSLHandshakeException {
 
     private static final long serialVersionUID = -1244781947804415549L;
 
-    /**
-     * Constructs an exception reporting an error found by
-     * an SSL subsystem during handshaking.
-     *
-     * @param reason describes the problem.
-     */
-    StacklessSSLHandshakeException(String reason) {
+    private StacklessSSLHandshakeException(String reason) {
         super(reason);
     }
 
@@ -39,5 +35,12 @@ final class StacklessSSLHandshakeException extends SSLHandshakeException {
         // This is a performance optimization to not fill in the
         // stack trace as this is a stackless exception.
         return this;
+    }
+
+    /**
+     * Creates a new {@link StacklessSSLHandshakeException} which has the origin of the given {@link Class} and method.
+     */
+    static StacklessSSLHandshakeException newInstance(String reason, Class<?> clazz, String method) {
+        return ThrowableUtil.unknownStackTrace(new StacklessSSLHandshakeException(reason), clazz, method);
     }
 }
