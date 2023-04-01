@@ -43,6 +43,7 @@ import io.netty5.util.concurrent.ImmediateExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SilentDispose;
+import io.netty5.util.internal.ThrowableUtil;
 import io.netty5.util.internal.UnstableApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -902,8 +903,9 @@ public class SslHandler extends ByteToMessageDecoder {
 
         // Add a supressed exception if the handshake was not completed yet.
         if (isStateSet(STATE_HANDSHAKE_STARTED) && !handshakePromise.isDone()) {
-            exception.addSuppressed(
-                    new StacklessSSLHandshakeException("Connection closed while SSL/TLS handshake was in progress"));
+            exception.addSuppressed(StacklessSSLHandshakeException.newInstance(
+                    "Connection closed while SSL/TLS handshake was in progress",
+                    SslHandler.class, "channelInactive"));
         }
 
         // Make sure to release SSLEngine,
