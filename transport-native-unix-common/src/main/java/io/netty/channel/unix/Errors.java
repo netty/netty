@@ -36,6 +36,7 @@ import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEP
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEALREADY;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorECONNREFUSED;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEHOSTUNREACH;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEISCONN;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorENETUNREACH;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.strError;
@@ -58,6 +59,7 @@ public final class Errors {
     public static final int ERROR_EISCONN_NEGATIVE = -errorEISCONN();
     public static final int ERROR_EALREADY_NEGATIVE = -errorEALREADY();
     public static final int ERROR_ENETUNREACH_NEGATIVE = -errorENETUNREACH();
+    public static final int ERROR_EHOSTUNREACH_NEGATIVE = -errorEHOSTUNREACH();
 
     /**
      * Holds the mappings for errno codes to String messages.
@@ -152,7 +154,7 @@ public final class Errors {
     }
 
     private static IOException newConnectException0(String method, int err) {
-        if (err == ERROR_ENETUNREACH_NEGATIVE) {
+        if (err == ERROR_ENETUNREACH_NEGATIVE || err == ERROR_EHOSTUNREACH_NEGATIVE) {
             return new NoRouteToHostException();
         }
         if (err == ERROR_EISCONN_NEGATIVE) {
