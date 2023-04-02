@@ -58,7 +58,7 @@ public class HttpContentDecoderTest {
     };
     private static final byte[] SNAPPY_HELLO_WORLD = {
             -1, 6, 0, 0, 115, 78, 97, 80, 112, 89, 1, 16, 0, 0, 11, -66, -63,
-            -22,104, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100
+            -22, 104, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100
     };
     private static final String SAMPLE_STRING = "Hello, I am Meow!. A small kitten. :)" +
             "I sleep all day, and meow all night.";
@@ -183,8 +183,6 @@ public class HttpContentDecoderTest {
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
-
-
 
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
 
