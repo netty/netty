@@ -75,7 +75,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         }
 
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return  new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                     ctx.channel().config(), new SnappyFrameDecoder());
         }
 
