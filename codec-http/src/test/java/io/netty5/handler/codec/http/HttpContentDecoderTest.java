@@ -55,6 +55,10 @@ public class HttpContentDecoderTest {
             31, -117, 8, 8, 12, 3, -74, 84, 0, 3, 50, 0, -53, 72, -51, -55, -55,
             -41, 81, 40, -49, 47, -54, 73, 1, 0, 58, 114, -85, -1, 12, 0, 0, 0
     };
+    private static final byte[] SNAPPY_HELLO_WORLD = {
+            -1, 6, 0, 0, 115, 78, 97, 80, 112, 89, 1, 16, 0, 0, 11, -66, -63,
+            -22, 104, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100
+    };
     private static final String SAMPLE_STRING = "Hello, I am Meow!. A small kitten. :)" +
             "I sleep all day, and meow all night.";
     private static final byte[] SAMPLE_BZ_BYTES = {27, 72, 0, 0, -60, -102, 91, -86, 103, 20,
@@ -152,28 +156,56 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testResponseDecompression() throws Exception {
+    public void testSnappyResponseDecompression() throws Exception {
         // baseline test: response decoder, content decompressor && request aggregator work as expected
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         HttpObjectAggregator<?> aggregator = new HttpObjectAggregator<DefaultHttpContent>(1024);
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
 
-        byte[] headers = ("HTTP/1.1 200 OK\r\n" +
-                         "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
-                         "Content-Encoding: gzip\r\n" +
-                         "\r\n").getBytes(US_ASCII);
-        assertFalse(channel.writeInbound(channel.bufferAllocator().allocate(headers.length)
-                .writeBytes(headers)));
-        assertTrue(channel.writeInbound(channel.bufferAllocator().allocate(GZ_HELLO_WORLD.length)
-                .writeBytes(GZ_HELLO_WORLD)));
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                         "Content-Length: " + SNAPPY_HELLO_WORLD.length + "\r\n" +
+                         "Content-Encoding: snappy\r\n" +
+                         "\r\n";
+
+        assertFalse(channel.writeInbound(channel.bufferAllocator().copyOf(headers, UTF_8)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(SNAPPY_HELLO_WORLD)));
 
         Object o = channel.readInbound();
         assertThat(o).isInstanceOf(FullHttpResponse.class);
-        FullHttpResponse resp = (FullHttpResponse) o;
-        assertEquals(String.valueOf(HELLO_WORLD.length()), resp.headers().get(HttpHeaderNames.CONTENT_LENGTH));
-        assertEquals(HELLO_WORLD, resp.payload().toString(US_ASCII));
-        resp.close();
+        try (FullHttpResponse resp = (FullHttpResponse) o) {
+            assertEquals(String.valueOf(HELLO_WORLD.length()), resp.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+            assertEquals(HELLO_WORLD, resp.payload().toString(US_ASCII));
+        }
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @Test
+    public void testResponseDecompression() throws Exception {
+        // baseline test: response decoder, content decompressor && request aggregator work as expected
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
+
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
+                "Content-Encoding: gzip\r\n" +
+                "\r\n";
+
+        assertFalse(channel.writeInbound(channel.bufferAllocator().copyOf(headers, UTF_8)));
+        assertTrue(channel.writeInbound(channel.bufferAllocator().copyOf(GZ_HELLO_WORLD)));
+
+        Object o = channel.readInbound();
+        assertThat(o).isInstanceOf(FullHttpResponse.class);
+        try (FullHttpResponse resp = (FullHttpResponse) o) {
+            assertEquals(String.valueOf(HELLO_WORLD.length()), resp.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+            assertEquals(HELLO_WORLD, resp.payload().toString(US_ASCII));
+        }
 
         assertHasInboundMessages(channel, false);
         assertHasOutboundMessages(channel, false);

@@ -18,12 +18,14 @@ package io.netty5.handler.codec.http;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.BrotliDecompressor;
 import io.netty5.handler.codec.compression.Decompressor;
+import io.netty5.handler.codec.compression.SnappyDecompressor;
 import io.netty5.handler.codec.compression.ZlibDecompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 
 import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty5.handler.codec.http.HttpHeaderValues.DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty5.handler.codec.http.HttpHeaderValues.SNAPPY;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
 
@@ -66,6 +68,10 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return BrotliDecompressor.newFactory().get();
+        }
+
+        if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
+            return SnappyDecompressor.newFactory().get();
         }
 
         // 'identity' or unsupported
