@@ -126,7 +126,7 @@ public final class Errors {
     }
 
     private static IOException newConnectException0(String method, int err) {
-        if (err == ERROR_ENETUNREACH_NEGATIVE) {
+        if (err == ERROR_ENETUNREACH_NEGATIVE || err == ERROR_EHOSTUNREACH_NEGATIVE) {
             return new NoRouteToHostException();
         }
         if (err == ERROR_EISCONN_NEGATIVE) {
