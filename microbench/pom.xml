@@ -208,6 +208,11 @@
       <classifier>${tcnative.classifier}</classifier>
       <optional>false</optional>
     </dependency>
+    <dependency>
+      <groupId>org.jctools</groupId>
+      <artifactId>jctools-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>
