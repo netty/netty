@@ -40,6 +40,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     /**
      * Create a new instance using the default number of threads, the default {@link ThreadFactory} and
      * the {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     * 使用默认的线程数，默认的 {@link ThreadFactory} 和 {@link SelectorProvider} 返回的 {@link SelectorProvider#provider()} 创建一个新实例。
      */
     public NioEventLoopGroup() {
         this(0);
