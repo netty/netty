@@ -52,8 +52,9 @@ import org.bouncycastle.cert.ocsp.OCSPResp;
 import org.bouncycastle.cert.ocsp.SingleResp;
 
 import javax.net.ssl.SSLSession;
-import javax.security.cert.X509Certificate;
 import java.math.BigInteger;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 
 /**
  * This is a very simple example for an HTTPS client that uses OCSP stapling.
@@ -218,8 +219,8 @@ public class OcspClientExample {
             }
 
             SSLSession session = engine.getSession();
-            X509Certificate[] chain = session.getPeerCertificateChain();
-            BigInteger certSerial = chain[0].getSerialNumber();
+            Certificate[] chain = session.getPeerCertificates();
+            BigInteger certSerial = ((X509Certificate) chain[0]).getSerialNumber();
 
             BasicOCSPResp basicResponse = (BasicOCSPResp) response.getResponseObject();
             SingleResp first = basicResponse.getResponses()[0];
