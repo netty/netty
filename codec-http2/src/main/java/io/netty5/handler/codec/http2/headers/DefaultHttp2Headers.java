@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
+import static io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty5.util.AsciiString.isUpperCase;
 import static java.util.Collections.emptyIterator;
 
@@ -71,7 +72,7 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
             throw new HeaderValidationException("empty headers are not allowed");
         }
         if (validateNames) {
-            if (PseudoHeaderName.hasPseudoHeaderFormat(name)) {
+            if (hasPseudoHeaderFormat(name)) {
                 if (!PseudoHeaderName.isPseudoHeader(name)) {
                     throw new HeaderValidationException("'" + name + "' is not a standard pseudo-header.");
                 }
@@ -95,6 +96,16 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
             }
         }
         return name;
+    }
+
+    @Override
+    protected CharSequence validateValue(CharSequence key, CharSequence value) {
+        // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+        // pseudo headers must not be empty
+        if (validateValues && (value == null || value.length() == 0) && hasPseudoHeaderFormat(key)) {
+            throw new HeaderValidationException("HTTP/2 pseudo-header '" + key + "' must not be empty.");
+        }
+        return super.validateValue(key, value);
     }
 
     @Override
@@ -285,7 +296,7 @@ public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Head
     @Override
     protected MultiMapEntry<CharSequence, CharSequence> newEntry(CharSequence key, CharSequence value, int keyHash) {
         Http2MultiMapEntry entry = new Http2MultiMapEntry(key, value, keyHash);
-        if (PseudoHeaderName.hasPseudoHeaderFormat(key)) {
+        if (hasPseudoHeaderFormat(key)) {
             if (firstPseudoHeader == null) {
                 assert lastPseudoHeader == null;
                 firstPseudoHeader = lastPseudoHeader = entry;

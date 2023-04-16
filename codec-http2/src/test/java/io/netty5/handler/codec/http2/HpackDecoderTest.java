@@ -57,6 +57,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -764,6 +765,42 @@ public class HpackDecoderTest {
             assertEquals("GET", decoded.method().toString());
             assertEquals("200", decoded.status().toString());
             assertEquals("bar", decoded.get("foo").toString());
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {":method,''", ":scheme,''", ":authority,''", ":path,''"})
+    public void testPseudoHeaderEmptyValidationEnabled(String name, String value) throws Exception {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = Http2Headers.newHeaders(false);
+            toEncode.add(name, value);
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            final Http2Headers decoded = Http2Headers.newHeaders();
+
+            Http2Exception.StreamException e = assertThrows(Http2Exception.StreamException.class,
+                    () -> hpackDecoder.decode(3, in, decoded, true));
+            assertThat(e.streamId(), is(3));
+            assertThat(e.error(), is(PROTOCOL_ERROR));
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {":method,''", ":scheme,''", ":authority,''", ":path,''"})
+    public void testPseudoHeaderEmptyValidationDisabled(String name, String value) throws Exception {
+        try (Buffer in = onHeapAllocator().allocate(200)) {
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = Http2Headers.newHeaders(false);
+            toEncode.add(name, value);
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            final Http2Headers decoded = Http2Headers.newHeaders(false);
+            hpackDecoder.decode(3, in, decoded, true);
+
+            assertSame(EMPTY_STRING, decoded.get(name));
         }
     }
 }
