@@ -115,7 +115,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
             reject(task);
         }
 
-        if (!(task instanceof LazyRunnable) && wakesUpForTask(task)) {
+        if (wakesUpForTask(task)) {
             wakeup(inEventLoop());
         }
     }
