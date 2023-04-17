@@ -187,7 +187,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     /**
-     *  @deprecated overrides {@link SingleThreadEventExecutor#wakesUpForTask} to re-create this behaviour
+     *  @deprecated override {@link SingleThreadEventExecutor#wakesUpForTask} to re-create this behaviour
      *
      */
     @Deprecated

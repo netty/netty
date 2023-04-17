@@ -917,7 +917,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * @deprecated overrides {@link SingleThreadEventExecutor#wakesUpForTask} to re-create this behaviour
+     * @deprecated override {@link SingleThreadEventExecutor#wakesUpForTask} to re-create this behaviour
      */
     @Deprecated
     protected interface NonWakeupRunnable extends LazyRunnable { }
