@@ -21,7 +21,6 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.buffer.StandardAllocationTypes;
-import io.netty5.handler.ssl.util.LazyJavaxX509Certificate;
 import io.netty5.handler.ssl.util.LazyX509Certificate;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.ReferenceCounted;
@@ -2301,7 +2300,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
         // These are guarded by synchronized(OpenSslEngine.this) as handshakeFinished() may be triggered by any
         // thread.
-        private X509Certificate[] x509PeerCerts;
         private Certificate[] peerCerts;
 
         private boolean valid = true;
@@ -2552,10 +2550,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     if (clientMode) {
                         if (isEmpty(peerCertificateChain)) {
                             peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
-                            x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
                         } else {
                             peerCerts = new Certificate[peerCertificateChain.length];
-                            x509PeerCerts = new X509Certificate[peerCertificateChain.length];
                             initCerts(peerCertificateChain, 0);
                         }
                     } else {
@@ -2566,16 +2562,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                         // See https://www.openssl.org/docs/ssl/SSL_get_peer_cert_chain.html
                         if (isEmpty(peerCertificate)) {
                             peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
-                            x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
                         } else {
                             if (isEmpty(peerCertificateChain)) {
                                 peerCerts = new Certificate[] {new LazyX509Certificate(peerCertificate)};
-                                x509PeerCerts = new X509Certificate[] {new LazyJavaxX509Certificate(peerCertificate)};
                             } else {
                                 peerCerts = new Certificate[peerCertificateChain.length + 1];
-                                x509PeerCerts = new X509Certificate[peerCertificateChain.length + 1];
                                 peerCerts[0] = new LazyX509Certificate(peerCertificate);
-                                x509PeerCerts[0] = new LazyJavaxX509Certificate(peerCertificate);
                                 initCerts(peerCertificateChain, 1);
                             }
                         }
@@ -2594,7 +2586,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             for (int i = 0; i < chain.length; i++) {
                 int certPos = startPos + i;
                 peerCerts[certPos] = new LazyX509Certificate(chain[i]);
-                x509PeerCerts[certPos] = new LazyJavaxX509Certificate(chain[i]);
             }
         }
 
@@ -2619,12 +2610,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
         @Override
         public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
-            synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (isEmpty(x509PeerCerts)) {
-                    throw new SSLPeerUnverifiedException("peer not verified");
-                }
-                return x509PeerCerts.clone();
-            }
+            throw new UnsupportedOperationException();
         }
 
         @Override

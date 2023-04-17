@@ -242,18 +242,6 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                         // expected
                     }
                     try {
-                        session.getPeerCertificateChain();
-                        fail();
-                    } catch (SSLPeerUnverifiedException e) {
-                        // expected
-                    } catch (UnsupportedOperationException e) {
-                        // Starting from Java15 this method throws UnsupportedOperationException as it was
-                        // deprecated before and getPeerCertificates() should be used
-                        if (PlatformDependent.javaVersion() < 15) {
-                            throw e;
-                        }
-                    }
-                    try {
                         session.getPeerPrincipal();
                         fail();
                     } catch (SSLPeerUnverifiedException e) {
