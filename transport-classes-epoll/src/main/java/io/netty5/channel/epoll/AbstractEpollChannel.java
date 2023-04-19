@@ -402,7 +402,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             active = true;
             clearFlag(Native.EPOLLOUT);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remoteAddress = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remoteAddress = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                        (InetSocketAddress) socket.remoteAddress());
             } else {
                 remoteAddress = requestedRemoteAddress;
             }
@@ -447,7 +448,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         boolean connected = doConnect0(remoteAddress, initialData);
         if (connected) {
             this.remoteAddress = remoteSocketAddr == null ?
-                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
             active = true;
         }
         if (fetchLocalAddress()) {

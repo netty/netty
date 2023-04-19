@@ -432,7 +432,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             active = true;
             writeFilter(false);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remoteAddress = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remoteAddress = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                        (InetSocketAddress) socket.remoteAddress());
             } else {
                 remoteAddress = requestedRemoteAddress;
             }
@@ -456,7 +457,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     protected boolean fetchLocalAddress() {
-        return socket.protocolFamily() != SocketProtocolFamily.UNIX;
+        return true;//socket.protocolFamily() != SocketProtocolFamily.UNIX;
     }
 
     /**
@@ -482,7 +483,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         if (connected) {
             active = true;
             this.remoteAddress = remoteSocketAddr == null?
-                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
         }
 
         if (fetchLocalAddress()) {

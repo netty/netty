@@ -414,18 +414,36 @@ public class Socket extends FileDescriptor {
         throw newIOException("accept", res);
     }
 
-    public final InetSocketAddress remoteAddress() {
-        byte[] addr = remoteAddress(fd);
-        // addr may be null if getpeername failed.
-        // See https://github.com/netty/netty/issues/3328
-        return addr == null ? null : address(addr, 0, addr.length);
+    public final SocketAddress remoteAddress() {
+        switch (protocolFamily()) {
+            case INET:
+            case INET6:
+                byte[] addr = remoteAddress(fd);
+                // addr may be null if getpeername failed.
+                // See https://github.com/netty/netty/issues/3328
+                return addr == null ? null : address(addr, 0, addr.length);
+            case UNIX:
+                byte[] domainAddr = remoteDomainSocketAddress(fd);
+                return domainAddr == null ? null : new DomainSocketAddress(new String(domainAddr));
+            default:
+                return null;
+        }
     }
 
-    public final InetSocketAddress localAddress() {
-        byte[] addr = localAddress(fd);
-        // addr may be null if getpeername failed.
-        // See https://github.com/netty/netty/issues/3328
-        return addr == null ? null : address(addr, 0, addr.length);
+    public final SocketAddress localAddress() {
+        switch (protocolFamily()) {
+            case INET:
+            case INET6:
+                byte[] addr = localAddress(fd);
+                // addr may be null if getpeername failed.
+                // See https://github.com/netty/netty/issues/3328
+                return addr == null ? null : address(addr, 0, addr.length);
+            case UNIX:
+                byte[] domainAddr = localDomainSocketAddress(fd);
+                return domainAddr == null ? null : new DomainSocketAddress(new String(domainAddr));
+            default:
+                return null;
+        }
     }
 
     public final int getReceiveBufferSize() throws IOException {
@@ -651,7 +669,9 @@ public class Socket extends FileDescriptor {
     private static native int accept(int fd, byte[] addr);
 
     private static native byte[] remoteAddress(int fd);
+    private static native byte[] remoteDomainSocketAddress(int fd);
     private static native byte[] localAddress(int fd);
+    private static native byte[] localDomainSocketAddress(int fd);
 
     private static native int send(int fd, ByteBuffer buf, int pos, int limit);
     private static native int sendAddress(int fd, long address, int pos, int limit);

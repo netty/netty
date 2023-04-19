@@ -140,6 +140,18 @@ static jobject createDomainDatagramSocketAddress(JNIEnv* env, const struct socka
     return obj;
 }
 
+static jbyteArray netty5_unix_socket_createDomainSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr) {
+    struct sockaddr_un* s = (struct sockaddr_un*) addr;
+    int pathLength = strlen(s->sun_path);
+    jbyteArray pathBytes = (*env)->NewByteArray(env, pathLength);
+    if (pathBytes == NULL) {
+        return NULL;
+    }
+
+    (*env)->SetByteArrayRegion(env, pathBytes, 0, pathLength, (jbyte*) &s->sun_path);
+    return pathBytes;
+}
+
 static jsize addressLength(const struct sockaddr_storage* addr) {
     int len = netty5_unix_socket_ipAddressLength(addr);
     if (len == 4) {
@@ -671,6 +683,15 @@ static jbyteArray netty5_unix_socket_remoteAddress(JNIEnv* env, jclass clazz, ji
     return netty5_unix_socket_createInetSocketAddressArray(env, &addr);
 }
 
+static jbyteArray netty5_unix_socket_remoteDomainSocketAddress(JNIEnv* env, jclass clazz, jint fd) {
+    struct sockaddr_storage addr;
+    socklen_t len = sizeof(addr);
+    if (getpeername(fd, (struct sockaddr*) &addr, &len) == -1) {
+        return NULL;
+    }
+    return netty5_unix_socket_createDomainSocketAddressArray(env, &addr);
+}
+
 static jbyteArray netty5_unix_socket_localAddress(JNIEnv* env, jclass clazz, jint fd) {
     struct sockaddr_storage addr;
     socklen_t len = sizeof(addr);
@@ -678,6 +699,15 @@ static jbyteArray netty5_unix_socket_localAddress(JNIEnv* env, jclass clazz, jin
         return NULL;
     }
     return netty5_unix_socket_createInetSocketAddressArray(env, &addr);
+}
+
+static jbyteArray netty5_unix_socket_localDomainSocketAddress(JNIEnv* env, jclass clazz, jint fd) {
+    struct sockaddr_storage addr;
+    socklen_t len = sizeof(addr);
+    if (getsockname(fd, (struct sockaddr*) &addr, &len) == -1) {
+        return NULL;
+    }
+    return netty5_unix_socket_createDomainSocketAddressArray(env, &addr);
 }
 
 static jint netty5_unix_socket_newSocketDgramFd(JNIEnv* env, jclass clazz, jboolean ipv6) {
@@ -1152,6 +1182,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "accept", "(I[B)I", (void *) netty5_unix_socket_accept },
   { "remoteAddress", "(I)[B", (void *) netty5_unix_socket_remoteAddress },
   { "localAddress", "(I)[B", (void *) netty5_unix_socket_localAddress },
+  { "remoteDomainSocketAddress", "(I)[B", (void *) netty5_unix_socket_remoteDomainSocketAddress },
+  { "localDomainSocketAddress", "(I)[B", (void *) netty5_unix_socket_localDomainSocketAddress },
   { "newSocketDgramFd", "(Z)I", (void *) netty5_unix_socket_newSocketDgramFd },
   { "newSocketStreamFd", "(Z)I", (void *) netty5_unix_socket_newSocketStreamFd },
   { "newSocketDomainFd", "()I", (void *) netty5_unix_socket_newSocketDomainFd },
