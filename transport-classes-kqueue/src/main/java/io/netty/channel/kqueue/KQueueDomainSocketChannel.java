@@ -47,6 +47,8 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
 
     KQueueDomainSocketChannel(Channel parent, BsdSocket fd) {
         super(parent, fd, true);
+        local = fd.localDomainSocketAddress();
+        remote = fd.remoteDomainSocketAddress();
     }
 
     @Override

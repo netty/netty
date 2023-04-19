@@ -1261,6 +1261,18 @@
                   <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
                   <justification>No change in compatibility</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.unix.DomainSocketAddress io.netty.channel.unix.Socket::localDomainSocketAddress()</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.unix.DomainSocketAddress io.netty.channel.unix.Socket::remoteDomainSocketAddress()</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
