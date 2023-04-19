@@ -457,7 +457,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     protected boolean fetchLocalAddress() {
-        return true;//socket.protocolFamily() != SocketProtocolFamily.UNIX;
+        return true; //socket.protocolFamily() != SocketProtocolFamily.UNIX;
     }
 
     /**
