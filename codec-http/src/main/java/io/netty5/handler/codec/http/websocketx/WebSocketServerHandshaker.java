@@ -201,6 +201,7 @@ public abstract class WebSocketServerHandshaker {
             // this means the user use an HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
             if (ctx == null) {
+                response.close();
                 return channel.newFailedFuture(
                         new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
             }
