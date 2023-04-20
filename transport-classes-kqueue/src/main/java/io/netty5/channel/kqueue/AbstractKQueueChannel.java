@@ -449,7 +449,13 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             checkResolvable((InetSocketAddress) local);
         }
         socket.bind(local);
-        this.localAddress = socket.localAddress();
+        if (socket.protocolFamily() != SocketProtocolFamily.UNIX) {
+            this.localAddress = socket.localAddress();
+        } else {
+            // getsockname(...) is not widely supported for UDS.
+            // See https://man.freebsd.org/cgi/man.cgi?query=getsockname&sektion=2&n=1
+            this.localAddress = local;
+        }
     }
 
     /**
