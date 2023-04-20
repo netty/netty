@@ -94,7 +94,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
         this.localAddress = fd.localAddress();
-        this.remoteAddress = remote;
+        this.remoteAddress = remote == null ? fd.remoteAddress() : remote;
     }
 
     @Override
@@ -449,15 +449,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             checkResolvable((InetSocketAddress) local);
         }
         socket.bind(local);
-        if (fetchLocalAddress()) {
-            this.localAddress = socket.localAddress();
-        } else {
-            this.localAddress = local;
-        }
-    }
-
-    protected boolean fetchLocalAddress() {
-        return true; //socket.protocolFamily() != SocketProtocolFamily.UNIX;
+        this.localAddress = socket.localAddress();
     }
 
     /**
@@ -486,12 +478,10 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
         }
 
-        if (fetchLocalAddress()) {
-            // We always need to set the localAddress even if not connected yet as the bind already took place.
-            //
-            // See https://github.com/netty/netty/issues/3463
-            this.localAddress = socket.localAddress();
-        }
+        // We always need to set the localAddress even if not connected yet as the bind already took place.
+        //
+        // See https://github.com/netty/netty/issues/3463
+        this.localAddress = socket.localAddress();
         return connected;
     }
 
