@@ -675,7 +675,7 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
 }
 
 static jbyteArray netty_unix_socket_remoteAddress(JNIEnv* env, jclass clazz, jint fd) {
-    struct sockaddr_storage addr;
+    struct sockaddr_storage addr = { 0 };
     socklen_t len = sizeof(addr);
     if (getpeername(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
@@ -684,7 +684,7 @@ static jbyteArray netty_unix_socket_remoteAddress(JNIEnv* env, jclass clazz, jin
 }
 
 static jbyteArray netty_unix_socket_remoteDomainSocketAddress(JNIEnv* env, jclass clazz, jint fd) {
-    struct sockaddr_storage addr;
+    struct sockaddr_storage addr = { 0 };
     socklen_t len = sizeof(addr);
     if (getpeername(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
@@ -693,7 +693,7 @@ static jbyteArray netty_unix_socket_remoteDomainSocketAddress(JNIEnv* env, jclas
 }
 
 static jbyteArray netty_unix_socket_localAddress(JNIEnv* env, jclass clazz, jint fd) {
-    struct sockaddr_storage addr;
+    struct sockaddr_storage addr = { 0 };
     socklen_t len = sizeof(addr);
     if (getsockname(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
@@ -702,7 +702,7 @@ static jbyteArray netty_unix_socket_localAddress(JNIEnv* env, jclass clazz, jint
 }
 
 static jbyteArray netty_unix_socket_localDomainSocketAddress(JNIEnv* env, jclass clazz, jint fd) {
-    struct sockaddr_storage addr;
+    struct sockaddr_storage addr = { 0 };
     socklen_t len = sizeof(addr);
     if (getsockname(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
