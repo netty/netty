@@ -100,12 +100,8 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
-        remoteAddress =  remote;
+        remoteAddress =  remote == null ? fd.remoteAddress() : remote;
         localAddress = fd.localAddress();
-    }
-
-    protected final boolean fetchLocalAddress() {
-        return socket.protocolFamily() != SocketProtocolFamily.UNIX;
     }
 
     protected static boolean isSoErrorZero(Socket fd) {
@@ -419,11 +415,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             checkResolvable((InetSocketAddress) local);
         }
         socket.bind(local);
-        if (fetchLocalAddress()) {
-            this.localAddress = socket.localAddress();
-        } else {
-            this.localAddress = local;
-        }
+        this.localAddress = socket.localAddress();
     }
 
     /**
@@ -451,12 +443,10 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
             active = true;
         }
-        if (fetchLocalAddress()) {
-            // We always need to set the localAddress even if not connected yet as the bind already took place.
-            //
-            // See https://github.com/netty/netty/issues/3463
-            this.localAddress = socket.localAddress();
-        }
+        // We always need to set the localAddress even if not connected yet as the bind already took place.
+        //
+        // See https://github.com/netty/netty/issues/3463
+        this.localAddress = socket.localAddress();
         return connected;
     }
 
