@@ -22,8 +22,6 @@ import java.util.List;
 
 public final class ThrowableUtil {
 
-    private static final Throwable[] EMPTY = new Throwable[0];
-
     private ThrowableUtil() { }
 
     /**
@@ -82,7 +80,7 @@ public final class ThrowableUtil {
     @SuppressJava6Requirement(reason = "Throwable getSuppressed is only available for >= 7. Has check for < 7.")
     public static Throwable[] getSuppressed(Throwable source) {
         if (!haveSuppressed()) {
-            return EMPTY;
+            return EmptyArrays.EMPTY_THROWABLES;
         }
         return source.getSuppressed();
     }
