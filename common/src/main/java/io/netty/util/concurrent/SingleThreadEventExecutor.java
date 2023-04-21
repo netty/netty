@@ -824,7 +824,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void execute0(@Schedule Runnable task) {
         ObjectUtil.checkNotNull(task, "task");
-        execute(task, !(task instanceof LazyRunnable) && wakesUpForTask(task));
+        execute(task, wakesUpForTask(task));
     }
 
     private void lazyExecute0(@Schedule Runnable task) {
@@ -917,7 +917,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * @deprecated use {@link AbstractEventExecutor.LazyRunnable}
+     * @deprecated override {@link SingleThreadEventExecutor#wakesUpForTask} to re-create this behaviour
      */
     @Deprecated
     protected interface NonWakeupRunnable extends LazyRunnable { }

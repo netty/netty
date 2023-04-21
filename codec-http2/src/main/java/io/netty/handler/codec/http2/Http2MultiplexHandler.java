@@ -274,22 +274,34 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             try {
                 childChannel.pipeline().fireExceptionCaught(cause.getCause());
             } finally {
-                childChannel.unsafe().closeForcibly();
+                // Close with the correct error that causes this stream exception.
+                // See https://github.com/netty/netty/issues/13235#issuecomment-1441994672
+                childChannel.closeWithError(exception.error());
             }
             return;
         }
+        if (cause instanceof Http2MultiplexActiveStreamsException) {
+            // Unwrap the cause that was used to create it and fire it for all the active streams.
+            fireExceptionCaughtForActiveStream(cause.getCause());
+            return;
+        }
+
         if (cause.getCause() instanceof SSLException) {
-            forEachActiveStream(new Http2FrameStreamVisitor() {
-                @Override
-                public boolean visit(Http2FrameStream stream) {
-                    AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
-                            ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireExceptionCaught(cause);
-                    return true;
-                }
-            });
+            fireExceptionCaughtForActiveStream(cause);
         }
         ctx.fireExceptionCaught(cause);
+    }
+
+    private void fireExceptionCaughtForActiveStream(final Throwable cause) throws Http2Exception {
+        forEachActiveStream(new Http2FrameStreamVisitor() {
+            @Override
+            public boolean visit(Http2FrameStream stream) {
+                AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                        ((DefaultHttp2FrameStream) stream).attachment;
+                childChannel.pipeline().fireExceptionCaught(cause);
+                return true;
+            }
+        });
     }
 
     private static boolean isServer(ChannelHandlerContext ctx) {

@@ -301,4 +301,15 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     protected boolean isDecodingRequest() {
         return true;
     }
+
+    @Override
+    protected boolean isContentAlwaysEmpty(final HttpMessage msg) {
+        // fast-path to save expensive O(n) checks; users can override createMessage
+        // and extends DefaultHttpRequest making implementing HttpResponse:
+        // this is why we cannot use instanceof DefaultHttpRequest here :(
+        if (msg.getClass() == DefaultHttpRequest.class) {
+            return false;
+        }
+        return super.isContentAlwaysEmpty(msg);
+    }
 }

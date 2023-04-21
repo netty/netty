@@ -576,6 +576,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false);
     }
 
+    final void closeWithError(Http2Error error) {
+        assert eventLoop().inEventLoop();
+        unsafe.close(unsafe.voidPromise(), error);
+    }
+
     private final class Http2ChannelUnsafe implements Unsafe {
         private final VoidChannelPromise unsafeVoidPromise =
                 new VoidChannelPromise(AbstractHttp2StreamChannel.this, false);
@@ -648,6 +653,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         @Override
         public void close(final ChannelPromise promise) {
+            close(promise, Http2Error.CANCEL);
+        }
+
+        void close(final ChannelPromise promise, Http2Error error) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -678,7 +687,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // Only ever send a reset frame if the connection is still alive and if the stream was created before
             // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
             if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
-                Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
+                Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
                 write(resetFrame, unsafe().voidPromise());
                 flush();
             }

@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.91.Final-SNAPSHOT</version>
+  <version>4.1.92.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -186,6 +186,30 @@
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
+      </properties>
+    </profile>
+    <profile>
+      <id>java20</id>
+      <activation>
+        <jdk>20</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -1237,6 +1261,18 @@
                   <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
                   <justification>No change in compatibility</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.unix.DomainSocketAddress io.netty.channel.unix.Socket::localDomainSocketAddress()</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.unix.DomainSocketAddress io.netty.channel.unix.Socket::remoteDomainSocketAddress()</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1532,7 +1568,7 @@
               <instructions>
                 <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
-                <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,*</Import-Package>
+                <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,*</Import-Package>
                 <!-- override "internal" private package convention -->
                 <Private-Package>!*</Private-Package>
               </instructions>
