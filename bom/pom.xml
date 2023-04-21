@@ -65,7 +65,7 @@
 
   <properties>
     <!-- Keep in sync with ../pom.xml -->
-    <tcnative.version>2.0.59.Final</tcnative.version>
+    <tcnative.version>2.0.60.Final-SNAPSHOT</tcnative.version>
   </properties>
 
   <build>
