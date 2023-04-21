@@ -94,7 +94,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
         this.localAddress = fd.localAddress();
-        this.remoteAddress = remote;
+        this.remoteAddress = remote == null ? fd.remoteAddress() : remote;
     }
 
     @Override
@@ -432,7 +432,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             active = true;
             writeFilter(false);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remoteAddress = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remoteAddress = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                        (InetSocketAddress) socket.remoteAddress());
             } else {
                 remoteAddress = requestedRemoteAddress;
             }
@@ -448,15 +449,13 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             checkResolvable((InetSocketAddress) local);
         }
         socket.bind(local);
-        if (fetchLocalAddress()) {
+        if (socket.protocolFamily() != SocketProtocolFamily.UNIX) {
             this.localAddress = socket.localAddress();
         } else {
+            // getsockname(...) is not widely supported for UDS.
+            // See https://man.freebsd.org/cgi/man.cgi?query=getsockname&sektion=2&n=1
             this.localAddress = local;
         }
-    }
-
-    protected boolean fetchLocalAddress() {
-        return socket.protocolFamily() != SocketProtocolFamily.UNIX;
     }
 
     /**
@@ -482,15 +481,13 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         if (connected) {
             active = true;
             this.remoteAddress = remoteSocketAddr == null?
-                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
         }
 
-        if (fetchLocalAddress()) {
-            // We always need to set the localAddress even if not connected yet as the bind already took place.
-            //
-            // See https://github.com/netty/netty/issues/3463
-            this.localAddress = socket.localAddress();
-        }
+        // We always need to set the localAddress even if not connected yet as the bind already took place.
+        //
+        // See https://github.com/netty/netty/issues/3463
+        this.localAddress = socket.localAddress();
         return connected;
     }
 

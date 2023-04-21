@@ -434,7 +434,8 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         if (socket.finishConnect()) {
             active = true;
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                        (InetSocketAddress) socket.remoteAddress());
             } else {
                 remote = requestedRemoteAddress;
             }
