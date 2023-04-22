@@ -341,7 +341,7 @@ public abstract class Recycler<T> {
             Thread owner = this.owner;
             if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
                 accept(handle);
-            } else if (owner != null && owner.getState() == Thread.State.TERMINATED) {
+            } else if (owner != null && isTerminated(owner)) {
                 this.owner = null;
                 pooledHandles = null;
             } else {
@@ -350,6 +350,10 @@ public abstract class Recycler<T> {
                     handles.relaxedOffer(handle);
                 }
             }
+        }
+
+        private static boolean isTerminated(Thread owner) {
+            return PlatformDependent.isJ9Jvm() ? !owner.isAlive() : owner.getState() == Thread.State.TERMINATED;
         }
 
         DefaultHandle<T> newHandle() {
