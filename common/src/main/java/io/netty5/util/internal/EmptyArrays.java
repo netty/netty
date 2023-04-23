@@ -37,5 +37,7 @@ public final class EmptyArrays {
     public static final Certificate[] EMPTY_CERTIFICATES = {};
     public static final X509Certificate[] EMPTY_X509_CERTIFICATES = {};
 
+    public static final Throwable[] EMPTY_THROWABLES = {};
+
     private EmptyArrays() { }
 }

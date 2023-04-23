@@ -1023,20 +1023,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     }
 
     private SSLException shutdownWithError(String operation, int sslError, int error) {
-        String errorString = SSL.getErrorString(error);
         if (logger.isDebugEnabled()) {
+            String errorString = SSL.getErrorString(error);
             logger.debug("{} failed with {}: OpenSSL error: {} {}",
                          operation, sslError, error, errorString);
         }
 
         // There was an internal error -- shutdown
         shutdown();
-        if (handshakeState == HandshakeState.FINISHED) {
-            return new SSLException(errorString);
-        }
 
-        SSLHandshakeException exception = new SSLHandshakeException(errorString);
-        // If we have a handshakeException stored already we should include it as well to help the user debug things.
+        SSLException exception = newSSLExceptionForError(error);
+        // If we have a pendingException stored already we should include it as well to help the user debug things.
         if (pendingException != null) {
             exception.initCause(pendingException);
             pendingException = null;
@@ -1305,15 +1302,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
         // See https://github.com/netty/netty/issues/3900
         if (SSL.bioLengthNonApplication(networkBIO) > 0) {
-            // we seems to have data left that needs to be transferred and so the user needs
+            // we seem to have data left that needs to be transferred and so the user needs
             // call wrap(...). Store the error so we can pick it up later.
-            String message = SSL.getErrorString(stackError);
-            SSLException exception = handshakeState == HandshakeState.FINISHED ?
-                    new SSLException(message) : new SSLHandshakeException(message);
             if (pendingException == null) {
-                pendingException = exception;
-            } else {
-                pendingException.addSuppressed(exception);
+                pendingException = newSSLExceptionForError(stackError);
+            } else if (shouldAddSuppressed(pendingException, stackError)) {
+                pendingException.addSuppressed(newSSLExceptionForError(stackError));
             }
             // We need to clear all errors so we not pick up anything that was left on the stack on the next
             // operation. Note that shutdownWithError(...) will cleanup the stack as well so its only needed here.
@@ -1321,6 +1315,23 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             return true;
         }
         return false;
+    }
+
+    private SSLException newSSLExceptionForError(int stackError) {
+        String message = SSL.getErrorString(stackError);
+        return handshakeState == HandshakeState.FINISHED ?
+                new OpenSslException(message, stackError) : new OpenSslHandshakeException(message, stackError);
+    }
+
+    private static boolean shouldAddSuppressed(Throwable target, int errorCode) {
+        for (Throwable suppressed: target.getSuppressed()) {
+            if (suppressed instanceof NativeSslException &&
+                    ((NativeSslException) suppressed).errorCode() == errorCode) {
+                /// An exception with this errorCode was already added before.
+                return false;
+            }
+        }
+        return true;
     }
 
     private SSLEngineResult sslReadErrorResult(int error, int stackError, int bytesConsumed, int bytesProduced)
@@ -2685,6 +2696,38 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     "sessionContext=" + sessionContext +
                     ", id=" + id +
                     '}';
+        }
+    }
+
+    private interface NativeSslException {
+        int errorCode();
+    }
+
+    private static final class OpenSslException extends SSLException implements NativeSslException {
+        private final int errorCode;
+
+        OpenSslException(String reason, int errorCode) {
+            super(reason);
+            this.errorCode = errorCode;
+        }
+
+        @Override
+        public int errorCode() {
+            return errorCode;
+        }
+    }
+
+    private static final class OpenSslHandshakeException extends SSLHandshakeException implements NativeSslException {
+        private final int errorCode;
+
+        OpenSslHandshakeException(String reason, int errorCode) {
+            super(reason);
+            this.errorCode = errorCode;
+        }
+
+        @Override
+        public int errorCode() {
+            return errorCode;
         }
     }
 }
