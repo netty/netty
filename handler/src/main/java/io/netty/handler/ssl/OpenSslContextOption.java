@@ -72,6 +72,6 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
     /**
      * Set the maximum number of bytes that is allowed during the handshake for certificate chain.
      */
-    public static final OpenSslContextOption<Long> MAX_CERTIFICATE_LIST =
-            new OpenSslContextOption<Long>("MAX_CERTIFICATE_LIST");
+    public static final OpenSslContextOption<Integer> MAX_CERTIFICATE_LIST_BYTES =
+            new OpenSslContextOption<Integer>("MAX_CERTIFICATE_LIST_BYTES");
 }

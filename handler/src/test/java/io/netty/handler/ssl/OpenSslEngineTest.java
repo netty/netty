@@ -1613,14 +1613,14 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST, 10L)
+                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
                 .build());
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST, 10L)
+                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
                 .clientAuth(ClientAuth.REQUIRE)
                 .build());
 
