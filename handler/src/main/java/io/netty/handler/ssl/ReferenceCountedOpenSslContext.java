@@ -227,7 +227,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         OpenSslPrivateKeyMethod privateKeyMethod = null;
         OpenSslAsyncPrivateKeyMethod asyncPrivateKeyMethod = null;
         OpenSslCertificateCompressionConfig certCompressionConfig = null;
-        Long maxCertificateList = null;
+        Integer maxCertificateList = null;
 
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
@@ -243,8 +243,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     asyncPrivateKeyMethod = (OpenSslAsyncPrivateKeyMethod) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS) {
                     certCompressionConfig = (OpenSslCertificateCompressionConfig) ctxOpt.getValue();
-                } else if (option == OpenSslContextOption.MAX_CERTIFICATE_LIST) {
-                    maxCertificateList = (Long) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES) {
+                    maxCertificateList = (Integer) ctxOpt.getValue();
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
