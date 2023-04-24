@@ -1614,4 +1614,43 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine()),
                 wrapEngine(serverSslCtx.newHandler(offHeapAllocator()).engine()));
     }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testMaxCertificateList(final SSLEngineTestParam param) throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .keyManager(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
+                .build());
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
+                .clientAuth(ClientAuth.REQUIRE)
+                .build());
+
+        final SSLEngine client = wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
+        final SSLEngine server = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
+
+        try {
+            assertThrows(SSLHandshakeException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    handshake(param.type(), param.delegate(), client, server);
+                }
+            });
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+            ssc.delete();
+        }
+    }
 }
