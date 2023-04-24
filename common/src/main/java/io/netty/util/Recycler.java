@@ -341,7 +341,7 @@ public abstract class Recycler<T> {
             Thread owner = this.owner;
             if (owner != null && Thread.currentThread() == owner && batch.size() < chunkSize) {
                 accept(handle);
-            } else if (owner != null && owner.getState() == Thread.State.TERMINATED) {
+            } else if (owner != null && isTerminated(owner)) {
                 this.owner = null;
                 pooledHandles = null;
             } else {
@@ -350,6 +350,12 @@ public abstract class Recycler<T> {
                     handles.relaxedOffer(handle);
                 }
             }
+        }
+
+        private static boolean isTerminated(Thread owner) {
+            // Do not use `Thread.getState()` in J9 JVM because it's known to have a performance issue.
+            // See: https://github.com/netty/netty/issues/13347#issuecomment-1518537895
+            return PlatformDependent.isJ9Jvm() ? !owner.isAlive() : owner.getState() == Thread.State.TERMINATED;
         }
 
         DefaultHandle<T> newHandle() {
