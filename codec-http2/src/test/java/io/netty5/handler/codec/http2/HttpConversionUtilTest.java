@@ -92,7 +92,8 @@ public class HttpConversionUtilTest {
         // field using the authority information from the control data of the original request, unless the
         // original request's target URI does not contain authority information
         // (in which case it MUST NOT generate ":authority").
-        assertThrows(Http2Exception.class, () -> HttpConversionUtil.setHttp2Authority("", Http2Headers.newHeaders()));
+        assertThrows(HeaderValidationException.class,
+                () -> HttpConversionUtil.setHttp2Authority("", Http2Headers.newHeaders()));
     }
 
     @Test
