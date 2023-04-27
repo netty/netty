@@ -18,6 +18,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
@@ -167,17 +168,23 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
                 combiner = new PromiseCombiner(ctx.executor());
             }
 
+            ChannelFuture future = null;
             if (readable) {
-                writeWithOptionalCombiner(ctx, new DefaultHttp3DataFrame(last.content()), promise, combiner);
+                future = writeWithOptionalCombiner(ctx, new DefaultHttp3DataFrame(last.content()), promise, combiner);
             }
             if (hasTrailers) {
                 Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                writeWithOptionalCombiner(ctx, new DefaultHttp3HeadersFrame(headers), promise, combiner);
+                future = writeWithOptionalCombiner(ctx, new DefaultHttp3HeadersFrame(headers), promise, combiner);
             }
             if (!readable) {
                 last.release();
             }
-            ((QuicStreamChannel) ctx.channel()).shutdownOutput();
+
+            if (future == null) {
+                ((QuicStreamChannel) ctx.channel()).shutdownOutput();
+            } else {
+                future.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+            }
             if (!readable && !hasTrailers && combiner == null) {
                 promise.trySuccess();
             }
@@ -194,16 +201,17 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
      * Write a message. If there is a combiner, add a new write promise to that combiner. If there is no combiner
      * ({@code null}), use the {@code outerPromise} directly as the write promise.
      */
-    private static void writeWithOptionalCombiner(
+    private static ChannelFuture writeWithOptionalCombiner(
             ChannelHandlerContext ctx,
             Object msg,
             ChannelPromise outerPromise,
             PromiseCombiner combiner
     ) {
         if (combiner == null) {
-            ctx.write(msg, outerPromise);
+            return ctx.write(msg, outerPromise);
         } else {
             combiner.add(ctx.write(msg));
+            return null;
         }
     }
 
