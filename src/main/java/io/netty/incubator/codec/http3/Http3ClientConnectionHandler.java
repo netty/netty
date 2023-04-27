@@ -31,7 +31,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
      * Create a new instance.
      */
     public Http3ClientConnectionHandler() {
-        this(null, null, null, null, false);
+        this(null, null, null, null, true);
     }
 
     /**

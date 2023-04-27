@@ -39,7 +39,7 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
      *                              This handler will receive {@link Http3HeadersFrame} and {@link Http3DataFrame}s.
      */
     public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler) {
-        this(requestStreamHandler, null, null, null, false);
+        this(requestStreamHandler, null, null, null, true);
     }
 
     /**
@@ -54,7 +54,7 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
      *                                              {@link ChannelHandler} for unknown inbound stream types or
      *                                              {@code null} if no special handling should be done.
      * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
-     *                                             remote peer or {@code null} if the default settings should be used.
+     *                                              remote peer or {@code null} if the default settings should be used.
      * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
      */
     public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler,
