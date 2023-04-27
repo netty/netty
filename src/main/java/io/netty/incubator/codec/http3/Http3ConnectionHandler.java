@@ -65,8 +65,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         }
         Long maxFieldSectionSize = localSettings.get(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         if (maxFieldSectionSize == null) {
-            maxFieldSectionSize = Http3CodecUtils.DEFAULT_MAX_HEADER_LIST_SIZE;
-            localSettings.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, maxFieldSectionSize);
+            // Just use the maximum value we can represent via a Long.
+            maxFieldSectionSize = Long.MAX_VALUE;
         }
         qpackDecoder = new QpackDecoder(localSettings);
         qpackEncoder = new QpackEncoder();

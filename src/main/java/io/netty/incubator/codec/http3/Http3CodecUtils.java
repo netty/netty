@@ -32,7 +32,6 @@ import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_INTERNAL_ERROR;
 import static io.netty.incubator.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 
 final class Http3CodecUtils {
-    static final long DEFAULT_MAX_HEADER_LIST_SIZE = 0xffffffffL;
 
     // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
     static final long MIN_RESERVED_FRAME_TYPE = 0x1f * 1 + 0x21;
