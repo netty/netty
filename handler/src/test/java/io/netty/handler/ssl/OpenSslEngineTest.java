@@ -33,16 +33,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.opentest4j.TestAbortedException;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.X509ExtendedKeyManager;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.AlgorithmConstraints;
@@ -56,9 +46,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.X509ExtendedKeyManager;
 
+import static io.netty.handler.ssl.OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES;
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
+import static io.netty.handler.ssl.SslProvider.OPENSSL;
+import static io.netty.handler.ssl.SslProvider.isOptionSupported;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -76,7 +79,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
     public OpenSslEngineTest() {
-        super(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+        super(SslProvider.isTlsv13Supported(OPENSSL));
     }
 
     @Override
@@ -1177,14 +1180,14 @@ public class OpenSslEngineTest extends SSLEngineTest {
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(cert.key(), cert.cert())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .sslProvider(SslProvider.OPENSSL).build());
+                .sslProvider(OPENSSL).build());
         final SSLEngine serverEngine =
                 wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(cert.certificate())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .sslProvider(SslProvider.OPENSSL).build());
+                .sslProvider(OPENSSL).build());
         final SSLEngine clientEngine =
                 wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -1477,12 +1480,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected SslProvider sslClientProvider() {
-        return SslProvider.OPENSSL;
+        return OPENSSL;
     }
 
     @Override
     protected SslProvider sslServerProvider() {
-        return SslProvider.OPENSSL;
+        return OPENSSL;
     }
 
     private static ApplicationProtocolConfig acceptingNegotiator(Protocol protocol,
@@ -1605,6 +1608,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMaxCertificateList(final SSLEngineTestParam param) throws Exception {
+        assumeTrue(isOptionSupported(sslClientProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        assumeTrue(isOptionSupported(sslServerProvider(), MAX_CERTIFICATE_LIST_BYTES));
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -1613,14 +1618,14 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
+                .option(MAX_CERTIFICATE_LIST_BYTES, 10)
                 .build());
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
+                .option(MAX_CERTIFICATE_LIST_BYTES, 10)
                 .clientAuth(ClientAuth.REQUIRE)
                 .build());
 
