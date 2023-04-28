@@ -61,6 +61,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
+import static io.netty5.handler.ssl.SslProvider.OPENSSL;
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
 import static java.lang.Integer.MAX_VALUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -1193,14 +1194,14 @@ public class OpenSslEngineTest extends SSLEngineTest {
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(cert.key(), cert.cert())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .sslProvider(SslProvider.OPENSSL).build());
+                .sslProvider(OPENSSL).build());
         final SSLEngine serverEngine =
                 wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(cert.certificate())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .sslProvider(SslProvider.OPENSSL).build());
+                .sslProvider(OPENSSL).build());
         final SSLEngine clientEngine =
                 wrapEngine(clientSslCtx.newEngine(offHeapAllocator()));
 
@@ -1493,12 +1494,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected SslProvider sslClientProvider() {
-        return SslProvider.OPENSSL;
+        return OPENSSL;
     }
 
     @Override
     protected SslProvider sslServerProvider() {
-        return SslProvider.OPENSSL;
+        return OPENSSL;
     }
 
     private static ApplicationProtocolConfig acceptingNegotiator(Protocol protocol,
@@ -1618,6 +1619,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMaxCertificateList(final SSLEngineTestParam param) throws Exception {
+        assumeTrue(SslProvider.isOptionSupported(sslClientProvider(), OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES));
+        assumeTrue(SslProvider.isOptionSupported(sslServerProvider(), OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES));
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
