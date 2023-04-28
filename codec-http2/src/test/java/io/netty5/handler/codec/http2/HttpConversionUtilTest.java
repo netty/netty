@@ -19,11 +19,11 @@ import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty5.handler.codec.http.HttpHeaderNames.COOKIE;
@@ -84,18 +84,22 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.setHttp2Authority(null, headers);
         assertNull(headers.authority());
 
-        HttpConversionUtil.setHttp2Authority("", headers);
-        assertSame(AsciiString.EMPTY_STRING, headers.authority());
+        // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+        // Clients that generate HTTP/2 requests directly MUST use the ":authority" pseudo-header
+        // field to convey authority information, unless there is no authority information to convey
+        // (in which case it MUST NOT generate ":authority").
+        // An intermediary that forwards a request over HTTP/2 MUST construct an ":authority" pseudo-header
+        // field using the authority information from the control data of the original request, unless the
+        // original request's target URI does not contain authority information
+        // (in which case it MUST NOT generate ":authority").
+        assertThrows(HeaderValidationException.class,
+                () -> HttpConversionUtil.setHttp2Authority("", Http2Headers.newHeaders()));
     }
 
     @Test
     public void setHttp2AuthorityWithEmptyAuthority() {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() {
-                HttpConversionUtil.setHttp2Authority("info@", Http2Headers.newHeaders());
-            }
-        });
+        assertThrows(IllegalArgumentException.class,
+                () -> HttpConversionUtil.setHttp2Authority("info@", Http2Headers.newHeaders()));
     }
 
     @Test
