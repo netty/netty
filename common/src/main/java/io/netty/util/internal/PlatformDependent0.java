@@ -283,15 +283,9 @@ final class PlatformDependent0 {
                             @Override
                             public Object run() {
                                 try {
-                                    Constructor<?> constructor = null;
-                                    try {
-                                        constructor =
-                                                direct.getClass().getDeclaredConstructor(long.class, int.class);
-                                    } catch (NoSuchMethodException e) {
-                                        // Breaking change in Java 21
-                                        constructor =
-                                                direct.getClass().getDeclaredConstructor(long.class, long.class);
-                                    }
+                                    final Constructor<?> constructor = javaVersion() >= 21 ?
+                                            direct.getClass().getDeclaredConstructor(long.class, long.class) :
+                                            direct.getClass().getDeclaredConstructor(long.class, int.class);
                                     Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
                                     if (cause != null) {
                                         return cause;
