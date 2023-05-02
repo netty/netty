@@ -108,7 +108,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             try {
                 int value = Integer.parseInt(mallocArenaMaxStr);
                 if (value > 0) {
-                    defaultMinNumArena = Math.min(Integer.parseInt(mallocArenaMaxStr), defaultMinNumArena);
+                    defaultMinNumArena = Math.min(value, defaultMinNumArena);
                 }
             } catch (NumberFormatException ignore) {
                 // ignore
