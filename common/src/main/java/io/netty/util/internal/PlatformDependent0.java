@@ -283,7 +283,8 @@ final class PlatformDependent0 {
                             @Override
                             public Object run() {
                                 try {
-                                    final Constructor<?> constructor =
+                                    final Constructor<?> constructor = javaVersion() >= 21 ?
+                                            direct.getClass().getDeclaredConstructor(long.class, long.class) :
                                             direct.getClass().getDeclaredConstructor(long.class, int.class);
                                     Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
                                     if (cause != null) {
@@ -479,7 +480,7 @@ final class PlatformDependent0 {
 
         INTERNAL_UNSAFE = internalUnsafe;
 
-        logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
+        logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
 
