@@ -102,7 +102,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
          */
         int defaultMinNumArena = NettyRuntime.availableProcessors() * 2;
 
-        // Respect MAX_ARENA_MAX if set.
+        // Respect MALLOC_ARENA_MAX if set.
         final String mallocArenaMaxStr = System.getenv("MALLOC_ARENA_MAX");
         if (mallocArenaMaxStr != null) {
             try {
