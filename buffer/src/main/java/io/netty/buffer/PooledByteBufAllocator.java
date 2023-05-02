@@ -100,7 +100,21 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
          *
          * See https://github.com/netty/netty/issues/3888.
          */
-        final int defaultMinNumArena = NettyRuntime.availableProcessors() * 2;
+        int defaultMinNumArena = NettyRuntime.availableProcessors() * 2;
+
+        // Respect MAX_ARENA_MAX if set.
+        final String mallocArenaMaxStr = System.getenv("MALLOC_ARENA_MAX");
+        if (mallocArenaMaxStr != null) {
+            try {
+                int value = Integer.parseInt(mallocArenaMaxStr);
+                if (value > 0) {
+                    defaultMinNumArena = Math.min(Integer.parseInt(mallocArenaMaxStr), defaultMinNumArena);
+                }
+            } catch (NumberFormatException ignore) {
+                // ignore
+            }
+        }
+
         final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
         DEFAULT_NUM_HEAP_ARENA = Math.max(0,
                 SystemPropertyUtil.getInt(
