@@ -200,7 +200,8 @@ final class PlatformDependent0 {
                                             }
                                             Parameter[] parameters = declaredConstructor.getParameters();
                                             return parameters[0].getType() == long.class
-                                                    && parameters[1].getType() == int.class
+                                                    && (parameters[1].getType() == int.class
+                                                    || parameters[1].getType() == long.class)
                                                     && parameters[2].getType() == Object.class;
                                         })
                                         .findFirst()
@@ -363,7 +364,7 @@ final class PlatformDependent0 {
             ALLOCATE_ARRAY_HANDLE = allocateArrayHandle;
         }
 
-        logger.debug("java.nio.DirectByteBuffer.<init>(long, int, Object): {}",
+        logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR_HANDLE != null ? "available" : "unavailable");
     }
 
