@@ -100,20 +100,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
          *
          * See https://github.com/netty/netty/issues/3888.
          */
-        int defaultMinNumArena = NettyRuntime.availableProcessors() * 2;
-
-        // Respect MALLOC_ARENA_MAX if set.
-        final String mallocArenaMaxStr = System.getenv("MALLOC_ARENA_MAX");
-        if (mallocArenaMaxStr != null) {
-            try {
-                int value = Integer.parseInt(mallocArenaMaxStr);
-                if (value > 0) {
-                    defaultMinNumArena = Math.min(value, defaultMinNumArena);
-                }
-            } catch (NumberFormatException ignore) {
-                // ignore
-            }
-        }
+        int defaultMinNumArena = mallocArenaMax(NettyRuntime.availableProcessors() * 2);
 
         final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
         DEFAULT_NUM_HEAP_ARENA = Math.max(0,
@@ -190,6 +177,22 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             logger.debug("-Dio.netty.allocator.maxCachedByteBuffersPerChunk: {}",
                     DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK);
         }
+    }
+
+    private static int mallocArenaMax(int defaultMinNumArena) {
+        // Respect MALLOC_ARENA_MAX if set.
+        final String mallocArenaMaxStr = System.getenv("MALLOC_ARENA_MAX");
+        if (mallocArenaMaxStr != null) {
+            try {
+                int value = Integer.parseInt(mallocArenaMaxStr);
+                if (value > 0) {
+                    return Math.min(value, defaultMinNumArena);
+                }
+            } catch (NumberFormatException ignore) {
+                // ignore
+            }
+        }
+        return defaultMinNumArena;
     }
 
     public static final PooledByteBufAllocator DEFAULT =
