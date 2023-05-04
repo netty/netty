@@ -558,7 +558,7 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
-    <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
+    <enforcer.plugin.version>3.3.0</enforcer.plugin.version>
     <junit.version>5.9.0</junit.version>
     <nativebuildtools.version>0.9.13</nativebuildtools.version>
     <skipTests>false</skipTests>
@@ -1024,7 +1024,7 @@
         <version>${enforcer.plugin.version}</version>
         <executions>
           <execution>
-            <id>enforce-tools</id>
+            <id>enforce-versions</id>
             <goals>
               <goal>enforce</goal>
             </goals>
