@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.DefaultProgressivePromise;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectPool;
@@ -247,7 +248,7 @@ public final class ChannelOutboundBuffer {
         assert p != null;
         final Class<?> promiseClass = p.getClass();
         // fast-path to save O(n) ChannelProgressivePromise's type check on OpenJDK
-        if (promiseClass == VoidChannelPromise.class) {
+        if (promiseClass == VoidChannelPromise.class || promiseClass == DefaultChannelPromise.class) {
             return;
         }
         // this is going to save from type pollution due to https://bugs.openjdk.org/browse/JDK-8180450
