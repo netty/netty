@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 
 import java.util.Locale;
 
@@ -38,6 +39,16 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
         } else {
             String message = "unsupported frame type: " + frame.getClass().getName();
             throw new UnsupportedOperationException(message);
+        }
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+            //Channel upgrade to websocket, remove WebSocketIndexPageHandler.
+            ctx.pipeline().remove(WebSocketIndexPageHandler.class);
+        } else {
+            super.userEventTriggered(ctx, evt);
         }
     }
 }
