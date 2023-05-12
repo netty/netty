@@ -16,6 +16,9 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
+
 import java.security.KeyStore;
 import java.security.Provider;
 import javax.net.ssl.KeyManager;
@@ -26,6 +29,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.File;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -261,7 +265,13 @@ public final class JdkSslServerContext extends JdkSslContext {
         try {
             if (trustCertCollection != null) {
                 trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
+            } else if (trustManagerFactory == null) {
+                // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
+                trustManagerFactory = TrustManagerFactory.getInstance(
+                        TrustManagerFactory.getDefaultAlgorithm());
+                trustManagerFactory.init((KeyStore) null);
             }
+
             if (key != null) {
                 keyManagerFactory = buildKeyManagerFactory(keyCertChain, null,
                         key, keyPassword, keyManagerFactory, null);
@@ -271,7 +281,7 @@ public final class JdkSslServerContext extends JdkSslContext {
             SSLContext ctx = sslContextProvider == null ? SSLContext.getInstance(PROTOCOL)
                 : SSLContext.getInstance(PROTOCOL, sslContextProvider);
             ctx.init(keyManagerFactory.getKeyManagers(),
-                     trustManagerFactory == null ? null : trustManagerFactory.getTrustManagers(),
+                    wrapTrustManagerIfNeeded(trustManagerFactory.getTrustManagers()),
                      null);
 
             SSLSessionContext sessCtx = ctx.getServerSessionContext();
@@ -290,4 +300,18 @@ public final class JdkSslServerContext extends JdkSslContext {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Guarded by java version check")
+    private static TrustManager[] wrapTrustManagerIfNeeded(TrustManager[] trustManagers) {
+        if (PlatformDependent.javaVersion() >= 7) {
+            for (int i = 0; i < trustManagers.length; i++) {
+                TrustManager tm = trustManagers[i];
+                if (tm instanceof X509ExtendedTrustManager) {
+                    // Wrap the TrustManager to provide a better exception message for users to debug hostname
+                    // validation failures.
+                    trustManagers[i] = new EnhancingX509ExtendedTrustManager((X509ExtendedTrustManager) tm);
+                }
+            }
+        }
+        return trustManagers;
+    }
 }
