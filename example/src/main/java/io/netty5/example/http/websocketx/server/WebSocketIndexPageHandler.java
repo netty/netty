@@ -24,6 +24,7 @@ import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.ssl.SslHandler;
@@ -51,6 +52,16 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
 
     public WebSocketIndexPageHandler(String websocketPath) {
         this.websocketPath = websocketPath;
+    }
+
+    @Override
+    public boolean acceptInboundMessage(Object msg) throws Exception {
+        if (super.acceptInboundMessage(msg)) {
+            FullHttpRequest req = (FullHttpRequest) msg;
+            // Handle websocket upgrade request.
+            return !req.headers().containsIgnoreCase(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
+        }
+        return false;
     }
 
     @Override
