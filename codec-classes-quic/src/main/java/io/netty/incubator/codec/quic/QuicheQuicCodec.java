@@ -86,10 +86,12 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                     type, version, scid,
                     dcid, token);
             if (channel != null) {
-                channel.recv(recipient, sender, buffer);
+                // Add to queue first, we might be able to safe some flushes and consolidate them
+                // in channelReadComplete(...) this way.
                 if (channel.markInFireChannelReadCompleteQueue()) {
                     needsFireChannelReadComplete.add(channel);
                 }
+                channel.recv(recipient, sender, buffer);
             }
         };
         estimatorHandle = ctx.channel().config().getMessageSizeEstimator().newHandle();
