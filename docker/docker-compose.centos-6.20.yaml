@@ -6,7 +6,7 @@ services:
     image: netty:centos-6-20
     build:
       args:
-        java_version : "20-zulu"
+        java_version : "20.0.1-zulu"
 
   build:
     image: netty:centos-6-20
