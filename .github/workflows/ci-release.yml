@@ -20,8 +20,7 @@ on:
   # Releases can only be triggered via the action tab
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: read-all
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
