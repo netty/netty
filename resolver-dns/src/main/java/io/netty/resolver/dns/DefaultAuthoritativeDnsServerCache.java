@@ -123,4 +123,14 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
         return "DefaultAuthoritativeDnsServerCache(minTtl=" + minTtl + ", maxTtl=" + maxTtl + ", cached nameservers=" +
                 resolveCache.size() + ')';
     }
+
+    // Package visibility for testing purposes
+    int minTtl() {
+        return minTtl;
+    }
+
+    // Package visibility for testing purposes
+    int maxTtl() {
+        return maxTtl;
+    }
 }
