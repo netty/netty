@@ -81,19 +81,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         senderSockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);
         recipientSockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);
         headerParser = new QuicHeaderParser(maxTokenLength, localConnIdLength);
-        parserCallback = (sender, recipient, buffer, type, version, scid, dcid, token) -> {
-            QuicheQuicChannel channel = quicPacketRead(ctx, sender, recipient,
-                    type, version, scid,
-                    dcid, token);
-            if (channel != null) {
-                // Add to queue first, we might be able to safe some flushes and consolidate them
-                // in channelReadComplete(...) this way.
-                if (channel.markInFireChannelReadCompleteQueue()) {
-                    needsFireChannelReadComplete.add(channel);
-                }
-                channel.recv(recipient, sender, buffer);
-            }
-        };
+        parserCallback = new QuicCodecHeaderProcessor(ctx);
         estimatorHandle = ctx.channel().config().getMessageSizeEstimator().newHandle();
     }
 
@@ -240,6 +228,31 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private static void removeIfClosed(Iterator<?> iterator, QuicheQuicChannel current) {
         if (current.freeIfClosed()) {
             iterator.remove();
+        }
+    }
+
+    private final class QuicCodecHeaderProcessor implements QuicHeaderParser.QuicHeaderProcessor {
+
+        private final ChannelHandlerContext ctx;
+
+        QuicCodecHeaderProcessor(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
+        }
+
+        @Override
+        public void process(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf buffer, QuicPacketType type,
+                            int version, ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
+            QuicheQuicChannel channel = quicPacketRead(ctx, sender, recipient,
+                    type, version, scid,
+                    dcid, token);
+            if (channel != null) {
+                // Add to queue first, we might be able to safe some flushes and consolidate them
+                // in channelReadComplete(...) this way.
+                if (channel.markInFireChannelReadCompleteQueue()) {
+                    needsFireChannelReadComplete.add(channel);
+                }
+                channel.recv(recipient, sender, buffer);
+            }
         }
     }
 }
