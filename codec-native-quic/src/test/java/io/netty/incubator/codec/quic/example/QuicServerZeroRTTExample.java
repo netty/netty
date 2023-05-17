@@ -29,7 +29,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.incubator.codec.quic.NoValidationQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
 import io.netty.incubator.codec.quic.QuicSslContext;
@@ -60,9 +59,9 @@ public final class QuicServerZeroRTTExample {
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
 
-                // Setup a token handler. In a production system you would want to implement and provide your custom
+                // Disable token usage. In a production system you would want to implement and provide your custom
                 // one.
-                .tokenHandler(NoValidationQuicTokenHandler.INSTANCE)
+                .tokenHandler(null)
                 // ChannelHandler that is added into QuicChannel pipeline.
                 .handler(new ChannelInboundHandlerAdapter() {
                     @Override

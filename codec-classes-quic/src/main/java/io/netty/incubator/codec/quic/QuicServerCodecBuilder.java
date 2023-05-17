@@ -161,13 +161,14 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     }
 
     /**
-     * Set the {@link QuicTokenHandler} that is used to generate and validate tokens.
+     * Set the {@link QuicTokenHandler} that is used to generate and validate tokens or
+     * {@code null} if no tokens should be used at all.
      *
      * @param tokenHandler  the {@link QuicTokenHandler} to use.
      * @return              this instance.
      */
     public QuicServerCodecBuilder tokenHandler(QuicTokenHandler tokenHandler) {
-        this.tokenHandler = ObjectUtil.checkNotNull(tokenHandler, "tokenHandler");
+        this.tokenHandler = tokenHandler;
         return self();
     }
 
@@ -176,9 +177,6 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         super.validate();
         if (handler == null && streamHandler == null) {
             throw new IllegalStateException("handler and streamHandler not set");
-        }
-        if (tokenHandler == null) {
-            throw new IllegalStateException("tokenHandler not set");
         }
     }
 
@@ -189,6 +187,9 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
                                    int localConnIdLength, FlushStrategy flushStrategy) {
         validate();
         QuicTokenHandler tokenHandler = this.tokenHandler;
+        if (tokenHandler == null) {
+            tokenHandler = NoQuicTokenHandler.INSTANCE;
+        }
         QuicConnectionIdGenerator generator = connectionIdAddressGenerator;
         if (generator == null) {
             generator = QuicConnectionIdGenerator.signGenerator();

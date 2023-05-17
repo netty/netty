@@ -294,7 +294,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                                QuicConnectionIdGenerator connectionIdGenerator) throws Throwable {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
                         .connectionIdAddressGenerator(connectionIdGenerator),
-                NoValidationQuicTokenHandler.INSTANCE,
+                NoQuicTokenHandler.INSTANCE,
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {
@@ -460,7 +460,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         CountDownLatch clientLatch = new CountDownLatch(1);
 
         // Disable token validation
-        Channel server = QuicTestUtils.newServer(executor, NoValidationQuicTokenHandler.INSTANCE,
+        Channel server = QuicTestUtils.newServer(executor, NoQuicTokenHandler.INSTANCE,
                 serverQuicChannelHandler, new BytesCountingHandler(serverLatch, numBytes));
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(executor);

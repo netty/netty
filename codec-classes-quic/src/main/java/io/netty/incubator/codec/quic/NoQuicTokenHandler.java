@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2023 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,19 +15,21 @@
  */
 package io.netty.incubator.codec.quic;
 
-import java.net.InetSocketAddress;
-
 import io.netty.buffer.ByteBuf;
 
+import java.net.InetSocketAddress;
+
 /**
- * A {@link QuicTokenHandler} which disables token validation.
+ * {@link QuicTokenHandler} which will disable token generation / validation completely.
+ * This will reduce the round-trip for QUIC connection migration, but will also weaking the
+ * security during connection establishment.
  */
-public final class NoValidationQuicTokenHandler implements QuicTokenHandler {
+final class NoQuicTokenHandler implements QuicTokenHandler {
 
-    private NoValidationQuicTokenHandler() {
+    public final static QuicTokenHandler INSTANCE = new NoQuicTokenHandler();
+
+    private NoQuicTokenHandler() {
     }
-
-    public static final NoValidationQuicTokenHandler INSTANCE = new NoValidationQuicTokenHandler();
 
     @Override
     public boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address) {
