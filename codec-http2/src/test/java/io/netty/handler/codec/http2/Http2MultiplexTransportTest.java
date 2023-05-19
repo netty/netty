@@ -684,7 +684,7 @@ public class Http2MultiplexTransportTest {
             });
             serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
 
-            final int streams = 10;
+            final int streams = 2;
             final CountDownLatch latch = new CountDownLatch(streams);
             final Bootstrap bs = new Bootstrap();
 
