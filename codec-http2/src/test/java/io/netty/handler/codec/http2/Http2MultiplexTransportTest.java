@@ -62,7 +62,7 @@ import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.X509Certificate;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -70,8 +70,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -107,7 +105,7 @@ public class Http2MultiplexTransportTest {
         ChannelFuture responseFuture;
         final AtomicInteger handlerInactivatedFlushed;
         final AtomicInteger handleInactivatedNotFlushed;
-        static final String LARGE_STRING = String.join("", Collections.nCopies(10240, "X"));
+        static final String LARGE_STRING = generateLargeString(10240);
 
         MultiplexInboundStream(AtomicInteger handleInactivatedFlushed,
                                AtomicInteger handleInactivatedNotFlushed) {
@@ -132,6 +130,14 @@ public class Http2MultiplexTransportTest {
                 handleInactivatedNotFlushed.incrementAndGet();
             }
             ctx.fireChannelInactive();
+        }
+
+        private static String generateLargeString(int sizeInBytes) {
+            StringBuilder sb = new StringBuilder(sizeInBytes);
+            for (int i = 0; i < sizeInBytes; i++) {
+                sb.append('X');
+            }
+            return sb.toString();
         }
     }
 
@@ -641,8 +647,20 @@ public class Http2MultiplexTransportTest {
         EventLoopGroup clientEventLoopGroup = null;
 
         try {
-            serverEventLoopGroup = new NioEventLoopGroup(1, (ThreadFactory) r -> new Thread(r, "serverloop"));
-            clientEventLoopGroup = new NioEventLoopGroup(1, (ThreadFactory) r -> new Thread(r, "clientloop"));
+            serverEventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, "serverloop");
+                }
+            });
+
+            clientEventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, "clientloop");
+                }
+            });
+
             final AtomicInteger handlerInactivatedFlushed = new AtomicInteger();
             final AtomicInteger handleInactivatedNotFlushed = new AtomicInteger();
             final ServerBootstrap sb = new ServerBootstrap();
@@ -696,12 +714,14 @@ public class Http2MultiplexTransportTest {
                 }
             });
 
-            final List<ChannelFuture> futures = IntStream.range(0, streams)
-                    .mapToObj(i -> h2Bootstrap.open().syncUninterruptibly().getNow())
-                    .map(ch -> ch.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)))
-                    .collect(Collectors.toList());
-
-            futures.forEach(ChannelFuture::syncUninterruptibly);
+            List<ChannelFuture> streamFutures = new ArrayList<ChannelFuture>();
+            for (int i = 0; i < streams; i ++) {
+                Http2StreamChannel stream = h2Bootstrap.open().syncUninterruptibly().getNow();
+                streamFutures.add(stream.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)));
+            }
+            for (int i = 0; i < streams; i ++) {
+                streamFutures.get(i).syncUninterruptibly();
+            }
 
             assertTrue(latch.await(60000, MILLISECONDS));
             assertEquals(0, handleInactivatedNotFlushed.get());
