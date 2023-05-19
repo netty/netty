@@ -105,12 +105,14 @@ public class Http2MultiplexTransportTest {
         ChannelFuture responseFuture;
         final AtomicInteger handlerInactivatedFlushed;
         final AtomicInteger handleInactivatedNotFlushed;
+        final CountDownLatch latchHandlerInactive;
         static final String LARGE_STRING = generateLargeString(10240);
 
         MultiplexInboundStream(AtomicInteger handleInactivatedFlushed,
-                               AtomicInteger handleInactivatedNotFlushed) {
+                               AtomicInteger handleInactivatedNotFlushed, CountDownLatch latchHandlerInactive) {
             this.handlerInactivatedFlushed = handleInactivatedFlushed;
             this.handleInactivatedNotFlushed = handleInactivatedNotFlushed;
+            this.latchHandlerInactive = latchHandlerInactive;
         }
 
         @Override
@@ -129,6 +131,7 @@ public class Http2MultiplexTransportTest {
             } else {
                 handleInactivatedNotFlushed.incrementAndGet();
             }
+            latchHandlerInactive.countDown();
             ctx.fireChannelInactive();
         }
 
@@ -642,6 +645,7 @@ public class Http2MultiplexTransportTest {
      * inactivated.
      */
     @Test
+    @Timeout(value = 120000L, unit = MILLISECONDS)
     public void streamHandlerInactivatedResponseFlushed() throws InterruptedException {
         EventLoopGroup serverEventLoopGroup = null;
         EventLoopGroup clientEventLoopGroup = null;
@@ -661,6 +665,10 @@ public class Http2MultiplexTransportTest {
                 }
             });
 
+            final int streams = 10;
+            final CountDownLatch latchClientResponses = new CountDownLatch(streams);
+            final CountDownLatch latchHandlerInactive = new CountDownLatch(streams);
+
             final AtomicInteger handlerInactivatedFlushed = new AtomicInteger();
             final AtomicInteger handleInactivatedNotFlushed = new AtomicInteger();
             final ServerBootstrap sb = new ServerBootstrap();
@@ -677,15 +685,13 @@ public class Http2MultiplexTransportTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline().remove(this);
                             ch.pipeline().addLast(new MultiplexInboundStream(handlerInactivatedFlushed,
-                                    handleInactivatedNotFlushed));
+                                    handleInactivatedNotFlushed, latchHandlerInactive));
                         }
                     }));
                 }
             });
             serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
 
-            final int streams = 2;
-            final CountDownLatch latch = new CountDownLatch(streams);
             final Bootstrap bs = new Bootstrap();
 
             bs.group(clientEventLoopGroup);
@@ -704,7 +710,7 @@ public class Http2MultiplexTransportTest {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     if (msg instanceof Http2DataFrame && ((Http2DataFrame) msg).isEndStream()) {
-                        latch.countDown();
+                        latchClientResponses.countDown();
                     }
                     ReferenceCountUtil.release(msg);
                 }
@@ -723,7 +729,8 @@ public class Http2MultiplexTransportTest {
                 streamFutures.get(i).syncUninterruptibly();
             }
 
-            assertTrue(latch.await(60000, MILLISECONDS));
+            assertTrue(latchHandlerInactive.await(120000, MILLISECONDS));
+            assertTrue(latchClientResponses.await(120000, MILLISECONDS));
             assertEquals(0, handleInactivatedNotFlushed.get());
             assertEquals(streams, handlerInactivatedFlushed.get());
         } finally {
