@@ -925,7 +925,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());
-        assertEquals(4096, childChannel.bytesBeforeUnwritable());
+        assertEquals(4097, childChannel.bytesBeforeUnwritable());
 
         // Flush everything which simulate writing everything to the socket.
         parentChannel.flush();

@@ -748,14 +748,12 @@ public final class ChannelOutboundBuffer {
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code false} then 0.
      */
     public long bytesBeforeUnwritable() {
-        long bytes = channel.config().getWriteBufferHighWaterMark() - totalPendingSize;
+        // +1 because writability doesn't change until the threshold is crossed (not equal to).
+        long bytes = channel.config().getWriteBufferHighWaterMark() - totalPendingSize + 1;
         // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().
-        if (bytes > 0) {
-            return isWritable() ? bytes : 0;
-        }
-        return 0;
+        return bytes > 0 && isWritable() ? bytes : 0;
     }
 
     /**
@@ -763,14 +761,12 @@ public final class ChannelOutboundBuffer {
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code true} then 0.
      */
     public long bytesBeforeWritable() {
-        long bytes = totalPendingSize - channel.config().getWriteBufferLowWaterMark();
+        // +1 because writability doesn't change until the threshold is crossed (not equal to).
+        long bytes = totalPendingSize - channel.config().getWriteBufferLowWaterMark() + 1;
         // If bytes is negative we know we are writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().
-        if (bytes > 0) {
-            return isWritable() ? 0 : bytes;
-        }
-        return 0;
+        return bytes <= 0 || isWritable() ? 0 : bytes;
     }
 
     /**
