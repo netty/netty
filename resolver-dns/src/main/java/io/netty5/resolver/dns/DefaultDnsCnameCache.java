@@ -96,4 +96,14 @@ public final class DefaultDnsCnameCache implements DnsCnameCache {
         requireNonNull(hostname, "hostname");
         return cache.clear(hostname);
     }
+
+    // Package visibility for testing purposes
+    int minTtl() {
+        return minTtl;
+    }
+
+    // Package visibility for testing purposes
+    int maxTtl() {
+        return maxTtl;
+    }
 }

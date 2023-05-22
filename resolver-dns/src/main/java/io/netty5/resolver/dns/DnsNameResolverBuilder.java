@@ -24,6 +24,8 @@ import io.netty5.resolver.HostsFileEntriesResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.ObjectUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -42,6 +44,9 @@ import static java.util.Objects.requireNonNull;
  * A {@link DnsNameResolver} builder.
  */
 public final class DnsNameResolverBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(DnsNameResolverBuilder.class);
+
     volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
@@ -494,11 +499,15 @@ public final class DnsNameResolverBuilder {
         }
 
         if (resolveCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
-            throw new IllegalStateException("resolveCache and TTLs are mutually exclusive");
+            logger.debug("resolveCache and TTLs are mutually exclusive. TTLs are ignored.");
+        }
+
+        if (cnameCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
+            logger.debug("cnameCache and TTLs are mutually exclusive. TTLs are ignored.");
         }
 
         if (authoritativeDnsServerCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
-            throw new IllegalStateException("authoritativeDnsServerCache and TTLs are mutually exclusive");
+            logger.debug("authoritativeDnsServerCache and TTLs are mutually exclusive. TTLs are ignored.");
         }
 
         DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
