@@ -38,9 +38,12 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import javax.net.ssl.SSLException;
 
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR;
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR;
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR;
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.SSL_CLOSE_COMPLETION_EVENT_VISITOR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * An HTTP/2 handler that creates child channels for each stream. This handler must be used in combination
@@ -97,38 +100,6 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             registerDone(future);
         }
     };
-
-    private static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR =
-            new UserEventStreamVisitor(ChannelInputShutdownEvent.INSTANCE);
-
-    private static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR =
-            new UserEventStreamVisitor(ChannelInputShutdownReadComplete.INSTANCE);
-
-    private static final Http2FrameStreamVisitor CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR =
-            new UserEventStreamVisitor(ChannelOutputShutdownEvent.INSTANCE);
-
-    private static final Http2FrameStreamVisitor SSL_CLOSE_COMPLETION_EVENT_VISITOR =
-            new UserEventStreamVisitor(SslCloseCompletionEvent.SUCCESS);
-
-    /**
-     * {@link Http2FrameStreamVisitor} that fires the user event for every active stream pipeline.
-     */
-    private static final class UserEventStreamVisitor implements Http2FrameStreamVisitor {
-
-        private final Object event;
-
-        UserEventStreamVisitor(Object event) {
-            this.event = checkNotNull(event, "event");
-        }
-
-        @Override
-        public boolean visit(Http2FrameStream stream) {
-            final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
-                    ((DefaultHttp2FrameStream) stream).attachment;
-            childChannel.pipeline().fireUserEventTriggered(event);
-            return true;
-        }
-    }
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;

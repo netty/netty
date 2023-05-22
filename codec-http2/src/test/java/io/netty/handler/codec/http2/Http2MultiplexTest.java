@@ -26,17 +26,23 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.LastInboundHandler.Consumer;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -45,6 +51,8 @@ import org.mockito.stubbing.Answer;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -123,10 +131,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Handshake
         verify(frameWriter).writeSettings(eqCodecCtx(),
                 anyHttp2Settings(), anyChannelPromise());
-    }
-
-    Channel parentChannel() {
-        return parentChannel;
     }
 
     private ChannelHandlerContext eqCodecCtx() {
@@ -1387,6 +1391,26 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         verify(frameWriter).writeWindowUpdate(
             eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
         assertTrue(flushSniffer.checkFlush());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] value={0}")
+    @MethodSource("userEvents")
+    public void userEventsThatPropagatedToChildChannels(Object userEvent) {
+        final LastInboundHandler inboundParentHandler = new LastInboundHandler();
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+        parentChannel.pipeline().addLast(inboundParentHandler);
+        parentChannel.pipeline().fireUserEventTriggered(userEvent);
+        assertEquals(userEvent, inboundHandler.readUserEvent());
+        assertEquals(userEvent, inboundParentHandler.readUserEvent());
+        assertNull(inboundHandler.readUserEvent());
+        assertNull(inboundParentHandler.readUserEvent());
+    }
+
+    private static Collection<Object> userEvents() {
+        return Arrays.asList(ChannelInputShutdownEvent.INSTANCE, ChannelInputShutdownReadComplete.INSTANCE,
+                ChannelOutputShutdownEvent.INSTANCE, SslCloseCompletionEvent.SUCCESS);
     }
 
     private static void verifyFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,

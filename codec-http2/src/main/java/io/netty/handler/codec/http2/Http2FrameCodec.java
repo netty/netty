@@ -285,8 +285,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 upgrade.release();
             }
         } else {
+            onUserEventTriggered(ctx, evt);
             ctx.fireUserEventTriggered(evt);
         }
+    }
+
+    void onUserEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        // noop
     }
 
     /**

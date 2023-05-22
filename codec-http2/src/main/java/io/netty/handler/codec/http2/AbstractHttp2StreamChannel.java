@@ -35,7 +35,11 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
@@ -52,6 +56,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 
 abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements Http2StreamChannel {
@@ -66,6 +71,18 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
     };
 
+    static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR =
+            new UserEventStreamVisitor(ChannelInputShutdownEvent.INSTANCE);
+
+    static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR =
+            new UserEventStreamVisitor(ChannelInputShutdownReadComplete.INSTANCE);
+
+    static final Http2FrameStreamVisitor CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR =
+            new UserEventStreamVisitor(ChannelOutputShutdownEvent.INSTANCE);
+
+    static final Http2FrameStreamVisitor SSL_CLOSE_COMPLETION_EVENT_VISITOR =
+            new UserEventStreamVisitor(SslCloseCompletionEvent.SUCCESS);
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractHttp2StreamChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -75,6 +92,26 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
      * Primarily is non-zero.
      */
     private static final int MIN_HTTP2_FRAME_SIZE = 9;
+
+    /**
+     * {@link Http2FrameStreamVisitor} that fires the user event for every active stream pipeline.
+     */
+    private static final class UserEventStreamVisitor implements Http2FrameStreamVisitor {
+
+        private final Object event;
+
+        UserEventStreamVisitor(Object event) {
+            this.event = checkNotNull(event, "event");
+        }
+
+        @Override
+        public boolean visit(Http2FrameStream stream) {
+            final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                    ((DefaultHttp2FrameStream) stream).attachment;
+            childChannel.pipeline().fireUserEventTriggered(event);
+            return true;
+        }
+    }
 
     /**
      * Returns the flow-control size for DATA frames, and {@value MIN_HTTP2_FRAME_SIZE} for all other frames.
