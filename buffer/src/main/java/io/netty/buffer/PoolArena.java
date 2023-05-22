@@ -567,7 +567,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     private static void appendPoolSubPages(StringBuilder buf, PoolSubpage<?>[] subpages) {
         for (int i = 0; i < subpages.length; i ++) {
             PoolSubpage<?> head = subpages[i];
-            if (head.next == head) {
+            if (head.next == head || head.next == null) {
                 continue;
             }
 
@@ -575,7 +575,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
                     .append(i)
                     .append(": ");
             PoolSubpage<?> s = head.next;
-            for (;;) {
+            while (s != null) {
                 buf.append(s);
                 s = s.next;
                 if (s == head) {
