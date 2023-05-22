@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.EmptyArrays;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -36,6 +37,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -184,36 +186,36 @@ public class EnhancedX509ExtendedTrustManagerTest {
     private static final EnhancingX509ExtendedTrustManager MATCHING_MANAGER =
             new EnhancingX509ExtendedTrustManager(new X509ExtendedTrustManager() {
         @Override
-        public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
+        public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) {
+            fail();
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
                 throws CertificateException {
             throw new CertificateException("No subject alternative DNS name matching netty.io.");
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) {
+        public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
             fail();
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+        public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
             throw new CertificateException("No subject alternative DNS name matching netty.io.");
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
+        public void checkClientTrusted(X509Certificate[] chain, String authType) {
             fail();
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] chain, String authType)
+        public void checkServerTrusted(X509Certificate[] chain, String authType)
                 throws CertificateException {
             throw new CertificateException("No subject alternative DNS name matching netty.io.");
-        }
-
-        @Override
-        public void checkServerTrusted(X509Certificate[] chain, String authType) {
-            fail();
         }
 
         @Override
@@ -226,17 +228,17 @@ public class EnhancedX509ExtendedTrustManagerTest {
         return Arrays.asList(new Executable() {
             @Override
             public void execute() throws Throwable {
-                MATCHING_MANAGER.checkClientTrusted(new X509Certificate[] { TEST_CERT }, null);
+                MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
         }, new Executable() {
             @Override
             public void execute() throws Throwable {
-                MATCHING_MANAGER.checkClientTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
+                MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
             }
         }, new Executable() {
             @Override
             public void execute() throws Throwable {
-                MATCHING_MANAGER.checkClientTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
+                MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
             }
         });
     }
@@ -246,34 +248,37 @@ public class EnhancedX509ExtendedTrustManagerTest {
                 @Override
                 public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
                         throws CertificateException {
-                    throw new CertificateException();
+                    fail();
                 }
 
                 @Override
-                public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) {
-                    fail();
+                public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
+                        throws CertificateException {
+                    throw new CertificateException();
                 }
 
                 @Override
                 public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
                         throws CertificateException {
-                    throw new CertificateException();
-                }
-
-                @Override
-                public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
                     fail();
                 }
 
                 @Override
-                public void checkClientTrusted(X509Certificate[] chain, String authType)
+                public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
                         throws CertificateException {
                     throw new CertificateException();
                 }
 
                 @Override
-                public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                public void checkClientTrusted(X509Certificate[] chain, String authType)
+                        throws CertificateException {
                     fail();
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType)
+                        throws CertificateException {
+                    throw new CertificateException();
                 }
 
                 @Override
@@ -286,17 +291,17 @@ public class EnhancedX509ExtendedTrustManagerTest {
         return Arrays.asList(new Executable() {
             @Override
             public void execute() throws Throwable {
-                NON_MATCHING_MANAGER.checkClientTrusted(new X509Certificate[] { TEST_CERT }, null);
+                NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
         }, new Executable() {
             @Override
             public void execute() throws Throwable {
-                NON_MATCHING_MANAGER.checkClientTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
+                NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
             }
         }, new Executable() {
             @Override
             public void execute() throws Throwable {
-                NON_MATCHING_MANAGER.checkClientTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
+                NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
             }
         });
     }
@@ -307,6 +312,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should wrap the original cause with our own.
         assertInstanceOf(CertificateException.class, exception.getCause());
+        assertThat(exception.getMessage(), Matchers.containsString("some.netty.io"));
     }
 
     @ParameterizedTest
@@ -315,5 +321,6 @@ public class EnhancedX509ExtendedTrustManagerTest {
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should not wrap the original cause with our own.
         assertNull(exception.getCause());
+        assertThat(exception.getMessage(), Matchers.not(Matchers.containsString("some.netty.io")));
     }
 }

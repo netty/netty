@@ -42,49 +42,49 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
     @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
             throws CertificateException {
-        try {
-            wrapped.checkClientTrusted(chain, authType, socket);
-        } catch (CertificateException e) {
-            throwEnhancedCertificateException(chain, e);
-        }
+        wrapped.checkClientTrusted(chain, authType, socket);
     }
 
     @Override
     public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
             throws CertificateException {
-        wrapped.checkServerTrusted(chain, authType, socket);
+        try {
+            wrapped.checkServerTrusted(chain, authType, socket);
+        } catch (CertificateException e) {
+            throwEnhancedCertificateException(chain, e);
+        }
     }
 
     @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
             throws CertificateException {
-        try {
-            wrapped.checkClientTrusted(chain, authType, engine);
-        } catch (CertificateException e) {
-            throwEnhancedCertificateException(chain, e);
-        }
+        wrapped.checkClientTrusted(chain, authType, engine);
     }
 
     @Override
     public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
             throws CertificateException {
-        wrapped.checkServerTrusted(chain, authType, engine);
-    }
-
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType)
-            throws CertificateException {
         try {
-            wrapped.checkClientTrusted(chain, authType);
+            wrapped.checkServerTrusted(chain, authType, engine);
         } catch (CertificateException e) {
             throwEnhancedCertificateException(chain, e);
         }
     }
 
     @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType)
+            throws CertificateException {
+        wrapped.checkClientTrusted(chain, authType);
+    }
+
+    @Override
     public void checkServerTrusted(X509Certificate[] chain, String authType)
             throws CertificateException {
-        wrapped.checkServerTrusted(chain, authType);
+        try {
+            wrapped.checkServerTrusted(chain, authType);
+        } catch (CertificateException e) {
+            throwEnhancedCertificateException(chain, e);
+        }
     }
 
     @Override
