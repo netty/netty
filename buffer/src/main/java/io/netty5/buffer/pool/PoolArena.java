@@ -496,7 +496,7 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
     private static void appendPoolSubPages(StringBuilder buf, PoolSubpage[] subpages) {
         for (int i = 0; i < subpages.length; i ++) {
             PoolSubpage head = (PoolSubpage) SUBPAGE_ARRAY.getVolatile(subpages, i);
-            if (head == null || head.next == head) {
+            if (head == null || head.next == head || head.next == null) {
                 continue;
             }
 
@@ -504,10 +504,10 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
                     .append(i)
                     .append(": ");
             PoolSubpage s = head.next;
-            do {
+            while (s != null && s != head) {
                 buf.append(s);
                 s = s.next;
-            } while (s != head);
+            }
         }
     }
 
