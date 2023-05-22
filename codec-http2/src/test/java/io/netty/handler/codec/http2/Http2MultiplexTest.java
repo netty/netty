@@ -125,6 +125,10 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 anyHttp2Settings(), anyChannelPromise());
     }
 
+    Channel parentChannel() {
+        return parentChannel;
+    }
+
     private ChannelHandlerContext eqCodecCtx() {
         return eq(codec.ctx);
     }

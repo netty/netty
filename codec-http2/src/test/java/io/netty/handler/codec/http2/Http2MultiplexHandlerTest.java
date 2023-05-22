@@ -17,9 +17,17 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
+import java.util.Collection;
 import javax.net.ssl.SSLException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -103,5 +111,23 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
             }
         });
         assertEquals(testExc, exc);
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] value={0}")
+    @MethodSource("userEvents")
+    public void userEventsThatPropagatedToChildChannels(Object userEvent) {
+        final LastInboundHandler inboundParentHandler = new LastInboundHandler();
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+        parentChannel().pipeline().addLast(inboundParentHandler);
+        parentChannel().pipeline().fireUserEventTriggered(userEvent);
+        assertEquals(userEvent, inboundHandler.readUserEvent());
+        assertEquals(userEvent, inboundParentHandler.readUserEvent());
+    }
+
+    private static Collection<Object> userEvents() {
+        return Arrays.asList(ChannelInputShutdownEvent.INSTANCE, ChannelInputShutdownReadComplete.INSTANCE,
+                ChannelOutputShutdownEvent.INSTANCE, SslCloseCompletionEvent.SUCCESS);
     }
 }

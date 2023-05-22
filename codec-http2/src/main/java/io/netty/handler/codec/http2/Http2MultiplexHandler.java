@@ -25,17 +25,22 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
-import javax.net.ssl.SSLException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import javax.net.ssl.SSLException;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * An HTTP/2 handler that creates child channels for each stream. This handler must be used in combination
@@ -92,6 +97,38 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             registerDone(future);
         }
     };
+
+    private static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR =
+            new UserEventStreamVisitor(ChannelInputShutdownEvent.INSTANCE);
+
+    private static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR =
+            new UserEventStreamVisitor(ChannelInputShutdownReadComplete.INSTANCE);
+
+    private static final Http2FrameStreamVisitor CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR =
+            new UserEventStreamVisitor(ChannelOutputShutdownEvent.INSTANCE);
+
+    private static final Http2FrameStreamVisitor SSL_CLOSE_COMPLETION_EVENT_VISITOR =
+            new UserEventStreamVisitor(SslCloseCompletionEvent.SUCCESS);
+
+    /**
+     * {@link Http2FrameStreamVisitor} that fires the user event for every active stream pipeline.
+     */
+    private static final class UserEventStreamVisitor implements Http2FrameStreamVisitor {
+
+        private final Object event;
+
+        UserEventStreamVisitor(Object event) {
+            this.event = checkNotNull(event, "event");
+        }
+
+        @Override
+        public boolean visit(Http2FrameStream stream) {
+            final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                    ((DefaultHttp2FrameStream) stream).attachment;
+            childChannel.pipeline().fireUserEventTriggered(event);
+            return true;
+        }
+    }
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
@@ -255,6 +292,15 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 }
             }
             return;
+        }
+        if (evt == ChannelInputShutdownEvent.INSTANCE) {
+            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR);
+        } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
+        } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
+            forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
+        } else if (evt == SslCloseCompletionEvent.SUCCESS) {
+            forEachActiveStream(SSL_CLOSE_COMPLETION_EVENT_VISITOR);
         }
         ctx.fireUserEventTriggered(evt);
     }
