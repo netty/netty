@@ -22,8 +22,7 @@ on:
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   tests:
