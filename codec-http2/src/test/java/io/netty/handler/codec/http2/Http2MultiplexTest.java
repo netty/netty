@@ -26,7 +26,6 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -1409,7 +1408,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     private static Collection<Object> userEvents() {
-        return Arrays.asList(ChannelInputShutdownEvent.INSTANCE, ChannelInputShutdownReadComplete.INSTANCE,
+        return Arrays.asList(ChannelInputShutdownReadComplete.INSTANCE,
                 ChannelOutputShutdownEvent.INSTANCE, SslCloseCompletionEvent.SUCCESS);
     }
 

@@ -25,7 +25,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
@@ -38,7 +37,6 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import javax.net.ssl.SSLException;
 
-import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR;
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR;
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR;
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.SSL_CLOSE_COMPLETION_EVENT_VISITOR;
@@ -264,9 +262,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             }
             return;
         }
-        if (evt == ChannelInputShutdownEvent.INSTANCE) {
-            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR);
-        } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
             forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
         } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
             forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);

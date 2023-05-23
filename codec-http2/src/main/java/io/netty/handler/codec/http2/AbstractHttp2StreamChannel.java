@@ -35,7 +35,6 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
@@ -70,9 +69,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             return true;
         }
     };
-
-    static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR =
-            new UserEventStreamVisitor(ChannelInputShutdownEvent.INSTANCE);
 
     static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR =
             new UserEventStreamVisitor(ChannelInputShutdownReadComplete.INSTANCE);
