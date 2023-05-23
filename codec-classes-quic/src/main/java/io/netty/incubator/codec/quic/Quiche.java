@@ -670,24 +670,42 @@ final class Quiche {
     static native int sockaddr_cmp(long addr, long addr2);
 
     /**
-     * Returns the memory address if the {@link ByteBuf}
+     * Returns the memory address if the {@link ByteBuf} taking the readerIndex into account.
+     *
+     * @param buf   the {@link ByteBuf} of which we want to obtain the memory address
+     *              (taking its {@link ByteBuf#readerIndex()} into account).
+     * @return      the memory address of this {@link ByteBuf}s readerIndex.
      */
-    static long memoryAddress(ByteBuf buf) {
-        assert buf.isDirect();
-        return buf.hasMemoryAddress() ? buf.memoryAddress() :
-                buffer_memory_address(buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
+    static long readerMemoryAddress(ByteBuf buf) {
+        return memoryAddress(buf, buf.readerIndex(), buf.readableBytes());
     }
 
     /**
-     * Returns the memory address of the given {@link ByteBuffer}. If you want to also respect the
-     * {@link ByteBuffer#position()} use {@link #memoryAddressWithPosition(ByteBuffer)}.
+     * Returns the memory address if the {@link ByteBuf} taking the writerIndex into account.
      *
-     * @param buf   the {@link ByteBuffer} of which we want to obtain the memory address..
-     * @return      the memory address of this {@link ByteBuffer}.
+     * @param buf   the {@link ByteBuf} of which we want to obtain the memory address
+     *              (taking its {@link ByteBuf#writerIndex()} into account).
+     * @return      the memory address of this {@link ByteBuf}s writerIndex.
      */
-    static long memoryAddress(ByteBuffer buf) {
+    static long writerMemoryAddress(ByteBuf buf) {
+        return memoryAddress(buf, buf.writerIndex(), buf.writableBytes());
+    }
+
+    /**
+     * Returns the memory address if the {@link ByteBuf} taking the offset into account.
+     *
+     * @param buf       the {@link ByteBuf} of which we want to obtain the memory address
+     *                  (taking the {@code offset} into account).
+     * @param offset    the offset of the memory address.
+     * @param len       the length of the {@link ByteBuf}.
+     * @return          the memory address of this {@link ByteBuf}s offset.
+     */
+    static long memoryAddress(ByteBuf buf, int offset, int len) {
         assert buf.isDirect();
-        return buffer_memory_address(buf);
+        if (buf.hasMemoryAddress()) {
+            return buf.memoryAddress() + offset;
+        }
+        return memoryAddressWithPosition(buf.internalNioBuffer(offset, len));
     }
 
     /**
@@ -699,7 +717,8 @@ final class Quiche {
      * @return      the memory address of this {@link ByteBuffer}s position.
      */
     static long memoryAddressWithPosition(ByteBuffer buf) {
-        return memoryAddress(buf) + buf.position();
+        assert buf.isDirect();
+        return buffer_memory_address(buf) + buf.position();
     }
 
     @SuppressWarnings("deprecation")

@@ -98,21 +98,25 @@ public final class QuicHeaderParser implements AutoCloseable {
     public void parse(InetSocketAddress sender,
                       InetSocketAddress recipient, ByteBuf packet, QuicHeaderProcessor callback) throws Exception {
         if (closed) {
-            throw new IllegalStateException("QuicHeaderParser is already closed");
+            throw new IllegalStateException(QuicHeaderParser.class.getSimpleName() + " is already closed");
         }
-        long contentAddress = Quiche.memoryAddress(packet) + packet.readerIndex();
-        int contentReadable = packet.readableBytes();
 
-        // Ret various len values so quiche_header_info can make use of these.
+        // Set various len values so quiche_header_info can make use of these.
         scidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
         dcidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
         tokenLenBuffer.setInt(0, maxTokenLength);
 
-        int res = Quiche.quiche_header_info(contentAddress, contentReadable, localConnectionIdLength,
-                Quiche.memoryAddress(versionBuffer), Quiche.memoryAddress(typeBuffer),
-                Quiche.memoryAddress(scidBuffer), Quiche.memoryAddress(scidLenBuffer),
-                Quiche.memoryAddress(dcidBuffer), Quiche.memoryAddress(dcidLenBuffer),
-                Quiche.memoryAddress(tokenBuffer), Quiche.memoryAddress(tokenLenBuffer));
+        int res = Quiche.quiche_header_info(
+                Quiche.readerMemoryAddress(packet), packet.readableBytes(),
+                localConnectionIdLength,
+                Quiche.memoryAddress(versionBuffer, 0, versionBuffer.capacity()),
+                Quiche.memoryAddress(typeBuffer, 0, versionBuffer.capacity()),
+                Quiche.memoryAddress(scidBuffer, 0, scidBuffer.capacity()),
+                Quiche.memoryAddress(scidLenBuffer, 0, scidLenBuffer.capacity()),
+                Quiche.memoryAddress(dcidBuffer, 0, dcidBuffer.capacity()),
+                Quiche.memoryAddress(dcidLenBuffer, 0, dcidLenBuffer.capacity()),
+                Quiche.memoryAddress(tokenBuffer, 0, tokenBuffer.capacity()),
+                Quiche.writerMemoryAddress(tokenLenBuffer));
         if (res >= 0) {
             int version = versionBuffer.getInt(0);
             byte type = typeBuffer.getByte(0);

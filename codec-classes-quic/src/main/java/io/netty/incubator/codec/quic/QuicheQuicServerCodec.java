@@ -123,9 +123,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             int outWriterIndex = out.writerIndex();
 
             int res = Quiche.quiche_negotiate_version(
-                    Quiche.memoryAddress(scid) + scid.readerIndex(), scid.readableBytes(),
-                    Quiche.memoryAddress(dcid) + dcid.readerIndex(), dcid.readableBytes(),
-                    Quiche.memoryAddress(out) + outWriterIndex, out.writableBytes());
+                    Quiche.readerMemoryAddress(scid), scid.readableBytes(),
+                    Quiche.readerMemoryAddress(dcid), dcid.readableBytes(),
+                    Quiche.writerMemoryAddress(out), out.writableBytes());
             if (res < 0) {
                 out.release();
                 Quiche.throwIfError(res);
@@ -150,12 +150,13 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
                 ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
                 int outWriterIndex = out.writerIndex();
-                int written = Quiche.quiche_retry(Quiche.memoryAddress(scid) + scid.readerIndex(), scid.readableBytes(),
-                        Quiche.memoryAddress(dcid) + dcid.readerIndex(), dcid.readableBytes(),
-                        Quiche.memoryAddress(connIdBuffer) + connIdBuffer.readerIndex(), connIdBuffer.readableBytes(),
-                        Quiche.memoryAddress(mintTokenBuffer) + mintTokenBuffer.readerIndex(),
-                        mintTokenBuffer.readableBytes(),
-                        version, Quiche.memoryAddress(out) + outWriterIndex, out.writableBytes());
+                int written = Quiche.quiche_retry(
+                        Quiche.readerMemoryAddress(scid), scid.readableBytes(),
+                        Quiche.readerMemoryAddress(dcid), dcid.readableBytes(),
+                        Quiche.readerMemoryAddress(connIdBuffer), connIdBuffer.readableBytes(),
+                        Quiche.readerMemoryAddress(mintTokenBuffer), mintTokenBuffer.readableBytes(),
+                        version,
+                        Quiche.writerMemoryAddress(out), out.writableBytes());
 
                 if (written < 0) {
                     out.release();
@@ -188,7 +189,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             key = connectionIdAddressGenerator.newId(
                     dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), localConnIdLength);
             connIdBuffer.writeBytes(key.duplicate());
-            scidAddr = Quiche.memoryAddress(connIdBuffer) + connIdBuffer.readerIndex();
+            scidAddr = Quiche.readerMemoryAddress(connIdBuffer);
             scidLen = localConnIdLength;
             ocidAddr = -1;
             ocidLen = -1;
@@ -198,9 +199,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                 return existingChannel;
             }
         } else {
-            scidAddr = Quiche.memoryAddress(dcid) + dcid.readerIndex();
+            scidAddr = Quiche.readerMemoryAddress(dcid);
             scidLen = localConnIdLength;
-            ocidAddr = Quiche.memoryAddress(token) + offset;
+            ocidAddr = Quiche.memoryAddress(token, offset, token.readableBytes());
             ocidLen = token.readableBytes() - offset;
             // Now create the key to store the channel in the map.
             byte[] bytes = new byte[localConnIdLength];
