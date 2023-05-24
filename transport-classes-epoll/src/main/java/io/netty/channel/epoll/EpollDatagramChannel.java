@@ -695,16 +695,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             DatagramPacket packet = msg.newDatagramPacket(byteBuf, local);
             if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                 processPacket(pipeline(), allocHandle, bytesReceived, packet);
-                byteBuf = null;
             } else {
                 // Its important that we process all received data out of the NativeDatagramPacketArray
                 // before we call fireChannelRead(...). This is because the user may call flush()
                 // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
                 datagramPackets = RecyclableArrayList.newInstance();
                 addDatagramPacketToOut(packet, datagramPackets);
-                // null out byteBuf as addDatagramPacketToOut did take ownership of the ByteBuf / packet and transfered
-                // it into the RecyclableArrayList.
-                byteBuf = null;
 
                 processPacketList(pipeline(), allocHandle, bytesReceived, datagramPackets);
                 datagramPackets.recycle();
@@ -737,15 +733,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 allocHandle.lastBytesRead(-1);
                 return false;
             }
-            int bytesReceived = received * datagramSize;
-            byteBuf.writerIndex(bytesReceived);
+
             InetSocketAddress local = localAddress();
+
+            // Set the writerIndex too the maximum number of bytes we might have read.
+            int bytesReceived = received * datagramSize;
+            byteBuf.writerIndex(byteBuf.writerIndex() + bytesReceived);
+
             if (received == 1) {
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(byteBuf, local);
                 if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                     processPacket(pipeline(), allocHandle, datagramSize, packet);
-                    byteBuf = null;
                     return true;
                 }
             }
@@ -754,7 +753,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
             datagramPackets = RecyclableArrayList.newInstance();
             for (int i = 0; i < received; i++) {
-                DatagramPacket packet = packets[i].newDatagramPacket(byteBuf.readRetainedSlice(datagramSize), local);
+                DatagramPacket packet = packets[i].newDatagramPacket(byteBuf, local);
+
+                // We need to skip the maximum datagram size to ensure we have the readerIndex in the right position
+                // for the next one.
+                byteBuf.skipBytes(datagramSize);
                 addDatagramPacketToOut(packet, datagramPackets);
             }
             // Ass we did use readRetainedSlice(...) before we should now release the byteBuf and null it out.
