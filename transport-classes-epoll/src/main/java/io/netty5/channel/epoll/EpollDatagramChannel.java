@@ -708,16 +708,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             DatagramPacket packet = msg.newDatagramPacket(buf, local);
             if (!(packet instanceof SegmentedDatagramPacket)) {
                 readSink.processRead(attemptedBytesRead, bytesReceived, packet);
-                buf = null;
             } else {
                 // Its important we process all received data out of the NativeDatagramPacketArray
                 // before we call fireChannelRead(...). This is because the user may call flush()
                 // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
                 datagramPackets = RecyclableArrayList.newInstance();
                 addDatagramPacketToOut(packet, datagramPackets);
-                // null out buf as addDatagramPacketToOut did take ownership of the Buffer / packet and transferred
-                // it into the RecyclableArrayList.
-                buf = null;
 
                 processPacketList(readSink, attemptedBytesRead, datagramPackets);
                 datagramPackets.recycle();
@@ -750,15 +746,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 readSink.processRead(attemptedBytesRead, 0, null);
                 return ReadState.All;
             }
+            InetSocketAddress local = (InetSocketAddress) localAddress();
+
             int bytesReceived = received * datagramSize;
             buf.writerOffset(initialWriterOffset + bytesReceived);
-            InetSocketAddress local = (InetSocketAddress) localAddress();
             if (received == 1) {
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(buf, local);
                 if (!(packet instanceof SegmentedDatagramPacket)) {
                     readSink.processRead(attemptedBytesRead, datagramSize, packet);
-                    buf = null;
                     return ReadState.Partial;
                 }
             }
@@ -767,8 +763,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
             datagramPackets = RecyclableArrayList.newInstance();
             for (int i = 0; i < received; i++) {
-                DatagramPacket packet = packets[i].newDatagramPacket(buf.readSplit(datagramSize), local);
+                int offset = buf.readerOffset();
+                DatagramPacket packet = packets[i].newDatagramPacket(buf, local);
                 addDatagramPacketToOut(packet, datagramPackets);
+
+                // We need to skip the maximum datagram size to ensure we have the readerIndex in the right position
+                // for the next one.
+                buf.readerOffset(offset + datagramSize);
             }
             // Since we used readSplit(...) before, we should now release the buffer and null it out.
             buf.close();
