@@ -86,7 +86,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             }
         };
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -170,7 +170,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
 
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)

@@ -149,7 +149,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(ImmediateExecutor.INSTANCE);
         QuicChannel quicChannel = null;
         try {
-            quicChannel = QuicChannel.newBootstrap(channel)
+            quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
@@ -257,7 +257,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
                     }
                 }
             };
-            quicChannel = QuicChannel.newBootstrap(channel)
+            quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(ch)
                     // Use the same allocator for the streams.

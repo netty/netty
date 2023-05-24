@@ -64,7 +64,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
             });
 
             channel = QuicTestUtils.newClient(executor);
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())
@@ -116,7 +116,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
             server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter());
 
             channel = QuicTestUtils.newClient(executor);
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter() {
                         @Override

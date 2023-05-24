@@ -87,7 +87,7 @@ public class QuicReadableTest extends AbstractQuicTest {
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         ByteBuf data = Unpooled.directBuffer().writeLong(8);
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())

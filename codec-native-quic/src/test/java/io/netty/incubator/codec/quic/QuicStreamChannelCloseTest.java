@@ -70,7 +70,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
             QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
 
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new StreamHandler())
                     .remoteAddress(server.localAddress())
@@ -132,7 +132,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             channel = QuicTestUtils.newClient(executor);
 
             StreamCreationHandler creationHandler = new StreamCreationHandler(type, halfClose, streamPromise);
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(creationHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())

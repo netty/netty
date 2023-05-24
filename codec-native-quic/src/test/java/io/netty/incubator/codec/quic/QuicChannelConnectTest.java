@@ -127,7 +127,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(executor);
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientValidationHandler)
                     .option(QuicChannelOption.QLOG,
                             new QLogConfiguration(path.toString(), "testTitle", "test"))
@@ -199,7 +199,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(sslTaskExecutor, context));
 
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientValidationHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -228,7 +228,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .localConnectionIdLength(10));
         try {
             ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
-            Future<QuicChannel> future = QuicChannel.newBootstrap(channel)
+            Future<QuicChannel> future = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(verifyHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(socket.getLocalSocketAddress())
@@ -269,7 +269,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .localConnectionIdLength(idLength));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -336,7 +336,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor));
         ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .remoteAddress(address)
                     .connect()
@@ -396,7 +396,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
-            Future<QuicChannel> future = QuicChannel.newBootstrap(channel)
+            Future<QuicChannel> future = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(verifyHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
@@ -425,7 +425,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -466,7 +466,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -537,7 +537,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(executor);
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -584,7 +584,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel channel = QuicTestUtils.newClient(executor);
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -658,7 +658,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .trustManager(new TrustManagerFactoryWrapper(trustManager))
                         .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
-            Throwable cause = QuicChannel.newBootstrap(channel)
+            Throwable cause = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -714,7 +714,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols("protocol").build()));
         AtomicReference<QuicConnectionCloseEvent> closeEventRef = new AtomicReference<>();
         try {
-            Throwable cause = QuicChannel.newBootstrap(channel)
+            Throwable cause = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -765,7 +765,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -805,7 +805,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -841,7 +841,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                         .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
-            Throwable cause = QuicChannel.newBootstrap(channel)
+            Throwable cause = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -904,7 +904,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .sslEngineProvider(c -> clientSslContext.newEngine(c.alloc(), hostname, 8080)));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -972,7 +972,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 }));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -1066,7 +1066,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .applicationProtocols(QuicTestUtils.PROTOS).build()));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
-            Future<QuicChannel> connectFuture = QuicChannel.newBootstrap(channel)
+            Future<QuicChannel> connectFuture = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(address)
@@ -1135,7 +1135,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         try {
             CountDownLatch clientSslCompletionEventLatch = new CountDownLatch(2);
 
-            QuicChannelBootstrap bootstrap = QuicChannel.newBootstrap(channel)
+            QuicChannelBootstrap bootstrap = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public boolean isSharable() {

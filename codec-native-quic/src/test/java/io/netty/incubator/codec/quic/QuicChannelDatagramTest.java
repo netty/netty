@@ -130,7 +130,7 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
         };
 
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .remoteAddress(address)
                     .connect()
@@ -268,7 +268,7 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
             }
         };
         try {
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .remoteAddress(address)
                     .connect()

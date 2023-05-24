@@ -56,7 +56,7 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
             StreamHandler handler = new StreamHandler();
             server = QuicTestUtils.newServer(executor, serverHandler, handler);
             channel = QuicTestUtils.newClient(executor);
-            QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
                     .streamHandler(new ChannelInboundHandlerAdapter())
                     .remoteAddress(server.localAddress())

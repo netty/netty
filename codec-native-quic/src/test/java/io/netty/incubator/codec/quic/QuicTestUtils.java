@@ -73,6 +73,15 @@ final class QuicTestUtils {
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
     }
 
+    static QuicChannelBootstrap newQuicChannelBootstrap(Channel channel) {
+        QuicChannelBootstrap bs = QuicChannel.newBootstrap(channel);
+        if (GROUP instanceof EpollEventLoopGroup) {
+            bs.option(QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR,
+                    EpollQuicUtils.newSegmentedAllocator(10));
+        }
+        return bs;
+    }
+
     static QuicClientCodecBuilder newQuicClientBuilder(Executor sslTaskExecutor) {
         return newQuicClientBuilder(sslTaskExecutor, QuicSslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols(PROTOS).build());
