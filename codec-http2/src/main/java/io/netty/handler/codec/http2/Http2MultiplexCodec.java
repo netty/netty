@@ -23,18 +23,15 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
-
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR;
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR;
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR;
 import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.SSL_CLOSE_COMPLETION_EVENT_VISITOR;
@@ -295,9 +292,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     @Override
     final void onUserEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt == ChannelInputShutdownEvent.INSTANCE) {
-            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_EVENT_VISITOR);
-        } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
             forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
         } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
             forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
