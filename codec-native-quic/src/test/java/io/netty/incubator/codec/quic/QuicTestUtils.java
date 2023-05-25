@@ -18,8 +18,11 @@ package io.netty.incubator.codec.quic;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -35,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 final class QuicTestUtils {
     static final String[] PROTOS = new String[]{"hq-29"};
     static final SelfSignedCertificate SELF_SIGNED_CERTIFICATE;
+
+    private static final int DATAGRAM_SIZE = 2048;
 
     static {
         SelfSignedCertificate cert;
@@ -65,9 +70,22 @@ final class QuicTestUtils {
         return newClient(newQuicClientBuilder(sslTaskExecutor));
     }
 
+    private static Bootstrap newBootstrap() {
+        Bootstrap bs = new Bootstrap();
+        if (GROUP instanceof EpollEventLoopGroup) {
+            bs.channel(EpollDatagramChannel.class)
+                    // Use recvmmsg when possible.
+                    .option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, DATAGRAM_SIZE)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(DATAGRAM_SIZE * 8));
+        } else {
+            bs.channel(NioDatagramChannel.class)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(DATAGRAM_SIZE));
+        }
+        return bs.group(GROUP);
+    }
+
     static Channel newClient(QuicClientCodecBuilder builder) throws Exception {
-        return new Bootstrap().group(GROUP)
-                .channel(Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class)
+        return newBootstrap()
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(builder.build())
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
@@ -134,9 +152,7 @@ final class QuicTestUtils {
             serverBuilder.handler(handler);
         }
         ChannelHandler codec = serverBuilder.build();
-        Bootstrap bs = new Bootstrap();
-        return bs.group(GROUP)
-                .channel(Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class)
+        return newBootstrap()
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(codec)
                 .localAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
