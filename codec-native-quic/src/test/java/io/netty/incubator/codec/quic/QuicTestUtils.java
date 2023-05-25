@@ -61,7 +61,11 @@ final class QuicTestUtils {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
-                GROUP.shutdownGracefully();
+                try {
+                    GROUP.shutdownGracefully().sync();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         });
     }

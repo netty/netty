@@ -50,6 +50,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private QuicHeaderParser.QuicHeaderProcessor parserCallback;
     private int pendingBytes;
     private int pendingPackets;
+    private boolean inChannelReadComplete;
 
     protected final QuicheConfig config;
     protected final int localConnIdLength;
@@ -96,6 +97,9 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
             connections.clear();
 
             needsFireChannelReadComplete.clear();
+            if (pendingPackets > 0) {
+                flushNow(ctx);
+            }
         } finally {
             config.free();
             if (senderSockaddrMemory != null) {
@@ -163,14 +167,22 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public final void channelReadComplete(ChannelHandlerContext ctx) {
-        for (;;) {
-            QuicheQuicChannel channel = needsFireChannelReadComplete.poll();
-            if (channel == null) {
-                break;
+        inChannelReadComplete = true;
+        try {
+            for (;;) {
+                QuicheQuicChannel channel = needsFireChannelReadComplete.poll();
+                if (channel == null) {
+                    break;
+                }
+                channel.recvComplete();
+                if (channel.freeIfClosed()) {
+                    connections.remove(channel.key());
+                }
             }
-            channel.recvComplete();
-            if (channel.freeIfClosed()) {
-                connections.remove(channel.key());
+        } finally {
+            inChannelReadComplete = false;
+            if (pendingPackets > 0) {
+                flushNow(ctx);
             }
         }
     }
@@ -196,25 +208,33 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)  {
+        pendingPackets ++;
         int size = estimatorHandle.size(msg);
         if (size > 0) {
             pendingBytes += size;
-            pendingPackets ++;
         }
         try {
             ctx.write(msg, promise);
         } finally {
-            // Check if we should force a flush() and so ensure the packets are delivered in a timely
-            // manner and also make room in the outboundbuffer again that belongs to the underlying channel.
-            if (flushStrategy.shouldFlushNow(pendingPackets, pendingBytes)) {
-                flushNow(ctx);
-            }
+            flushIfNeeded(ctx);
         }
     }
 
     @Override
     public final void flush(ChannelHandlerContext ctx) {
-        if (pendingBytes > 0) {
+        // If we are in the channelReadComplete(...) method we might be able to delay the flush(...) until we finish
+        // processing all channels.
+        if (inChannelReadComplete) {
+            flushIfNeeded(ctx);
+        } else if (pendingPackets > 0) {
+            flushNow(ctx);
+        }
+    }
+
+    private void flushIfNeeded(ChannelHandlerContext ctx) {
+        // Check if we should force a flush() and so ensure the packets are delivered in a timely
+        // manner and also make room in the outboundbuffer again that belongs to the underlying channel.
+        if (flushStrategy.shouldFlushNow(pendingPackets, pendingBytes)) {
             flushNow(ctx);
         }
     }
