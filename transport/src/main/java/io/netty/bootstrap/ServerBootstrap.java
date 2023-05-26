@@ -148,13 +148,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     pipeline.addLast(handler);
                 }
 
-                ch.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        pipeline.addLast(new ServerBootstrapAcceptor(
-                                ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
-                    }
-                });
+                pipeline.addLast(new ServerBootstrapAcceptor(ch, currentChildGroup, currentChildHandler,
+                                                             currentChildOptions, currentChildAttrs));
             }
         });
     }
