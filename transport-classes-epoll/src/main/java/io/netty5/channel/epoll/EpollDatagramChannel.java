@@ -763,13 +763,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
             datagramPackets = RecyclableArrayList.newInstance();
             for (int i = 0; i < received; i++) {
-                int offset = buf.readerOffset();
                 DatagramPacket packet = packets[i].newDatagramPacket(buf, local);
+                int readable = packet.content().readableBytes();
                 addDatagramPacketToOut(packet, datagramPackets);
 
                 // We need to skip the maximum datagram size to ensure we have the readerIndex in the right position
                 // for the next one.
-                buf.readerOffset(offset + datagramSize);
+                buf.skipReadableBytes(datagramSize - readable);
             }
             // Since we used readSplit(...) before, we should now release the buffer and null it out.
             buf.close();
