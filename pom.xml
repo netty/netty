@@ -68,9 +68,9 @@
   <properties>
     <javaModuleName>io.netty.incubator.codec.http3</javaModuleName>
     <skipTests>false</skipTests>
-    <netty.version>4.1.92.Final</netty.version>
+    <netty.version>4.1.93.Final</netty.version>
     <netty.build.version>31</netty.build.version>
-    <netty.quic.version>0.0.40.Final</netty.quic.version>
+    <netty.quic.version>0.0.43.Final</netty.quic.version>
     <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
     <junit.version>5.9.0</junit.version>
     <release.gpg.keyname />
