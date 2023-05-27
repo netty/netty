@@ -101,7 +101,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         private final UncheckedBooleanSupplier defaultMaybeMoreSupplier = new UncheckedBooleanSupplier() {
             @Override
             public boolean get() {
-                return attemptedBytesRead == lastBytesRead;
+                return lastBytesRead > 0 && attemptedBytesRead == lastBytesRead;
             }
         };
 
@@ -146,8 +146,8 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         @Override
         public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
             return config.isAutoRead() &&
-                   (!respectMaybeMoreData || maybeMoreDataSupplier.get()) &&
-                   totalMessages < maxMessagePerRead && (ignoreBytesRead || totalBytesRead > 0);
+                    (ignoreBytesRead || (!respectMaybeMoreData || maybeMoreDataSupplier.get())) &&
+                    totalMessages < maxMessagePerRead;
         }
 
         @Override
