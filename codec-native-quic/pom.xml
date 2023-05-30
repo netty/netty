@@ -494,6 +494,89 @@
         <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
       </properties>
     </profile>
+
+    <!-- Profile related to native-image -->
+    <!-- ./mvnw -Pnative-image-agent -pl codec-native-quic test -->
+    <profile>
+      <id>native-image-agent</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcpkix-jdk15on</artifactId>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <source>17</source>
+              <target>17</target>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>io.netty.incubator.codec.quic.QuicChannelEchoTest</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native.maven.plugin.version}</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.codehaus.plexus</groupId>
+                <artifactId>plexus-utils</artifactId>
+                <version>3.4.2</version>
+              </dependency>
+            </dependencies>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>test-native</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <phase>test</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <skipNativeTests>true</skipNativeTests>
+              <metadataRepository>
+                <enabled>true</enabled>
+              </metadataRepository>
+              <agent>
+                <enabled>true</enabled>
+                <defaultMode>Conditional</defaultMode>
+                <modes>
+                  <conditional>
+                    <userCodeFilterPath>${project.basedir}/src/test/resources/netty-filter.json</userCodeFilterPath>
+                    <extraFilterPath>${project.basedir}/src/test/resources/test-class-filter.json</extraFilterPath>
+                    <parallel>true</parallel>
+                  </conditional>
+                </modes>
+                <options>
+                  <builtinCallerFilter>true</builtinCallerFilter>
+                  <builtinHeuristicFilter>true</builtinHeuristicFilter>
+                  <enableExperimentalPredefinedClasses>false</enableExperimentalPredefinedClasses>
+                  <enableExperimentalUnsafeAllocationTracing>false</enableExperimentalUnsafeAllocationTracing>
+                  <trackReflectionMetadata>true</trackReflectionMetadata>
+                </options>
+                <metadataCopy>
+                  <disabledStages>
+                    <stage>main</stage>
+                  </disabledStages>
+                  <merge>true</merge>
+                </metadataCopy>
+              </agent>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <build>

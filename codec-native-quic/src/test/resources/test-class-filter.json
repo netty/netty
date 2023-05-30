@@ -1,0 +1,12 @@
+{
+    "rules": [
+        {"includeClasses": "**"},
+        {"excludeClasses": "ch.qos.logback.**"},
+        {"excludeClasses": "io.netty.incubator.codec.quic.NoValidationQuicTokenHandler"},
+        {"excludeClasses": "io.netty.incubator.codec.quic.QuicChannelValidationHandler"},
+        {"excludeClasses": "org.apache.maven.surefire.**"}
+    ],
+    "regexRules": [
+        {"excludeClasses": ".*Test.*"}
+    ]
+}

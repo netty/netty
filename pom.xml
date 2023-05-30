@@ -68,6 +68,7 @@
   <modules>
     <module>codec-classes-quic</module>
     <module>codec-native-quic</module>
+    <module>testsuite-native-image</module>
   </modules>
   <properties>
     <javaModuleName />
@@ -77,6 +78,7 @@
     <netty.build.version>31</netty.build.version>
     <commons.codec.version>1.15</commons.codec.version>
     <junit.version>5.9.0</junit.version>
+    <native.maven.plugin.version>0.9.22</native.maven.plugin.version>
     <test.argLine>-D_</test.argLine>
     <bundleNativeCode />
     <crossCompile />
@@ -443,7 +445,7 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.68</version>
+        <version>1.70</version>
         <scope>test</scope>
       </dependency>
       <dependency>
