@@ -148,18 +148,22 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
 
         // this combiner is created lazily if we need multiple write calls
         PromiseCombiner combiner = null;
+        // With the last content, *if* we write anything here, we need to wait for that write to complete before
+        // closing. To do that, we need to unvoid the promise. So if we write anything *and* this is the last message
+        // we will unvoid.
+        boolean isLast = msg instanceof LastHttpContent;
 
         if (msg instanceof HttpMessage) {
             Http3Headers headers = toHttp3Headers((HttpMessage) msg);
             DefaultHttp3HeadersFrame frame = new DefaultHttp3HeadersFrame(headers);
 
-            if (msg instanceof HttpContent && !promise.isVoid()) {
+            if (msg instanceof HttpContent && (!promise.isVoid() || isLast)) {
                 combiner = new PromiseCombiner(ctx.executor());
             }
-            writeWithOptionalCombiner(ctx, frame, promise, combiner);
+            promise = writeWithOptionalCombiner(ctx, frame, promise, combiner, isLast);
         }
 
-        if (msg instanceof LastHttpContent) {
+        if (isLast) {
             LastHttpContent last = (LastHttpContent) msg;
             boolean readable = last.content().isReadable();
             boolean hasTrailers = !last.trailingHeaders().isEmpty();
@@ -168,28 +172,29 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
                 combiner = new PromiseCombiner(ctx.executor());
             }
 
-            ChannelFuture future = null;
             if (readable) {
-                future = writeWithOptionalCombiner(ctx, new DefaultHttp3DataFrame(last.content()), promise, combiner);
+                promise = writeWithOptionalCombiner(ctx,
+                        new DefaultHttp3DataFrame(last.content()), promise, combiner, true);
             }
             if (hasTrailers) {
                 Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                future = writeWithOptionalCombiner(ctx, new DefaultHttp3HeadersFrame(headers), promise, combiner);
+                promise = writeWithOptionalCombiner(ctx,
+                        new DefaultHttp3HeadersFrame(headers), promise, combiner, true);
             }
             if (!readable) {
                 last.release();
             }
 
-            if (future == null) {
-                ((QuicStreamChannel) ctx.channel()).shutdownOutput();
-            } else {
-                future.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
-            }
             if (!readable && !hasTrailers && combiner == null) {
+                // we had to write nothing. happy days!
+                ((QuicStreamChannel) ctx.channel()).shutdownOutput();
                 promise.trySuccess();
+            } else {
+                promise.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
             }
         } else if (msg instanceof HttpContent) {
-            writeWithOptionalCombiner(ctx, new DefaultHttp3DataFrame(((HttpContent) msg).content()), promise, combiner);
+            promise = writeWithOptionalCombiner(ctx,
+                    new DefaultHttp3DataFrame(((HttpContent) msg).content()), promise, combiner, false);
         }
 
         if (combiner != null) {
@@ -201,18 +206,22 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
      * Write a message. If there is a combiner, add a new write promise to that combiner. If there is no combiner
      * ({@code null}), use the {@code outerPromise} directly as the write promise.
      */
-    private static ChannelFuture writeWithOptionalCombiner(
+    private static ChannelPromise writeWithOptionalCombiner(
             ChannelHandlerContext ctx,
             Object msg,
             ChannelPromise outerPromise,
-            PromiseCombiner combiner
+            PromiseCombiner combiner,
+            boolean unvoidPromise
     ) {
+        if (unvoidPromise) {
+            outerPromise = outerPromise.unvoid();
+        }
         if (combiner == null) {
-            return ctx.write(msg, outerPromise);
+            ctx.write(msg, outerPromise);
         } else {
             combiner.add(ctx.write(msg));
-            return null;
         }
+        return outerPromise;
     }
 
     private Http3Headers toHttp3Headers(HttpMessage msg) {

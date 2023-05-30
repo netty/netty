@@ -19,10 +19,14 @@ package io.netty.incubator.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
@@ -32,6 +36,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -43,6 +48,8 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -649,6 +656,146 @@ public class Http3FrameToHttpObjectCodecTest {
         Http3HeadersFrame trailingHeadersFrame = ch.readOutbound();
         assertEquals("bar", trailingHeadersFrame.headers().get("foo").toString());
 
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEncodeVoidPromise() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
+        ch.writeOneOutbound(new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.POST, "/hello/world", Unpooled.wrappedBuffer(new byte[1])),
+                ch.voidPromise());
+        ch.flushOutbound();
+
+        Http3HeadersFrame headersFrame = ch.readOutbound();
+        Http3Headers headers = headersFrame.headers();
+        Http3DataFrame data = ch.readOutbound();
+data.release();
+        assertThat(headers.scheme().toString(), is("https"));
+        assertThat(headers.method().toString(), is("POST"));
+        assertThat(headers.path().toString(), is("/hello/world"));
+        assertTrue(ch.isOutputShutdown());
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testEncodeCombinations() {
+        // this test goes through all the branches of Http3FrameToHttpObjectCodec and ensures right functionality
+
+        for (boolean headers : new boolean[]{false, true}) {
+            for (boolean last : new boolean[]{false, true}) {
+                for (boolean nonEmptyContent : new boolean[]{false, true}) {
+                    for (boolean hasTrailers : new boolean[]{false, true}) {
+                        for (boolean voidPromise : new boolean[]{false, true}) {
+                            testEncodeCombination(headers, last, nonEmptyContent, hasTrailers, voidPromise);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param headers         Should this be an initial message, with headers ({@link HttpRequest})?
+     * @param last            Should this be a last message ({@link LastHttpContent})?
+     * @param nonEmptyContent Should this message have non-empty content?
+     * @param hasTrailers     Should this {@code last} message have trailers?
+     * @param voidPromise     Should the write operation use a void promise?
+     */
+    private static void testEncodeCombination(
+            boolean headers,
+            boolean last,
+            boolean nonEmptyContent,
+            boolean hasTrailers,
+            boolean voidPromise
+    ) {
+        ByteBuf content = nonEmptyContent ? Unpooled.wrappedBuffer(new byte[1]) : Unpooled.EMPTY_BUFFER;
+        HttpHeaders trailers = new DefaultHttpHeaders();
+        if (hasTrailers) {
+            trailers.add("foo", "bar");
+        }
+        HttpObject msg;
+        if (headers) {
+            if (last) {
+                msg = new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/foo", content, new DefaultHttpHeaders(), trailers);
+            } else {
+                if (hasTrailers || nonEmptyContent) {
+                    // not supported by the netty HTTP/1 model
+                    content.release();
+                    return;
+                }
+                msg = new DefaultHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/foo", new DefaultHttpHeaders());
+            }
+        } else {
+            if (last) {
+                msg = new DefaultLastHttpContent(content, trailers);
+            } else {
+                if (hasTrailers) {
+                    // makes no sense
+                    content.release();
+                    return;
+                }
+                msg = new DefaultHttpContent(content);
+            }
+        }
+
+        List<ChannelPromise> framePromises = new ArrayList<>();
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(
+                new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                        framePromises.add(promise);
+                        ctx.write(msg, ctx.voidPromise());
+                    }
+                },
+                new Http3FrameToHttpObjectCodec(false)
+        );
+
+        ChannelFuture fullPromise = ch.writeOneOutbound(msg, voidPromise ? ch.voidPromise() : ch.newPromise());
+        ch.flushOutbound();
+
+        if (headers) {
+            Http3HeadersFrame headersFrame = ch.readOutbound();
+            assertThat(headersFrame.headers().scheme().toString(), is("https"));
+            assertThat(headersFrame.headers().method().toString(), is("POST"));
+            assertThat(headersFrame.headers().path().toString(), is("/foo"));
+        }
+        if (nonEmptyContent) {
+            Http3DataFrame dataFrame = ch.readOutbound();
+            assertThat(dataFrame.content().readableBytes(), is(1));
+            dataFrame.release();
+        } else if (!headers && !hasTrailers && !last) {
+            ch.<Http3DataFrame>readOutbound().release();
+        }
+        if (hasTrailers) {
+            Http3HeadersFrame trailersFrame = ch.readOutbound();
+            assertThat(trailersFrame.headers().get("foo"), is("bar"));
+        }
+        // empty LastHttpContent has no data written and will complete the promise immediately
+        boolean anyData = hasTrailers || nonEmptyContent || headers || !last;
+        if (!voidPromise) {
+            if (anyData) {
+                assertFalse(fullPromise.isDone());
+            } else {
+                // nothing to write, immediately complete
+                assertTrue(fullPromise.isDone());
+            }
+        }
+        if (!last || anyData) {
+            assertFalse(ch.isOutputShutdown());
+        }
+        for (ChannelPromise framePromise : framePromises) {
+            framePromise.trySuccess();
+        }
+        if (last) {
+            assertTrue(ch.isOutputShutdown());
+        }
+        if (!voidPromise) {
+            assertTrue(fullPromise.isDone());
+        }
         assertFalse(ch.finish());
     }
 
