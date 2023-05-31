@@ -174,14 +174,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile long bidiStreamsLeft;
 
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, InetSocketAddress local,
-                      InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
-                              Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
-                              Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        this(parent, server, key, local,remote, supportsDatagram, streamHandler, streamOptionsArray,
-                streamAttrsArray, null, null);
-    }
-
-    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, InetSocketAddress local,
                               InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
@@ -210,15 +202,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, false, null, local, remote, false, streamHandler,
-                streamOptionsArray, streamAttrsArray);
-    }
-
-    static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress local, InetSocketAddress remote,
-                                       boolean supportsDatagram, ChannelHandler streamHandler,
-                                       Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
-                                       Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram,
-                streamHandler, streamOptionsArray, streamAttrsArray);
+                streamOptionsArray, streamAttrsArray, null, null);
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress local,
