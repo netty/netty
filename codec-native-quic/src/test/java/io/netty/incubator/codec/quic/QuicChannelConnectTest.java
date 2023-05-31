@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
@@ -71,6 +72,7 @@ import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -561,6 +563,120 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             // Check if we also can access these after the channel was closed.
             assertNotNull(accepted.localAddress());
             assertNotNull(accepted.remoteAddress());
+        } finally {
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectWith0RTT(Executor executor) throws Throwable {
+        final ChannelHandler closeHandler = new ChannelInboundHandlerAdapter() {
+            @Override
+            public boolean isSharable() {
+                return true;
+            }
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                // Close the connection / stream once accepted.
+                ctx.close();
+            }
+        };
+
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
+                        QuicSslContextBuilder.forServer(
+                                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                                .applicationProtocols(QuicTestUtils.PROTOS)
+                                .earlyData(true)
+                                .build()),
+                InsecureQuicTokenHandler.INSTANCE, closeHandler, closeHandler);
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        QuicSslContext sslContext = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .applicationProtocols(QuicTestUtils.PROTOS)
+                .earlyData(true)
+                .build();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor, sslContext)
+                .sslEngineProvider(q -> sslContext.newEngine(q.alloc(), "localhost", 9999)));
+        final CountDownLatch errorLatch = new CountDownLatch(1);
+        final CountDownLatch streamLatch = new CountDownLatch(1);
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+
+        try {
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt instanceof SslEarlyDataReadyEvent) {
+                                ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL,
+                                        new ChannelInboundHandlerAdapter()).addListener(f -> {
+                                    try {
+                                        QuicException exception = assertInstanceOf(QuicException.class, f.cause());
+                                        // This is expected as we didn't receive the transport params yet.
+                                        // Creating a new stream will only work once we create the next connection
+                                        // as part of 0-RTT.
+                                        assertEquals(QuicError.STREAM_LIMIT, exception.error());
+                                    } catch (Throwable error) {
+                                        errorRef.set(error);
+                                    } finally {
+                                        errorLatch.countDown();
+                                    }
+                                });
+                            }
+                            ctx.fireUserEventTriggered(evt);
+                        }
+                    })
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            errorLatch.await();
+            if (errorRef.get() != null) {
+                throw errorRef.get();
+            }
+
+            quicChannel.closeFuture().sync();
+
+            quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt instanceof SslEarlyDataReadyEvent) {
+                                ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL,
+                                        new ChannelInboundHandlerAdapter()).addListener(f -> {
+                                    try {
+                                        // This should succeed as we have the transport params cached as part of
+                                        // the session.
+                                        assertTrue(f.isSuccess());
+                                    } catch (Throwable error) {
+                                        errorRef.set(error);
+                                    } finally {
+                                        streamLatch.countDown();
+                                    }
+                                });
+                            }
+                            ctx.fireUserEventTriggered(evt);
+                        }
+                    })
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            streamLatch.await();
+            if (errorRef.get() != null) {
+                throw errorRef.get();
+            }
+
+            quicChannel.closeFuture().sync();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
