@@ -52,7 +52,6 @@ public final class QuicChannelBootstrap {
     private QuicConnectionAddress connectionAddress = QuicConnectionAddress.EPHEMERAL;
     private ChannelHandler handler;
     private ChannelHandler streamHandler;
-    private EarlyDataSendCallback earlyDataSendCallback;
 
     /**
      * Creates a new instance which uses the given {@link Channel} to bootstrap the {@link QuicChannel}.
@@ -183,17 +182,6 @@ public final class QuicChannelBootstrap {
     }
 
     /**
-     * Set the {@link EarlyDataSendCallback} to use.
-     *
-     * @param earlyDataSendCallback the callback.
-     * @return                      this instance.
-     */
-    public QuicChannelBootstrap earlyDataSendCallBack(EarlyDataSendCallback earlyDataSendCallback) {
-        this.earlyDataSendCallback = ObjectUtil.checkNotNull(earlyDataSendCallback, "earlyDataSendCallback");
-        return this;
-    }
-
-    /**
      * Connects a {@link QuicChannel} to the remote peer and notifies the future once done.
      *
      * @return {@link Future} which is notified once the operation completes.
@@ -232,8 +220,7 @@ public final class QuicChannelBootstrap {
         final QuicConnectionAddress address = connectionAddress;
         QuicChannel channel = QuicheQuicChannel.forClient(parent, (InetSocketAddress)  local,
                 (InetSocketAddress) remote,
-                streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs),
-                earlyDataSendCallback);
+                streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
 
         Quic.setupChannel(channel, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs), handler, logger);
         EventLoop eventLoop = parent.eventLoop();

@@ -126,8 +126,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
     private final TimeoutHandler timeoutHandler;
-    private final EarlyDataSendCallback earlyDataSendCallback;
-
     private Executor sslTaskExecutor;
 
     private boolean inFireChannelReadCompleteQueue;
@@ -178,17 +176,16 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, InetSocketAddress local,
                       InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
-                              Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
-                              EarlyDataSendCallback earlyDataSendCallback) {
+                              Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         this(parent, server, key, local,remote, supportsDatagram, streamHandler, streamOptionsArray,
-                streamAttrsArray, null, earlyDataSendCallback, null);
+                streamAttrsArray, null, null);
     }
 
     private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, InetSocketAddress local,
                               InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
-                              Consumer<QuicheQuicChannel> timeoutTask, EarlyDataSendCallback earlyDataSendCallback,
+                              Consumer<QuicheQuicChannel> timeoutTask,
                               Executor sslTaskExecutor) {
         super(parent);
         config = new QuicheQuicChannelConfig(this);
@@ -204,7 +201,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.streamHandler = streamHandler;
         this.streamOptionsArray = streamOptionsArray;
         this.streamAttrsArray = streamAttrsArray;
-        this.earlyDataSendCallback = earlyDataSendCallback;
         timeoutHandler = new TimeoutHandler(timeoutTask);
         this.sslTaskExecutor = sslTaskExecutor == null ? ImmediateExecutor.INSTANCE : sslTaskExecutor;
     }
@@ -212,10 +208,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     static QuicheQuicChannel forClient(Channel parent, InetSocketAddress local, InetSocketAddress remote,
                                        ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
-                                       Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
-                                       EarlyDataSendCallback earlyDataSendCallback) {
+                                       Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, false, null, local, remote, false, streamHandler,
-                streamOptionsArray, streamAttrsArray, earlyDataSendCallback);
+                streamOptionsArray, streamAttrsArray);
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress local, InetSocketAddress remote,
@@ -223,7 +218,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram,
-                streamHandler, streamOptionsArray, streamAttrsArray, null);
+                streamHandler, streamOptionsArray, streamAttrsArray);
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress local,
@@ -233,7 +228,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
                                        Consumer<QuicheQuicChannel> timeoutTask, Executor sslTaskExecutor) {
         return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram,
-                streamHandler, streamOptionsArray, streamAttrsArray, timeoutTask, null,
+                streamHandler, streamOptionsArray, streamAttrsArray, timeoutTask,
                 sslTaskExecutor);
     }
 
@@ -1712,9 +1707,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     void finishConnect() {
         assert !server;
         if (connectionSend()) {
-            if (earlyDataSendCallback != null) {
-                earlyDataSendCallback.send(this);
-            }
+            pipeline().fireUserEventTriggered(SslEarlyDataReadyEvent.INSTANCE);
             flushParent();
         }
     }

@@ -29,7 +29,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.incubator.codec.quic.EarlyDataSendCallback;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicChannelBootstrap;
 import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
@@ -37,6 +36,7 @@ import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.incubator.codec.quic.SslEarlyDataReadyEvent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
@@ -50,21 +50,24 @@ public final class QuicClientZeroRTTExample {
                 applicationProtocols("http/0.9").earlyData(true).build();
 
         newChannelAndSendData(context, null);
-        newChannelAndSendData(context, new EarlyDataSendCallback() {
+        newChannelAndSendData(context, new ChannelInboundHandlerAdapter() {
             @Override
-            public void send(QuicChannel quicChannel) {
-                createStream(quicChannel).addListener(f -> {
-                    if (f.isSuccess()) {
-                        QuicStreamChannel streamChannel = (QuicStreamChannel) f.getNow();
-                        streamChannel.writeAndFlush(
-                                Unpooled.copiedBuffer("0rtt stream data\r\n", CharsetUtil.US_ASCII));
-                    }
-                });
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof SslEarlyDataReadyEvent) {
+                    createStream(((QuicChannel) ctx.channel())).addListener(f -> {
+                        if (f.isSuccess()) {
+                            QuicStreamChannel streamChannel = (QuicStreamChannel) f.getNow();
+                            streamChannel.writeAndFlush(
+                                    Unpooled.copiedBuffer("0rtt stream data\r\n", CharsetUtil.US_ASCII));
+                        }
+                    });
+                }
+                super.userEventTriggered(ctx, evt);
             }
         });
     }
 
-    static void newChannelAndSendData(QuicSslContext context, EarlyDataSendCallback earlyDataSendCallback) throws Exception {
+    static void newChannelAndSendData(QuicSslContext context, ChannelHandler earlyDataSendHandler) throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         try {
             ChannelHandler codec = new QuicClientCodecBuilder()
@@ -95,8 +98,8 @@ public final class QuicClientZeroRTTExample {
                     })
                     .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, 9999));
 
-            if (earlyDataSendCallback != null) {
-                quicChannelBootstrap.earlyDataSendCallBack(earlyDataSendCallback);
+            if (earlyDataSendHandler != null) {
+                quicChannelBootstrap.handler(earlyDataSendHandler);
             }
 
             QuicChannel quicChannel = quicChannelBootstrap
