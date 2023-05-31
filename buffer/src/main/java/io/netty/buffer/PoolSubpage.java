@@ -22,7 +22,6 @@ import static io.netty.buffer.PoolChunk.RUN_OFFSET_SHIFT;
 import static io.netty.buffer.PoolChunk.SIZE_SHIFT;
 import static io.netty.buffer.PoolChunk.IS_USED_SHIFT;
 import static io.netty.buffer.PoolChunk.IS_SUBPAGE_SHIFT;
-import static io.netty.buffer.SizeClasses.LOG2_QUANTUM;
 
 final class PoolSubpage<T> implements PoolSubpageMetric {
 
@@ -38,7 +37,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     boolean doNotDestroy;
     private int maxNumElems;
-    private int bitmapLength;
     private int nextAvail;
     private int numAvail;
 
@@ -63,9 +61,9 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         this.runOffset = runOffset;
         this.runSize = runSize;
         this.elemSize = elemSize;
-        bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
 
         doNotDestroy = true;
+        int bitmapLength = 0;
         if (elemSize != 0) {
             maxNumElems = numAvail = runSize / elemSize;
             nextAvail = 0;
@@ -74,6 +72,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
                 bitmapLength ++;
             }
         }
+        bitmap = new long[bitmapLength];
         addToPool(head);
     }
 
@@ -114,6 +113,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         }
         int q = bitmapIdx >>> 6;
         int r = bitmapIdx & 63;
+        assert q <= bitmap.length;
         assert (bitmap[q] >>> r & 1) != 0;
         bitmap[q] ^= 1L << r;
 
@@ -177,7 +177,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     private int findNextAvail() {
         final long[] bitmap = this.bitmap;
-        final int bitmapLength = this.bitmapLength;
+        final int bitmapLength = this.bitmap.length;
         for (int i = 0; i < bitmapLength; i ++) {
             long bits = bitmap[i];
             if (~bits != 0) {
