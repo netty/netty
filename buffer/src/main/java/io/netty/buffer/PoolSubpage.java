@@ -74,6 +74,9 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
                 bitmapLength ++;
             }
         }
+
+        assert bitmap.length == bitmapLength;
+
         addToPool(head);
     }
 
