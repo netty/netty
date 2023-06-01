@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
@@ -39,6 +38,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.AssertionFailedError;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -72,7 +72,6 @@ import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -575,19 +574,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testConnectWith0RTT(Executor executor) throws Throwable {
-        final ChannelHandler closeHandler = new ChannelInboundHandlerAdapter() {
-            @Override
-            public boolean isSharable() {
-                return true;
-            }
-
-            @Override
-            public void channelActive(ChannelHandlerContext ctx) {
-                // Close the connection / stream once accepted.
-                ctx.close();
-            }
-        };
-
+        final CountDownLatch readLatch = new CountDownLatch(1);
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(
                                         QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
@@ -595,7 +582,31 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 .applicationProtocols(QuicTestUtils.PROTOS)
                                 .earlyData(true)
                                 .build()),
-                InsecureQuicTokenHandler.INSTANCE, closeHandler, closeHandler);
+                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                }, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buffer = (ByteBuf) msg;
+                        try {
+                            assertEquals(4, buffer.readableBytes());
+                            assertEquals(1, buffer.readInt());
+                            readLatch.countDown();
+                            ctx.close();
+                            ctx.channel().parent().close();
+                        } finally {
+                            buffer.release();
+                        }
+                    }
+                });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
         QuicSslContext sslContext = QuicSslContextBuilder.forClient()
@@ -605,7 +616,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .build();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor, sslContext)
                 .sslEngineProvider(q -> sslContext.newEngine(q.alloc(), "localhost", 9999)));
-        final CountDownLatch errorLatch = new CountDownLatch(1);
         final CountDownLatch streamLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> errorRef = new AtomicReference<>();
 
@@ -615,20 +625,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslEarlyDataReadyEvent) {
-                                ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL,
-                                        new ChannelInboundHandlerAdapter()).addListener(f -> {
-                                    try {
-                                        QuicException exception = assertInstanceOf(QuicException.class, f.cause());
-                                        // This is expected as we didn't receive the transport params yet.
-                                        // Creating a new stream will only work once we create the next connection
-                                        // as part of 0-RTT.
-                                        assertEquals(QuicError.STREAM_LIMIT, exception.error());
-                                    } catch (Throwable error) {
-                                        errorRef.set(error);
-                                    } finally {
-                                        errorLatch.countDown();
-                                    }
-                                });
+                                errorRef.set(new AssertionFailedError("Shouldn't be called on the first connection"));
                             }
                             ctx.fireUserEventTriggered(evt);
                         }
@@ -638,12 +635,11 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect()
                     .get();
 
-            errorLatch.await();
+            quicChannel.close().sync();
+
             if (errorRef.get() != null) {
                 throw errorRef.get();
             }
-
-            quicChannel.closeFuture().sync();
 
             quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter() {
@@ -656,6 +652,10 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                         // This should succeed as we have the transport params cached as part of
                                         // the session.
                                         assertTrue(f.isSuccess());
+                                        Channel stream = (Channel) f.getNow();
+
+                                        // Let's write some data as part of the client hello.
+                                        stream.writeAndFlush(stream.alloc().buffer().writeInt(1));
                                     } catch (Throwable error) {
                                         errorRef.set(error);
                                     } finally {
@@ -677,6 +677,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             }
 
             quicChannel.closeFuture().sync();
+            readLatch.await();
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.

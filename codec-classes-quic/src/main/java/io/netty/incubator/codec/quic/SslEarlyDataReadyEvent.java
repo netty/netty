@@ -17,10 +17,11 @@ package io.netty.incubator.codec.quic;
 
 
 /**
- * Event which is fired once it's possible to send early data.
+ * Event which is fired once it's possible to send early data on the client-side.
+ * See <a href="https://www.rfc-editor.org/rfc/rfc8446#section-4.2.10">RFC8446 4.2.10 Early Data Indication</a>.
  * <p>
- * Users might call {@link io.netty.channel.Channel#write(Object)} to send early data. The data is automatically
- * flushed as part of the connection establishment.
+ * Users might call {@link io.netty.channel.Channel#writeAndFlush(Object)} or
+ * {@link io.netty.channel.ChannelHandlerContext#writeAndFlush(Object)} to send early data.
  * Please be aware that early data may be replay-able and so may have other security concerns then other data.
  */
 public final class SslEarlyDataReadyEvent {

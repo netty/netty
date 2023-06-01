@@ -148,6 +148,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean recvStreamPending;
     private boolean streamReadable;
     private boolean handshakeCompletionNotified;
+    private boolean earlyDataReadyNotified;
 
     private int reantranceGuard = 0;
     private static final int IN_RECV = 1 << 1;
@@ -1229,7 +1230,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * {@link Channel#flush()} at some point.
      */
     private boolean connectionSend() {
-        if (isConnDestroyed() || (reantranceGuard & IN_CONNECTION_SEND) != 0) {
+        if (isConnDestroyed()) {
+            return false;
+        }
+        if ((reantranceGuard & IN_CONNECTION_SEND) != 0) {
+            // Let's notify about early data if needed.
+            notifyEarlyDataReadyIfNeeded();
             return false;
         }
 
@@ -1251,6 +1257,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // Consume all tasks
                     do {
                         task.run();
+                        // Notify about early data ready if needed.
+                        notifyEarlyDataReadyIfNeeded();
                     } while ((task = connection.sslTask()) != null);
 
                     // Let's try again sending after we did process all tasks.
@@ -1258,6 +1266,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 } else {
                     runAllTaskSend(sslTaskExecutor, task);
                 }
+            } else {
+                // Notify about early data ready if needed.
+                notifyEarlyDataReadyIfNeeded();
             }
 
             if (packetWasWritten) {
@@ -1691,8 +1702,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     void finishConnect() {
         assert !server;
         if (connectionSend()) {
-            pipeline().fireUserEventTriggered(SslEarlyDataReadyEvent.INSTANCE);
             flushParent();
+        }
+    }
+
+    private void notifyEarlyDataReadyIfNeeded() {
+        if (!server && !earlyDataReadyNotified &&
+                !isConnDestroyed() && Quiche.quiche_conn_is_in_early_data(connection.address())) {
+            earlyDataReadyNotified = true;
+            pipeline().fireUserEventTriggered(SslEarlyDataReadyEvent.INSTANCE);
         }
     }
 
