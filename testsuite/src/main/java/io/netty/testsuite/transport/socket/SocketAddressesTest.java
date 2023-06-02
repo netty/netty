@@ -39,14 +39,25 @@ public abstract class SocketAddressesTest extends AbstractSocketTest {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
-                testAddresses(serverBootstrap, bootstrap);
+                testAddresses(serverBootstrap, bootstrap, true);
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testAddressesConnectWithoutLocalAddress(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testAddresses(serverBootstrap, bootstrap, false);
             }
         });
     }
 
     protected abstract void assertAddress(SocketAddress address);
 
-    private void testAddresses(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    private void testAddresses(ServerBootstrap sb, Bootstrap cb, boolean withLocalAddress) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -65,7 +76,11 @@ public abstract class SocketAddressesTest extends AbstractSocketTest {
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
 
-            clientChannel.connect(serverChannel.localAddress(), newSocketAddress()).syncUninterruptibly().channel();
+            if (withLocalAddress) {
+                clientChannel.connect(serverChannel.localAddress(), newSocketAddress()).syncUninterruptibly().channel();
+            } else {
+                clientChannel.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            }
 
             assertAddress(clientChannel.localAddress());
             assertAddress(clientChannel.remoteAddress());
