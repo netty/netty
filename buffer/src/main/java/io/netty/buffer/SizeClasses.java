@@ -207,7 +207,7 @@ abstract class SizeClasses implements SizeClassesMetric {
             remove = yes;
         }
 
-        short isSubpage = log2Size < pageShifts + LOG2_SIZE_CLASS_GROUP? yes : no;
+        short isSubpage = log2Size <= pageShifts? yes : no;
 
         int log2DeltaLookup = log2Size < LOG2_MAX_LOOKUP_SIZE ||
                               log2Size == LOG2_MAX_LOOKUP_SIZE && remove == no

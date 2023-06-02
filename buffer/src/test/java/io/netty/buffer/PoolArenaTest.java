@@ -142,6 +142,46 @@ public class PoolArenaTest {
     }
 
     @Test
+    public void testSmallAllocationUpperBound() {
+        final int pageSize = 1 << 13;
+        final PooledByteBufAllocator allocator = new PooledByteBufAllocator(
+                true,   // preferDirect
+                0,      // nHeapArena
+                1,      // nDirectArena
+                pageSize,   // pageSize
+                11,     // maxOrder
+                0,      // smallCacheSize
+                0,      // normalCacheSize
+                false    // useCacheForAllThreads
+        );
+
+        // create small buffer
+        final ByteBuf b1 = allocator.directBuffer(pageSize);
+        // create normal buffer
+        final ByteBuf b2 = allocator.directBuffer(pageSize << 1);
+
+        assertNotNull(b1);
+        assertNotNull(b2);
+
+        // then release buffer to deallocated memory while threadlocal cache has been disabled
+        // allocations counter value must equals deallocations counter value
+        assertTrue(b1.release());
+        assertTrue(b2.release());
+
+        assertTrue(allocator.directArenas().size() >= 1);
+        final PoolArenaMetric metric = allocator.directArenas().get(0);
+
+        assertEquals(2, metric.numDeallocations());
+        assertEquals(2, metric.numAllocations());
+
+        assertEquals(1, metric.numSmallDeallocations());
+        assertEquals(1, metric.numSmallAllocations());
+
+        assertEquals(1, metric.numNormalDeallocations());
+        assertEquals(1, metric.numNormalAllocations());
+    }
+
+    @Test
     public void testDirectArenaMemoryCopy() {
         ByteBuf src = PooledByteBufAllocator.DEFAULT.directBuffer(512);
         ByteBuf dst = PooledByteBufAllocator.DEFAULT.directBuffer(512);
