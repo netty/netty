@@ -30,7 +30,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
