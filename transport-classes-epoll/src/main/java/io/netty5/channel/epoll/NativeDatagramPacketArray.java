@@ -287,7 +287,7 @@ final class NativeDatagramPacketArray {
             }
 
             // Slice out the buffer with the correct length.
-            Buffer slice = buffer.split(count);
+            Buffer slice = buffer.readSplit(count);
 
             // UDP_GRO
             if (segmentSize > 0) {
