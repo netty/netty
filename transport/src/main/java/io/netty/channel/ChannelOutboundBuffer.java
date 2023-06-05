@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultProgressivePromise;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectPool;
@@ -76,7 +75,13 @@ public final class ChannelOutboundBuffer {
     private final Channel channel;
 
     // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
-    //
+
+    // 1. Treat null as the tailEntry.next, when flushedEntry==unflushedEntry, Indicates that there is no message that needs to be flushed
+    // 2. if flushedEntry!=null and flushedEntry != unflushedEntry(flush behind unflush), then flush state available.
+    // 3. add: if add message and unflushedEntry=null, set unflushedEntry=new entry
+    // 4. flush: set flushedEntry=unflushedEntry and set unflushedEntry=null (null is tail.next, unflushedEntry take one step forward)
+    // 5. remove: flushedEntry step forward one by one.
+
     // The Entry that is the first in the linked-list structure that was flushed
     private Entry flushedEntry;
     // The Entry which is the first unflushed in the linked-list structure
@@ -115,13 +120,13 @@ public final class ChannelOutboundBuffer {
      */
     public void addMessage(Object msg, int size, ChannelPromise promise) {
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
-        if (tailEntry == null) {
-            flushedEntry = null;
-        } else {
-            Entry tail = tailEntry;
-            tail.next = entry;
+
+        if (tailEntry != null) {
+            tailEntry.next = entry;
         }
+
         tailEntry = entry;
+
         if (unflushedEntry == null) {
             unflushedEntry = entry;
         }
@@ -139,26 +144,19 @@ public final class ChannelOutboundBuffer {
         // There is no need to process all entries if there was already a flush before and no new messages
         // where added in the meantime.
         //
-        // See https://github.com/netty/netty/issues/2577
-        Entry entry = unflushedEntry;
-        if (entry != null) {
-            if (flushedEntry == null) {
-                // there is no flushedEntry yet, so start with the entry
-                flushedEntry = entry;
-            }
-            do {
-                flushed ++;
-                if (!entry.promise.setUncancellable()) {
-                    // Was cancelled so make sure we free up memory and notify about the freed bytes
-                    int pending = entry.cancel();
-                    decrementPendingOutboundBytes(pending, false, true);
-                }
-                entry = entry.next;
-            } while (entry != null);
-
-            // All flushed so reset unflushedEntry
-            unflushedEntry = null;
+        if(unflushedEntry == null){
+            return;
         }
+        flushedEntry = unflushedEntry;
+        do {
+            flushed++;
+            if (!unflushedEntry.promise.setUncancellable()) {
+                // Was cancelled so make sure we free up memory and notify about the freed bytes
+                int pending = unflushedEntry.cancel();
+                decrementPendingOutboundBytes(pending, false, true);
+            }
+            unflushedEntry = unflushedEntry.next;
+        } while (unflushedEntry != null);
     }
 
     /**
@@ -216,12 +214,11 @@ public final class ChannelOutboundBuffer {
      * Return the current message to write or {@code null} if nothing was flushed before and so is ready to be written.
      */
     public Object current() {
-        Entry entry = flushedEntry;
-        if (entry == null) {
+        if (!isFlushAvailable()) {
             return null;
         }
 
-        return entry.msg;
+        return flushedEntry.msg;
     }
 
     /**
@@ -229,19 +226,19 @@ public final class ChannelOutboundBuffer {
      * @return {@code 0} if nothing was flushed before for the current message or there is no current message
      */
     public long currentProgress() {
-        Entry entry = flushedEntry;
-        if (entry == null) {
+        if (!isFlushAvailable()) {
             return 0;
         }
-        return entry.progress;
+        return flushedEntry.progress;
     }
 
     /**
      * Notify the {@link ChannelPromise} of the current message about writing progress.
      */
     public void progress(long amount) {
+        assert isFlushAvailable();
+
         Entry e = flushedEntry;
-        assert e != null;
         ChannelPromise p = e.promise;
         long progress = e.progress + amount;
         e.progress = progress;
@@ -265,11 +262,12 @@ public final class ChannelOutboundBuffer {
      * messages are ready to be handled.
      */
     public boolean remove() {
-        Entry e = flushedEntry;
-        if (e == null) {
+        if (!isFlushAvailable()) {
             clearNioBuffers();
             return false;
         }
+
+        Entry e = flushedEntry;
         Object msg = e.msg;
 
         ChannelPromise promise = e.promise;
@@ -300,11 +298,13 @@ public final class ChannelOutboundBuffer {
     }
 
     private boolean remove0(Throwable cause, boolean notifyWritability) {
-        Entry e = flushedEntry;
-        if (e == null) {
+        if (flushedEntry == unflushedEntry) {
             clearNioBuffers();
             return false;
         }
+
+        Entry e = flushedEntry;
+
         Object msg = e.msg;
 
         ChannelPromise promise = e.promise;
@@ -327,16 +327,9 @@ public final class ChannelOutboundBuffer {
     }
 
     private void removeEntry(Entry e) {
-        if (-- flushed == 0) {
-            // processed everything
-            flushedEntry = null;
-            if (e == tailEntry) {
-                tailEntry = null;
-                unflushedEntry = null;
-            }
-        } else {
-            flushedEntry = e.next;
-        }
+        assert e != null && flushedEntry != unflushedEntry;
+        --flushed;
+        flushedEntry = e.next;
     }
 
     /**
@@ -380,6 +373,14 @@ public final class ChannelOutboundBuffer {
             nioBufferCount = 0;
             Arrays.fill(NIO_BUFFERS.get(), 0, count, null);
         }
+    }
+
+    /**
+     *
+     * @return true if flushedEntry != null and flushedEntry is behind unflushedEntry
+     */
+    private boolean isFlushAvailable(){
+        return flushedEntry != unflushedEntry && flushedEntry != null;
     }
 
     /**

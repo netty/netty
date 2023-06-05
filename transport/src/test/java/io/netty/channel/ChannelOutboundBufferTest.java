@@ -24,6 +24,7 @@ import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -36,11 +37,198 @@ import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChannelOutboundBufferTest {
+
+    @Test
+    public void testBufferState() {
+        TestChannel channel = new TestChannel();
+        final ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        final int progressStep = 10;
+        int progress = 0;
+
+        //flush empty buffer
+        buffer.addFlush();
+        assertEquals(0, buffer.size());
+        assertTrue(buffer.isEmpty());
+        assertNull(buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferSize());
+
+        //add
+        ByteBuf b1 = wrappedBuffer(new byte[] { 0 });
+        int r1 = b1.readableBytes();
+        ChannelPromise p1 = channel.newPromise();
+        buffer.addMessage(b1, r1, p1);
+        buffer.nioBuffers();
+
+        assertThrowsExactly(AssertionError.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.progress(progressStep);
+            }
+        });
+
+        assertEquals(0, buffer.size());
+        assertTrue(buffer.isEmpty());
+        assertNull(buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferSize());
+
+        //remove
+        buffer.remove();
+        buffer.nioBuffers();
+        assertThrowsExactly(AssertionError.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.progress(progressStep);
+            }
+        });
+        assertEquals(0, buffer.size());
+        assertTrue(buffer.isEmpty());
+        assertNull(buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferSize());
+
+
+        //add
+        ByteBuf b2 = wrappedBuffer(new byte[] { 0 });
+        int r2 = b2.readableBytes();
+        ChannelPromise p2 = channel.newPromise();
+        buffer.addMessage(b2, r2, p2);
+        buffer.nioBuffers();
+        assertThrowsExactly(AssertionError.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.progress(progressStep);
+            }
+        });
+        assertEquals(0, buffer.size());
+        assertTrue(buffer.isEmpty());
+        assertNull(buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferSize());
+        assertEquals(0, buffer.nioBufferSize());
+
+        //flush
+        buffer.addFlush();
+        buffer.nioBuffers();
+        buffer.progress(progressStep);
+        progress += progressStep;
+        assertEquals(2, buffer.size());
+        assertFalse(buffer.isEmpty());
+        assertEquals(b1, buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(2, buffer.nioBufferCount());
+        assertEquals(2, buffer.nioBufferSize());
+
+        //add
+        ByteBuf b3 = wrappedBuffer(new byte[] { 0 });
+        int r3 = b3.readableBytes();
+        ChannelPromise p3 = channel.newPromise();
+        buffer.addMessage(b3, r3, p3);
+        buffer.nioBuffers();
+        buffer.progress(progressStep);
+        progress += progressStep;
+
+        assertEquals(2, buffer.size());
+        assertFalse(buffer.isEmpty());
+        assertEquals(b1, buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(2, buffer.nioBufferCount());
+        assertEquals(2, buffer.nioBufferSize());
+
+        //remove
+        buffer.remove();
+        buffer.nioBuffers();
+        buffer.progress(progressStep);
+        progress = progressStep;
+
+        assertEquals(1, buffer.size());
+        assertFalse(buffer.isEmpty());
+        assertEquals(b2, buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(1, buffer.nioBufferCount());
+        assertEquals(1, buffer.nioBufferSize());
+
+        //remove
+        buffer.remove();
+        buffer.nioBuffers();
+        assertThrowsExactly(AssertionError.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.progress(progressStep);
+            }
+        });
+
+        assertEquals(0, buffer.size());
+        assertTrue(buffer.isEmpty());
+        assertNull(buffer.current());
+        assertEquals(0, buffer.currentProgress());
+        assertEquals(0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferSize());
+
+        //add
+        ByteBuf b4 = wrappedBuffer(new byte[] { 0 });
+        int r4 = b4.readableBytes();
+        ChannelPromise p4 = channel.newPromise();
+        buffer.addMessage(b4, r4, p4);
+        buffer.nioBuffers();
+
+        assertThrowsExactly(AssertionError.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.progress(progressStep);
+            }
+        });
+
+        assertEquals(0, buffer.size());
+        assertTrue(buffer.isEmpty());
+        assertNull(buffer.current());
+        assertEquals(0, buffer.currentProgress());
+        assertEquals(0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferSize());
+
+        //remove
+        buffer.remove();
+        buffer.nioBuffers();
+        assertThrowsExactly(AssertionError.class, new Executable() {
+            @Override
+            public void execute() {
+                buffer.progress(progressStep);
+            }
+        });
+        assertEquals(0, buffer.size());
+        assertTrue(buffer.isEmpty());
+        assertNull(buffer.current());
+        assertEquals(0, buffer.currentProgress());
+        assertEquals(0, buffer.nioBufferCount());
+        assertEquals(0, buffer.nioBufferSize());
+
+        //flush
+        buffer.addFlush();
+        buffer.nioBuffers();
+        buffer.progress(progressStep);
+        progress = progressStep;
+        buffer.progress(progressStep);
+        progress += progressStep;
+
+        assertEquals(2, buffer.size());
+        assertFalse(buffer.isEmpty());
+        assertEquals(b3, buffer.current());
+        assertEquals(progress, buffer.currentProgress());
+        assertEquals(2, buffer.nioBufferCount());
+        assertEquals(2, buffer.nioBufferSize());
+    }
 
     @Test
     public void testEmptyNioBuffers() {
