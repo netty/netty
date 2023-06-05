@@ -87,7 +87,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (super.doConnect(remoteAddress, localAddress)) {
-            local = (DomainSocketAddress) localAddress;
+            local = localAddress != null ? (DomainSocketAddress) localAddress : socket.localDomainSocketAddress();
             remote = (DomainSocketAddress) remoteAddress;
             return true;
         }
