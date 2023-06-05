@@ -988,10 +988,9 @@ public final class NetUtil {
 
     private static String toAddressString(byte[] bytes, int offset, boolean ipv4Mapped) {
         final int[] words = new int[IPV6_WORD_COUNT];
-        int i;
-        final int end = offset + words.length;
-        for (i = offset; i < end; ++i) {
-            words[i] = ((bytes[i << 1] & 0xff) << 8) | (bytes[(i << 1) + 1] & 0xff);
+        for (int i = 0; i < words.length; ++i) {
+            int idx = (i << 1) + offset;
+            words[i] = ((bytes[idx] & 0xff) << 8) | (bytes[idx + 1] & 0xff);
         }
 
         // Find longest run of 0s, tie goes to first found instance
@@ -999,7 +998,7 @@ public final class NetUtil {
         int currentLength;
         int shortestStart = -1;
         int shortestLength = 0;
-        for (i = 0; i < words.length; ++i) {
+        for (int i = 0; i < words.length; ++i) {
             if (words[i] == 0) {
                 if (currentStart < 0) {
                     currentStart = i;
@@ -1015,7 +1014,7 @@ public final class NetUtil {
         }
         // If the array ends on a streak of zeros, make sure we account for it
         if (currentStart >= 0) {
-            currentLength = i - currentStart;
+            currentLength = words.length - currentStart;
             if (currentLength > shortestLength) {
                 shortestStart = currentStart;
                 shortestLength = currentLength;
@@ -1032,7 +1031,7 @@ public final class NetUtil {
         final StringBuilder b = new StringBuilder(IPV6_MAX_CHAR_COUNT);
         if (shortestEnd < 0) { // Optimization when there is no compressing needed
             b.append(Integer.toHexString(words[0]));
-            for (i = 1; i < words.length; ++i) {
+            for (int i = 1; i < words.length; ++i) {
                 b.append(':');
                 b.append(Integer.toHexString(words[i]));
             }
@@ -1046,7 +1045,7 @@ public final class NetUtil {
                 b.append(Integer.toHexString(words[0]));
                 isIpv4Mapped = false;
             }
-            for (i = 1; i < words.length; ++i) {
+            for (int i = 1; i < words.length; ++i) {
                 if (!inRangeEndExclusive(i, shortestStart, shortestEnd)) {
                     if (!inRangeEndExclusive(i - 1, shortestStart, shortestEnd)) {
                         // If the last index was not part of the shortened sequence
