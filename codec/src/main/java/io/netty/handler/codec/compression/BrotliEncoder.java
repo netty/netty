@@ -30,7 +30,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
@@ -44,23 +43,6 @@ import java.nio.channels.WritableByteChannel;
 public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
     private static final AttributeKey<Writer> ATTR = AttributeKey.valueOf("BrotliEncoderWriter");
-
-    /**
-     * Encoder flush method is package-private, so we have to
-     * use reflection to call that method.
-     */
-    private static final Method FLUSH_METHOD;
-
-    static {
-        Method method;
-        try {
-            method = Encoder.class.getDeclaredMethod("flush");
-            method.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException(e);
-        }
-        FLUSH_METHOD = method;
-    }
 
     private final Encoder.Parameters parameters;
     private final boolean isSharable;
@@ -224,8 +206,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                 // A race condition will not arise because one flush call to encoder will result
                 // in only 1 call at `write(ByteBuffer)`.
                 brotliEncoderChannel.write(msg.nioBuffer());
-                FLUSH_METHOD.invoke(brotliEncoderChannel);
-
+                brotliEncoderChannel.flush();
             } catch (Exception e) {
                 ReferenceCountUtil.release(msg);
                 throw e;
