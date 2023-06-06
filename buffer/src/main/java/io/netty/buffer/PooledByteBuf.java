@@ -37,7 +37,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     protected int offset;
     protected int length;
     int maxLength;
-    PoolThreadCache cache;
+    PoolArenasCache cache;
     ByteBuffer tmpNioBuf;
     private ByteBufAllocator allocator;
 
@@ -48,7 +48,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-              long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+              long handle, int offset, int length, int maxLength, PoolArenasCache cache) {
         init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
     }
 
@@ -57,7 +57,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-                       long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+                       long handle, int offset, int length, int maxLength, PoolArenasCache cache) {
         assert handle >= 0;
         assert chunk != null;
         assert !PoolChunk.isSubpage(handle) || chunk.arena.size2SizeIdx(maxLength) <= chunk.arena.smallMaxSizeIdx:
