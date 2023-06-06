@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -122,7 +123,7 @@ public class SocksCmdRequestTest {
         assertEquals((byte) asciiHost.length(), buffer.readUnsignedByte());
         assertEquals(asciiHost,
             CharBuffer.wrap(buffer.readCharSequence(asciiHost.length(), CharsetUtil.US_ASCII)));
-        assertEquals(port, SocksCommonUtils.readUnsignedShortBE(buffer));
+        assertEquals(port, ByteBufUtil.readUnsignedShortBE(buffer));
 
         buffer.release();
     }
@@ -147,7 +148,7 @@ public class SocksCmdRequestTest {
         assertEquals((byte) asciiHost.length(), buffer.readUnsignedByte());
         assertEquals(asciiHost,
             CharBuffer.wrap(buffer.readCharSequence(asciiHost.length(), CharsetUtil.US_ASCII)));
-        assertEquals(port, SocksCommonUtils.readUnsignedShortBE(buffer));
+        assertEquals(port, ByteBufUtil.readUnsignedShortBE(buffer));
 
         buffer.release();
     }

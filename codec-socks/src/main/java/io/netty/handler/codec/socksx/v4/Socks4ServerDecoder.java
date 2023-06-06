@@ -16,11 +16,11 @@
 package io.netty.handler.codec.socksx.v4;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socks.SocksCommonUtils;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder.State;
 import io.netty.util.CharsetUtil;
@@ -69,8 +69,8 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
                 }
 
                 type = Socks4CommandType.valueOf(in.readByte());
-                dstPort = SocksCommonUtils.readUnsignedShortBE(in);
-                dstAddr = NetUtil.intToIpAddress(SocksCommonUtils.readIntBE(in));
+                dstPort = ByteBufUtil.readUnsignedShortBE(in);
+                dstAddr = NetUtil.intToIpAddress(ByteBufUtil.readIntBE(in));
                 checkpoint(State.READ_USERID);
             }
             case READ_USERID: {

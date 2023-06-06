@@ -17,11 +17,11 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socks.SocksCommonUtils;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder.State;
 import io.netty.util.internal.ObjectUtil;
@@ -69,7 +69,7 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
                 in.skipBytes(1); // Reserved
                 final Socks5AddressType addrType = Socks5AddressType.valueOf(in.readByte());
                 final String addr = addressDecoder.decodeAddress(addrType, in);
-                final int port = SocksCommonUtils.readUnsignedShortBE(in);
+                final int port = ByteBufUtil.readUnsignedShortBE(in);
 
                 out.add(new DefaultSocks5CommandResponse(status, addrType, addr, port));
                 checkpoint(State.SUCCESS);

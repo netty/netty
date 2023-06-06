@@ -16,11 +16,8 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
-
-import java.nio.ByteOrder;
 
 public final class SocksCommonUtils {
     public static final SocksRequest UNKNOWN_SOCKS_REQUEST = new UnknownSocksRequest();
@@ -65,14 +62,4 @@ public final class SocksCommonUtils {
         buffer.skipBytes(length);
         return s;
     }
-
-    public static int readUnsignedShortBE(ByteBuf buf) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.readUnsignedShort() :
-            ByteBufUtil.swapShort((short) buf.readUnsignedShort());
-    }
-
-    public static int readIntBE(ByteBuf buf) {
-      return buf.order() == ByteOrder.BIG_ENDIAN? buf.readInt() :
-          ByteBufUtil.swapInt(buf.readInt());
-  }
 }
