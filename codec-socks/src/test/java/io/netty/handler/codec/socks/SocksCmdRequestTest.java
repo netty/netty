@@ -16,7 +16,6 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -123,7 +122,7 @@ public class SocksCmdRequestTest {
         assertEquals((byte) asciiHost.length(), buffer.readUnsignedByte());
         assertEquals(asciiHost,
             CharBuffer.wrap(buffer.readCharSequence(asciiHost.length(), CharsetUtil.US_ASCII)));
-        assertEquals(port, readUnsignedShortBE(buffer));
+        assertEquals(port, SocksCommonUtils.readUnsignedShortBE(buffer));
 
         buffer.release();
     }
@@ -148,7 +147,7 @@ public class SocksCmdRequestTest {
         assertEquals((byte) asciiHost.length(), buffer.readUnsignedByte());
         assertEquals(asciiHost,
             CharBuffer.wrap(buffer.readCharSequence(asciiHost.length(), CharsetUtil.US_ASCII)));
-        assertEquals(port, readUnsignedShortBE(buffer));
+        assertEquals(port, SocksCommonUtils.readUnsignedShortBE(buffer));
 
         buffer.release();
     }
@@ -169,9 +168,4 @@ public class SocksCmdRequestTest {
             assertTrue(e instanceof IllegalArgumentException);
         }
     }
-
-    public static int readUnsignedShortBE(ByteBuf buf) {
-      return buf.order() == ByteOrder.BIG_ENDIAN? buf.readUnsignedShort() :
-              ByteBufUtil.swapShort((short) buf.readUnsignedShort());
-  }
 }
