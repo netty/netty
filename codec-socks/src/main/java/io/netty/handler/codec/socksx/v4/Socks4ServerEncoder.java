@@ -17,6 +17,7 @@
 package io.netty.handler.codec.socksx.v4;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -38,7 +39,7 @@ public final class Socks4ServerEncoder extends MessageToByteEncoder<Socks4Comman
     protected void encode(ChannelHandlerContext ctx, Socks4CommandResponse msg, ByteBuf out) throws Exception {
         out.writeByte(0);
         out.writeByte(msg.status().byteValue());
-        out.writeShort(msg.dstPort());
+        ByteBufUtil.writeShortBE(out, msg.dstPort());
         out.writeBytes(msg.dstAddr() == null? IPv4_HOSTNAME_ZEROED
                                             : NetUtil.createByteArrayFromIpAddressString(msg.dstAddr()));
     }
