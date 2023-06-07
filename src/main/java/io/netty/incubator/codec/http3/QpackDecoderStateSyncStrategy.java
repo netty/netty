@@ -18,14 +18,14 @@ package io.netty.incubator.codec.http3;
 
 /**
  * A strategy that determines when to send <a
- * href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-2.2.2.3">acknowledgment</a> of new table
+ * href="https://www.rfc-editor.org/rfc/rfc9204.html#name-section-acknowledgment">acknowledgment</a> of new table
  * entries on the QPACK decoder stream.
  */
 public interface QpackDecoderStateSyncStrategy {
 
     /**
      * Callback when an <a
-     * href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-encoded-field-section-prefi">
+     * href="https://www.rfc-editor.org/rfc/rfc9204.html#name-encoded-field-section-prefi">
      * encoded header field section</a> is decoded successfully by the decoder.
      *
      * @param requiredInsertCount for the encoded field section.
@@ -37,7 +37,7 @@ public interface QpackDecoderStateSyncStrategy {
      *
      * @param insertCount for the entry.
      * @return {@code true} if an <a
-     * href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-count-increment">insert count
+     * href="https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-count-increment">insert count
      * increment decoder instruction</a> should be sent.
      */
     boolean entryAdded(int insertCount);

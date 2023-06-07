@@ -97,7 +97,7 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         if ((b & 0b1000_0000) == 0b1000_0000) {
             int readerIndex = in.readerIndex();
             // T == 1 implies static table index.
-            // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-with-name-reference
+            // https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-with-name-reference
             final boolean isStaticTableIndex = QpackUtil.firstByteEquals(in, (byte) 0b1100_0000);
             final int nameIdx = decodePrefixedIntegerAsInt(in, 6);
             if (nameIdx < 0) {
@@ -204,7 +204,7 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof ChannelInputShutdownEvent) {
-            // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+            // See https://www.rfc-editor.org/rfc/rfc9204.html#name-encoder-and-decoder-streams
             Http3CodecUtils.criticalStreamClosed(ctx);
         }
         ctx.fireUserEventTriggered(evt);
@@ -212,7 +212,7 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+        // See https://www.rfc-editor.org/rfc/rfc9204.html#name-encoder-and-decoder-streams
         Http3CodecUtils.criticalStreamClosed(ctx);
         ctx.fireChannelInactive();
     }

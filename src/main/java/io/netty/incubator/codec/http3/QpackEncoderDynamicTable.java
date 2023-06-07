@@ -62,18 +62,19 @@ final class QpackEncoderDynamicTable {
     private final byte hashMask;
 
     /**
-     * Current size of the table (https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-3.2.1)
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-dynamic-table-size">Current size of the table</a>.
      */
     private long size;
 
     /**
-     * Maximum capacity of the table (https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-3.2.3)
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-maximum-dynamic-table-capac">
+     *     Maximum capacity of the table</a>.
      */
     private long capacity = -1;
 
     /*
      * The below indexes follow the suggested heuristics in Section 2.1.1.1 Avoiding Prohibited insertions
-     * https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-2.1.1.1
+     * https://www.rfc-editor.org/rfc/rfc9204.html#name-avoiding-prohibited-inserti
      *
      *                Tail                             Drain       Head
      *                 |                                |           |
@@ -149,7 +150,7 @@ final class QpackEncoderDynamicTable {
 
     /**
      * Callback when a header block which had a {@link #requiredInsertCount()} greater than {@code 0} is
-     * <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-section-acknowledgment">acknowledged</a>
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-section-acknowledgment">acknowledged</a>
      * by the decoder.
      *
      * @param entryIndex For the entry corresponding to the {@link #requiredInsertCount()}.
@@ -164,7 +165,7 @@ final class QpackEncoderDynamicTable {
                 assert e.refCount > 0;
                 e.refCount--;
                 if (e.index > knownReceived.index) {
-                    // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-known-received-count
+                    // https://www.rfc-editor.org/rfc/rfc9204.html#name-known-received-count
                     // If the Required Insert Count of the acknowledged field section is greater than the current Known
                     // Received Count, Known Received Count is updated to that Required Insert Count value.
                     knownReceived = e;
@@ -175,13 +176,13 @@ final class QpackEncoderDynamicTable {
         }
         // We have reached the end of the linked list so the index was invalid and hence the connection should
         // be closed.
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.4
+        // https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4
         throw INVALID_REQUIRED_INSERT_COUNT_INCREMENT;
     }
 
     /**
      * Callback when a decoder <a
-     * href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-count-increment">increments its
+     * href="https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-count-increment">increments its
      * insert count.</a>
      *
      * @param knownReceivedCountIncr Increment count.
@@ -201,7 +202,7 @@ final class QpackEncoderDynamicTable {
         }
         // We have reached the end of the linked list so the index was invalid and hence the connection should be
         // closed.
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.4
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-decoder-instructions
         throw INVALID_KNOW_RECEIVED_COUNT_INCREMENT;
     }
 
@@ -214,7 +215,7 @@ final class QpackEncoderDynamicTable {
     }
 
     int requiredInsertCount(int entryIndex) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-required-insert-count
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count
         // if ReqInsertCount == 0:
         //      EncInsertCount = 0
         // else:
@@ -225,7 +226,7 @@ final class QpackEncoderDynamicTable {
 
     // Visible for tests
     int knownReceivedCount() {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-known-received-count
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-known-received-count
         return requiredInsertCount(knownReceived.index);
     }
 
@@ -239,7 +240,7 @@ final class QpackEncoderDynamicTable {
 
     /**
      * Transforms the passed {@code entryIndex} as a <a
-     * href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-relative-indexing">relative index for
+     * href="https://www.rfc-editor.org/rfc/rfc9204.html#name-relative-indexing">relative index for
      * encoder instructions</a>.
      *
      * @param entryIndex to transform.
@@ -292,7 +293,7 @@ final class QpackEncoderDynamicTable {
      * @param name of the entry for lookups, not verified for the entry at the pased {@code idx}
      * @param value of the entry for lookups, not verified for the entry at the pased {@code idx}
      * @param idx of the entry.
-     * @return <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-required-insert-count">Required
+     * @return <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count">Required
      * insert count</a> if the passed entry has to be referenced in a header block.
      */
     int addReferenceToEntry(CharSequence name, CharSequence value, int idx) {
@@ -412,7 +413,7 @@ final class QpackEncoderDynamicTable {
 
         /**
          * Number of header blocks that refer to this entry as the value for its <a
-         * href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-required-insert-count">
+         * href="https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count">
          * required insert count</a>
          */
         int refCount;

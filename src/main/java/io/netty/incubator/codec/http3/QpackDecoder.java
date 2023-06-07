@@ -94,7 +94,7 @@ final class QpackDecoder {
      * Decode the header block and add these to the {@link BiConsumer}. This method assumes the entire header block is
      * contained in {@code in}. However, this method may not be able to decode the header block if the QPACK dynamic
      * table does not contain all entries required to decode the header block.
-     * See <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-blocked-streams">blocked streams</a>.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-blocked-streams">blocked streams</a>.
      * In such a case, this method will return {@code false} and would invoke {@code whenDecoded} when the stream is
      * unblocked and the header block is completely decoded.
      *
@@ -151,7 +151,7 @@ final class QpackDecoder {
 
     /**
      * Updates dynamic table capacity corresponding to the
-     * <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-set-dynamic-table-capacity">
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-set-dynamic-table-capacity">
      *     encoder instruction.</a>
      *
      * @param capacity New capacity.
@@ -168,7 +168,7 @@ final class QpackDecoder {
 
     /**
      * Inserts a header field with a name reference corresponding to the
-     * <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-with-name-reference">
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-with-name-reference">
      *     encoder instruction.</a>
      *
      *  @param qpackDecoderStream {@link QuicStreamChannel} for the QPACK decoder stream.
@@ -192,7 +192,7 @@ final class QpackDecoder {
 
     /**
      * Inserts a header field with a literal name corresponding to the
-     * <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-with-literal-name">
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-with-literal-name">
      *     encoder instruction.</a>
      *
      * @param qpackDecoderStream {@link QuicStreamChannel} for the QPACK decoder stream.
@@ -208,7 +208,7 @@ final class QpackDecoder {
 
     /**
      * Duplicates a previous entry corresponding to the
-     * <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-with-literal-name">
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-with-literal-name">
      *     encoder instruction.</a>
      *
      * @param qpackDecoderStream {@link QuicStreamChannel} for the QPACK decoder stream.
@@ -223,7 +223,7 @@ final class QpackDecoder {
 
     /**
      * Callback when a bi-directional stream is
-     * <a href="https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-abandonment-of-a-stream"> abandoned</a>
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-abandonment-of-a-stream"> abandoned</a>
      *
      * @param qpackDecoderStream {@link QuicStreamChannel} for the QPACK decoder stream.
      * @param streamId which is abandoned.
@@ -232,7 +232,7 @@ final class QpackDecoder {
         if (maxTableCapacity == 0) {
             return;
         }
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-stream-cancellation
+        // https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.2
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 1 |     Stream ID (6+)    |
@@ -243,7 +243,7 @@ final class QpackDecoder {
     }
 
     private static boolean isIndexed(byte b) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-indexed-field-line
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 1 | T |      Index (6+)       |
@@ -252,7 +252,7 @@ final class QpackDecoder {
     }
 
     private static boolean isLiteralWithNameRef(byte b) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-nam
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-nam
         //  0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 1 | N | T |Name Index (4+)|
@@ -261,7 +261,7 @@ final class QpackDecoder {
     }
 
     private static boolean isLiteral(byte b) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-lit
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-lit
         //  0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 1 | N | H |NameLen(3+)|
@@ -270,7 +270,7 @@ final class QpackDecoder {
     }
 
     private static boolean isIndexedWithPostBase(byte b) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-indexed-field-line-with-pos
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line-with-pos
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 0 | 1 |  Index (4+)   |
@@ -279,7 +279,7 @@ final class QpackDecoder {
     }
 
     private static boolean isLiteralWithPostBaseNameRef(byte b) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-pos
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-pos
         //  0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 0 | 0 | N |NameIdx(3+)|
@@ -289,7 +289,7 @@ final class QpackDecoder {
 
     private void decodeIndexed(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink, int base)
             throws QpackException {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-indexed-field-line
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 1 | T |      Index (6+)       |
@@ -314,7 +314,7 @@ final class QpackDecoder {
 
     private void decodeIndexedWithPostBase(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink, int base)
             throws QpackException {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-indexed-field-line-with-pos
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line-with-pos
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 0 | 1 |  Index (4+)   |
@@ -328,7 +328,7 @@ final class QpackDecoder {
     private void decodeLiteralWithNameRef(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink, int base)
             throws QpackException {
         final CharSequence name;
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-nam
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-nam
         //    0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 1 | N | T |Name Index (4+)|
@@ -357,7 +357,7 @@ final class QpackDecoder {
 
     private void decodeLiteralWithPostBaseNameRef(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink, int base)
             throws QpackException {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-pos
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-nam
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 0 | 0 | N |NameIdx(3+)|
@@ -374,7 +374,7 @@ final class QpackDecoder {
     }
 
     private void decodeLiteral(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink) throws QpackException {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-lit
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-lit
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 1 | N | H |NameLen(3+)|
@@ -407,7 +407,7 @@ final class QpackDecoder {
     int decodeRequiredInsertCount(QpackAttributes qpackAttributes, ByteBuf buf) throws QpackException {
         final long encodedInsertCount = QpackUtil.decodePrefixedInteger(buf, 8);
         assert encodedInsertCount >= 0;
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-required-insert-count
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count
         // FullRange = 2 * MaxEntries
         //   if EncodedInsertCount == 0:
         //      ReqInsertCount = 0
@@ -457,7 +457,7 @@ final class QpackDecoder {
 
     // Visible for testing
     int decodeBase(ByteBuf buf, int requiredInsertCount) throws QpackException {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.5.1
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-encoded-field-section-prefi
         //   0   1   2   3   4   5   6   7
         // +---+---------------------------+
         // | S |      Delta Base (7+)      |
@@ -465,7 +465,7 @@ final class QpackDecoder {
         final boolean s = (buf.getByte(buf.readerIndex()) & 0b1000_0000) == 0b1000_0000;
         final int deltaBase = decodePrefixedIntegerAsInt(buf, 7);
         assert deltaBase >= 0;
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-base
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-base
         //    if S == 0:
         //      Base = ReqInsertCount + DeltaBase
         //   else:
@@ -501,7 +501,7 @@ final class QpackDecoder {
             }
         }
         if (stateSyncStrategy.entryAdded(insertCount)) {
-            // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-count-increment
+            // https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-count-increment
             //   0   1   2   3   4   5   6   7
             // +---+---+---+---+---+---+---+---+
             // | 0 | 0 |     Increment (6+)    |

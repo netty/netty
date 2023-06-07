@@ -84,7 +84,7 @@ final class QpackEncoder {
                 streamTrackers.computeIfAbsent(streamId, __ -> new StreamTracker())
                         .add(maxDynamicTblIdx);
             }
-            // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-encoded-field-section-prefi
+            // https://www.rfc-editor.org/rfc/rfc9204.html#name-encoded-field-section-prefi
             //   0   1   2   3   4   5   6   7
             // +---+---+---+---+---+---+---+---+
             // |   Required Insert Count (8+)  |
@@ -110,7 +110,7 @@ final class QpackEncoder {
             final QuicStreamChannel encoderStream = attributes.encoderStream();
             dynamicTable.maxTableCapacity(maxTableCapacity);
             final ByteBuf tableCapacity = encoderStream.alloc().buffer(8);
-            // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-set-dynamic-table-capacity
+            // https://www.rfc-editor.org/rfc/rfc9204.html#name-set-dynamic-table-capacity
             //  0   1   2   3   4   5   6   7
             // +---+---+---+---+---+---+---+---+
             // | 0 | 0 | 1 |   Capacity (5+)   |
@@ -275,7 +275,7 @@ final class QpackEncoder {
             if (dynamicTable.requiresDuplication(idx, sizeOf(name, value))) {
                 idx = dynamicTable.add(name, value, sizeOf(name, value));
                 assert idx >= 0;
-                // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-duplicate
+                // https://www.rfc-editor.org/rfc/rfc9204.html#section-4.3.4
                 //  0   1   2   3   4   5   6   7
                 // +---+---+---+---+---+---+---+---+
                 // | 0 | 0 | 0 |    Index (5+)     |
@@ -338,7 +338,7 @@ final class QpackEncoder {
                 if (nameIdx >= 0) {
                     // 2 prefixed integers (name index and value length) each requires a maximum of 8 bytes
                     insert = encoderStream.alloc().buffer(value.length() + 16);
-                    // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-with-name-reference
+                    // https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-with-name-reference
                     //    0   1   2   3   4   5   6   7
                     // +---+---+---+---+---+---+---+---+
                     // | 1 | T |    Name Index (6+)    |
@@ -347,7 +347,7 @@ final class QpackEncoder {
                 } else {
                     // 2 prefixed integers (name and value length) each requires a maximum of 8 bytes
                     insert = encoderStream.alloc().buffer(name.length() + value.length() + 16);
-                    // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-with-literal-name
+                    // https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-with-literal-name
                     //     0   1   2   3   4   5   6   7
                     //   +---+---+---+---+---+---+---+---+
                     //   | 0 | 1 | H | Name Length (5+)  |
@@ -379,7 +379,7 @@ final class QpackEncoder {
     }
 
     private void encodeIndexedStaticTable(ByteBuf out, int index) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-indexed-field-line
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 1 | T |      Index (6+)       |
@@ -388,7 +388,7 @@ final class QpackEncoder {
     }
 
     private void encodeIndexedDynamicTable(ByteBuf out, int base, int index) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-indexed-field-line
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 1 | T |      Index (6+)       |
@@ -397,7 +397,7 @@ final class QpackEncoder {
     }
 
     private void encodePostBaseIndexed(ByteBuf out, int base, int index) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-indexed-field-line-with-pos
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line-with-pos
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 0 | 1 |  Index (4+)   |
@@ -406,7 +406,7 @@ final class QpackEncoder {
     }
 
     private void encodeLiteralWithNameRefStaticTable(ByteBuf out, int nameIndex, CharSequence value) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-nam
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-nam
         //     0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
         //   | 0 | 1 | N | T |Name Index (4+)|
@@ -421,7 +421,7 @@ final class QpackEncoder {
     }
 
     private void encodeLiteralWithNameRefDynamicTable(ByteBuf out, int base, int nameIndex, CharSequence value) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-nam
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-nam
         //     0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
         //   | 0 | 1 | N | T |Name Index (4+)|
@@ -436,7 +436,7 @@ final class QpackEncoder {
     }
 
     private void encodeLiteralWithPostBaseNameRef(ByteBuf out, int base, int nameIndex, CharSequence value) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-pos
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-pos
         //    0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
         //   | 0 | 0 | 0 | 0 | N |NameIdx(3+)|
@@ -451,7 +451,7 @@ final class QpackEncoder {
     }
 
     private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value) {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-literal-field-line-with-lit
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-lit
         //   0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
         //   | 0 | 0 | 1 | N | H |NameLen(3+)|

@@ -100,7 +100,7 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
             if (increment == 0) {
                 discard = true;
                 // Zero is not allowed as an increment
-                // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-insert-count-increment
+                // https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-count-increment
                 // Increment is an unsigned integer, so only 0 is the invalid value.
                 // https://www.rfc-editor.org/rfc/rfc7541#section-5
                 connectionError(ctx, QPACK_DECODER_STREAM_ERROR,
@@ -137,7 +137,7 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof ChannelInputShutdownEvent) {
-            // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+            // See https://www.rfc-editor.org/rfc/rfc9204.html#name-encoder-and-decoder-streams
             Http3CodecUtils.criticalStreamClosed(ctx);
         }
         ctx.fireUserEventTriggered(evt);
@@ -145,7 +145,7 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+        // See https://www.rfc-editor.org/rfc/rfc9204.html#name-encoder-and-decoder-streams
         Http3CodecUtils.criticalStreamClosed(ctx);
         ctx.fireChannelInactive();
     }

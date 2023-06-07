@@ -20,9 +20,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 class QpackHeaderField {
 
     /**
-     * Section 3.2.1 Dynamic Table Size
-     * https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-3.2.1
-     *
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-dynamic-table-size">
+     *     Section 3.2.1 Dynamic Table Size</a>.
      * The size of an entry is the sum of its name's length in bytes, its
      * value's length in bytes, and 32.
      */

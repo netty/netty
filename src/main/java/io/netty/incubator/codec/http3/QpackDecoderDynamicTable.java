@@ -63,12 +63,12 @@ final class QpackDecoderDynamicTable {
     }
 
     QpackHeaderField getEntryRelativeEncodedField(int index) throws QpackException {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-relative-indexing
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-relative-indexing
         return getEntry(moduloIndex(index));
     }
 
     QpackHeaderField getEntryRelativeEncoderInstructions(int index) throws QpackException {
-        // https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#name-relative-indexing
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-relative-indexing
         // Name index is the relative index, relative to the last added entry.
         return getEntry(index > tail ? fields.length - index + tail : tail - index);
     }

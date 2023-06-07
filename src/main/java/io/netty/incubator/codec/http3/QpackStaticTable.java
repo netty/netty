@@ -36,8 +36,7 @@ final class QpackStaticTable {
     static final int MASK_NAME_REF = 1 << 10;
 
     /**
-     * Appendix A: Static Table
-     * https://tools.ietf.org/html/draft-ietf-quic-qpack-19#appendix-A
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-static-table-2>Appendix A: Static Table</a>
      */
     private static final List<QpackHeaderField> STATIC_TABLE = Arrays.asList(
         newEmptyHeaderField(":authority"),
