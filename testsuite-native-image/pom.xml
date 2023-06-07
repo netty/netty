@@ -30,6 +30,12 @@
   <profiles>
     <profile>
       <id>native-image-quic-server</id>
+      <activation>
+        <file>
+          <!-- GraalVM Component Updater should exist when using GraalVM-->
+          <exists>${java.home}/bin/gu</exists>
+        </file>
+      </activation>
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
@@ -116,6 +122,12 @@
     </profile>
     <profile>
       <id>native-image-quic-client</id>
+      <activation>
+        <file>
+          <!-- GraalVM Component Updater should exists when using GraalVM-->
+          <exists>${java.home}/bin/gu</exists>
+        </file>
+      </activation>
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>

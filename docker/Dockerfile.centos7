@@ -25,7 +25,8 @@ RUN yum install -y \
  tar \
  unzip \
  wget \
- zip
+ zip \
+ zlib-devel
 
 RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
@@ -63,3 +64,6 @@ RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 # Prepare our own build
 ENV PATH /root/.sdkman/candidates/maven/current:$PATH
 ENV JAVA_HOME /root/.sdkman/candidates/java/current
+
+# when the JDK is GraalVM install native-image
+RUN if [ -O /root/.sdkman/candidates/java/current/bin/gu ]; then /root/.sdkman/candidates/java/current/bin/gu install native-image; else echo "Not GraalVM, skip installation of native-image" ; fi

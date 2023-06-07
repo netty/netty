@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty-codec-quic-centos6:centos-6-1.17
+    build:
+      args:
+        java_version : "22.3.r17-grl"
+
+  build:
+    image: netty-codec-quic-centos6:centos-6-1.17
+
+  build-leak:
+    image: netty-codec-quic-centos6:centos-6-1.17
+
+  build-clean:
+    image: netty-codec-quic-centos6:centos-6-1.17
+
+  shell:
+    image: netty-codec-quic-centos6:centos-6-1.17
