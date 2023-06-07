@@ -208,9 +208,9 @@ public class DnsNameResolver extends InetNameResolver {
                 response.setTruncated(true);
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug(
-                            "{} RECEIVED: UDP truncated packet received, consider adjusting maxPayloadSize for the {}.",
-                            ctx.channel(), StringUtil.simpleClassName(DnsNameResolver.class));
+                    logger.debug("{} RECEIVED: UDP [{}: {}] truncated packet received, consider adjusting "
+                                    + "maxPayloadSize for the {}.", ctx.channel(), response.id(), packet.sender(),
+                            StringUtil.simpleClassName(DnsNameResolver.class));
                 }
             }
             return response;
@@ -1347,14 +1347,12 @@ public class DnsNameResolver extends InetNameResolver {
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final DatagramDnsResponse res = (DatagramDnsResponse) msg;
             final int queryId = res.id();
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("{} RECEIVED: UDP [{}: {}], {}", ch, queryId, res.sender(), res);
-            }
+            logger.debug("{} RECEIVED: UDP [{}: {}], {}", ch, queryId, res.sender(), res);
 
             final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
             if (qCtx == null) {
-                logger.debug("Received a DNS response with an unknown ID: UDP [{}: {}]", ch, queryId);
+                logger.debug("{} Received a DNS response with an unknown ID: UDP [{}: {}]",
+                        ch, queryId, res.sender());
                 res.release();
                 return;
             }
@@ -1374,9 +1372,8 @@ public class DnsNameResolver extends InetNameResolver {
                 @Override
                 public void operationComplete(ChannelFuture future) {
                     if (!future.isSuccess()) {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Unable to fallback to TCP [{}]", queryId, future.cause());
-                        }
+                        logger.debug("{} Unable to fallback to TCP [{}: {}]",
+                                ch, queryId, res.sender(), future.cause());
 
                         // TCP fallback failed, just use the truncated response.
                         qCtx.finish(res);
@@ -1412,8 +1409,10 @@ public class DnsNameResolver extends InetNameResolver {
                             } else {
                                 response.release();
                                 tcpCtx.tryFailure("Received TCP DNS response with unexpected ID", null, false);
-                                logger.debug("Received a DNS response with an unexpected ID: TCP [{}: {}]",
-                                        channel, queryId);
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug("{} Received a DNS response with an unexpected ID: TCP [{}: {}]",
+                                            channel, queryId, channel.remoteAddress());
+                                }
                             }
                         }
 
@@ -1457,9 +1456,9 @@ public class DnsNameResolver extends InetNameResolver {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (cause instanceof CorruptedFrameException) {
-                logger.debug("Unable to decode DNS response: UDP [{}]", ctx.channel(), cause);
+                logger.debug("{} Unable to decode DNS response: UDP", ctx.channel(), cause);
             } else {
-                logger.warn("Unexpected exception: UDP [{}]", ctx.channel(), cause);
+                logger.warn("{} Unexpected exception: UDP", ctx.channel(), cause);
             }
         }
     }
