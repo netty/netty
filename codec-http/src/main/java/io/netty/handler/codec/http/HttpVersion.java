@@ -35,8 +35,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private static final Pattern VERSION_PATTERN =
         Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
 
-    private static final String HTTP_1_0_STRING = "HTTP/1.0";
-    private static final String HTTP_1_1_STRING = "HTTP/1.1";
+    static final String HTTP_1_0_STRING = "HTTP/1.0";
+    static final String HTTP_1_1_STRING = "HTTP/1.1";
 
     /**
      * HTTP/1.0
@@ -58,6 +58,13 @@ public class HttpVersion implements Comparable<HttpVersion> {
      */
     public static HttpVersion valueOf(String text) {
         ObjectUtil.checkNotNull(text, "text");
+
+        // super fast-path
+        if (text == HTTP_1_1_STRING) {
+            return HTTP_1_1;
+        } else if (text == HTTP_1_0_STRING) {
+            return HTTP_1_0;
+        }
 
         text = text.trim();
 

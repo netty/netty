@@ -377,5 +377,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString X_REQUESTED_WITH = AsciiString.cached("x-requested-with");
 
+    /**
+     * {@code "alt-svc"}
+     */
+    public static final AsciiString ALT_SVC = AsciiString.cached("alt-svc");
+
     private HttpHeaderNames() { }
 }

@@ -19,7 +19,14 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.util.internal.StringUtil;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.AbstractList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -128,7 +135,11 @@ public class DefaultDnsCache implements DnsCache {
             return Collections.<DnsCacheEntry>emptyList();
         }
 
-        return resolveCache.get(appendDot(hostname));
+        final List<? extends DnsCacheEntry> entries = resolveCache.get(appendDot(hostname));
+        if (entries == null || entries.isEmpty()) {
+            return entries;
+        }
+        return new DnsCacheEntryList(entries);
     }
 
     @Override
@@ -175,17 +186,32 @@ public class DefaultDnsCache implements DnsCache {
         private final String hostname;
         private final InetAddress address;
         private final Throwable cause;
+        private final int hash;
 
         DefaultDnsCacheEntry(String hostname, InetAddress address) {
             this.hostname = hostname;
             this.address = address;
             cause = null;
+            hash = System.identityHashCode(this);
         }
 
         DefaultDnsCacheEntry(String hostname, Throwable cause) {
             this.hostname = hostname;
             this.cause = cause;
             address = null;
+            hash = System.identityHashCode(this);
+        }
+
+        private DefaultDnsCacheEntry(DefaultDnsCacheEntry entry) {
+            this.hostname = entry.hostname;
+            if (entry.cause == null) {
+                this.address = entry.address;
+                this.cause = null;
+            } else {
+                this.address = null;
+                this.cause = copyThrowable(entry.cause);
+            }
+            this.hash = entry.hash;
         }
 
         @Override
@@ -210,9 +236,111 @@ public class DefaultDnsCache implements DnsCache {
                 return address.toString();
             }
         }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return (obj instanceof DefaultDnsCacheEntry) && ((DefaultDnsCacheEntry) obj).hash == hash;
+        }
+
+        DnsCacheEntry copyIfNeeded() {
+            if (cause == null) {
+                return this;
+            }
+            return new DefaultDnsCacheEntry(this);
+        }
     }
 
     private static String appendDot(String hostname) {
         return StringUtil.endsWith(hostname, '.') ? hostname : hostname + '.';
     }
+
+    private static Throwable copyThrowable(Throwable error) {
+        if (error.getClass() == UnknownHostException.class) {
+            // Fast-path as this is the only type of Throwable that our implementation ever add to the cache.
+            UnknownHostException copy = new UnknownHostException(error.getMessage()) {
+                @Override
+                public Throwable fillInStackTrace() {
+                    // noop.
+                    return this;
+                }
+            };
+            copy.initCause(error.getCause());
+            copy.setStackTrace(error.getStackTrace());
+            return copy;
+        }
+        ObjectOutputStream oos = null;
+        ObjectInputStream ois = null;
+
+        try {
+            // Throwable is Serializable so lets just do a deep copy.
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            oos = new ObjectOutputStream(baos);
+            oos.writeObject(error);
+
+            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+            ois = new ObjectInputStream(bais);
+            return (Throwable) ois.readObject();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException(e);
+        } finally {
+            if (oos != null) {
+                try {
+                    oos.close();
+                } catch (IOException ignore) {
+                    // noop
+                }
+            }
+            if (ois != null) {
+                try {
+                    ois.close();
+                } catch (IOException ignore) {
+                    // noop
+                }
+            }
+        }
+    }
+
+    private static final class DnsCacheEntryList extends AbstractList<DnsCacheEntry> {
+        private final List<? extends DnsCacheEntry> entries;
+
+        DnsCacheEntryList(List<? extends DnsCacheEntry> entries) {
+            this.entries = entries;
+        }
+
+        @Override
+        public DnsCacheEntry get(int index) {
+            DefaultDnsCacheEntry entry = (DefaultDnsCacheEntry) entries.get(index);
+            // As we dont know what exactly the user is doing with the returned exception (for example
+            // using addSuppressed(...) and so hold up a lot of memory until the entry expires) we do
+            // create a copy.
+            return entry.copyIfNeeded();
+        }
+
+        @Override
+        public int size() {
+            return entries.size();
+        }
+
+        @Override
+        public int hashCode() {
+            // Just delegate to super to make checkstyle happy
+            return super.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof DnsCacheEntryList) {
+                // Fast-path.
+                return entries.equals(((DnsCacheEntryList) o).entries);
+            }
+            return super.equals(o);
+        }
+    };
 }

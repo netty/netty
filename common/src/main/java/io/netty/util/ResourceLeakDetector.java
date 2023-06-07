@@ -107,7 +107,7 @@ public class ResourceLeakDetector<T> {
             logger.debug("-Dio.netty.noResourceLeakDetection: {}", disabled);
             logger.warn(
                     "-Dio.netty.noResourceLeakDetection is deprecated. Use '-D{}={}' instead.",
-                    PROP_LEVEL, DEFAULT_LEVEL.name().toLowerCase());
+                    PROP_LEVEL, Level.DISABLED.name().toLowerCase());
         } else {
             disabled = false;
         }
@@ -664,7 +664,7 @@ public class ResourceLeakDetector<T> {
                     // Suppress a warning about out of bounds access
                     // since the length of excludedMethods is always even, see addExclusions()
                     if (exclusions[k].equals(element.getClassName())
-                            && exclusions[k + 1].equals(element.getMethodName())) { // lgtm[java/index-out-of-bounds]
+                            && exclusions[k + 1].equals(element.getMethodName())) {
                         continue out;
                     }
                 }

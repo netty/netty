@@ -709,7 +709,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void canCloseStreamWithVoidPromise() throws Exception {
         handler = newHandler();
-        handler.closeStream(stream, ctx.voidPromise());
+        handler.closeStream(stream, ctx.voidPromise().setSuccess());
         verify(stream, times(1)).close();
         verifyNoMoreInteractions(stream);
     }

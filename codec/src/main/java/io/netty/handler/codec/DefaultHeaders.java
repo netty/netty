@@ -532,7 +532,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
-            add0(h, i, name, fromObject(name, v));
+            V converted = fromObject(name, v);
+            validateValue(valueValidator, name, converted);
+            add0(h, i, name, converted);
         }
 
         return thisT();
@@ -550,7 +552,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (v == null) {
                 break;
             }
-            add0(h, i, name, fromObject(name, v));
+            V converted = fromObject(name, v);
+            validateValue(valueValidator, name, converted);
+            add0(h, i, name, converted);
         }
 
         return thisT();
@@ -1009,7 +1013,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     protected void validateValue(ValueValidator<V> validator, K name, V value) {
-        validator.validate(value);
+        try {
+            validator.validate(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Validation failed for header '" + name + "'", e);
+        }
     }
 
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {

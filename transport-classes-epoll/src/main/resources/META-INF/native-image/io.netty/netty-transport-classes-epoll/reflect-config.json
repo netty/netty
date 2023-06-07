@@ -1,0 +1,37 @@
+[
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.epoll.Native"
+    },
+    "name":"io.netty.channel.epoll.EpollServerSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.epoll.Native"
+    },
+    "name":"io.netty.channel.epoll.EpollDomainSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.epoll.Native"
+    },
+    "name":"io.netty.channel.epoll.EpollServerDomainSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.epoll.Native"
+    },
+    "name":"io.netty.channel.epoll.EpollDatagramChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.epoll.Native"
+    },
+    "name": "io.netty.util.internal.NativeLibraryUtil",
+    "allDeclaredMethods": true
+  }
+]

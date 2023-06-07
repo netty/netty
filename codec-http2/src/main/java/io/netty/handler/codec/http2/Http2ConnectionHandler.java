@@ -625,15 +625,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void closeStream(final Http2Stream stream, ChannelFuture future) {
-        stream.close();
-
         if (future.isDone()) {
-            checkCloseConnection(future);
+            doCloseStream(stream, future);
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    checkCloseConnection(future);
+                public void operationComplete(ChannelFuture future) {
+                    doCloseStream(stream, future);
                 }
             });
         }
@@ -917,6 +915,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (!future.isSuccess()) {
             onConnectionError(ctx, true, future.cause(), null);
         }
+    }
+
+    private void doCloseStream(final Http2Stream stream, ChannelFuture future) {
+        stream.close();
+        checkCloseConnection(future);
     }
 
     /**

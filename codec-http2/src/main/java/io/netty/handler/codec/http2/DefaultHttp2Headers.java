@@ -175,6 +175,13 @@ public class DefaultHttp2Headers
     protected void validateValue(ValueValidator<CharSequence> validator, CharSequence name, CharSequence value) {
         // This method has a noop override for backward compatibility, see https://github.com/netty/netty/pull/12975
         super.validateValue(validator, name, value);
+        // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+        // pseudo headers must not be empty
+        if (nameValidator() == HTTP2_NAME_VALIDATOR && (value == null || value.length() == 0) &&
+                hasPseudoHeaderFormat(name)) {
+            PlatformDependent.throwException(connectionError(
+                    PROTOCOL_ERROR, "HTTP/2 pseudo-header '%s' must not be empty.", name));
+        }
     }
 
     @Override

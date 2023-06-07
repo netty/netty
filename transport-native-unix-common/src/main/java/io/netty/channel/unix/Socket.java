@@ -414,11 +414,21 @@ public class Socket extends FileDescriptor {
         return addr == null ? null : address(addr, 0, addr.length);
     }
 
+    public final DomainSocketAddress remoteDomainSocketAddress() {
+        byte[] addr = remoteDomainSocketAddress(fd);
+        return addr == null ? null : new DomainSocketAddress(new String(addr));
+    }
+
     public final InetSocketAddress localAddress() {
         byte[] addr = localAddress(fd);
         // addr may be null if getpeername failed.
         // See https://github.com/netty/netty/issues/3328
         return addr == null ? null : address(addr, 0, addr.length);
+    }
+
+    public final DomainSocketAddress localDomainSocketAddress() {
+        byte[] addr = localDomainSocketAddress(fd);
+        return addr == null ? null : new DomainSocketAddress(new String(addr));
     }
 
     public final int getReceiveBufferSize() throws IOException {
@@ -633,7 +643,9 @@ public class Socket extends FileDescriptor {
     private static native int accept(int fd, byte[] addr);
 
     private static native byte[] remoteAddress(int fd);
+    private static native byte[] remoteDomainSocketAddress(int fd);
     private static native byte[] localAddress(int fd);
+    private static native byte[] localDomainSocketAddress(int fd);
 
     private static native int send(int fd, ByteBuffer buf, int pos, int limit);
     private static native int sendAddress(int fd, long address, int pos, int limit);

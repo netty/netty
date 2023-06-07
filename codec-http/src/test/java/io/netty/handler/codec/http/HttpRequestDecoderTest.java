@@ -82,8 +82,21 @@ public class HttpRequestDecoderTest {
         testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS);
     }
 
+    @Test
+    public void testDecodeWholeRequestAtOnceMixedDelimitersWithIntegerOverflowOnMaxBodySize() {
+        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE);
+        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE - 1);
+    }
+
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        testDecodeWholeRequestAtOnce(content, HttpRequestDecoder.DEFAULT_MAX_HEADER_SIZE);
+    }
+
+    private static void testDecodeWholeRequestAtOnce(byte[] content, int maxHeaderSize) {
+        EmbeddedChannel channel =
+                new EmbeddedChannel(new HttpRequestDecoder(HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
+                                                           maxHeaderSize,
+                                                           HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE));
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(content)));
         HttpRequest req = channel.readInbound();
         assertNotNull(req);
@@ -307,7 +320,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
+        assertThat(request.decoderResult().cause(), instanceOf(TooLongHttpLineException.class));
         assertFalse(channel.finish());
     }
 
@@ -544,6 +557,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertFalse(request.decoderResult().isFailure());
+        assertTrue(request.headers().names().contains("Transfer-Encoding"));
         assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
         assertFalse(request.headers().contains("Content-Length"));
         LastHttpContent c = channel.readInbound();

@@ -15,6 +15,16 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import javax.net.ssl.SSLException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link Http2MultiplexHandler}.
@@ -39,5 +49,59 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
     @Override
     protected boolean ignoreWindowUpdateFrames() {
         return true;
+    }
+
+    @Test
+    public void sslExceptionTriggersChildChannelException() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+        final RuntimeException testExc = new RuntimeException(new SSLException("foo"));
+        channel.parent().pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                if (cause != testExc) {
+                    super.exceptionCaught(ctx, cause);
+                }
+            }
+        });
+        channel.parent().pipeline().fireExceptionCaught(testExc);
+
+        assertTrue(channel.isActive());
+        RuntimeException exc = assertThrows(RuntimeException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(testExc, exc);
+    }
+
+    @Test
+    public void customExceptionForwarding() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+        final RuntimeException testExc = new RuntimeException("xyz");
+        channel.parent().pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                if (cause != testExc) {
+                    super.exceptionCaught(ctx, cause);
+                } else {
+                    ctx.pipeline().fireExceptionCaught(new Http2MultiplexActiveStreamsException(cause));
+                }
+            }
+        });
+        channel.parent().pipeline().fireExceptionCaught(testExc);
+
+        assertTrue(channel.isActive());
+        RuntimeException exc = assertThrows(RuntimeException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertEquals(testExc, exc);
     }
 }

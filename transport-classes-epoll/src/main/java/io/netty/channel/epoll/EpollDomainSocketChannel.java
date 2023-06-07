@@ -41,7 +41,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     }
 
     EpollDomainSocketChannel(Channel parent, FileDescriptor fd) {
-        super(parent, new LinuxSocket(fd.intValue()));
+        this(parent, new LinuxSocket(fd.intValue()));
     }
 
     public EpollDomainSocketChannel(int fd) {
@@ -50,6 +50,8 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
 
     public EpollDomainSocketChannel(Channel parent, LinuxSocket fd) {
         super(parent, fd);
+        local = fd.localDomainSocketAddress();
+        remote = fd.remoteDomainSocketAddress();
     }
 
     public EpollDomainSocketChannel(int fd, boolean active) {
@@ -85,7 +87,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (super.doConnect(remoteAddress, localAddress)) {
-            local = (DomainSocketAddress) localAddress;
+            local = localAddress != null ? (DomainSocketAddress) localAddress : socket.localDomainSocketAddress();
             remote = (DomainSocketAddress) remoteAddress;
             return true;
         }

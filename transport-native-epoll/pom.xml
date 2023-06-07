@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.86.Final-SNAPSHOT</version>
+    <version>4.1.94.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-epoll</artifactId>
 
@@ -145,7 +145,7 @@
 
           <plugin>
             <groupId>org.fusesource.hawtjni</groupId>
-            <artifactId>maven-hawtjni-plugin</artifactId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
             <executions>
               <execution>
                 <id>build-native-lib</id>
@@ -296,7 +296,7 @@
 
           <plugin>
             <groupId>org.fusesource.hawtjni</groupId>
-            <artifactId>maven-hawtjni-plugin</artifactId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
             <executions>
               <execution>
                 <id>build-native-lib</id>
@@ -418,6 +418,12 @@
       <groupId>io.github.artsok</groupId>
       <artifactId>rerunner-jupiter</artifactId>
       <scope>test</scope>
+    </dependency>
+    <!-- For SelfSignedCertificate usage on JDK20+ -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 

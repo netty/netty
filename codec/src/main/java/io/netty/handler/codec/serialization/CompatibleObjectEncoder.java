@@ -82,7 +82,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
     protected void encode(ChannelHandlerContext ctx, Serializable msg, ByteBuf out) throws Exception {
         // Suppress a warning about resource leak since oss is closed below
         ObjectOutputStream oos = newObjectOutputStream(
-                new ByteBufOutputStream(out));  // lgtm[java/output-resource-leak]
+                new ByteBufOutputStream(out));
         try {
             if (resetInterval != 0) {
                 // Resetting will prevent OOM on the receiving side.

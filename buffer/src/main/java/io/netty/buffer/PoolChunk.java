@@ -259,13 +259,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private void removeAvailRun(long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(runPages(handle));
-        LongPriorityQueue queue = runsAvail[pageIdxFloor];
-        removeAvailRun(queue, handle);
+        runsAvail[pageIdxFloor].remove(handle);
+        removeAvailRun0(handle);
     }
 
-    private void removeAvailRun(LongPriorityQueue queue, long handle) {
-        queue.remove(handle);
-
+    private void removeAvailRun0(long handle) {
         int runOffset = runOffset(handle);
         int pages = runPages(handle);
         //remove first page of run
@@ -287,11 +285,15 @@ final class PoolChunk<T> implements PoolChunkMetric {
     @Override
     public int usage() {
         final int freeBytes;
-        arena.lock();
-        try {
+        if (this.unpooled) {
             freeBytes = this.freeBytes;
-        } finally {
-            arena.unlock();
+        } else {
+            runsAvailLock.lock();
+            try {
+                freeBytes = this.freeBytes;
+            } finally {
+                runsAvailLock.unlock();
+            }
         }
         return usage(freeBytes);
     }
@@ -308,7 +310,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return 100 - freePercentage;
     }
 
-    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache cache) {
+    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolArenasCache cache) {
         final long handle;
         if (sizeIdx <= arena.smallMaxSizeIdx) {
             // small
@@ -351,7 +353,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
             assert handle != LongPriorityQueue.NO_VALUE && !isUsed(handle) : "invalid handle: " + handle;
 
-            removeAvailRun(queue, handle);
+            removeAvailRun0(handle);
 
             if (handle != -1) {
                 handle = splitLargeRun(handle, pages);
@@ -580,7 +582,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void initBuf(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
-                 PoolThreadCache threadCache) {
+                 PoolArenasCache threadCache) {
         if (isSubpage(handle)) {
             initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
         } else {
@@ -591,7 +593,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void initBufWithSubpage(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
-                            PoolThreadCache threadCache) {
+                            PoolArenasCache threadCache) {
         int runOffset = runOffset(handle);
         int bitmapIdx = bitmapIdx(handle);
 
@@ -620,11 +622,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     @Override
     public int freeBytes() {
-        arena.lock();
+        if (this.unpooled) {
+            return freeBytes;
+        }
+        runsAvailLock.lock();
         try {
             return freeBytes;
         } finally {
-            arena.unlock();
+            runsAvailLock.unlock();
         }
     }
 
@@ -635,11 +640,15 @@ final class PoolChunk<T> implements PoolChunkMetric {
     @Override
     public String toString() {
         final int freeBytes;
-        arena.lock();
-        try {
+        if (this.unpooled) {
             freeBytes = this.freeBytes;
-        } finally {
-            arena.unlock();
+        } else {
+            runsAvailLock.lock();
+            try {
+                freeBytes = this.freeBytes;
+            } finally {
+                runsAvailLock.unlock();
+            }
         }
 
         return new StringBuilder()

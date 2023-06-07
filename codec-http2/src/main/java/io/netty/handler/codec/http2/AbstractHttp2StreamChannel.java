@@ -35,7 +35,10 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
@@ -52,6 +55,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 
 abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements Http2StreamChannel {
@@ -66,6 +70,15 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
     };
 
+    static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR =
+            new UserEventStreamVisitor(ChannelInputShutdownReadComplete.INSTANCE);
+
+    static final Http2FrameStreamVisitor CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR =
+            new UserEventStreamVisitor(ChannelOutputShutdownEvent.INSTANCE);
+
+    static final Http2FrameStreamVisitor SSL_CLOSE_COMPLETION_EVENT_VISITOR =
+            new UserEventStreamVisitor(SslCloseCompletionEvent.SUCCESS);
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractHttp2StreamChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -75,6 +88,26 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
      * Primarily is non-zero.
      */
     private static final int MIN_HTTP2_FRAME_SIZE = 9;
+
+    /**
+     * {@link Http2FrameStreamVisitor} that fires the user event for every active stream pipeline.
+     */
+    private static final class UserEventStreamVisitor implements Http2FrameStreamVisitor {
+
+        private final Object event;
+
+        UserEventStreamVisitor(Object event) {
+            this.event = checkNotNull(event, "event");
+        }
+
+        @Override
+        public boolean visit(Http2FrameStream stream) {
+            final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                    ((DefaultHttp2FrameStream) stream).attachment;
+            childChannel.pipeline().fireUserEventTriggered(event);
+            return true;
+        }
+    }
 
     /**
      * Returns the flow-control size for DATA frames, and {@value MIN_HTTP2_FRAME_SIZE} for all other frames.
@@ -361,26 +394,22 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     @Override
     public long bytesBeforeUnwritable() {
-        long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize;
+        // +1 because writability doesn't change until the threshold is crossed (not equal to).
+        long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize + 1;
         // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check
         // writability. Note that totalPendingSize and isWritable() use different volatile variables that are not
         // synchronized together. totalPendingSize will be updated before isWritable().
-        if (bytes > 0) {
-            return isWritable() ? bytes : 0;
-        }
-        return 0;
+        return bytes > 0 && isWritable() ? bytes : 0;
     }
 
     @Override
     public long bytesBeforeWritable() {
-        long bytes = totalPendingSize - config().getWriteBufferLowWaterMark();
+        // +1 because writability doesn't change until the threshold is crossed (not equal to).
+        long bytes = totalPendingSize - config().getWriteBufferLowWaterMark() + 1;
         // If bytes is negative we know we are writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().
-        if (bytes > 0) {
-            return isWritable() ? 0 : bytes;
-        }
-        return 0;
+        return bytes <= 0 || isWritable() ? 0 : bytes;
     }
 
     @Override
@@ -576,6 +605,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false);
     }
 
+    final void closeWithError(Http2Error error) {
+        assert eventLoop().inEventLoop();
+        unsafe.close(unsafe.voidPromise(), error);
+    }
+
     private final class Http2ChannelUnsafe implements Unsafe {
         private final VoidChannelPromise unsafeVoidPromise =
                 new VoidChannelPromise(AbstractHttp2StreamChannel.this, false);
@@ -648,6 +682,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         @Override
         public void close(final ChannelPromise promise) {
+            close(promise, Http2Error.CANCEL);
+        }
+
+        void close(final ChannelPromise promise, Http2Error error) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -678,7 +716,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // Only ever send a reset frame if the connection is still alive and if the stream was created before
             // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
             if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
-                Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
+                Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
                 write(resetFrame, unsafe().voidPromise());
                 flush();
             }

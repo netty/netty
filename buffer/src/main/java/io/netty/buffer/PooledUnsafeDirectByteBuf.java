@@ -49,7 +49,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     void init(PoolChunk<ByteBuffer> chunk, ByteBuffer nioBuffer,
-              long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+              long handle, int offset, int length, int maxLength, PoolArenasCache cache) {
         super.init(chunk, nioBuffer, handle, offset, length, maxLength, cache);
         initMemoryAddress();
     }

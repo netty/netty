@@ -25,20 +25,21 @@ import java.nio.charset.Charset;
 public class MixedFileUpload extends AbstractMixedHttpData<FileUpload> implements FileUpload {
 
     public MixedFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size,
-            long limitSize) {
+                           String contentTransferEncoding, Charset charset, long size,
+                           long limitSize) {
         this(name, filename, contentType, contentTransferEncoding,
-                charset, size, limitSize, DiskFileUpload.baseDirectory, DiskFileUpload.deleteOnExitTemporaryFile);
+             charset, size, limitSize, DiskFileUpload.baseDirectory, DiskFileUpload.deleteOnExitTemporaryFile);
     }
 
     public MixedFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size,
-            long limitSize, String baseDir, boolean deleteOnExit) {
+                           String contentTransferEncoding, Charset charset, long size,
+                           long limitSize, String baseDir, boolean deleteOnExit) {
         super(limitSize, baseDir, deleteOnExit,
-                size > limitSize ?
-                        new DiskFileUpload(name, filename, contentType, contentTransferEncoding, charset, size) :
-                        new MemoryFileUpload(name, filename, contentType, contentTransferEncoding, charset, size)
-                );
+              size > limitSize?
+                      new DiskFileUpload(name, filename, contentType, contentTransferEncoding, charset, size, baseDir,
+                                         deleteOnExit) :
+                      new MemoryFileUpload(name, filename, contentType, contentTransferEncoding, charset, size)
+        );
     }
 
     @Override

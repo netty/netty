@@ -253,10 +253,22 @@ public final class StringUtil {
      * given, or {@code -1} if the character is invalid.
      */
     public static int decodeHexNibble(final char c) {
-        assert HEX2B.length == (Character.MAX_VALUE + 1);
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
         return HEX2B[c];
+    }
+
+    /**
+     * Helper to decode half of a hexadecimal number from a string.
+     * @param b The ASCII character of the hexadecimal number to decode.
+     * Must be in the range {@code [0-9a-fA-F]}.
+     * @return The hexadecimal value represented in the ASCII character
+     * given, or {@code -1} if the character is invalid.
+     */
+    public static int decodeHexNibble(final byte b) {
+        // Character.digit() is not used here, as it addresses a larger
+        // set of characters (both ASCII and full-width latin letters).
+        return HEX2B[b];
     }
 
     /**

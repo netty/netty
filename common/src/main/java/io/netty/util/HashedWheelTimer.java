@@ -116,7 +116,6 @@ public class HashedWheelTimer implements Timer {
     private final AtomicLong pendingTimeouts = new AtomicLong(0);
     private final long maxPendingTimeouts;
     private final Executor taskExecutor;
-    private long currRound;
 
     private volatile long startTime;
 
@@ -497,14 +496,11 @@ public class HashedWheelTimer implements Timer {
                 final long deadline = waitForNextTick();
                 if (deadline > 0) {
                     int idx = (int) (tick & mask);
-                    if (idx == 0 && tick > 0) {
-                        currRound ++;
-                    }
                     processCancelledTasks();
                     HashedWheelBucket bucket =
                             wheel[idx];
                     transferTimeoutsToBuckets();
-                    bucket.expireTimeouts(deadline, currRound);
+                    bucket.expireTimeouts(deadline);
                     tick++;
                 }
             } while (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_STARTED);
@@ -540,7 +536,7 @@ public class HashedWheelTimer implements Timer {
                 }
 
                 long calculated = timeout.deadline / tickDuration;
-                timeout.execRound = calculated / wheel.length;
+                timeout.remainingRounds = (calculated - tick) / wheel.length;
 
                 final long ticks = Math.max(calculated, tick); // Ensure we don't schedule for past.
                 int stopIndex = (int) (ticks & mask);
@@ -630,9 +626,9 @@ public class HashedWheelTimer implements Timer {
         @SuppressWarnings({"unused", "FieldMayBeFinal", "RedundantFieldInitialization" })
         private volatile int state = ST_INIT;
 
-        // execRound will be calculated and set by Worker.transferTimeoutsToBuckets() before the
+        // remainingRounds will be calculated and set by Worker.transferTimeoutsToBuckets() before the
         // HashedWheelTimeout will be added to the correct HashedWheelBucket.
-        long execRound;
+        long remainingRounds;
 
         // This will be used to chain timeouts in HashedWheelTimerBucket via a double-linked-list.
         // As only the workerThread will act on it there is no need for synchronization / volatile.
@@ -782,13 +778,13 @@ public class HashedWheelTimer implements Timer {
         /**
          * Expire all {@link HashedWheelTimeout}s for the given {@code deadline}.
          */
-        public void expireTimeouts(long deadline, long currRound) {
+        public void expireTimeouts(long deadline) {
             HashedWheelTimeout timeout = head;
 
             // process all timeouts
             while (timeout != null) {
                 HashedWheelTimeout next = timeout.next;
-                if (timeout.execRound <= currRound) {
+                if (timeout.remainingRounds <= 0) {
                     next = remove(timeout);
                     if (timeout.deadline <= deadline) {
                         timeout.expire();
@@ -800,7 +796,7 @@ public class HashedWheelTimer implements Timer {
                 } else if (timeout.isCancelled()) {
                     next = remove(timeout);
                 } else {
-                    break;
+                    timeout.remainingRounds --;
                 }
                 timeout = next;
             }

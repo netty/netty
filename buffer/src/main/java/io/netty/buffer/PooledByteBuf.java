@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final Handle<PooledByteBuf<T>> recyclerHandle;
+    private final EnhancedHandle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -36,18 +37,18 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     protected int offset;
     protected int length;
     int maxLength;
-    PoolThreadCache cache;
+    PoolArenasCache cache;
     ByteBuffer tmpNioBuf;
     private ByteBufAllocator allocator;
 
     @SuppressWarnings("unchecked")
     protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
+        this.recyclerHandle = (EnhancedHandle<PooledByteBuf<T>>) recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-              long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+              long handle, int offset, int length, int maxLength, PoolArenasCache cache) {
         init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
     }
 
@@ -56,7 +57,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-                       long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+                       long handle, int offset, int length, int maxLength, PoolArenasCache cache) {
         assert handle >= 0;
         assert chunk != null;
         assert !PoolChunk.isSubpage(handle) || chunk.arena.size2SizeIdx(maxLength) <= chunk.arena.smallMaxSizeIdx:
@@ -177,12 +178,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             tmpNioBuf = null;
             chunk = null;
             cache = null;
-            recycle();
+            this.recyclerHandle.unguardedRecycle(this);
         }
-    }
-
-    private void recycle() {
-        recyclerHandle.recycle(this);
     }
 
     protected final int idx(int index) {

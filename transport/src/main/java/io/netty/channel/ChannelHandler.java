@@ -89,7 +89,7 @@ import java.lang.annotation.Target;
  * </pre>
  * Because the handler instance has a state variable which is dedicated to
  * one connection, you have to create a new handler instance for each new
- * channel to avoid a race condition where a unauthenticated client can get
+ * channel to avoid a race condition where an unauthenticated client can get
  * the confidential information:
  * <pre>
  * // Create a new handler instance per channel.

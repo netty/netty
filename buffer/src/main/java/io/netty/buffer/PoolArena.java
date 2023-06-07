@@ -31,7 +31,7 @@ import static io.netty.buffer.PoolChunk.isSubpage;
 import static java.lang.Math.max;
 
 abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
-    static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
+    private static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
     enum SizeClass {
         Small,
@@ -124,13 +124,13 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
     abstract boolean isDirect();
 
-    PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
+    PooledByteBuf<T> allocate(PoolArenasCache cache, int reqCapacity, int maxCapacity) {
         PooledByteBuf<T> buf = newByteBuf(maxCapacity);
         allocate(cache, buf, reqCapacity);
         return buf;
     }
 
-    private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
+    private void allocate(PoolArenasCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
         final int sizeIdx = size2SizeIdx(reqCapacity);
 
         if (sizeIdx <= smallMaxSizeIdx) {
@@ -145,7 +145,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
     }
 
-    private void tcacheAllocateSmall(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity,
+    private void tcacheAllocateSmall(PoolArenasCache cache, PooledByteBuf<T> buf, final int reqCapacity,
                                      final int sizeIdx) {
 
         if (cache.allocateSmall(this, buf, reqCapacity, sizeIdx)) {
@@ -186,7 +186,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         incSmallAllocation();
     }
 
-    private void tcacheAllocateNormal(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity,
+    private void tcacheAllocateNormal(PoolArenasCache cache, PooledByteBuf<T> buf, final int reqCapacity,
                                       final int sizeIdx) {
         if (cache.allocateNormal(this, buf, reqCapacity, sizeIdx)) {
             // was able to allocate out of the cache so move on
@@ -201,7 +201,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         }
     }
 
-    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache threadCache) {
+    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolArenasCache threadCache) {
         assert lock.isHeldByCurrentThread();
         if (q050.allocate(buf, reqCapacity, sizeIdx, threadCache) ||
             q025.allocate(buf, reqCapacity, sizeIdx, threadCache) ||
@@ -229,7 +229,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         allocationsHuge.increment();
     }
 
-    void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolThreadCache cache) {
+    void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolArenasCache cache) {
         if (chunk.unpooled) {
             int size = chunk.chunkSize();
             destroyChunk(chunk);
@@ -567,7 +567,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     private static void appendPoolSubPages(StringBuilder buf, PoolSubpage<?>[] subpages) {
         for (int i = 0; i < subpages.length; i ++) {
             PoolSubpage<?> head = subpages[i];
-            if (head.next == head) {
+            if (head.next == head || head.next == null) {
                 continue;
             }
 
@@ -575,7 +575,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
                     .append(i)
                     .append(": ");
             PoolSubpage<?> s = head.next;
-            for (;;) {
+            while (s != null) {
                 buf.append(s);
                 s = s.next;
                 if (s == head) {

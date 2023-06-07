@@ -33,6 +33,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
@@ -861,6 +863,52 @@ public class HpackDecoderTest {
         } finally {
             in1.release();
             in2.release();
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {":method,''", ":scheme,''", ":authority,''", ":path,''"})
+    public void testPseudoHeaderEmptyValidationEnabled(String name, String value) throws Exception {
+        final ByteBuf in = Unpooled.buffer(200);
+        try {
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = new InOrderHttp2Headers();
+            toEncode.add(name, value);
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            final Http2Headers decoded = new DefaultHttp2Headers();
+
+            Http2Exception.StreamException e = assertThrows(Http2Exception.StreamException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    hpackDecoder.decode(3, in, decoded, true);
+                }
+            });
+            assertThat(e.streamId(), is(3));
+            assertThat(e.error(), is(PROTOCOL_ERROR));
+        } finally {
+            in.release();
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {":method,''", ":scheme,''", ":authority,''", ":path,''"})
+    public void testPseudoHeaderEmptyValidationDisabled(String name, String value) throws Exception {
+        final ByteBuf in = Unpooled.buffer(200);
+        try {
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = new InOrderHttp2Headers();
+            toEncode.add(name, value);
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            final Http2Headers decoded = new DefaultHttp2Headers(false);
+            hpackDecoder.decode(3, in, decoded, true);
+
+            assertSame(AsciiString.EMPTY_STRING, decoded.get(name));
+        } finally {
+            in.release();
         }
     }
 }

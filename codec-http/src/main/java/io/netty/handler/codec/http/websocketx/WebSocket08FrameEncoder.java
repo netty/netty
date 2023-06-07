@@ -61,7 +61,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 
@@ -186,8 +185,10 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     int end = data.writerIndex();
 
                     if (srcOrder == dstOrder) {
-                        // Use the optimized path only when byte orders match
-                        long longMask = mask | (long) mask << 32;
+                        // Use the optimized path only when byte orders match.
+                        // Avoid sign extension on widening primitive conversion
+                        long longMask = (long) mask & 0xFFFFFFFFL;
+                        longMask |= longMask << 32;
 
                         // If the byte order of our buffers it little endian we have to bring our mask
                         // into the same format, because getInt() and writeInt() will use a reversed byte order
@@ -207,7 +208,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     int maskOffset = 0;
                     for (; i < end; i++) {
                         byte byteData = data.getByte(i);
-                        buf.writeByte(byteData ^ byteAtIndex(mask, maskOffset++ & 3));
+                        buf.writeByte(byteData ^ WebSocketUtil.byteAtIndex(mask, maskOffset++ & 3));
                     }
                 }
                 out.add(buf);
@@ -227,9 +228,5 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 buf.release();
             }
         }
-    }
-
-    private static int byteAtIndex(int mask, int index) {
-        return (mask >> 8 * (3 - index)) & 0xFF;
     }
 }

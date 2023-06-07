@@ -130,15 +130,15 @@ public final class Socks5ProxyHandler extends ProxyHandler {
         if (response instanceof Socks5InitialResponse) {
             Socks5InitialResponse res = (Socks5InitialResponse) response;
             Socks5AuthMethod authMethod = socksAuthMethod();
-
-            if (res.authMethod() != Socks5AuthMethod.NO_AUTH && res.authMethod() != authMethod) {
+            Socks5AuthMethod resAuthMethod = res.authMethod();
+            if (resAuthMethod != Socks5AuthMethod.NO_AUTH && resAuthMethod != authMethod) {
                 // Server did not allow unauthenticated access nor accept the requested authentication scheme.
                 throw new ProxyConnectException(exceptionMessage("unexpected authMethod: " + res.authMethod()));
             }
 
-            if (authMethod == Socks5AuthMethod.NO_AUTH) {
+            if (resAuthMethod == Socks5AuthMethod.NO_AUTH) {
                 sendConnectCommand(ctx);
-            } else if (authMethod == Socks5AuthMethod.PASSWORD) {
+            } else if (resAuthMethod == Socks5AuthMethod.PASSWORD) {
                 // In case of password authentication, send an authentication request.
                 ctx.pipeline().replace(decoderName, decoderName, new Socks5PasswordAuthResponseDecoder());
                 sendToProxyServer(new DefaultSocks5PasswordAuthRequest(

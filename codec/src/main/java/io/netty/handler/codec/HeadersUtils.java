@@ -104,7 +104,7 @@ public final class HeadersUtils {
      * @return a {@link Set} of header values or an empty {@link Set} if no values are found.
      */
     public static Set<String> namesAsString(Headers<CharSequence, CharSequence, ?> headers) {
-        return new CharSequenceDelegatingStringSet(headers.names());
+        return new DelegatingNameSet(headers);
     }
 
     private static final class StringEntryIterator implements Iterator<Entry<String, String>> {
@@ -192,57 +192,31 @@ public final class HeadersUtils {
         }
     }
 
-    private static final class CharSequenceDelegatingStringSet extends DelegatingStringSet<CharSequence> {
-        CharSequenceDelegatingStringSet(Set<CharSequence> allNames) {
-            super(allNames);
-        }
+    private static final class DelegatingNameSet extends AbstractCollection<String> implements Set<String> {
+        private final Headers<CharSequence, CharSequence, ?> headers;
 
-        @Override
-        public boolean add(String e) {
-            return allNames.add(e);
-        }
-
-        @Override
-        public boolean addAll(Collection<? extends String> c) {
-            return allNames.addAll(c);
-        }
-    }
-
-    private abstract static class DelegatingStringSet<T> extends AbstractCollection<String> implements Set<String> {
-        protected final Set<T> allNames;
-
-        DelegatingStringSet(Set<T> allNames) {
-            this.allNames = checkNotNull(allNames, "allNames");
+        DelegatingNameSet(Headers<CharSequence, CharSequence, ?> headers) {
+            this.headers = checkNotNull(headers, "headers");
         }
 
         @Override
         public int size() {
-            return allNames.size();
+            return headers.names().size();
         }
 
         @Override
         public boolean isEmpty() {
-            return allNames.isEmpty();
+            return headers.isEmpty();
         }
 
         @Override
         public boolean contains(Object o) {
-            return allNames.contains(o.toString());
+            return headers.contains(o.toString());
         }
 
         @Override
         public Iterator<String> iterator() {
-            return new StringIterator<T>(allNames.iterator());
-        }
-
-        @Override
-        public boolean remove(Object o) {
-            return allNames.remove(o);
-        }
-
-        @Override
-        public void clear() {
-            allNames.clear();
+            return new StringIterator<CharSequence>(headers.names().iterator());
         }
     }
 }

@@ -20,9 +20,12 @@ import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_CONCURRENT_STREAMS;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
@@ -36,6 +39,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZ
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Integer.toHexString;
 
 /**
  * Settings for one endpoint in an HTTP/2 connection. Each of the values are optional as defined in
@@ -207,38 +211,46 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
         switch (key) {
             case SETTINGS_HEADER_TABLE_SIZE:
                 if (value < MIN_HEADER_TABLE_SIZE || value > MAX_HEADER_TABLE_SIZE) {
-                    throw new IllegalArgumentException("Setting HEADER_TABLE_SIZE is invalid: " + value);
+                    throw new IllegalArgumentException("Setting HEADER_TABLE_SIZE is invalid: " + value +
+                            ", expected [" + MIN_HEADER_TABLE_SIZE + ", " + MAX_HEADER_TABLE_SIZE + ']');
                 }
                 break;
             case SETTINGS_ENABLE_PUSH:
                 if (value != 0L && value != 1L) {
-                    throw new IllegalArgumentException("Setting ENABLE_PUSH is invalid: " + value);
+                    throw new IllegalArgumentException("Setting ENABLE_PUSH is invalid: " + value +
+                            ", expected [0, 1]");
                 }
                 break;
             case SETTINGS_MAX_CONCURRENT_STREAMS:
                 if (value < MIN_CONCURRENT_STREAMS || value > MAX_CONCURRENT_STREAMS) {
-                    throw new IllegalArgumentException(
-                            "Setting MAX_CONCURRENT_STREAMS is invalid: " + value);
+                    throw new IllegalArgumentException("Setting MAX_CONCURRENT_STREAMS is invalid: " + value +
+                            ", expected [" + MIN_CONCURRENT_STREAMS + ", " + MAX_CONCURRENT_STREAMS + ']');
                 }
                 break;
             case SETTINGS_INITIAL_WINDOW_SIZE:
                 if (value < MIN_INITIAL_WINDOW_SIZE || value > MAX_INITIAL_WINDOW_SIZE) {
-                    throw new IllegalArgumentException("Setting INITIAL_WINDOW_SIZE is invalid: "
-                            + value);
+                    throw new IllegalArgumentException("Setting INITIAL_WINDOW_SIZE is invalid: " + value +
+                            ", expected [" + MIN_INITIAL_WINDOW_SIZE + ", " + MAX_INITIAL_WINDOW_SIZE + ']');
                 }
                 break;
             case SETTINGS_MAX_FRAME_SIZE:
                 if (!isMaxFrameSizeValid(value.intValue())) {
-                    throw new IllegalArgumentException("Setting MAX_FRAME_SIZE is invalid: " + value);
+                    throw new IllegalArgumentException("Setting MAX_FRAME_SIZE is invalid: " + value +
+                            ", expected [" + MAX_FRAME_SIZE_LOWER_BOUND + ", " + MAX_FRAME_SIZE_UPPER_BOUND + ']');
                 }
                 break;
             case SETTINGS_MAX_HEADER_LIST_SIZE:
                 if (value < MIN_HEADER_LIST_SIZE || value > MAX_HEADER_LIST_SIZE) {
-                    throw new IllegalArgumentException("Setting MAX_HEADER_LIST_SIZE is invalid: " + value);
+                    throw new IllegalArgumentException("Setting MAX_HEADER_LIST_SIZE is invalid: " + value +
+                            ", expected [" + MIN_HEADER_LIST_SIZE + ", " + MAX_HEADER_LIST_SIZE + ']');
                 }
                 break;
             default:
-                // Non-standard HTTP/2 setting - don't do validation.
+                // Non-standard HTTP/2 setting
+                if (value < 0 || value > MAX_UNSIGNED_INT) {
+                    throw new IllegalArgumentException("Non-standard setting 0x" + toHexString(key) + " is invalid: " +
+                            value + ", expected unsigned 32-bit value");
+                }
                 break;
         }
     }
@@ -260,7 +272,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
                 return "MAX_HEADER_LIST_SIZE";
             default:
                 // Unknown keys.
-                return super.keyToString(key);
+                return "0x" + toHexString(key);
         }
     }
 

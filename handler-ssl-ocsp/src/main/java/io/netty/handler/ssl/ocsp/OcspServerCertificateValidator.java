@@ -136,7 +136,7 @@ public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter
                         .getSession()
                         .getPeerCertificates();
 
-                assert certificates.length <= 2 : "There must an end-entity certificate and issuer certificate";
+                assert certificates.length >= 2 : "There must an end-entity certificate and issuer certificate";
 
                 Promise<BasicOCSPResp> ocspRespPromise = OcspClient.query((X509Certificate) certificates[0],
                         (X509Certificate) certificates[1], validateNonce, ioTransport, dnsNameResolver);

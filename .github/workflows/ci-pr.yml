@@ -22,6 +22,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
@@ -29,14 +32,16 @@ jobs:
   verify-pr:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
+
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-verify-pr-${{ hashFiles('**/pom.xml') }}
@@ -49,21 +54,26 @@ jobs:
       - name: Checking bom dependency versions
         run: ./.github/scripts/check_bom_dependencies.sh
 
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
   build-pr-windows:
     runs-on: windows-2019
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 11
+          distribution: 'zulu'
+          java-version: '11'
 
       # Cache .m2/repository
       # Caching of maven dependencies
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: pr-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -73,14 +83,18 @@ jobs:
       - name: Build project
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: test-results-windows-x86_64-java11-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: build-pr-windows-target
@@ -92,13 +106,16 @@ jobs:
     name: linux-aarch64-verify-native
     # The host should always be Linux
     runs-on: ubuntu-20.04
+    permissions:
+      contents: read  # for actions/checkout to fetch code
+      packages: write  # for uraimo/run-on-arch-action to cache docker images
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-build-pr-aarch64-${{ hashFiles('**/pom.xml') }}
@@ -106,7 +123,7 @@ jobs:
             ${{ runner.os }}-maven-build-pr-aarch64-
             ${{ runner.os }}-maven-
 
-      - uses: uraimo/run-on-arch-action@v2.0.9
+      - uses: uraimo/run-on-arch-action@v2.5.0
         name: Run commands
         id: runcmd
         with:
@@ -150,9 +167,9 @@ jobs:
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-leak"
-          - setup: linux-x86_64-java19
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.119.yaml run build-leak"
+          - setup: linux-x86_64-java20
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.20.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.20.yaml run build-leak"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
@@ -160,11 +177,11 @@ jobs:
     name: ${{ matrix.setup }} build
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -193,14 +210,18 @@ jobs:
       - name: Checking for detected leak
         run: ./.github/scripts/check_leak.sh build-leak.output
 
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: build-${{ matrix.setup }}-target
