@@ -296,8 +296,7 @@ public class ByteBufUtilTest {
         ByteBuf buf = buffer(bufferType, 2).order(ByteOrder.BIG_ENDIAN);
         buf.writeShort(shortValue);
         assertEquals(shortValue, ByteBufUtil.readUnsignedShortBE(buf));
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
+        buf.clear();
         buf.writeShortLE(shortValue);
         assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
         buf.release();
@@ -305,8 +304,7 @@ public class ByteBufUtilTest {
         buf = buffer(bufferType, 2).order(ByteOrder.LITTLE_ENDIAN);
         buf.writeShort(shortValue);
         assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
+        buf.clear();
         buf.writeShortLE(shortValue);
         assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
         buf.release();
@@ -317,8 +315,7 @@ public class ByteBufUtilTest {
         buf = buffer(bufferType, 2).order(ByteOrder.BIG_ENDIAN);
         buf.writeShort(shortValue);
         assertEquals(shortValue, ByteBufUtil.readUnsignedShortBE(buf));
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
+        buf.clear();
         buf.writeShortLE(shortValue);
         assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
         buf.release();
@@ -326,8 +323,7 @@ public class ByteBufUtilTest {
         buf = buffer(bufferType, 2).order(ByteOrder.LITTLE_ENDIAN);
         buf.writeShort(shortValue);
         assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
+        buf.clear();
         buf.writeShortLE(shortValue);
         assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
         buf.release();
@@ -342,8 +338,7 @@ public class ByteBufUtilTest {
         ByteBuf buf = buffer(bufferType, 4).order(ByteOrder.BIG_ENDIAN);
         buf.writeInt(intValue);
         assertEquals(intValue, ByteBufUtil.readIntBE(buf));
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
+        buf.clear();
         buf.writeIntLE(intValue);
         assertEquals(ByteBufUtil.swapInt(intValue), ByteBufUtil.readIntBE(buf));
         buf.release();
@@ -351,8 +346,7 @@ public class ByteBufUtilTest {
         buf = buffer(bufferType, 4).order(ByteOrder.LITTLE_ENDIAN);
         buf.writeInt(intValue);
         assertEquals(ByteBufUtil.swapInt(intValue), ByteBufUtil.readIntBE(buf));
-        buf.resetReaderIndex();
-        buf.resetWriterIndex();
+        buf.clear();
         buf.writeIntLE(intValue);
         assertEquals(ByteBufUtil.swapInt(intValue), ByteBufUtil.readIntBE(buf));
         buf.release();

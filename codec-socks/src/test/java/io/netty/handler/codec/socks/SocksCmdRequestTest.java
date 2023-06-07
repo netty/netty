@@ -140,7 +140,6 @@ public class SocksCmdRequestTest {
         ByteBuf buffer = Unpooled.buffer(24).order(ByteOrder.LITTLE_ENDIAN);
         rq.encodeAsByteBuf(buffer);
 
-        buffer.resetReaderIndex();
         assertEquals(SocksProtocolVersion.SOCKS5.byteValue(), buffer.readByte());
         assertEquals(SocksCmdType.BIND.byteValue(), buffer.readByte());
         assertEquals((byte) 0x00, buffer.readByte());
