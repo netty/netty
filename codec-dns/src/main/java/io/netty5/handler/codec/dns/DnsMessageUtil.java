@@ -80,6 +80,7 @@ final class DnsMessageUtil {
            .append('(');
 
         appendAddresses(buf, msg)
+           .append("id: ")
            .append(msg.id())
            .append(", ")
            .append(msg.opCode());
@@ -99,6 +100,7 @@ final class DnsMessageUtil {
            .append('(');
 
         appendAddresses(buf, msg)
+           .append("id: ")
            .append(msg.id())
            .append(", ")
            .append(msg.opCode())

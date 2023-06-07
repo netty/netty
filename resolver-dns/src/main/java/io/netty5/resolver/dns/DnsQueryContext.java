@@ -207,9 +207,11 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     void finish(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
         final DnsResponse res = envelope.content();
         if (res.count(DnsSection.QUESTION) != 1) {
-            logger.warn("Received a DNS response with invalid number of questions: {}", envelope);
+            logger.warn("{} Received a DNS response with invalid number of questions. Expected: 1, found: {}",
+                    channel(), envelope);
         } else if (!question().equals(res.recordAt(DnsSection.QUESTION))) {
-            logger.warn("Received a mismatching DNS response: {}", envelope);
+            logger.warn("{} Received a mismatching DNS response. Expected: [{}], found: {}",
+                    channel(), question(), envelope);
         } else if (trySuccess(envelope)) {
             return; // Ownership transferred, don't release
         }
