@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
-public final class SocksCommonUtils {
+final class SocksCommonUtils {
     public static final SocksRequest UNKNOWN_SOCKS_REQUEST = new UnknownSocksRequest();
     public static final SocksResponse UNKNOWN_SOCKS_RESPONSE = new UnknownSocksResponse();
 

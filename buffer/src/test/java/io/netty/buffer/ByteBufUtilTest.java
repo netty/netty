@@ -290,7 +290,8 @@ public class ByteBufUtilTest {
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
     public void readUnsignedShortBE(BufferType bufferType) {
-        int shortValue = 0x1234;
+        int shortValue = 0x1234; // unsigned short
+        int swappedShortValue = 0x3412; // swapped version of the value above
 
         ByteBuf buf = buffer(bufferType, 2).order(ByteOrder.BIG_ENDIAN);
         buf.writeShort(shortValue);
@@ -298,16 +299,37 @@ public class ByteBufUtilTest {
         buf.resetReaderIndex();
         buf.resetWriterIndex();
         buf.writeShortLE(shortValue);
-        assertEquals(ByteBufUtil.swapShort((short) shortValue), ByteBufUtil.readUnsignedShortBE(buf));
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
         buf.release();
 
         buf = buffer(bufferType, 2).order(ByteOrder.LITTLE_ENDIAN);
         buf.writeShort(shortValue);
-        assertEquals(ByteBufUtil.swapShort((short) shortValue), ByteBufUtil.readUnsignedShortBE(buf));
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
         buf.resetReaderIndex();
         buf.resetWriterIndex();
         buf.writeShortLE(shortValue);
-        assertEquals(ByteBufUtil.swapShort((short) shortValue), ByteBufUtil.readUnsignedShortBE(buf));
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.release();
+
+        shortValue = 0xfedc; // unsigned short
+        swappedShortValue = 0xdcfe; // swapped version of the value above
+
+        buf = buffer(bufferType, 2).order(ByteOrder.BIG_ENDIAN);
+        buf.writeShort(shortValue);
+        assertEquals(shortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.resetReaderIndex();
+        buf.resetWriterIndex();
+        buf.writeShortLE(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.release();
+
+        buf = buffer(bufferType, 2).order(ByteOrder.LITTLE_ENDIAN);
+        buf.writeShort(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.resetReaderIndex();
+        buf.resetWriterIndex();
+        buf.writeShortLE(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
         buf.release();
     }
 

@@ -698,7 +698,7 @@ public final class ByteBufUtil {
     @SuppressWarnings("deprecation")
     public static int readUnsignedShortBE(ByteBuf buf) {
         return buf.order() == ByteOrder.BIG_ENDIAN? buf.readUnsignedShort() :
-                swapShort((short) buf.readUnsignedShort());
+                swapShort((short) buf.readUnsignedShort()) & 0xFFFF;
     }
 
     /**
