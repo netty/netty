@@ -73,6 +73,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -131,6 +132,8 @@ public class DnsNameResolver extends InetNameResolver {
                 LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             }
         }
+        logger.debug("Default ResolvedAddressTypes: {}", DEFAULT_RESOLVE_ADDRESS_TYPES);
+        logger.debug("Localhost address: {}", LOCALHOST_ADDRESS);
 
         String hostName;
         try {
@@ -139,6 +142,7 @@ public class DnsNameResolver extends InetNameResolver {
             hostName = null;
         }
         WINDOWS_HOST_NAME = hostName;
+        logger.debug("Windows hostname: {}", WINDOWS_HOST_NAME);
     }
 
     static {
@@ -153,6 +157,7 @@ public class DnsNameResolver extends InetNameResolver {
             searchDomains = EmptyArrays.EMPTY_STRINGS;
         }
         DEFAULT_SEARCH_DOMAINS = searchDomains;
+        logger.debug("Default search domains: {}", Arrays.toString(DEFAULT_SEARCH_DOMAINS));
 
         UnixResolverOptions options;
         try {
@@ -161,6 +166,7 @@ public class DnsNameResolver extends InetNameResolver {
             options = UnixResolverOptions.newBuilder().build();
         }
         DEFAULT_OPTIONS = options;
+        logger.debug("Default {}", DEFAULT_OPTIONS);
     }
 
     /**
