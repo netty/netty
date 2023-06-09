@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socks.SocksCmdRequestDecoder.State;
@@ -56,15 +57,15 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<State> {
             case READ_CMD_ADDRESS: {
                 switch (addressType) {
                     case IPv4: {
-                        String host = NetUtil.intToIpAddress(byteBuf.readInt());
-                        int port = byteBuf.readUnsignedShort();
+                        String host = NetUtil.intToIpAddress(ByteBufUtil.readIntBE(byteBuf));
+                        int port = ByteBufUtil.readUnsignedShortBE(byteBuf);
                         out.add(new SocksCmdRequest(cmdType, addressType, host, port));
                         break;
                     }
                     case DOMAIN: {
                         int fieldLength = byteBuf.readByte();
                         String host = SocksCommonUtils.readUsAscii(byteBuf, fieldLength);
-                        int port = byteBuf.readUnsignedShort();
+                        int port = ByteBufUtil.readUnsignedShortBE(byteBuf);
                         out.add(new SocksCmdRequest(cmdType, addressType, host, port));
                         break;
                     }
@@ -72,7 +73,7 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<State> {
                         byte[] bytes = new byte[16];
                         byteBuf.readBytes(bytes);
                         String host = SocksCommonUtils.ipv6toStr(bytes);
-                        int port = byteBuf.readUnsignedShort();
+                        int port = ByteBufUtil.readUnsignedShortBE(byteBuf);
                         out.add(new SocksCmdRequest(cmdType, addressType, host, port));
                         break;
                     }

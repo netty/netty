@@ -693,6 +693,24 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Reads a big-endian unsigned 16-bit short integer from the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static int readUnsignedShortBE(ByteBuf buf) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.readUnsignedShort() :
+                swapShort((short) buf.readUnsignedShort()) & 0xFFFF;
+    }
+
+    /**
+     * Reads a big-endian 32-bit integer from the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static int readIntBE(ByteBuf buf) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.readInt() :
+                swapInt(buf.readInt());
+    }
+
+    /**
      * Read the given amount of bytes into a new {@link ByteBuf} that is allocated from the {@link ByteBufAllocator}.
      */
     public static ByteBuf readBytes(ByteBufAllocator alloc, ByteBuf buffer, int length) {

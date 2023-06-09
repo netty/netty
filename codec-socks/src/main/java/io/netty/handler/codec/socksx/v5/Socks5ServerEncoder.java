@@ -17,6 +17,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.EncoderException;
@@ -87,6 +88,6 @@ public class Socks5ServerEncoder extends MessageToByteEncoder<Socks5Message> {
         out.writeByte(bndAddrType.byteValue());
         addressEncoder.encodeAddress(bndAddrType, msg.bndAddr(), out);
 
-        out.writeShort(msg.bndPort());
+        ByteBufUtil.writeShortBE(out, msg.bndPort());
     }
 }
