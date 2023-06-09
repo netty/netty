@@ -35,6 +35,7 @@
 #define ERR_LEN 256
 
 static jclass sslTaskClass = NULL;
+static jmethodID sslTaskDestroyMethod = NULL;
 static jfieldID sslTaskReturnValue = NULL;
 static jfieldID sslTaskComplete = NULL;
 
@@ -272,6 +273,9 @@ static void netty_boringssl_ssl_task_free(JNIEnv* e, netty_boringssl_ssl_task_t*
     }
 
     if (sslTask->task != NULL) {
+        // Execute the destroy method
+        (*e)->CallVoidMethod(e, sslTask->task, sslTaskDestroyMethod);
+
         // As we created a Global reference before we need to delete the reference as otherwise we will leak memory.
         (*e)->DeleteGlobalRef(e, sslTask->task);
         sslTask->task = NULL;
@@ -580,6 +584,10 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
     int ret = 0;
     EVP_PKEY* pkey = (EVP_PKEY *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassKeyField);
     const STACK_OF(CRYPTO_BUFFER) *cchain = (STACK_OF(CRYPTO_BUFFER) *) (*e)->GetLongField(e, ssl_task->task, certificateTaskClassChainField);
+
+    // Set both fields to 0 so destroy() will not destroy the native allocated memory.
+    (*e)->SetLongField(e, ssl_task->task, certificateTaskClassKeyField, 0);
+    (*e)->SetLongField(e, ssl_task->task, certificateTaskClassChainField, 0);
 
     SSL_set_ex_data(ssl, sslTaskIdx, NULL);
     netty_boringssl_ssl_task_free(e, ssl_task);
@@ -1351,6 +1359,8 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, sslTaskClass, name, done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskReturnValue, "returnValue", "I", done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskComplete, "complete", "Z", done);
+    NETTY_JNI_UTIL_GET_METHOD(env, sslTaskClass, sslTaskDestroyMethod, "destroy", "()V", done);
+
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethodTask", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, sslPrivateKeyMethodTaskClass, name, done);

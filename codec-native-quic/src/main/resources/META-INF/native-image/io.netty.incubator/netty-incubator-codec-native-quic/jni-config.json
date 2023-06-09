@@ -73,7 +73,8 @@
   "fields":[
     {"name":"complete"}, 
     {"name":"returnValue"}
-  ]
+  ],
+  "methods":[{"name":"destroy","parameterTypes":[] }]
 },
 {
   "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},

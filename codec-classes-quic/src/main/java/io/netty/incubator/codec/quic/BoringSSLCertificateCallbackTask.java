@@ -58,4 +58,16 @@ final class BoringSSLCertificateCallbackTask extends BoringSSLTask {
             taskCallback.onResult(ssl, 0);
         }
     }
+
+    @Override
+    protected void destroy() {
+        if (key != 0) {
+            BoringSSL.EVP_PKEY_free(key);
+            key = 0;
+        }
+        if (chain != 0) {
+            BoringSSL.CRYPTO_BUFFER_stack_free(chain);
+            chain = 0;
+        }
+    }
 }

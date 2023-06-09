@@ -19,9 +19,6 @@ package io.netty.incubator.codec.quic;
  * A SSL related task that will be returned by {@link BoringSSL#SSL_getTask(long)}.
  */
 abstract class BoringSSLTask implements Runnable {
-    private static final Runnable NOOP = () -> {
-        // NOOP
-    };
     private final long ssl;
     protected boolean didRun;
 
@@ -43,6 +40,13 @@ abstract class BoringSSLTask implements Runnable {
                 complete = true;
             });
         }
+    }
+
+    /**
+     * Called once the task should be destroyed.
+     */
+    protected void destroy() {
+        // Noop
     }
 
     /**
