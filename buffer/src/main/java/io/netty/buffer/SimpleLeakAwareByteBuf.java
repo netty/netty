@@ -139,13 +139,9 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
         if (unwrappedDerived instanceof AbstractPooledDerivedByteBuf) {
             // Update the parent to point to this buffer so we correctly close the ResourceLeakTracker.
             ((AbstractPooledDerivedByteBuf) unwrappedDerived).parent(this);
-
-            ResourceLeakTracker<ByteBuf> newLeak = AbstractByteBuf.leakDetector.track(derived);
-            if (newLeak == null) {
-                // No leak detection, just return the derived buffer.
-                return derived;
-            }
-            return newLeakAwareByteBuf(derived, newLeak);
+            
+            // force tracking of derived buffers (see issue #13414)
+            return newLeakAwareByteBuf(derived, AbstractByteBuf.leakDetector.trackForcibly(derived));
         }
         return newSharedLeakAwareByteBuf(derived);
     }
