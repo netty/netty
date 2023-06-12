@@ -177,16 +177,18 @@ static STACK_OF(CRYPTO_BUFFER)* arrayToStack(JNIEnv* env, jobjectArray array, CR
         int data_len = (*env)->GetArrayLength(env, bytes);
         uint8_t* data = (uint8_t*) (*env)->GetByteArrayElements(env, bytes, 0);
         CRYPTO_BUFFER *buffer = CRYPTO_BUFFER_new(data, data_len, pool);
+        (*env)->ReleaseByteArrayElements(env, bytes, (jbyte*)data, JNI_ABORT);
+        (*env)->DeleteLocalRef(env, bytes);
+
         if (buffer == NULL) {
             goto cleanup;
         }
+
         if (sk_CRYPTO_BUFFER_push(stack, buffer) <= 0) {
             // If we cant push for whatever reason ensure we release the buffer.
             CRYPTO_BUFFER_free(buffer);
             goto cleanup;
         }
-        (*env)->ReleaseByteArrayElements(env, bytes, (jbyte*)data, JNI_ABORT);
-        (*env)->DeleteLocalRef(env, bytes);
     }
     return stack;
 cleanup:
