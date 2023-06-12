@@ -255,7 +255,7 @@ public class ResourceLeakDetector<T> {
      * @return the {@link ResourceLeakTracker}
      */
     @SuppressWarnings("unchecked")
-    public final ResourceLeakTracker<T> trackForcibly(T obj) {
+    public ResourceLeakTracker<T> trackForcibly(T obj) {
         return track0(obj, true);
     }
 
