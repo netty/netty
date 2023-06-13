@@ -231,7 +231,7 @@ public class ResourceLeakDetector<T> {
      */
     @Deprecated
     public final ResourceLeak open(T obj) {
-        return track0(obj);
+        return track0(obj, false);
     }
 
     /**
@@ -242,25 +242,33 @@ public class ResourceLeakDetector<T> {
      */
     @SuppressWarnings("unchecked")
     public final ResourceLeakTracker<T> track(T obj) {
-        return track0(obj);
+        return track0(obj, false);
+    }
+
+    /**
+     * Creates a new {@link ResourceLeakTracker} which is expected to be closed via
+     * {@link ResourceLeakTracker#close(Object)} when the related resource is deallocated.
+     *
+     * Unlike {@link #track(Object)}, this method always returns a tracker, regardless
+     * of the detection settings.
+     *
+     * @return the {@link ResourceLeakTracker}
+     */
+    @SuppressWarnings("unchecked")
+    public ResourceLeakTracker<T> trackForcibly(T obj) {
+        return track0(obj, true);
     }
 
     @SuppressWarnings("unchecked")
-    private DefaultResourceLeak track0(T obj) {
+    private DefaultResourceLeak track0(T obj, boolean force) {
         Level level = ResourceLeakDetector.level;
-        if (level == Level.DISABLED) {
-            return null;
+        if (force ||
+                level == Level.PARANOID ||
+                (level != Level.DISABLED && PlatformDependent.threadLocalRandom().nextInt(samplingInterval) == 0)) {
+            reportLeak();
+            return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
         }
-
-        if (level.ordinal() < Level.PARANOID.ordinal()) {
-            if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
-                reportLeak();
-                return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
-            }
-            return null;
-        }
-        reportLeak();
-        return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
+        return null;
     }
 
     private void clearRefQueue() {
