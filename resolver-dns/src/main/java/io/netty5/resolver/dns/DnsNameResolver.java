@@ -48,6 +48,7 @@ import io.netty5.resolver.InetNameResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.util.NetUtil;
 import io.netty5.util.ReferenceCounted;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.concurrent.Future;
@@ -870,7 +871,12 @@ public class DnsNameResolver extends InetNameResolver {
                 }
 
                 if (!result.isEmpty()) {
-                    trySuccess(promise, result);
+                    if (!trySuccess(promise, result)) {
+                        // We were not able to transfer ownership, release the records to prevent leaks.
+                        for (DnsRecord r: result) {
+                            Resource.dispose(r);
+                        }
+                    }
                     return promise.asFuture();
                 }
             }
