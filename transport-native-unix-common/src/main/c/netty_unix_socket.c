@@ -843,16 +843,17 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
     jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
     if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+        (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
+    (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
     if (unlink((const char*) addr.sun_path) == -1 && errno != ENOENT) {
         return -errno;
     }
 
     int res = bind(fd, (struct sockaddr*) &addr, _UNIX_ADDR_LENGTH(socket_path_len));
-    (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
     if (res == -1) {
         return -errno;
@@ -871,17 +872,17 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
     if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
+        (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
         return -ENAMETOOLONG;
     }
     memcpy(addr.sun_path, socket_path, socket_path_len);
+    (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
     int res;
     int err;
     do {
         res = connect(fd, (struct sockaddr*) &addr, _UNIX_ADDR_LENGTH(socket_path_len));
     } while (res == -1 && ((err = errno) == EINTR));
-
-    (*env)->ReleaseByteArrayElements(env, socketPath, socket_path, 0);
 
     if (res < 0) {
         return -err;
