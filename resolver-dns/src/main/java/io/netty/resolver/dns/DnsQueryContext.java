@@ -276,6 +276,6 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         // cancellation
         DnsQueryContext self = parent.queryContextManager.remove(nameServerAddr, id);
 
-        assert self == this;
+        assert self == this : "Removed DnsQueryContext is not the correct instance";
     }
 }

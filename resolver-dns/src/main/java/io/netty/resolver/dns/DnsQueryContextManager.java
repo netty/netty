@@ -77,27 +77,31 @@ final class DnsQueryContextManager {
             final int port = nameServerAddr.getPort();
             DnsQueryContextMap old = map.put(nameServerAddr, newContexts);
             // Assert that we didn't replace an existing mapping.
-            assert old == null;
+            assert old == null : "DnsQueryContextMap already exists for " + nameServerAddr;
 
+            InetSocketAddress extraAddress = null;
             if (a instanceof Inet4Address) {
                 // Also add the mapping for the IPv4-compatible IPv6 address.
                 final Inet4Address a4 = (Inet4Address) a;
                 if (a4.isLoopbackAddress()) {
-                    old = map.put(new InetSocketAddress(NetUtil.LOCALHOST6, port), newContexts);
+                    extraAddress = new InetSocketAddress(NetUtil.LOCALHOST6, port);
                 } else {
-                    old = map.put(new InetSocketAddress(toCompactAddress(a4), port), newContexts);
+                    extraAddress = new InetSocketAddress(toCompactAddress(a4), port);
                 }
             } else if (a instanceof Inet6Address) {
                 // Also add the mapping for the IPv4 address if this IPv6 address is compatible.
                 final Inet6Address a6 = (Inet6Address) a;
                 if (a6.isLoopbackAddress()) {
-                    old = map.put(new InetSocketAddress(NetUtil.LOCALHOST4, port), newContexts);
+                    extraAddress = new InetSocketAddress(NetUtil.LOCALHOST4, port);
                 } else if (a6.isIPv4CompatibleAddress()) {
-                    old = map.put(new InetSocketAddress(toIPv4Address(a6), port), newContexts);
+                    extraAddress = new InetSocketAddress(toIPv4Address(a6), port);
                 }
             }
-            // Assert that we didn't replace an existing mapping.
-            assert old == null;
+            if (extraAddress != null) {
+                old = map.put(extraAddress, newContexts);
+                // Assert that we didn't replace an existing mapping.
+                assert old == null : "DnsQueryContextMap already exists for " + extraAddress;
+            }
 
             return newContexts;
         }
