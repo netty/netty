@@ -52,6 +52,7 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
@@ -905,7 +906,12 @@ public class DnsNameResolver extends InetNameResolver {
                 }
 
                 if (!result.isEmpty()) {
-                    trySuccess(promise, result);
+                    if (!trySuccess(promise, result)) {
+                        // We were not able to transfer ownership, release the records to prevent leaks.
+                        for (DnsRecord r: result) {
+                            ReferenceCountUtil.safeRelease(r);
+                        }
+                    }
                     return promise;
                 }
             }
