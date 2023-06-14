@@ -148,11 +148,21 @@ abstract class DnsQueryContext {
                     timeoutFuture.cancel(false);
                 }
 
-                // Remove the id from the manager as soon as the query completes. This may be because of success,
-                // failure or cancellation
-                DnsQueryContext self = queryContextManager.remove(nameServerAddr, id);
-
-                assert self == DnsQueryContext.this : "Removed DnsQueryContext is not the correct instance";
+                if (future.cause() instanceof DnsNameResolverTimeoutException) {
+                    // This query was failed due a timeout. Let's delay the removal of the id to reduce the risk
+                    // of reusing the same id again while the remote nameserver might send the response after the
+                    // timeout. We choose a delay of 20 seconds, after this period all bets are off.
+                    channel.eventLoop().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            removeFromContextManager(nameServerAddr);
+                        }
+                    }, 20, TimeUnit.SECONDS);
+                } else {
+                    // Remove the id from the manager as soon as the query completes. This may be because of success,
+                    // failure or cancellation
+                    removeFromContextManager(nameServerAddr);
+                }
             }
         });
         final DnsQuestion question = question();
@@ -176,6 +186,12 @@ abstract class DnsQueryContext {
         }
 
         return sendQuery(nameServerAddr, query, queryTimeoutMillis, flush);
+    }
+
+    private void removeFromContextManager(InetSocketAddress nameServerAddr) {
+        DnsQueryContext self = queryContextManager.remove(nameServerAddr, id);
+
+        assert self == this : "Removed DnsQueryContext is not the correct instance";
     }
 
     private ChannelFuture sendQuery(final InetSocketAddress nameServerAddr, final DnsQuery query,
