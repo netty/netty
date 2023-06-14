@@ -274,6 +274,8 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
 
         // Remove the id from the manager as soon as the query completes. This may be because of success, failure or
         // cancellation
-        parent.queryContextManager.remove(nameServerAddr, id);
+        DnsQueryContext self = parent.queryContextManager.remove(nameServerAddr, id);
+
+        assert self == this : "Removed DnsQueryContext is not the correct instance";
     }
 }
