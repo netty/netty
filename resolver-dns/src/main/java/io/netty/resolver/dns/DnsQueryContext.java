@@ -132,7 +132,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         sendQuery(query, queryTimeoutMillis, flush, writePromise);
     }
 
-    private void sendQuery(final DnsQuery query, long queryTimeoutMillis,
+    private void sendQuery(final DnsQuery query, final long queryTimeoutMillis,
                            final boolean flush, final ChannelPromise writePromise) {
         if (channelReadyFuture.isSuccess()) {
             writeQuery(query, queryTimeoutMillis, flush, writePromise);
