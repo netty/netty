@@ -1334,7 +1334,7 @@ public class DnsNameResolver extends InetNameResolver {
         try {
             DnsQueryContext queryContext = new DatagramDnsQueryContext(ch, channelReadyPromise, queryContextManager,
                     payloadSize, isRecursionDesired(), question, additionals, castPromise);
-            ChannelFuture future = queryContext.query(nameServerAddr, queryTimeoutMillis(), flush);
+            ChannelFuture future = queryContext.writeQuery(nameServerAddr, queryTimeoutMillis(), flush);
             queryLifecycleObserver.queryWritten(nameServerAddr, future);
             return castPromise;
         } catch (Exception e) {
@@ -1376,7 +1376,7 @@ public class DnsNameResolver extends InetNameResolver {
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
             if (!res.isTruncated() || socketChannelFactory == null) {
-                qCtx.finish(qCh, res);
+                qCtx.finishSuccess(qCh, res);
                 return;
             }
 
@@ -1393,7 +1393,7 @@ public class DnsNameResolver extends InetNameResolver {
                                 ch, queryId, res.sender(), future.cause());
 
                         // TCP fallback failed, just use the truncated response.
-                        qCtx.finish(qCh, res);
+                        qCtx.finishSuccess(qCh, res);
                         return;
                     }
                     final Channel tcpCh = future.channel();
@@ -1420,13 +1420,13 @@ public class DnsNameResolver extends InetNameResolver {
 
                             DnsQueryContext foundCtx = queryContextManager.get(res.sender(), queryId);
                             if (foundCtx == tcpCtx) {
-                                tcpCtx.finish(tcpCh, new AddressedEnvelopeAdapter(
+                                tcpCtx.finishSuccess(tcpCh, new AddressedEnvelopeAdapter(
                                         (InetSocketAddress) ctx.channel().remoteAddress(),
                                         (InetSocketAddress) ctx.channel().localAddress(),
                                         response));
                             } else {
                                 response.release();
-                                tcpCtx.tryFailure((InetSocketAddress) tcpCh.remoteAddress(),
+                                tcpCtx.finishFailure((InetSocketAddress) tcpCh.remoteAddress(),
                                         "Received TCP DNS response with unexpected ID", null, false);
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("{} Received a DNS response with an unexpected ID: TCP [{}: {}]",
@@ -1437,7 +1437,7 @@ public class DnsNameResolver extends InetNameResolver {
 
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            if (tcpCtx.tryFailure((InetSocketAddress) ctx.channel().remoteAddress(),
+                            if (tcpCtx.finishFailure((InetSocketAddress) ctx.channel().remoteAddress(),
                                     "TCP fallback error", cause, false) && logger.isDebugEnabled()) {
                                 logger.debug("{} Error during processing response: TCP [{}: {}]",
                                         ctx.channel(), queryId,
@@ -1452,16 +1452,16 @@ public class DnsNameResolver extends InetNameResolver {
                         public void operationComplete(
                                 Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
                             if (future.isSuccess()) {
-                                qCtx.finish(qCh, future.getNow());
+                                qCtx.finishSuccess(qCh, future.getNow());
                                 res.release();
                             } else {
                                 // TCP fallback failed, just use the truncated response.
-                                qCtx.finish(qCh, res);
+                                qCtx.finishSuccess(qCh, res);
                             }
                             tcpCh.close();
                         }
                     });
-                    tcpCtx.query((InetSocketAddress) tcpCh.remoteAddress(), queryTimeoutMillis(),
+                    tcpCtx.writeQuery((InetSocketAddress) tcpCh.remoteAddress(), queryTimeoutMillis(),
                             true);
                 }
             });

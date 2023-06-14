@@ -56,7 +56,7 @@ abstract class DnsQueryContext {
     private final boolean recursionDesired;
     private volatile Future<?> timeoutFuture;
 
-    private int id;
+    private int id = -1;
 
     DnsQueryContext(Channel channel,
                     Future<? extends Channel> channelReadyFuture,
@@ -98,15 +98,43 @@ abstract class DnsQueryContext {
         return false;
     }
 
+    /**
+     * Returns the {@link DnsQuestion} that will be written as part of the {@link DnsQuery}.
+     *
+     * @return the question.
+     */
     final DnsQuestion question() {
         return question;
     }
 
+    /**
+     * Creates and returns a new {@link DnsQuery}.
+     *
+     * @param id                the transaction id to use.
+     * @param nameServerAddr    the nameserver to which the query will be send.
+     * @return                  the new query.
+     */
     protected abstract DnsQuery newQuery(int id, InetSocketAddress nameServerAddr);
+
+    /**
+     * Returns the protocol that is used for the query.
+     *
+     * @return  the protocol.
+     */
     protected abstract String protocol();
 
-    final ChannelFuture query(final InetSocketAddress nameServerAddr, long queryTimeoutMillis,
-                     boolean flush) {
+    /**
+     * Write the query and return the {@link ChannelFuture} that is completed once the write completes.
+     *
+     * @param nameServerAddr        the nameserver to write the query to.
+     * @param queryTimeoutMillis    the timeout after which the query is considered timeout and the original
+     *                              {@link Promise} will be failed.
+     * @param flush                 {@code true} if {@link Channel#flush()} should be called as well.
+     * @return
+     */
+    final ChannelFuture writeQuery(final InetSocketAddress nameServerAddr, long queryTimeoutMillis,
+                                   boolean flush) {
+        assert id == -1 : this.getClass().getSimpleName() + ".writeQuery(...) + can only be executed once.";
         id = queryContextManager.add(nameServerAddr, this);
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
@@ -209,7 +237,7 @@ abstract class DnsQueryContext {
     private void onQueryWriteCompletion(final InetSocketAddress nameServerAddr, final long queryTimeoutMillis,
                                         ChannelFuture writeFuture) {
         if (!writeFuture.isSuccess()) {
-            tryFailure(nameServerAddr,
+            finishFailure(nameServerAddr,
                     "failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
             return;
         }
@@ -224,7 +252,7 @@ abstract class DnsQueryContext {
                         return;
                     }
 
-                    tryFailure(nameServerAddr, "query '" + id + "' via " + protocol() + " timed out after " +
+                    finishFailure(nameServerAddr, "query '" + id + "' via " + protocol() + " timed out after " +
                             queryTimeoutMillis + " milliseconds", null, true);
                 }
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -232,9 +260,10 @@ abstract class DnsQueryContext {
     }
 
     /**
-     * Takes ownership of passed envelope
+     * Notifies the original {@link Promise} that the response for the query was received.
+     * This method takes ownership of passed {@link AddressedEnvelope}.
      */
-    void finish(Channel channel, AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
+    void finishSuccess(Channel channel, AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
         final DnsResponse res = envelope.content();
         if (res.count(DnsSection.QUESTION) != 1) {
             logger.warn("{} Received a DNS response with invalid number of questions. Expected: 1, found: {}",
@@ -253,7 +282,10 @@ abstract class DnsQueryContext {
         return promise.trySuccess((AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope);
     }
 
-    final boolean tryFailure(InetSocketAddress nameServerAddr, String message, Throwable cause, boolean timeout) {
+    /**
+     * Notifies the original {@link Promise} that the query completes because of an failure.
+     */
+    final boolean finishFailure(InetSocketAddress nameServerAddr, String message, Throwable cause, boolean timeout) {
         if (promise.isDone()) {
             return false;
         }
