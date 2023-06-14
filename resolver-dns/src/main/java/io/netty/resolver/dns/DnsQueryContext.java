@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
+abstract class DnsQueryContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsQueryContext.class);
 
@@ -51,29 +51,24 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     private final DnsQuestion question;
     private final DnsRecord[] additionals;
     private final DnsRecord optResource;
-    private final InetSocketAddress nameServerAddr;
 
     private final boolean recursionDesired;
     private volatile Future<?> timeoutFuture;
+
     private int id;
 
     DnsQueryContext(Future<? extends Channel> channelReadyFuture, DnsQueryContextManager  queryContextManager,
                     int maxPayLoadSize,
                     boolean recursionDesired,
-                    InetSocketAddress nameServerAddr,
                     DnsQuestion question,
                     DnsRecord[] additionals,
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
         this.queryContextManager = checkNotNull(queryContextManager, "queryContextManager");
         this.channelReadyFuture = checkNotNull(channelReadyFuture, "channelReadyFuture");
-        this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
         this.question = checkNotNull(question, "question");
         this.additionals = checkNotNull(additionals, "additionals");
         this.promise = checkNotNull(promise, "promise");
         this.recursionDesired = recursionDesired;
-
-        // Ensure we remove the id from the QueryContextManager once the query completes.
-        promise.addListener(this);
 
         if (maxPayLoadSize > 0 &&
                 // Only add the extra OPT record if there is not already one. This is required as only one is allowed
@@ -106,9 +101,28 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     protected abstract DnsQuery newQuery(int id, InetSocketAddress nameServerAddr);
     protected abstract String protocol();
 
-    final void query(long queryTimeoutMillis, boolean flush, ChannelPromise writePromise) {
+    final void query(InetSocketAddress nameServerAddr, long queryTimeoutMillis,
+                     boolean flush, ChannelPromise writePromise) {
         id = queryContextManager.add(nameServerAddr, this);
 
+        // Ensure we remove the id from the QueryContextManager once the query completes.
+        promise.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
+            @Override
+            public void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
+                // Cancel the timeout task.
+                Future<?> timeoutFuture = DnsQueryContext.this.timeoutFuture;
+                if (timeoutFuture != null) {
+                    DnsQueryContext.this.timeoutFuture = null;
+                    timeoutFuture.cancel(false);
+                }
+
+                // Remove the id from the manager as soon as the query completes. This may be because of success,
+                // failure or cancellation
+                DnsQueryContext self = queryContextManager.remove(nameServerAddr, id);
+
+                assert self == DnsQueryContext.this : "Removed DnsQueryContext is not the correct instance";
+            }
+        });
         final DnsQuestion question = question();
         final DnsQuery query = newQuery(id, nameServerAddr);
 
@@ -129,13 +143,13 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                     writePromise.channel(), protocol(), id, nameServerAddr, question);
         }
 
-        sendQuery(query, queryTimeoutMillis, flush, writePromise);
+        sendQuery(nameServerAddr, query, queryTimeoutMillis, flush, writePromise);
     }
 
-    private void sendQuery(final DnsQuery query, final long queryTimeoutMillis,
+    private void sendQuery(final InetSocketAddress nameServerAddr, final DnsQuery query, final long queryTimeoutMillis,
                            final boolean flush, final ChannelPromise writePromise) {
         if (channelReadyFuture.isSuccess()) {
-            writeQuery(query, queryTimeoutMillis, flush, writePromise);
+            writeQuery(nameServerAddr, query, queryTimeoutMillis, flush, writePromise);
         } else {
             Throwable cause = channelReadyFuture.cause();
             if (cause != null) {
@@ -150,7 +164,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                             // If the query is done in a late fashion (as the channel was not ready yet) we always flush
                             // to ensure we did not race with a previous flush() that was done when the Channel was not
                             // ready yet.
-                            writeQuery(query, queryTimeoutMillis, true, writePromise);
+                            writeQuery(nameServerAddr, query, queryTimeoutMillis, true, writePromise);
                         } else {
                             Throwable cause = future.cause();
                             failQuery(query, cause, writePromise);
@@ -170,26 +184,28 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         }
     }
 
-    private void writeQuery(final DnsQuery query, final long queryTimeoutMillis,
+    private void writeQuery(final InetSocketAddress nameServerAddr, final DnsQuery query, final long queryTimeoutMillis,
                             final boolean flush, final ChannelPromise writePromise) {
         Channel channel = writePromise.channel();
         final ChannelFuture writeFuture = flush ? channel.writeAndFlush(query, writePromise) :
                 channel.write(query, writePromise);
         if (writeFuture.isDone()) {
-            onQueryWriteCompletion(queryTimeoutMillis, writeFuture);
+            onQueryWriteCompletion(nameServerAddr, queryTimeoutMillis, writeFuture);
         } else {
             writeFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) {
-                    onQueryWriteCompletion(queryTimeoutMillis, writeFuture);
+                    onQueryWriteCompletion(nameServerAddr, queryTimeoutMillis, writeFuture);
                 }
             });
         }
     }
 
-    private void onQueryWriteCompletion(final long queryTimeoutMillis, ChannelFuture writeFuture) {
+    private void onQueryWriteCompletion(final InetSocketAddress nameServerAddr, final long queryTimeoutMillis,
+                                        ChannelFuture writeFuture) {
         if (!writeFuture.isSuccess()) {
-            tryFailure("failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
+            tryFailure(nameServerAddr,
+                    "failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
             return;
         }
 
@@ -203,7 +219,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                         return;
                     }
 
-                    tryFailure("query '" + id + "' via " + protocol() + " timed out after " +
+                    tryFailure(nameServerAddr, "query '" + id + "' via " + protocol() + " timed out after " +
                             queryTimeoutMillis + " milliseconds", null, true);
                 }
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -232,7 +248,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         return promise.trySuccess((AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope);
     }
 
-    final boolean tryFailure(String message, Throwable cause, boolean timeout) {
+    final boolean tryFailure(InetSocketAddress nameServerAddr, String message, Throwable cause, boolean timeout) {
         if (promise.isDone()) {
             return false;
         }
@@ -258,21 +274,5 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
             e = new DnsNameResolverException(nameServerAddr, question, buf.toString(), cause);
         }
         return promise.tryFailure(e);
-    }
-
-    @Override
-    public final void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
-        // Cancel the timeout task.
-        Future<?> timeoutFuture = this.timeoutFuture;
-        if (timeoutFuture != null) {
-            this.timeoutFuture = null;
-            timeoutFuture.cancel(false);
-        }
-
-        // Remove the id from the manager as soon as the query completes. This may be because of success, failure or
-        // cancellation
-        DnsQueryContext self = queryContextManager.remove(nameServerAddr, id);
-
-        assert self == this : "Removed DnsQueryContext is not the correct instance";
     }
 }

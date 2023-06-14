@@ -1332,8 +1332,8 @@ public class DnsNameResolver extends InetNameResolver {
         final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
         try {
             new DatagramDnsQueryContext(channelReadyPromise, queryContextManager, payloadSize,
-                    isRecursionDesired(), nameServerAddr, question, additionals, castPromise)
-                    .query(queryTimeoutMillis(), flush, writePromise);
+                    isRecursionDesired(), question, additionals, castPromise)
+                    .query(nameServerAddr, queryTimeoutMillis(), flush, writePromise);
             return castPromise;
         } catch (Exception e) {
             return castPromise.setFailure(e);
@@ -1400,8 +1400,7 @@ public class DnsNameResolver extends InetNameResolver {
                             tcpCh.eventLoop().newPromise();
                     final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
                     final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(channelReadyPromise,
-                            queryContextManager, payloadSize, isRecursionDesired(),
-                            (InetSocketAddress) tcpCh.remoteAddress(), qCtx.question(),
+                            queryContextManager, payloadSize, isRecursionDesired(), qCtx.question(),
                             EMPTY_ADDITIONALS, promise);
 
                     tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
@@ -1425,7 +1424,8 @@ public class DnsNameResolver extends InetNameResolver {
                                         response));
                             } else {
                                 response.release();
-                                tcpCtx.tryFailure("Received TCP DNS response with unexpected ID", null, false);
+                                tcpCtx.tryFailure((InetSocketAddress) tcpCh.remoteAddress(),
+                                        "Received TCP DNS response with unexpected ID", null, false);
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("{} Received a DNS response with an unexpected ID: TCP [{}: {}]",
                                             tcpCh, queryId, tcpCh.remoteAddress());
@@ -1435,7 +1435,8 @@ public class DnsNameResolver extends InetNameResolver {
 
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            if (tcpCtx.tryFailure("TCP fallback error", cause, false) && logger.isDebugEnabled()) {
+                            if (tcpCtx.tryFailure((InetSocketAddress) ctx.channel().remoteAddress(),
+                                    "TCP fallback error", cause, false) && logger.isDebugEnabled()) {
                                 logger.debug("{} Error during processing response: TCP [{}: {}]",
                                         ctx.channel(), queryId,
                                         ctx.channel().remoteAddress(), cause);
@@ -1458,7 +1459,8 @@ public class DnsNameResolver extends InetNameResolver {
                             tcpCh.close();
                         }
                     });
-                    tcpCtx.query(queryTimeoutMillis(), true, future.channel().newPromise());
+                    tcpCtx.query((InetSocketAddress) tcpCh.remoteAddress(), queryTimeoutMillis(),
+                            true, future.channel().newPromise());
                 }
             });
         }
