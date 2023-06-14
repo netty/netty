@@ -45,6 +45,7 @@ abstract class DnsQueryContext {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsQueryContext.class);
 
     private final Future<? extends Channel> channelReadyFuture;
+    private final Channel channel;
     private final DnsQueryContextManager queryContextManager;
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;
 
@@ -57,12 +58,15 @@ abstract class DnsQueryContext {
 
     private int id;
 
-    DnsQueryContext(Future<? extends Channel> channelReadyFuture, DnsQueryContextManager  queryContextManager,
+    DnsQueryContext(Channel channel,
+                    Future<? extends Channel> channelReadyFuture,
+                    DnsQueryContextManager queryContextManager,
                     int maxPayLoadSize,
                     boolean recursionDesired,
                     DnsQuestion question,
                     DnsRecord[] additionals,
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
+        this.channel = checkNotNull(channel, "channel");
         this.queryContextManager = checkNotNull(queryContextManager, "queryContextManager");
         this.channelReadyFuture = checkNotNull(channelReadyFuture, "channelReadyFuture");
         this.question = checkNotNull(question, "question");
@@ -101,8 +105,8 @@ abstract class DnsQueryContext {
     protected abstract DnsQuery newQuery(int id, InetSocketAddress nameServerAddr);
     protected abstract String protocol();
 
-    final void query(InetSocketAddress nameServerAddr, long queryTimeoutMillis,
-                     boolean flush, ChannelPromise writePromise) {
+    final ChannelFuture query(final InetSocketAddress nameServerAddr, long queryTimeoutMillis,
+                     boolean flush) {
         id = queryContextManager.add(nameServerAddr, this);
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
@@ -140,14 +144,15 @@ abstract class DnsQueryContext {
 
         if (logger.isDebugEnabled()) {
             logger.debug("{} WRITE: {}, [{}: {}], {}",
-                    writePromise.channel(), protocol(), id, nameServerAddr, question);
+                    channel, protocol(), id, nameServerAddr, question);
         }
 
-        sendQuery(nameServerAddr, query, queryTimeoutMillis, flush, writePromise);
+        return sendQuery(nameServerAddr, query, queryTimeoutMillis, flush);
     }
 
-    private void sendQuery(final InetSocketAddress nameServerAddr, final DnsQuery query, final long queryTimeoutMillis,
-                           final boolean flush, final ChannelPromise writePromise) {
+    private ChannelFuture sendQuery(final InetSocketAddress nameServerAddr, final DnsQuery query,
+                                    final long queryTimeoutMillis, final boolean flush) {
+        final ChannelPromise writePromise = channel.newPromise();
         if (channelReadyFuture.isSuccess()) {
             writeQuery(nameServerAddr, query, queryTimeoutMillis, flush, writePromise);
         } else {
@@ -173,22 +178,22 @@ abstract class DnsQueryContext {
                 });
             }
         }
+        return writePromise;
     }
 
     private void failQuery(DnsQuery query, Throwable cause, ChannelPromise writePromise) {
         try {
             promise.tryFailure(cause);
-            writePromise.setFailure(cause);
+            writePromise.tryFailure(cause);
         } finally {
             ReferenceCountUtil.release(query);
         }
     }
 
     private void writeQuery(final InetSocketAddress nameServerAddr, final DnsQuery query, final long queryTimeoutMillis,
-                            final boolean flush, final ChannelPromise writePromise) {
-        Channel channel = writePromise.channel();
-        final ChannelFuture writeFuture = flush ? channel.writeAndFlush(query, writePromise) :
-                channel.write(query, writePromise);
+                            final boolean flush, ChannelPromise promise) {
+        final ChannelFuture writeFuture = flush ? channel.writeAndFlush(query, promise) :
+                channel.write(query, promise);
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(nameServerAddr, queryTimeoutMillis, writeFuture);
         } else {

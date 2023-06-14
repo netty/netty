@@ -27,7 +27,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
@@ -1262,7 +1261,7 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
-        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(),
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE, EMPTY_ADDITIONALS, true,
                       ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
@@ -1272,8 +1271,9 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
-        return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(),
-                     ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(additionals, false), true,
+                ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
     /**
@@ -1283,7 +1283,8 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(), promise);
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                EMPTY_ADDITIONALS, true, promise);
     }
 
     /**
@@ -1294,7 +1295,8 @@ public class DnsNameResolver extends InetNameResolver {
             Iterable<DnsRecord> additionals,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(), promise);
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(additionals, false), true, promise);
     }
 
     /**
@@ -1321,19 +1323,19 @@ public class DnsNameResolver extends InetNameResolver {
 
     final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
             InetSocketAddress nameServerAddr, DnsQuestion question,
+            final DnsQueryLifecycleObserver queryLifecycleObserver,
             DnsRecord[] additionals,
             boolean flush,
-            ChannelPromise writePromise,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        assert !writePromise.isVoid();
 
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
                 checkNotNull(promise, "promise"));
         final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
         try {
-            new DatagramDnsQueryContext(channelReadyPromise, queryContextManager, payloadSize,
-                    isRecursionDesired(), question, additionals, castPromise)
-                    .query(nameServerAddr, queryTimeoutMillis(), flush, writePromise);
+            DnsQueryContext queryContext = new DatagramDnsQueryContext(ch, channelReadyPromise, queryContextManager,
+                    payloadSize, isRecursionDesired(), question, additionals, castPromise);
+            ChannelFuture future = queryContext.query(nameServerAddr, queryTimeoutMillis(), flush);
+            queryLifecycleObserver.queryWritten(nameServerAddr, future);
             return castPromise;
         } catch (Exception e) {
             return castPromise.setFailure(e);
@@ -1399,7 +1401,7 @@ public class DnsNameResolver extends InetNameResolver {
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
                             tcpCh.eventLoop().newPromise();
                     final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
-                    final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(channelReadyPromise,
+                    final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh, channelReadyPromise,
                             queryContextManager, payloadSize, isRecursionDesired(), qCtx.question(),
                             EMPTY_ADDITIONALS, promise);
 
@@ -1460,7 +1462,7 @@ public class DnsNameResolver extends InetNameResolver {
                         }
                     });
                     tcpCtx.query((InetSocketAddress) tcpCh.remoteAddress(), queryTimeoutMillis(),
-                            true, future.channel().newPromise());
+                            true);
                 }
             });
         }

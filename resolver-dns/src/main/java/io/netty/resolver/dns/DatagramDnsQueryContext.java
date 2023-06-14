@@ -29,11 +29,12 @@ import java.net.InetSocketAddress;
 
 final class DatagramDnsQueryContext extends DnsQueryContext {
 
-    DatagramDnsQueryContext(Future<? extends Channel> channelReadyFuture, DnsQueryContextManager queryContextManager,
+    DatagramDnsQueryContext(Channel channel, Future<? extends Channel> channelReadyFuture,
+                            DnsQueryContextManager queryContextManager,
                             int maxPayLoadSize, boolean recursionDesired,
                             DnsQuestion question, DnsRecord[] additionals,
                             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-        super(channelReadyFuture, queryContextManager, maxPayLoadSize, recursionDesired,
+        super(channel, channelReadyFuture, queryContextManager, maxPayLoadSize, recursionDesired,
                 question, additionals, promise);
     }
 
