@@ -1372,6 +1372,10 @@ public class DnsNameResolver extends InetNameResolver {
                         qCh, queryId, res.sender());
                 res.release();
                 return;
+            } else if (qCtx.isDone()) {
+                logger.debug("{} Received a DNS response for a query that was completed already ID: UDP [{}: {}]",
+                        qCh, queryId, res.sender());
+                res.release();
             }
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
@@ -1419,7 +1423,11 @@ public class DnsNameResolver extends InetNameResolver {
                             }
 
                             DnsQueryContext foundCtx = queryContextManager.get(res.sender(), queryId);
-                            if (foundCtx == tcpCtx) {
+                            if (foundCtx != null && foundCtx.isDone()) {
+                                logger.debug("{} Received a DNS response for a query that was completed " +
+                                                "already ID: TCP [{}: {}]", tcpCh, queryId, res.sender());
+                                response.release();
+                            } else if (foundCtx == tcpCtx) {
                                 tcpCtx.finishSuccess(tcpCh, new AddressedEnvelopeAdapter(
                                         (InetSocketAddress) ctx.channel().remoteAddress(),
                                         (InetSocketAddress) ctx.channel().localAddress(),

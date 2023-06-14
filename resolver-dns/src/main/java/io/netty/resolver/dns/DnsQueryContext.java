@@ -32,6 +32,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -43,6 +44,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 abstract class DnsQueryContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsQueryContext.class);
+    private static final long ID_REUSE_ON_TIMEOUT_DELAY_MILLIS =
+            SystemPropertyUtil.getLong("io.netty.resolver.dns.idReuseOnTimeoutDelayMillis", 10000);
 
     private final Future<? extends Channel> channelReadyFuture;
     private final Channel channel;
@@ -99,6 +102,15 @@ abstract class DnsQueryContext {
     }
 
     /**
+     * Returns {@code true} if the query was completed already.
+     *
+     * @return {@code true} if done.
+     */
+    final boolean isDone() {
+        return promise.isDone();
+    }
+
+    /**
      * Returns the {@link DnsQuestion} that will be written as part of the {@link DnsQuery}.
      *
      * @return the question.
@@ -151,13 +163,13 @@ abstract class DnsQueryContext {
                 if (future.cause() instanceof DnsNameResolverTimeoutException) {
                     // This query was failed due a timeout. Let's delay the removal of the id to reduce the risk
                     // of reusing the same id again while the remote nameserver might send the response after the
-                    // timeout. We choose a delay of 20 seconds, after this period all bets are off.
+                    // timeout.
                     channel.eventLoop().schedule(new Runnable() {
                         @Override
                         public void run() {
                             removeFromContextManager(nameServerAddr);
                         }
-                    }, 20, TimeUnit.SECONDS);
+                    }, ID_REUSE_ON_TIMEOUT_DELAY_MILLIS, TimeUnit.MILLISECONDS);
                 } else {
                     // Remove the id from the manager as soon as the query completes. This may be because of success,
                     // failure or cancellation
