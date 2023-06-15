@@ -45,8 +45,13 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 abstract class DnsQueryContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsQueryContext.class);
-    private static final long ID_REUSE_ON_TIMEOUT_DELAY_MILLIS =
-            SystemPropertyUtil.getLong("io.netty.resolver.dns.idReuseOnTimeoutDelayMillis", 10000);
+    private static final long ID_REUSE_ON_TIMEOUT_DELAY_MILLIS;
+
+    static {
+        ID_REUSE_ON_TIMEOUT_DELAY_MILLIS =
+                SystemPropertyUtil.getLong("io.netty.resolver.dns.idReuseOnTimeoutDelayMillis", 10000);
+        logger.debug("-Dio.netty.resolver.dns.idReuseOnTimeoutDelayMillis: {}", ID_REUSE_ON_TIMEOUT_DELAY_MILLIS);
+    }
 
     private final Future<? extends Channel> channelReadyFuture;
     private final Channel channel;
