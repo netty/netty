@@ -1376,6 +1376,7 @@ public class DnsNameResolver extends InetNameResolver {
                 logger.debug("{} Received a DNS response for a query that was timed out or cancelled: UDP [{}: {}]",
                         qCh, queryId, res.sender());
                 res.release();
+                return;
             }
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
