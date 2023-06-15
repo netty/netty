@@ -38,8 +38,8 @@ final class DnsQueryContextManager {
     private final Map<InetSocketAddress, DnsQueryContextMap> map =
             new HashMap<>();
 
-    int add(DnsQueryContext qCtx) {
-        final DnsQueryContextMap contexts = getOrCreateContextMap(qCtx.nameServerAddr());
+    int add(InetSocketAddress nameServerAddr, DnsQueryContext qCtx) {
+        final DnsQueryContextMap contexts = getOrCreateContextMap(nameServerAddr);
         return contexts.add(qCtx);
     }
 

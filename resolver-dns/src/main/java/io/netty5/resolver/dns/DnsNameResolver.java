@@ -1212,8 +1212,8 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
-        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(),
-                      ch.executor().newPromise());
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                EMPTY_ADDITIONALS, true, ch.newPromise());
     }
 
     /**
@@ -1222,8 +1222,8 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
-        return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(),
-                     ch.executor().newPromise());
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(additionals, false), true, ch.newPromise());
     }
 
     /**
@@ -1233,7 +1233,8 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(), promise);
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                EMPTY_ADDITIONALS, true, promise);
     }
 
     /**
@@ -1244,7 +1245,8 @@ public class DnsNameResolver extends InetNameResolver {
             Iterable<DnsRecord> additionals,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(), promise);
+        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(additionals, false), true, promise);
     }
 
     /**
@@ -1271,16 +1273,18 @@ public class DnsNameResolver extends InetNameResolver {
 
     final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
             InetSocketAddress nameServerAddr, DnsQuestion question,
+            final DnsQueryLifecycleObserver queryLifecycleObserver,
             DnsRecord[] additionals,
             boolean flush,
-            Promise<Void> writePromise,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
                 requireNonNull(promise, "promise"));
+        final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
         try {
-            new DatagramDnsQueryContext(this, nameServerAddr, question, additionals, castPromise)
-                    .query(flush, writePromise);
+            DnsQueryContext queryContext = new DatagramDnsQueryContext(ch, channelReadyPromise.asFuture(),
+                    queryContextManager, payloadSize, isRecursionDesired(), question, additionals, castPromise);
+            Future<Void> future = queryContext.writeQuery(nameServerAddr, queryTimeoutMillis(), flush);
+            queryLifecycleObserver.queryWritten(nameServerAddr, future);
         } catch (Exception e) {
             castPromise.setFailure(e);
         }
@@ -1306,21 +1310,22 @@ public class DnsNameResolver extends InetNameResolver {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            final Channel qCh = ctx.channel();
             final DatagramDnsResponse res = (DatagramDnsResponse) msg;
             final int queryId = res.id();
-            logger.debug("{} RECEIVED: UDP [{}: {}], {}", ch, queryId, res.sender(), res);
+            logger.debug("{} RECEIVED: UDP [{}: {}], {}", qCh, queryId, res.sender(), res);
 
             final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
             if (qCtx == null) {
                 logger.debug("{} Received a DNS response with an unknown ID: UDP [{}: {}]",
-                        ch, queryId, res.sender());
+                        qCh, queryId, res.sender());
                 res.release();
                 return;
             }
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
             if (!res.isTruncated() || socketChannelFactory == null) {
-                qCtx.finish(res);
+                qCtx.finishSuccess(qCh, res);
                 return;
             }
 
@@ -1337,48 +1342,51 @@ public class DnsNameResolver extends InetNameResolver {
                     }
 
                     // TCP fallback failed, just use the truncated response.
-                    qCtx.finish(res);
+                    qCtx.finishSuccess(qCh, res);
                     return;
                 }
-                final Channel channel = future.getNow();
+                final Channel tcpCh = future.getNow();
 
                 Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
-                        channel.executor().newPromise();
-                final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(DnsNameResolver.this, channel,
-                        (InetSocketAddress) channel.remoteAddress(), qCtx.question(),
+                        tcpCh.newPromise();
+                final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
+                final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh, channelReadyPromise.asFuture(),
+                        queryContextManager, payloadSize, isRecursionDesired(), qCtx.question(),
                         EMPTY_ADDITIONALS, promise);
 
-                channel.pipeline().addLast(new TcpDnsResponseDecoder());
-                channel.pipeline().addLast(new ChannelHandler() {
+                tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
+                tcpCh.pipeline().addLast(new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx1, Object msg1) {
-                        Channel channel = ctx1.channel();
+                        Channel tcpCh = ctx1.channel();
                         DnsResponse response = (DnsResponse) msg1;
                         int queryId1 = response.id();
 
                         if (logger.isDebugEnabled()) {
-                            logger.debug("{} RECEIVED: TCP [{}: {}], {}", channel, queryId,
-                                    channel.remoteAddress(), response);
+                            logger.debug("{} RECEIVED: TCP [{}: {}], {}", tcpCh, queryId,
+                                    tcpCh.remoteAddress(), response);
                         }
                         DnsQueryContext foundCtx = queryContextManager.get(res.sender(), queryId1);
                         if (foundCtx == tcpCtx) {
-                            tcpCtx.finish(new AddressedEnvelopeAdapter(
+                            tcpCtx.finishSuccess(tcpCh, new AddressedEnvelopeAdapter(
                                     (InetSocketAddress) ctx1.channel().remoteAddress(),
                                     (InetSocketAddress) ctx1.channel().localAddress(),
                                     response));
                         } else {
                             response.release();
-                            tcpCtx.tryFailure("Received TCP DNS response with unexpected ID", null, false);
+                            tcpCtx.finishFailure((InetSocketAddress) tcpCh.remoteAddress(),
+                                    "Received TCP DNS response with unexpected ID", null, false);
                             if (logger.isDebugEnabled()) {
                                 logger.debug("{} Received a DNS response with an unexpected ID: TCP [{}: {}]",
-                                        channel, queryId, channel.remoteAddress());
+                                        tcpCh, queryId, tcpCh.remoteAddress());
                             }
                         }
                     }
 
                     @Override
                     public void channelExceptionCaught(ChannelHandlerContext ctx1, Throwable cause) {
-                        if (tcpCtx.tryFailure("TCP fallback error", cause, false) && logger.isDebugEnabled()) {
+                        if (tcpCtx.finishFailure((InetSocketAddress) ctx.channel().remoteAddress(),
+                                "TCP fallback error", cause, false) && logger.isDebugEnabled()) {
                             logger.debug("{} Error during processing response: TCP [{}: {}]",
                                     ctx1.channel(), queryId,
                                     ctx1.channel().remoteAddress(), cause);
@@ -1387,17 +1395,18 @@ public class DnsNameResolver extends InetNameResolver {
                 });
 
                 promise.asFuture().addListener(addressEnvelopeFuture -> {
-                    channel.close();
 
                     if (addressEnvelopeFuture.isSuccess()) {
-                        qCtx.finish(addressEnvelopeFuture.getNow());
+                        qCtx.finishSuccess(qCh, addressEnvelopeFuture.getNow());
                         res.release();
                     } else {
                         // TCP fallback failed, just use the truncated response.
-                        qCtx.finish(res);
+                        qCtx.finishSuccess(qCh, res);
                     }
+                    tcpCh.close();
                 });
-                tcpCtx.query(true, channel.newPromise());
+                tcpCtx.writeQuery((InetSocketAddress) tcpCh.remoteAddress(), queryTimeoutMillis(),
+                        true);
             });
         }
 

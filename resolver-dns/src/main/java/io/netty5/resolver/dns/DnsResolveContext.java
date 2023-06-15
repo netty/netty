@@ -420,7 +420,6 @@ abstract class DnsResolveContext<T> {
                                       queryLifecycleObserver, promise, cause);
             return;
         }
-        final Promise<Void> writePromise = parent.ch.newPromise();
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
                 parent.ch.executor().newPromise();
 
@@ -435,11 +434,9 @@ abstract class DnsResolveContext<T> {
         }
 
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
-                parent.query0(nameServerAddr, question, additionals, flush, writePromise, queryPromise);
+                parent.query0(nameServerAddr, question, queryLifecycleObserver, additionals, flush, queryPromise);
 
         queriesInProgress.add(f);
-
-        queryLifecycleObserver.queryWritten(nameServerAddr, writePromise.asFuture());
 
         f.addListener(future -> {
             queriesInProgress.remove(future);

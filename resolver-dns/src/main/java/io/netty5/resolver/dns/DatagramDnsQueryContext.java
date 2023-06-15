@@ -22,26 +22,25 @@ import io.netty5.handler.codec.dns.DnsQuery;
 import io.netty5.handler.codec.dns.DnsQuestion;
 import io.netty5.handler.codec.dns.DnsRecord;
 import io.netty5.handler.codec.dns.DnsResponse;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 
 final class DatagramDnsQueryContext extends DnsQueryContext {
 
-    DatagramDnsQueryContext(DnsNameResolver parent, InetSocketAddress nameServerAddr, DnsQuestion question,
-                            DnsRecord[] additionals,
+    DatagramDnsQueryContext(Channel channel, Future<? extends Channel> channelReadyFuture,
+                            DnsQueryContextManager queryContextManager,
+                            int maxPayLoadSize, boolean recursionDesired,
+                            DnsQuestion question, DnsRecord[] additionals,
                             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-        super(parent, nameServerAddr, question, additionals, promise);
+        super(channel, channelReadyFuture, queryContextManager, maxPayLoadSize, recursionDesired,
+                question, additionals, promise);
     }
 
     @Override
-    protected DnsQuery newQuery(int id) {
-        return new DatagramDnsQuery(null, nameServerAddr(), id);
-    }
-
-    @Override
-    protected Channel channel() {
-        return parent().ch;
+    protected DnsQuery newQuery(int id, InetSocketAddress nameServerAddr) {
+        return new DatagramDnsQuery(null, nameServerAddr, id);
     }
 
     @Override
