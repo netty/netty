@@ -37,6 +37,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -160,10 +161,11 @@ abstract class DnsQueryContext {
                     timeoutFuture.cancel(false);
                 }
 
-                if (future.cause() instanceof DnsNameResolverTimeoutException) {
-                    // This query was failed due a timeout. Let's delay the removal of the id to reduce the risk
-                    // of reusing the same id again while the remote nameserver might send the response after the
-                    // timeout.
+                Throwable cause = future.cause();
+                if (cause instanceof DnsNameResolverTimeoutException || cause instanceof CancellationException) {
+                    // This query was failed due a timeout or cancellation. Let's delay the removal of the id to reduce
+                    // the risk of reusing the same id again while the remote nameserver might send the response after
+                    // the timeout.
                     channel.eventLoop().schedule(new Runnable() {
                         @Override
                         public void run() {
