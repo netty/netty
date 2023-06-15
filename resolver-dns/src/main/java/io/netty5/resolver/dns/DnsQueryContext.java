@@ -27,7 +27,6 @@ import io.netty5.handler.codec.dns.DnsResponse;
 import io.netty5.handler.codec.dns.DnsSection;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
 import org.slf4j.Logger;
@@ -44,6 +43,7 @@ abstract class DnsQueryContext {
 
     private final Future<? extends Channel> channelReadyFuture;
     private final Channel channel;
+    private final InetSocketAddress nameServerAddr;
     private final DnsQueryContextManager queryContextManager;
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;
 
@@ -58,6 +58,7 @@ abstract class DnsQueryContext {
 
     DnsQueryContext(Channel channel,
                     Future<? extends Channel> channelReadyFuture,
+                    InetSocketAddress nameServerAddr,
                     DnsQueryContextManager queryContextManager,
                     int maxPayLoadSize,
                     boolean recursionDesired,
@@ -67,6 +68,7 @@ abstract class DnsQueryContext {
         this.channel = requireNonNull(channel, "channel");
         this.queryContextManager = requireNonNull(queryContextManager, "queryContextManager");
         this.channelReadyFuture = requireNonNull(channelReadyFuture, "channelReadyFuture");
+        this.nameServerAddr = requireNonNull(nameServerAddr, "nameServerAddr");
         this.question = requireNonNull(question, "question");
         this.additionals = requireNonNull(additionals, "additionals");
         this.promise = requireNonNull(promise, "promise");
@@ -128,15 +130,13 @@ abstract class DnsQueryContext {
     /**
      * Write the query and return the {@link Future} that is completed once the write completes.
      *
-     * @param nameServerAddr        the nameserver to write the query to.
      * @param queryTimeoutMillis    the timeout after which the query is considered timeout and the original
      *                              {@link Promise} will be failed.
      * @param flush                 {@code true} if {@link Channel#flush()} should be called as well.
-     * @return
+     * @return                      the {@link Future} that is notified once once the write completes.
      */
-    final Future<Void> writeQuery(final InetSocketAddress nameServerAddr, long queryTimeoutMillis,
-                                   boolean flush) {
-        assert id == -1 : this.getClass().getSimpleName() + ".writeQuery(...) + can only be executed once.";
+    final Future<Void> writeQuery(long queryTimeoutMillis,  boolean flush) {
+        assert id == -1 : this.getClass().getSimpleName() + ".writeQuery(...) can only be executed once.";
         id = queryContextManager.add(nameServerAddr, this);
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
@@ -208,10 +208,10 @@ abstract class DnsQueryContext {
         final Future<Void> writeFuture = flush ? channel.writeAndFlush(query) :
                 channel.write(query);
         if (writeFuture.isDone()) {
-            onQueryWriteCompletion(nameServerAddr, queryTimeoutMillis, writeFuture, promise);
+            onQueryWriteCompletion(queryTimeoutMillis, writeFuture, promise);
         } else {
             writeFuture.addListener(f -> {
-                onQueryWriteCompletion(nameServerAddr, queryTimeoutMillis, writeFuture, promise);
+                onQueryWriteCompletion(queryTimeoutMillis, writeFuture, promise);
             });
         }
     }
@@ -227,12 +227,11 @@ abstract class DnsQueryContext {
         Resource.dispose(query);
     }
 
-    private void onQueryWriteCompletion(final InetSocketAddress nameServerAddr, final long queryTimeoutMillis,
+    private void onQueryWriteCompletion(final long queryTimeoutMillis,
                                         Future<Void> writeFuture, Promise<Void> writePromise) {
         if (!writeFuture.isSuccess()) {
             writePromise.setFailure(writeFuture.cause());
-            finishFailure(nameServerAddr,
-                    "failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
+            finishFailure("failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
             return;
         }
         writePromise.setSuccess(null);
@@ -244,7 +243,7 @@ abstract class DnsQueryContext {
                     return;
                 }
 
-                finishFailure(nameServerAddr, "query '" + id + "' via " + protocol() + " timed out after " +
+                finishFailure("query '" + id + "' via " + protocol() + " timed out after " +
                         queryTimeoutMillis + " milliseconds", null, true);
                 }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
         }
@@ -254,7 +253,7 @@ abstract class DnsQueryContext {
      * Notifies the original {@link Promise} that the response for the query was received.
      * This method takes ownership of passed {@link AddressedEnvelope}.
      */
-    void finishSuccess(Channel channel, AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
+    void finishSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
         final DnsResponse res = envelope.content();
         if (res.count(DnsSection.QUESTION) != 1) {
             logger.warn("{} Received a DNS response with invalid number of questions. Expected: 1, found: {}",
@@ -276,7 +275,7 @@ abstract class DnsQueryContext {
     /**
      * Notifies the original {@link Promise} that the query completes because of an failure.
      */
-    final boolean finishFailure(InetSocketAddress nameServerAddr, String message, Throwable cause, boolean timeout) {
+    final boolean finishFailure(String message, Throwable cause, boolean timeout) {
         if (promise.isDone()) {
             return false;
         }
