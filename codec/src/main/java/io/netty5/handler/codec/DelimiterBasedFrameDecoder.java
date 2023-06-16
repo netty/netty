@@ -313,27 +313,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
      * found in the haystack.
      */
     private static int indexOf(Buffer haystack, Buffer needle) {
-        for (int i = haystack.readerOffset(); i < haystack.writerOffset(); i ++) {
-            int haystackIndex = i;
-            int needleIndex;
-            for (needleIndex = 0; needleIndex < needle.capacity(); needleIndex ++) {
-                if (haystack.getByte(haystackIndex) != needle.getByte(needleIndex)) {
-                    break;
-                } else {
-                    haystackIndex ++;
-                    if (haystackIndex == haystack.writerOffset() &&
-                        needleIndex != needle.capacity() - 1) {
-                        return -1;
-                    }
-                }
-            }
-
-            if (needleIndex == needle.capacity()) {
-                // Found the needle from the haystack!
-                return i - haystack.readerOffset();
-            }
-        }
-        return -1;
+        return haystack.bytesBefore(needle);
     }
 
     private static void validateDelimiter(Buffer delimiter) {
