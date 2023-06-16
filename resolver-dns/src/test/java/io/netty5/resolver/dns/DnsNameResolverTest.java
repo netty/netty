@@ -3154,7 +3154,27 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver();
-
+            ChannelFactory<DatagramChannel> channelFactory = new ChannelFactory<DatagramChannel>() {
+                @Override
+                public DatagramChannel newChannel(EventLoop loop) {
+                    DatagramChannel datagramChannel = new NioDatagramChannel(loop);
+                    if (truncatedBecauseOfMtu) {
+                        datagramChannel.pipeline().addFirst(new ChannelHandler() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                if (msg instanceof DatagramPacket) {
+                                    // Truncate the packet by 1 byte.
+                                    DatagramPacket packet = (DatagramPacket) msg;
+                                    packet.content().writerOffset(packet.content().writerOffset() - 1);
+                                }
+                                ctx.fireChannelRead(msg);
+                            }
+                        });
+                    }
+                    return datagramChannel;
+                }
+            };
+            builder.channelFactory(channelFactory);
             if (tcpFallback) {
                 dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
 
@@ -3168,19 +3188,7 @@ public class DnsNameResolverTest {
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
             resolver = builder.build();
-            if (truncatedBecauseOfMtu) {
-                resolver.ch.pipeline().addFirst(new ChannelHandler() {
-                    @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (msg instanceof DatagramPacket) {
-                            // Truncate the packet by 1 byte.
-                            DatagramPacket packet = (DatagramPacket) msg;
-                            packet.content().writerOffset(packet.content().writerOffset() - 1);
-                        }
-                        ctx.fireChannelRead(msg);
-                    }
-                });
-            }
+
             Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> envelopeFuture = resolver.query(
                     new DefaultDnsQuestion(host, DnsRecordType.TXT));
 

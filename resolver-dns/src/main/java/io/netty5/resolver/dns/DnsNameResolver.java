@@ -142,9 +142,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
         WINDOWS_HOST_NAME = hostName;
         logger.debug("Windows hostname: {}", WINDOWS_HOST_NAME);
-    }
 
-    static {
         String[] searchDomains;
         try {
             searchDomains = EmptyArrays.EMPTY_STRINGS;
@@ -208,15 +206,15 @@ public class DnsNameResolver extends InetNameResolver {
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
 
-    final Promise<Channel> channelReadyPromise;
-    final Channel ch;
+    private final Promise<Channel> channelReadyPromise;
+    private final Channel ch;
 
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
     private final Comparator<InetSocketAddress> nameServerComparator;
     /**
      * Manages the {@link DnsQueryContext}s in progress and their query IDs.
      */
-    final DnsQueryContextManager queryContextManager = new DnsQueryContextManager();
+    private final DnsQueryContextManager queryContextManager = new DnsQueryContextManager();
 
     /**
      * Cache for {@link #doResolve(String, Promise)} and {@link #doResolveAll(String, Promise)}.
@@ -251,7 +249,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final boolean decodeIdn;
     private final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
     private final boolean completeOncePreferredResolved;
-    private final ChannelFactory<? extends SocketChannel> socketChannelFactory;
+    private final Bootstrap socketBootstrap;
 
     private final int maxNumConsolidation;
     private final Map<String, Future<List<InetAddress>>> inflightLookups;
@@ -424,7 +422,15 @@ public class DnsNameResolver extends InetNameResolver {
         this.ndots = ndots >= 0 ? ndots : DEFAULT_OPTIONS.ndots();
         this.decodeIdn = decodeIdn;
         this.completeOncePreferredResolved = completeOncePreferredResolved;
-        this.socketChannelFactory = socketChannelFactory;
+        if (socketChannelFactory == null) {
+            socketBootstrap = null;
+        } else {
+            socketBootstrap = new Bootstrap();
+            socketBootstrap.option(ChannelOption.SO_REUSEADDR, true)
+                    .group(executor())
+                    .channelFactory(socketChannelFactory)
+                    .handler(TCP_ENCODER);
+        }
         switch (this.resolvedAddressTypes) {
             case IPV4_ONLY:
                 supportsAAAARecords = false;
@@ -885,7 +891,7 @@ public class DnsNameResolver extends InetNameResolver {
         // It was not A/AAAA question or there was no entry in /etc/hosts.
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsRecordResolveContext(this, promise, question, additionals, nameServerAddrs, maxQueriesPerResolve)
+        new DnsRecordResolveContext(this, ch, promise, question, additionals, nameServerAddrs, maxQueriesPerResolve)
                 .resolve(promise);
         return promise.asFuture();
     }
@@ -1164,8 +1170,8 @@ public class DnsNameResolver extends InetNameResolver {
                             final boolean completeEarlyIfPossible) {
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        DnsAddressResolveContext ctx = new DnsAddressResolveContext(this, originalPromise, hostname, additionals,
-                nameServerAddrs, maxQueriesPerResolve, resolveCache,
+        DnsAddressResolveContext ctx = new DnsAddressResolveContext(this, ch, originalPromise, hostname,
+                additionals, nameServerAddrs, maxQueriesPerResolve, resolveCache,
                 authoritativeDnsServerCache, completeEarlyIfPossible);
         ctx.resolve(promise);
     }
@@ -1330,17 +1336,12 @@ public class DnsNameResolver extends InetNameResolver {
             }
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
-            if (!res.isTruncated() || socketChannelFactory == null) {
+            if (!res.isTruncated() || socketBootstrap == null) {
                 qCtx.finishSuccess(res);
                 return;
             }
 
-            Bootstrap bs = new Bootstrap();
-            bs.option(ChannelOption.SO_REUSEADDR, true)
-            .group(executor())
-            .channelFactory(socketChannelFactory)
-            .handler(TCP_ENCODER);
-            bs.connect(res.sender()).addListener(future -> {
+            socketBootstrap.connect(res.sender()).addListener(future -> {
                 if (future.isFailed()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("{} Unable to fallback to TCP [{}: {}]",

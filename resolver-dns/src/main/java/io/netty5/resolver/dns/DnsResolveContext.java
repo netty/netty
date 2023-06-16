@@ -18,6 +18,7 @@ package io.netty5.resolver.dns;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.AddressedEnvelope;
+import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.handler.codec.dns.DefaultDnsQuestion;
@@ -82,6 +83,7 @@ abstract class DnsResolveContext<T> {
             DnsResolveContext.class, "tryToFinishResolve(..)");
 
     final DnsNameResolver parent;
+    private final Channel channel;
     private final Promise<?> originalPromise;
     private final DnsServerAddressStream nameServerAddrs;
     private final String hostname;
@@ -98,12 +100,13 @@ abstract class DnsResolveContext<T> {
     private boolean triedCNAME;
     private boolean completeEarly;
 
-    DnsResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
+    DnsResolveContext(DnsNameResolver parent, Channel channel, Promise<?> originalPromise,
                       String hostname, int dnsClass, DnsRecordType[] expectedTypes,
                       DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs, int allowedQueries) {
         assert expectedTypes.length > 0;
 
         this.parent = parent;
+        this.channel = channel;
         this.originalPromise = originalPromise;
         this.hostname = hostname;
         this.dnsClass = dnsClass;
@@ -135,6 +138,13 @@ abstract class DnsResolveContext<T> {
     }
 
     /**
+     * The {@link Channel} used.
+     */
+    Channel channel() {
+        return channel;
+    }
+
+    /**
      * The {@link DnsCache} to use while resolving.
      */
     DnsCache resolveCache() {
@@ -158,7 +168,8 @@ abstract class DnsResolveContext<T> {
     /**
      * Creates a new context with the given parameters.
      */
-    abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, Promise<?> originalPromise,
+    abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, Channel channel,
+                                                     Promise<?> originalPromise,
                                                      String hostname,
                                                      int dnsClass, DnsRecordType[] expectedTypes,
                                                      DnsRecord[] additionals,
@@ -269,7 +280,7 @@ abstract class DnsResolveContext<T> {
     }
 
     void doSearchDomainQuery(String hostname, Promise<List<T>> nextPromise) {
-        DnsResolveContext<T> nextContext = newResolverContext(parent, originalPromise, hostname, dnsClass,
+        DnsResolveContext<T> nextContext = newResolverContext(parent, channel, originalPromise, hostname, dnsClass,
                                                               expectedTypes, additionals, nameServerAddrs,
                 parent.maxQueriesPerResolve());
         nextContext.internalResolve(hostname, nextPromise);
@@ -421,7 +432,7 @@ abstract class DnsResolveContext<T> {
             return;
         }
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
-                parent.ch.executor().newPromise();
+                channel.executor().newPromise();
 
         final long queryStartTimeNanos;
         final boolean isFeedbackAddressStream;
@@ -522,7 +533,7 @@ abstract class DnsResolveContext<T> {
         if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache,
                 parent.resolvedProtocolFamiliesUnsafe())) {
 
-            new DnsAddressResolveContext(parent, originalPromise, nameServerName, additionals,
+            new DnsAddressResolveContext(parent, channel, originalPromise, nameServerName, additionals,
                                          parent.newNameServerAddressStream(nameServerName),
                                          // Resolving the unresolved nameserver must be limited by allowedQueries
                                          // so we eventually fail
@@ -825,7 +836,7 @@ abstract class DnsResolveContext<T> {
                         if (logger.isDebugEnabled()) {
                             logger.debug("{} Ignoring record {} for [{}: {}] as it contains a different name than " +
                                             "the question name [{}]. Cnames: {}, Search domains: {}",
-                                    parent.ch, r.toString(), response.id(), envelope.sender(), questionName, cnames,
+                                    channel, r.toString(), response.id(), envelope.sender(), questionName, cnames,
                                     parent.searchDomains());
                         }
                         continue;
@@ -838,7 +849,7 @@ abstract class DnsResolveContext<T> {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Ignoring record {} for [{}: {}] as the converted record is null. "
                                     + "Hostname [{}], Additionals: {}",
-                            parent.ch, r.toString(), response.id(), envelope.sender(), hostname, additionals);
+                            channel, r.toString(), response.id(), envelope.sender(), hostname, additionals);
                 }
                 continue;
             }
