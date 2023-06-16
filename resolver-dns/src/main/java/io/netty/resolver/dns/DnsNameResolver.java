@@ -1332,9 +1332,9 @@ public class DnsNameResolver extends InetNameResolver {
                 checkNotNull(promise, "promise"));
         final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
         try {
-            DnsQueryContext queryContext = new DatagramDnsQueryContext(ch, channelReadyPromise, queryContextManager,
-                    payloadSize, isRecursionDesired(), question, additionals, castPromise);
-            ChannelFuture future = queryContext.writeQuery(nameServerAddr, queryTimeoutMillis(), flush);
+            DnsQueryContext queryContext = new DatagramDnsQueryContext(ch, channelReadyPromise, nameServerAddr,
+                    queryContextManager, payloadSize, isRecursionDesired(), question, additionals, castPromise);
+            ChannelFuture future = queryContext.writeQuery(queryTimeoutMillis(), flush);
             queryLifecycleObserver.queryWritten(nameServerAddr, future);
             return castPromise;
         } catch (Exception e) {
@@ -1381,7 +1381,7 @@ public class DnsNameResolver extends InetNameResolver {
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
             if (!res.isTruncated() || socketChannelFactory == null) {
-                qCtx.finishSuccess(qCh, res);
+                qCtx.finishSuccess(res);
                 return;
             }
 
@@ -1398,7 +1398,7 @@ public class DnsNameResolver extends InetNameResolver {
                                 ch, queryId, res.sender(), future.cause());
 
                         // TCP fallback failed, just use the truncated response.
-                        qCtx.finishSuccess(qCh, res);
+                        qCtx.finishSuccess(res);
                         return;
                     }
                     final Channel tcpCh = future.channel();
@@ -1407,8 +1407,8 @@ public class DnsNameResolver extends InetNameResolver {
                             tcpCh.eventLoop().newPromise();
                     final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
                     final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh, channelReadyPromise,
-                            queryContextManager, payloadSize, isRecursionDesired(), qCtx.question(),
-                            EMPTY_ADDITIONALS, promise);
+                            (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, payloadSize,
+                            isRecursionDesired(), qCtx.question(), EMPTY_ADDITIONALS, promise);
 
                     tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
                     tcpCh.pipeline().addLast(new ChannelInboundHandlerAdapter() {
@@ -1429,14 +1429,13 @@ public class DnsNameResolver extends InetNameResolver {
                                                 ": TCP [{}: {}]", tcpCh, queryId, res.sender());
                                 response.release();
                             } else if (foundCtx == tcpCtx) {
-                                tcpCtx.finishSuccess(tcpCh, new AddressedEnvelopeAdapter(
+                                tcpCtx.finishSuccess(new AddressedEnvelopeAdapter(
                                         (InetSocketAddress) ctx.channel().remoteAddress(),
                                         (InetSocketAddress) ctx.channel().localAddress(),
                                         response));
                             } else {
                                 response.release();
-                                tcpCtx.finishFailure((InetSocketAddress) tcpCh.remoteAddress(),
-                                        "Received TCP DNS response with unexpected ID", null, false);
+                                tcpCtx.finishFailure("Received TCP DNS response with unexpected ID", null, false);
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("{} Received a DNS response with an unexpected ID: TCP [{}: {}]",
                                             tcpCh, queryId, tcpCh.remoteAddress());
@@ -1446,7 +1445,7 @@ public class DnsNameResolver extends InetNameResolver {
 
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            if (tcpCtx.finishFailure((InetSocketAddress) ctx.channel().remoteAddress(),
+                            if (tcpCtx.finishFailure(
                                     "TCP fallback error", cause, false) && logger.isDebugEnabled()) {
                                 logger.debug("{} Error during processing response: TCP [{}: {}]",
                                         ctx.channel(), queryId,
@@ -1461,17 +1460,16 @@ public class DnsNameResolver extends InetNameResolver {
                         public void operationComplete(
                                 Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
                             if (future.isSuccess()) {
-                                qCtx.finishSuccess(qCh, future.getNow());
+                                qCtx.finishSuccess(future.getNow());
                                 res.release();
                             } else {
                                 // TCP fallback failed, just use the truncated response.
-                                qCtx.finishSuccess(qCh, res);
+                                qCtx.finishSuccess(res);
                             }
                             tcpCh.close();
                         }
                     });
-                    tcpCtx.writeQuery((InetSocketAddress) tcpCh.remoteAddress(), queryTimeoutMillis(),
-                            true);
+                    tcpCtx.writeQuery(queryTimeoutMillis(), true);
                 }
             });
         }

@@ -30,11 +30,12 @@ import java.net.InetSocketAddress;
 final class TcpDnsQueryContext extends DnsQueryContext {
 
     TcpDnsQueryContext(Channel channel, Future<? extends Channel> channelReadyFuture,
+                       InetSocketAddress nameServerAddr,
                        DnsQueryContextManager queryContextManager,
                        int maxPayLoadSize, boolean recursionDesired,
                        DnsQuestion question, DnsRecord[] additionals,
                        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-        super(channel, channelReadyFuture, queryContextManager, maxPayLoadSize, recursionDesired,
+        super(channel, channelReadyFuture, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
                 question, additionals, promise);
     }
 
