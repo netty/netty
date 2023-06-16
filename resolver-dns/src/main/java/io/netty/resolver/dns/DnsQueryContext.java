@@ -32,10 +32,12 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -43,6 +45,13 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 abstract class DnsQueryContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsQueryContext.class);
+    private static final long ID_REUSE_ON_TIMEOUT_DELAY_MILLIS;
+
+    static {
+        ID_REUSE_ON_TIMEOUT_DELAY_MILLIS =
+                SystemPropertyUtil.getLong("io.netty.resolver.dns.idReuseOnTimeoutDelayMillis", 10000);
+        logger.debug("-Dio.netty.resolver.dns.idReuseOnTimeoutDelayMillis: {}", ID_REUSE_ON_TIMEOUT_DELAY_MILLIS);
+    }
 
     private final Future<? extends Channel> channelReadyFuture;
     private final Channel channel;
@@ -102,6 +111,15 @@ abstract class DnsQueryContext {
     }
 
     /**
+     * Returns {@code true} if the query was completed already.
+     *
+     * @return {@code true} if done.
+     */
+    final boolean isDone() {
+        return promise.isDone();
+    }
+
+    /**
      * Returns the {@link DnsQuestion} that will be written as part of the {@link DnsQuery}.
      *
      * @return the question.
@@ -149,11 +167,22 @@ abstract class DnsQueryContext {
                     timeoutFuture.cancel(false);
                 }
 
-                // Remove the id from the manager as soon as the query completes. This may be because of success,
-                // failure or cancellation
-                DnsQueryContext self = queryContextManager.remove(nameServerAddr, id);
-
-                assert self == DnsQueryContext.this : "Removed DnsQueryContext is not the correct instance";
+                Throwable cause = future.cause();
+                if (cause instanceof DnsNameResolverTimeoutException || cause instanceof CancellationException) {
+                    // This query was failed due a timeout or cancellation. Let's delay the removal of the id to reduce
+                    // the risk of reusing the same id again while the remote nameserver might send the response after
+                    // the timeout.
+                    channel.eventLoop().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            removeFromContextManager(nameServerAddr);
+                        }
+                    }, ID_REUSE_ON_TIMEOUT_DELAY_MILLIS, TimeUnit.MILLISECONDS);
+                } else {
+                    // Remove the id from the manager as soon as the query completes. This may be because of success,
+                    // failure or cancellation
+                    removeFromContextManager(nameServerAddr);
+                }
             }
         });
         final DnsQuestion question = question();
@@ -177,6 +206,12 @@ abstract class DnsQueryContext {
         }
 
         return sendQuery(nameServerAddr, query, queryTimeoutMillis, flush);
+    }
+
+    private void removeFromContextManager(InetSocketAddress nameServerAddr) {
+        DnsQueryContext self = queryContextManager.remove(nameServerAddr, id);
+
+        assert self == this : "Removed DnsQueryContext is not the correct instance";
     }
 
     private ChannelFuture sendQuery(final InetSocketAddress nameServerAddr, final DnsQuery query,

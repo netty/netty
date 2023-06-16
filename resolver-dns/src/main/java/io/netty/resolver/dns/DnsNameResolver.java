@@ -1372,6 +1372,11 @@ public class DnsNameResolver extends InetNameResolver {
                         qCh, queryId, res.sender());
                 res.release();
                 return;
+            } else if (qCtx.isDone()) {
+                logger.debug("{} Received a DNS response for a query that was timed out or cancelled: UDP [{}: {}]",
+                        qCh, queryId, res.sender());
+                res.release();
+                return;
             }
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
@@ -1419,7 +1424,11 @@ public class DnsNameResolver extends InetNameResolver {
                             }
 
                             DnsQueryContext foundCtx = queryContextManager.get(res.sender(), queryId);
-                            if (foundCtx == tcpCtx) {
+                            if (foundCtx != null && foundCtx.isDone()) {
+                                logger.debug("{} Received a DNS response for a query that was timed out or cancelled " +
+                                                ": TCP [{}: {}]", tcpCh, queryId, res.sender());
+                                response.release();
+                            } else if (foundCtx == tcpCtx) {
                                 tcpCtx.finishSuccess(new AddressedEnvelopeAdapter(
                                         (InetSocketAddress) ctx.channel().remoteAddress(),
                                         (InetSocketAddress) ctx.channel().localAddress(),
