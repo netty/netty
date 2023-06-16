@@ -18,6 +18,7 @@ package io.netty.handler.codec;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
@@ -311,27 +312,11 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
      * found in the haystack.
      */
     private static int indexOf(ByteBuf haystack, ByteBuf needle) {
-        for (int i = haystack.readerIndex(); i < haystack.writerIndex(); i ++) {
-            int haystackIndex = i;
-            int needleIndex;
-            for (needleIndex = 0; needleIndex < needle.capacity(); needleIndex ++) {
-                if (haystack.getByte(haystackIndex) != needle.getByte(needleIndex)) {
-                    break;
-                } else {
-                    haystackIndex ++;
-                    if (haystackIndex == haystack.writerIndex() &&
-                        needleIndex != needle.capacity() - 1) {
-                        return -1;
-                    }
-                }
-            }
-
-            if (needleIndex == needle.capacity()) {
-                // Found the needle from the haystack!
-                return i - haystack.readerIndex();
-            }
+        int index = ByteBufUtil.indexOf(needle, haystack);
+        if (index == -1) {
+            return -1;
         }
-        return -1;
+        return index - haystack.readerIndex();
     }
 
     private static void validateDelimiter(ByteBuf delimiter) {
