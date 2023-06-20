@@ -35,6 +35,7 @@ import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.DecoderException;
+import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.DomainNameMapping;
@@ -69,6 +70,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -701,13 +703,58 @@ public class SniHandlerTest {
     }
 
     @Test
+    public void testSniHandlerFailsOnTooBigClientHello() throws Exception {
+        SniHandler handler = new SniHandler(new Mapping<String, SslContext>() {
+            @Override
+            public SslContext map(String input) {
+                throw new UnsupportedOperationException("Should not be called");
+            }
+        }, 10, 0);
+
+        final AtomicReference<SniCompletionEvent> completionEventRef =
+                new AtomicReference<SniCompletionEvent>();
+        final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
+            @Override
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+                if (evt instanceof SniCompletionEvent) {
+                    completionEventRef.set((SniCompletionEvent) evt);
+                }
+            }
+        });
+        final Buffer buffer = ch.bufferAllocator().allocate(128);
+        buffer.writeByte((byte) 0x16);      // Content Type: Handshake
+        buffer.writeShort((short) 0x0303); // TLS 1.2
+        buffer.writeShort((short) 0x0006); // Packet length
+
+        // 16_777_215
+        buffer.writeByte((byte) 0x01); // Client Hello
+        buffer.writeMedium(0xFFFFFF); // Length
+        buffer.writeShort((short) 0x0303); // TLS 1.2
+
+        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(buffer));
+        try {
+            while (completionEventRef.get() == null) {
+                Thread.sleep(100);
+                // We need to run all pending tasks as the handshake timeout is scheduled on the EventLoop.
+                ch.runPendingTasks();
+            }
+            SniCompletionEvent completionEvent = completionEventRef.get();
+            assertNotNull(completionEvent);
+            assertNotNull(completionEvent.cause());
+            assertEquals(TooLongFrameException.class, completionEvent.cause().getClass());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
+    @Test
     public void testSniHandlerFiresHandshakeTimeout() throws Exception {
         SniHandler handler = new SniHandler(new Mapping<String, SslContext>() {
             @Override
             public SslContext map(String input) {
                 throw new UnsupportedOperationException("Should not be called");
             }
-        }, 10);
+        }, 0, 10);
 
         final AtomicReference<SniCompletionEvent> completionEventRef =
             new AtomicReference<SniCompletionEvent>();
@@ -743,7 +790,7 @@ public class SniHandlerTest {
             public SslContext map(String input) {
                 return context;
             }
-        }, 100);
+        }, 0, 100);
 
         final AtomicReference<SniCompletionEvent> sniCompletionEventRef =
             new AtomicReference<SniCompletionEvent>();

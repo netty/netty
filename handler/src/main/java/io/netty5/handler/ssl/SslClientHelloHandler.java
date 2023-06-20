@@ -21,8 +21,10 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.DecoderException;
+import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.PlatformDependent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,13 +33,30 @@ import org.slf4j.LoggerFactory;
  * {@link ByteToMessageDecoder} which allows to be notified once a full {@code ClientHello} was received.
  */
 public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
+    /**
+     * The maximum length of client hello message as defined by
+     * <a href="https://www.rfc-editor.org/rfc/rfc5246#section-6.2.1">RFC5246</a>.
+     */
+    public static final int MAX_CLIENT_HELLO_LENGTH = 0xFFFFFF;
 
     private static final Logger logger = LoggerFactory.getLogger(SslClientHelloHandler.class);
 
+    private final int maxClientHelloLength;
     private boolean handshakeFailed;
     private boolean suppressRead;
     private ReadBufferAllocator pendingReadBufferAllocator;
     private Buffer handshakeBuffer;
+
+    public SslClientHelloHandler() {
+        this(MAX_CLIENT_HELLO_LENGTH);
+    }
+
+    protected SslClientHelloHandler(int maxClientHelloLength) {
+        // 16MB is the maximum as per RFC:
+        // See https://www.rfc-editor.org/rfc/rfc5246#section-6.2.1
+        this.maxClientHelloLength =
+                ObjectUtil.checkInRange(maxClientHelloLength, 0, MAX_CLIENT_HELLO_LENGTH, "maxClientHelloLength");
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
@@ -115,6 +134,15 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                                     handshakeLength = in.getUnsignedMedium(readerIndex +
                                             SslUtils.SSL_RECORD_HEADER_LENGTH + 1);
 
+                                    if (handshakeLength > maxClientHelloLength && maxClientHelloLength != 0) {
+                                        TooLongFrameException e = new TooLongFrameException(
+                                                "ClientHello length exceeds " + maxClientHelloLength +
+                                                        ": " + handshakeLength);
+                                        in.skipReadableBytes(in.readableBytes());
+                                        ctx.fireChannelInboundEvent(new SniCompletionEvent(e));
+                                        SslUtils.handleHandshakeFailure(ctx, null, null, e, true);
+                                        throw e;
+                                    }
                                     // Consume handshakeType and handshakeLength (this sums up as 4 bytes)
                                     readerIndex += 4;
                                     packetLength -= 4;
@@ -161,6 +189,9 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                 }
             } catch (NotSslRecordException e) {
                 // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
+                throw e;
+            } catch (TooLongFrameException e) {
+                // Just rethrow as in this case we also closed the channel
                 throw e;
             } catch (Exception e) {
                 // unexpected encoding, ignore sni and use default
