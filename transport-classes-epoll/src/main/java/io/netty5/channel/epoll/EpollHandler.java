@@ -22,7 +22,6 @@ import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
-import io.netty5.channel.SingleThreadEventLoop;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.util.collection.IntObjectHashMap;
@@ -30,6 +29,7 @@ import io.netty5.util.collection.IntObjectMap;
 import io.netty5.util.concurrent.Ticker;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
+import io.netty5.util.internal.UnstableApi;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,9 +61,9 @@ public class EpollHandler implements IoHandler {
 
     // Pick a number that no task could have previously used.
     private long prevDeadlineNanos = Ticker.systemTicker().nanoTime() - 1;
-    private final FileDescriptor epollFd;
-    private final FileDescriptor eventFd;
-    private final FileDescriptor timerFd;
+    private FileDescriptor epollFd;
+    private FileDescriptor eventFd;
+    private FileDescriptor timerFd;
     private final IntObjectMap<AbstractEpollChannel<?>> channels = new IntObjectHashMap<>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
@@ -117,6 +117,15 @@ public class EpollHandler implements IoHandler {
             allowGrowing = false;
             events = new EpollEventArray(maxEvents);
         }
+        openFileDescriptors();
+    }
+
+    /**
+     * This method is intended for use by a process checkpoint/restore
+     * integration, such as OpenJDK CRaC.
+     */
+    @UnstableApi
+    public void openFileDescriptors() {
         boolean success = false;
         FileDescriptor epollFd = null;
         FileDescriptor eventFd = null;
@@ -482,39 +491,7 @@ public class EpollHandler implements IoHandler {
     @Override
     public final void destroy() {
         try {
-            // Ensure any in-flight wakeup writes have been performed prior to closing eventFd.
-            while (pendingWakeup) {
-                try {
-                    int count = epollWaitTimeboxed();
-                    if (count == 0) {
-                        // We timed-out so assume that the write we're expecting isn't coming
-                        break;
-                    }
-                    for (int i = 0; i < count; i++) {
-                        if (events.fd(i) == eventFd.intValue()) {
-                            pendingWakeup = false;
-                            break;
-                        }
-                    }
-                } catch (IOException ignore) {
-                    // ignore
-                }
-            }
-            try {
-                eventFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the event fd.", e);
-            }
-            try {
-                timerFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the timer fd.", e);
-            }
-            try {
-                epollFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the epoll fd.", e);
-            }
+            closeFileDescriptors();
         } finally {
             // release native memory
             if (iovArray != null) {
@@ -526,6 +503,49 @@ public class EpollHandler implements IoHandler {
                 datagramPacketArray = null;
             }
             events.free();
+        }
+    }
+
+    /**
+     * This method is intended for use by process checkpoint/restore
+     * integration, such as OpenJDK CRaC.
+     * It's up to the caller to ensure that there is no concurrent use
+     * of the FDs while these are closed, e.g. by blocking the executor.
+     */
+    @UnstableApi
+    public void closeFileDescriptors() {
+        // Ensure any in-flight wakeup writes have been performed prior to closing eventFd.
+        while (pendingWakeup) {
+            try {
+                int count = epollWaitTimeboxed();
+                if (count == 0) {
+                    // We timed-out so assume that the write we're expecting isn't coming
+                    break;
+                }
+                for (int i = 0; i < count; i++) {
+                    if (events.fd(i) == eventFd.intValue()) {
+                        pendingWakeup = false;
+                        break;
+                    }
+                }
+            } catch (IOException ignore) {
+                // ignore
+            }
+        }
+        try {
+            eventFd.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close the event fd.", e);
+        }
+        try {
+            timerFd.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close the timer fd.", e);
+        }
+        try {
+            epollFd.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close the epoll fd.", e);
         }
     }
 
