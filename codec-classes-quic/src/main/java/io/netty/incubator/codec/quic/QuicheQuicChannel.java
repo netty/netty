@@ -1101,31 +1101,35 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 // If the segmentSize is not -1 we know we need to send now what was in the out list (which might be
                 // nothing as well).
                 if (segmentSize != -1) {
+                    boolean stop = false;
                     switch (size) {
                         case 0:
                             // There was nothing in the out list, just move on.
                             break;
                         case 1:
                             // Only one buffer in the out list, there is no need to use segments.
-                            boolean stop = writePacket
-                                    (new DatagramPacket(bufferList.get(0), sendToAddress), maxDatagramSize, len);
+                            stop = writePacket(new DatagramPacket(
+                                    bufferList.get(0), sendToAddress), maxDatagramSize, len);
                             packetWasWritten = true;
-                            if (stop) {
-                                // Nothing left in the window, continue later
-                                return true;
-                            }
                             break;
                         default:
                             // Create a packet with segments in.
-                            boolean stopWriting = writePacket(segmentedDatagramPacketAllocator.newPacket(
+                            stop = writePacket(segmentedDatagramPacketAllocator.newPacket(
                                     Unpooled.wrappedBuffer(bufferList.toArray(
                                             new ByteBuf[0])), segmentSize, sendToAddress), maxDatagramSize, len);
                             packetWasWritten = true;
-                            if (stopWriting) {
-                                // Nothing left in the window, continue later
-                                return true;
-                            }
                             break;
+                    }
+                    if (stop) {
+                        // Nothing left in the window, continue later. That said we still need to also
+                        // write the previous filled out buffer as otherwise we would either leak or need
+                        // to drop it and so produce some loss.
+                        if (out.isReadable()) {
+                            parent().write(new DatagramPacket(out, sendToAddress));
+                        } else {
+                            out.release();
+                        }
+                        return true;
                     }
                     // We processed everything that was in the list, clear it.
                     bufferList.clear();
