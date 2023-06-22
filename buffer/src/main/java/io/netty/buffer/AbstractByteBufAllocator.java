@@ -16,9 +16,11 @@
 
 package io.netty.buffer;
 
+import static io.netty.util.ResourceLeakDetector.Level.DISABLED;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetector.Level;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -38,8 +40,17 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
+        final Level level = ResourceLeakDetector.getLevel();
+        if (level == DISABLED) {
+            return buf;
+        }
+        return toEnabledLeakAwareBuffer(level, buf);
+    }
+
+    private static ByteBuf toEnabledLeakAwareBuffer(Level level, ByteBuf buf) {
+        assert level != DISABLED;
         ResourceLeakTracker<ByteBuf> leak;
-        switch (ResourceLeakDetector.getLevel()) {
+        switch (level) {
             case SIMPLE:
                 leak = AbstractByteBuf.leakDetector.track(buf);
                 if (leak != null) {
@@ -60,8 +71,17 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     protected static CompositeByteBuf toLeakAwareBuffer(CompositeByteBuf buf) {
+        final Level level = ResourceLeakDetector.getLevel();
+        if (level == DISABLED) {
+            return buf;
+        }
+        return toEnabledLeakAwareBuffer(level, buf);
+    }
+
+    private static CompositeByteBuf toEnabledLeakAwareBuffer(Level level, CompositeByteBuf buf) {
+        assert level != DISABLED;
         ResourceLeakTracker<ByteBuf> leak;
-        switch (ResourceLeakDetector.getLevel()) {
+        switch (level) {
             case SIMPLE:
                 leak = AbstractByteBuf.leakDetector.track(buf);
                 if (leak != null) {
