@@ -79,10 +79,6 @@
       <artifactId>netty-transport</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-classes-epoll</artifactId>
       <!-- Let's mark as optional as it is not strictly needed -->

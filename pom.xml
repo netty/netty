@@ -76,7 +76,6 @@
     <packaging.type>jar</packaging.type>
     <netty.version>4.1.94.Final</netty.version>
     <netty.build.version>31</netty.build.version>
-    <commons.codec.version>1.15</commons.codec.version>
     <junit.version>5.9.0</junit.version>
     <native.maven.plugin.version>0.9.22</native.maven.plugin.version>
     <test.argLine>-D_</test.argLine>
@@ -384,11 +383,6 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-transport</artifactId>
         <version>${netty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-codec</groupId>
-        <artifactId>commons-codec</artifactId>
-        <version>${commons.codec.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>

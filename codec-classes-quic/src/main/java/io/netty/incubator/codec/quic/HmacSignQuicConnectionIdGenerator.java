@@ -16,12 +16,15 @@
 package io.netty.incubator.codec.quic;
 
 import java.nio.ByteBuffer;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
 import io.netty.util.internal.ObjectUtil;
-import org.apache.commons.codec.digest.HmacAlgorithms;
-import org.apache.commons.codec.digest.HmacUtils;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * A {@link QuicConnectionIdGenerator} which creates new connection id by signing the given input
@@ -29,6 +32,8 @@ import org.apache.commons.codec.digest.HmacUtils;
  */
 final class HmacSignQuicConnectionIdGenerator implements QuicConnectionIdGenerator {
     static final QuicConnectionIdGenerator INSTANCE = new HmacSignQuicConnectionIdGenerator();
+
+    private static final String ALGORITM = "HmacSHA256";
     private static final byte[] randomKey = new byte[16];
 
     static {
@@ -44,13 +49,29 @@ final class HmacSignQuicConnectionIdGenerator implements QuicConnectionIdGenerat
                 "HmacSignQuicConnectionIdGenerator should always have an input to sign with");
     }
 
+    private static Mac newMac() {
+        try {
+            SecretKeySpec keySpec = new SecretKeySpec(randomKey, ALGORITM);
+            Mac mac = Mac.getInstance(ALGORITM);
+            mac.init(keySpec);
+            return mac;
+        } catch (NoSuchAlgorithmException | InvalidKeyException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
     @Override
     public ByteBuffer newId(ByteBuffer buffer, int length) {
         ObjectUtil.checkNotNull(buffer, "buffer");
         ObjectUtil.checkPositive(buffer.remaining(), "buffer");
         ObjectUtil.checkInRange(length, 0, maxConnectionIdLength(), "length");
 
-        byte[] signBytes = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, randomKey).hmac(buffer);
+
+        // TODO: Consider using a ThreadLocal.
+        Mac mac = newMac();
+        mac.update(buffer);
+
+        byte[] signBytes = mac.doFinal();
         if (signBytes.length != length) {
             signBytes = Arrays.copyOf(signBytes, length);
         }
