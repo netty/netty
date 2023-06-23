@@ -154,7 +154,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final int IN_RECV = 1 << 1;
     private static final int IN_CONNECTION_SEND = 1 << 2;
     private static final int IN_HANDLE_WRITABLE_STREAMS = 1 << 3;
-    private static final int IN_FORCE_CLOSE = 1 << 3;
+    private static final int IN_FORCE_CLOSE = 1 << 4;
 
     private static final int CLOSED = 0;
     private static final int OPEN = 1;
