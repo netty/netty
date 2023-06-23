@@ -616,6 +616,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .build();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor, sslContext)
                 .sslEngineProvider(q -> sslContext.newEngine(q.alloc(), "localhost", 9999)));
+        final CountDownLatch activeLatch = new CountDownLatch(1);
+        final CountDownLatch eventLatch = new CountDownLatch(1);
         final CountDownLatch streamLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> errorRef = new AtomicReference<>();
 
@@ -644,8 +646,15 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter() {
                         @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            activeLatch.countDown();
+                            ctx.fireChannelActive();
+                        }
+
+                        @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslEarlyDataReadyEvent) {
+                                eventLatch.countDown();
                                 ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL,
                                         new ChannelInboundHandlerAdapter()).addListener(f -> {
                                     try {
@@ -671,10 +680,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect()
                     .get();
 
-            streamLatch.await();
-            if (errorRef.get() != null) {
-                throw errorRef.get();
-            }
+            awaitAndCheckError(activeLatch, errorRef);
+            awaitAndCheckError(eventLatch, errorRef);
+            awaitAndCheckError(streamLatch, errorRef);
 
             quicChannel.closeFuture().sync();
             readLatch.await();
@@ -684,6 +692,14 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             channel.close().sync();
 
             shutdown(executor);
+        }
+    }
+
+    private static void awaitAndCheckError(CountDownLatch latch, AtomicReference<Throwable> errorRef) throws Throwable {
+        while (!latch.await(500, TimeUnit.MILLISECONDS)) {
+            if (errorRef.get() != null) {
+                throw errorRef.get();
+            }
         }
     }
 
