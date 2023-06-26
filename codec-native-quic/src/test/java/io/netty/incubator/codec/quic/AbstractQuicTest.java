@@ -32,7 +32,7 @@ public abstract class AbstractQuicTest {
     }
 
     static Executor[] newSslTaskExecutors() {
-        return  new Executor[] {
+        return new Executor[] {
                 ImmediateExecutor.INSTANCE,
                 Executors.newSingleThreadExecutor()
         };

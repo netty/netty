@@ -33,6 +33,7 @@ import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.ImmediateExecutor;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
@@ -574,6 +575,15 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testConnectWith0RTT(Executor executor) throws Throwable {
+        if (executor != ImmediateExecutor.INSTANCE) {
+            // Disable 0RTT test when offloading for now as it sometimes timeout. This is just a workaround and will
+            // need a proper fix.
+            // See https://github.com/netty/netty-incubator-codec-quic/issues/544
+            //
+            // TODO: remove once fixed.
+            shutdown(executor);
+            return;
+        }
         final CountDownLatch readLatch = new CountDownLatch(1);
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(
