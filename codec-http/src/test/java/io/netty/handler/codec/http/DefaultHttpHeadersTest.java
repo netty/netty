@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,31 +17,56 @@ package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderValues.ZERO;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.util.AsciiString.contentEquals;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultHttpHeadersTest {
     private static final CharSequence HEADER_NAME = "testHeader";
+    private static final CharSequence ILLEGAL_VALUE = "testHeader\r\nContent-Length:45\r\n\r\n";
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void nullHeaderNameNotAllowed() {
-        new DefaultHttpHeaders().add(null, "foo");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultHttpHeaders().add(null, "foo");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void emptyHeaderNameNotAllowed() {
-        new DefaultHttpHeaders().add(StringUtil.EMPTY_STRING, "foo");
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DefaultHttpHeaders().add(StringUtil.EMPTY_STRING, "foo");
+            }
+        });
     }
 
     @Test
@@ -63,11 +88,11 @@ public class DefaultHttpHeadersTest {
     @Test
     public void keysShouldBeCaseInsensitiveInHeadersEquals() {
         DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
-        headers1.add(of("name1"), Arrays.asList("value1", "value2", "value3"));
+        headers1.add(of("name1"), asList("value1", "value2", "value3"));
         headers1.add(of("nAmE2"), of("value4"));
 
         DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
-        headers2.add(of("naMe1"), Arrays.asList("value1", "value2", "value3"));
+        headers2.add(of("naMe1"), asList("value1", "value2", "value3"));
         headers2.add(of("NAME2"), of("value4"));
 
         assertEquals(headers1, headers1);
@@ -145,16 +170,26 @@ public class DefaultHttpHeadersTest {
         assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetNullHeaderValueValidate() {
-        HttpHeaders headers = new DefaultHttpHeaders(true);
-        headers.set(of("test"), (CharSequence) null);
+        final HttpHeaders headers = new DefaultHttpHeaders(true);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                headers.set(of("test"), (CharSequence) null);
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetNullHeaderValueNotValidate() {
-        HttpHeaders headers = new DefaultHttpHeaders(false);
-        headers.set(of("test"), (CharSequence) null);
+        final HttpHeaders headers = new DefaultHttpHeaders(false);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                headers.set(of("test"), (CharSequence) null);
+            }
+        });
     }
 
     @Test
@@ -207,6 +242,30 @@ public class DefaultHttpHeadersTest {
     }
 
     @Test
+    public void setCharSequenceValidatesValue() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.set(HEADER_NAME, ILLEGAL_VALUE);
+            }
+        });
+        assertTrue(exception.getMessage().contains(HEADER_NAME));
+    }
+
+    @Test
+    public void setIterableValidatesValue() {
+        final DefaultHttpHeaders headers = newDefaultDefaultHttpHeaders();
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.set(HEADER_NAME, Collections.singleton(ILLEGAL_VALUE));
+            }
+        });
+        assertTrue(exception.getMessage().contains(HEADER_NAME));
+    }
+
+    @Test
     public void toStringOnEmptyHeaders() {
         assertEquals("DefaultHttpHeaders[]", newDefaultDefaultHttpHeaders().toString());
     }
@@ -232,8 +291,39 @@ public class DefaultHttpHeadersTest {
                 .add(HttpHeaderNames.CONTENT_LENGTH, 10)
                 .names();
 
-        String[] namesArray = nettyHeaders.toArray(new String[0]);
+        String[] namesArray = nettyHeaders.toArray(EmptyArrays.EMPTY_STRINGS);
         assertArrayEquals(namesArray, new String[] { HttpHeaderNames.CONTENT_LENGTH.toString() });
+    }
+
+    @Test
+    public void names() {
+        HttpHeaders headers = new DefaultHttpHeaders(true)
+                .add(ACCEPT, APPLICATION_JSON)
+                .add(CONTENT_LENGTH, ZERO)
+                .add(CONNECTION, CLOSE);
+        assertFalse(headers.isEmpty());
+        assertEquals(3, headers.size());
+        Set<String> names = headers.names();
+        assertEquals(3, names.size());
+        assertTrue(names.contains(ACCEPT.toString()));
+        assertTrue(names.contains(CONTENT_LENGTH.toString()));
+        assertTrue(names.contains(CONNECTION.toString()));
+    }
+
+    @Test
+    public void testContainsName() {
+        HttpHeaders headers = new DefaultHttpHeaders(true)
+                .add(CONTENT_LENGTH, "36");
+        assertTrue(headers.contains("Content-Length"));
+        assertTrue(headers.contains("content-length"));
+        assertTrue(headers.contains(CONTENT_LENGTH));
+        headers.remove(CONTENT_LENGTH);
+        assertFalse(headers.contains("Content-Length"));
+        assertFalse(headers.contains("content-length"));
+        assertFalse(headers.contains(CONTENT_LENGTH));
+
+        assertFalse(headers.contains("non-existent-name"));
+        assertFalse(headers.contains(new AsciiString("non-existent-name")));
     }
 
     private static void assertDefaultValues(final DefaultHttpHeaders headers, final HeaderValue headerValue) {

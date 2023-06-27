@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -46,9 +46,9 @@ import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -61,9 +61,9 @@ import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -96,18 +96,19 @@ public class InboundHttp2ToHttpAdapterTest {
     private CountDownLatch serverLatch2;
     private CountDownLatch clientLatch2;
     private CountDownLatch settingsLatch;
+    private CountDownLatch clientHandlersAddedLatch;
     private int maxContentLength;
     private HttpResponseDelegator serverDelegator;
     private HttpResponseDelegator clientDelegator;
     private HttpSettingsDelegator settingsDelegator;
     private Http2Exception clientException;
 
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
     }
 
-    @After
+    @AfterEach
     public void teardown() throws Exception {
         cleanupCapturedRequests();
         cleanupCapturedResponses();
@@ -663,6 +664,7 @@ public class InboundHttp2ToHttpAdapterTest {
         serverLatch2 = new CountDownLatch(serverLatchCount2);
         clientLatch2 = new CountDownLatch(clientLatchCount2);
         settingsLatch = new CountDownLatch(settingsLatchCount);
+        clientHandlersAddedLatch = new CountDownLatch(1);
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -727,6 +729,7 @@ public class InboundHttp2ToHttpAdapterTest {
                     }
                 });
                 p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
@@ -734,16 +737,23 @@ public class InboundHttp2ToHttpAdapterTest {
                         }
                     }
                 });
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        clientHandlersAddedLatch.countDown();
+                    }
+                });
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress("InboundHttp2ToHttpAdapterTest")).sync().channel();
+        serverChannel = sb.bind(new LocalAddress(getClass())).sync().channel();
 
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
+        assertTrue(clientHandlersAddedLatch.await(5, SECONDS));
     }
 
     private void cleanupCapturedRequests() {

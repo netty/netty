@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,24 +17,25 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
 public class DelegatingSslContextTest {
-    private static final String[] EXPECTED_PROTOCOLS = { SslUtils.PROTOCOL_TLS_V1_1 };
+    private static final String[] EXPECTED_PROTOCOLS = { SslProtocols.TLS_v1_1 };
 
     @Test
     public void testInitEngineOnNewEngine() throws Exception {
         SslContext delegating = newDelegatingSslContext();
 
         SSLEngine engine = delegating.newEngine(UnpooledByteBufAllocator.DEFAULT);
-        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
+        assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
 
         engine = delegating.newEngine(UnpooledByteBufAllocator.DEFAULT, "localhost", 9090);
-        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
+        assertArrayEquals(EXPECTED_PROTOCOLS, engine.getEnabledProtocols());
     }
 
     @Test
@@ -42,10 +43,10 @@ public class DelegatingSslContextTest {
         SslContext delegating = newDelegatingSslContext();
 
         SslHandler handler = delegating.newHandler(UnpooledByteBufAllocator.DEFAULT);
-        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
+        assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
 
         handler = delegating.newHandler(UnpooledByteBufAllocator.DEFAULT, "localhost", 9090);
-        Assert.assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
+        assertArrayEquals(EXPECTED_PROTOCOLS, handler.engine().getEnabledProtocols());
     }
 
     private static SslContext newDelegatingSslContext() throws Exception {

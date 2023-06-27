@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,6 +22,8 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -113,7 +115,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
             reject(task);
         }
 
-        if (!(task instanceof LazyRunnable) && wakesUpForTask(task)) {
+        if (wakesUpForTask(task)) {
             wakeup(inEventLoop());
         }
     }
@@ -153,5 +155,63 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @UnstableApi
     public int registeredChannels() {
         return -1;
+    }
+
+    /**
+     * @return read-only iterator of active {@link Channel}s registered with this {@link EventLoop}.
+     *         The returned value is not guaranteed to be exact accurate and
+     *         should be viewed as a best effort. This method is expected to be called from within
+     *         event loop.
+     * @throws UnsupportedOperationException if operation is not supported by implementation.
+     */
+    @UnstableApi
+    public Iterator<Channel> registeredChannelsIterator() {
+        throw new UnsupportedOperationException("registeredChannelsIterator");
+    }
+
+    protected static final class ChannelsReadOnlyIterator<T extends Channel> implements Iterator<Channel> {
+        private final Iterator<T> channelIterator;
+
+        public ChannelsReadOnlyIterator(Iterable<T> channelIterable) {
+            this.channelIterator =
+                    ObjectUtil.checkNotNull(channelIterable, "channelIterable").iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return channelIterator.hasNext();
+        }
+
+        @Override
+        public Channel next() {
+            return channelIterator.next();
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("remove");
+        }
+
+        @SuppressWarnings("unchecked")
+        public static <T> Iterator<T> empty() {
+            return (Iterator<T>) EMPTY;
+        }
+
+        private static final Iterator<Object> EMPTY = new Iterator<Object>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public Object next() {
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("remove");
+            }
+        };
     }
 }

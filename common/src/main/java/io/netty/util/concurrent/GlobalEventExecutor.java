@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,9 +16,12 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import org.jetbrains.annotations.Async.Schedule;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -33,14 +36,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Single-thread singleton {@link EventExecutor}.  It starts the thread automatically and stops it when there is no
- * task pending in the task queue for 1 second.  Please note it is not scalable to schedule large number of tasks to
- * this executor; use a dedicated executor.
+ * task pending in the task queue for {@code io.netty.globalEventExecutor.quietPeriodSeconds} second
+ * (default is 1 second).  Please note it is not scalable to schedule large number of tasks to this executor;
+ * use a dedicated executor.
  */
 public final class GlobalEventExecutor extends AbstractScheduledEventExecutor implements OrderedEventExecutor {
-
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(GlobalEventExecutor.class);
 
-    private static final long SCHEDULE_QUIET_PERIOD_INTERVAL = TimeUnit.SECONDS.toNanos(1);
+    private static final long SCHEDULE_QUIET_PERIOD_INTERVAL;
+
+    static {
+        int quietPeriod = SystemPropertyUtil.getInt("io.netty.globalEventExecutor.quietPeriodSeconds", 1);
+        if (quietPeriod <= 0) {
+            quietPeriod = 1;
+        }
+        logger.debug("-Dio.netty.globalEventExecutor.quietPeriodSeconds: {}", quietPeriod);
+
+        SCHEDULE_QUIET_PERIOD_INTERVAL = TimeUnit.SECONDS.toNanos(quietPeriod);
+    }
 
     public static final GlobalEventExecutor INSTANCE = new GlobalEventExecutor();
 
@@ -51,7 +64,12 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         public void run() {
             // NOOP
         }
-    }, null), ScheduledFutureTask.deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL), -SCHEDULE_QUIET_PERIOD_INTERVAL);
+    }, null),
+            // note: the getCurrentTimeNanos() call here only works because this is a final class, otherwise the method
+            // could be overridden leading to unsafe initialization here!
+            deadlineNanos(getCurrentTimeNanos(), SCHEDULE_QUIET_PERIOD_INTERVAL),
+            -SCHEDULE_QUIET_PERIOD_INTERVAL
+    );
 
     // because the GlobalEventExecutor is a singleton, tasks submitted to it can come from arbitrary threads and this
     // can trigger the creation of a thread from arbitrary thread groups; for this reason, the thread factory must not
@@ -115,7 +133,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     private void fetchFromScheduledTaskQueue() {
-        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        long nanoTime = getCurrentTimeNanos();
         Runnable scheduledTask = pollScheduledTask(nanoTime);
         while (scheduledTask != null) {
             taskQueue.add(scheduledTask);
@@ -125,9 +143,6 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     /**
      * Return the number of tasks that are pending for processing.
-     *
-     * <strong>Be aware that this operation may be expensive as it depends on the internal implementation of the
-     * SingleThreadEventExecutor. So use it was care!</strong>
      */
     public int pendingTasks() {
         return taskQueue.size();
@@ -203,6 +218,10 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     @Override
     public void execute(Runnable task) {
+        execute0(task);
+    }
+
+    private void execute0(@Schedule Runnable task) {
         addTask(ObjectUtil.checkNotNull(task, "task"));
         if (!inEventLoop()) {
             startThread();
@@ -240,7 +259,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 Runnable task = takeTask();
                 if (task != null) {
                     try {
-                        task.run();
+                        runTask(task);
                     } catch (Throwable t) {
                         logger.warn("Unexpected exception from the global event executor: ", t);
                     }
@@ -260,7 +279,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                     assert stopped;
 
                     // Check if there are pending entries added by execute() or schedule*() while we do CAS above.
-                    if (taskQueue.isEmpty() && (scheduledTaskQueue == null || scheduledTaskQueue.size() == 1)) {
+                    // Do not check scheduledTaskQueue because it is not thread-safe and can only be mutated from a
+                    // TaskRunner actively running tasks.
+                    if (taskQueue.isEmpty()) {
                         // A) No new task was added and thus there's nothing to handle
                         //    -> safe to terminate because there's nothing left to do
                         // B) A new thread started and handled all the new tasks.

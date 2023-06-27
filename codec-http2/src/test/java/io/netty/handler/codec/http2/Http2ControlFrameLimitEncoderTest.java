@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -25,13 +25,12 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.DefaultMessageSizeEstimator;
-import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -44,7 +43,8 @@ import java.util.Queue;
 import static io.netty.handler.codec.http2.Http2CodecUtil.*;
 import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /**
@@ -74,12 +74,12 @@ public class Http2ControlFrameLimitEncoderTest {
 
     private int numWrites;
 
-    private Queue<ChannelPromise> goAwayPromises = new ArrayDeque<ChannelPromise>();
+    private final Queue<ChannelPromise> goAwayPromises = new ArrayDeque<ChannelPromise>();
 
     /**
      * Init fields and do mocking.
      */
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
@@ -171,7 +171,7 @@ public class Http2ControlFrameLimitEncoderTest {
         return promise;
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         // Close and release any buffered frames.
         encoder.close();
@@ -266,7 +266,7 @@ public class Http2ControlFrameLimitEncoderTest {
         verify(ctx, atLeast(invocations)).flush();
         verify(ctx, times(invocations)).close();
         if (failed) {
-            verify(writer, times(1)).writeGoAway(eq(ctx), eq(0), eq(ENHANCE_YOUR_CALM.code()),
+            verify(writer, times(1)).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(ENHANCE_YOUR_CALM.code()),
                     any(ByteBuf.class), any(ChannelPromise.class));
         }
     }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -94,7 +94,9 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     public AsciiString(byte[] value, int start, int length, boolean copy) {
         if (copy) {
-            this.value = Arrays.copyOfRange(value, start, start + length);
+            final byte[] rangedCopy = new byte[length];
+            System.arraycopy(value, start, rangedCopy, 0, rangedCopy.length);
+            this.value = rangedCopy;
             this.offset = 0;
         } else {
             if (isOutOfBounds(start, length, value.length)) {

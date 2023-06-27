@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,9 +23,9 @@ import java.net.URI;
 public class WebSocketClientHandshaker00Test extends WebSocketClientHandshakerTest {
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
-                                                      boolean absoluteUpgradeUrl) {
+                                                      boolean absoluteUpgradeUrl, boolean generateOriginHeader) {
         return new WebSocketClientHandshaker00(uri, WebSocketVersion.V00, subprotocol, headers,
-          1024, 10000, absoluteUpgradeUrl);
+          1024, 10000, absoluteUpgradeUrl, generateOriginHeader);
     }
 
     @Override

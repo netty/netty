@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,11 +26,13 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentMatcher;
 import org.slf4j.LoggerFactory;
 
@@ -43,9 +45,12 @@ import static io.netty.util.internal.StringUtil.NEWLINE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 
 /**
@@ -64,7 +69,7 @@ public class LoggingHandlerTest {
      */
     private Appender<ILoggingEvent> appender;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         for (Iterator<Appender<ILoggingEvent>> i = rootLogger.iteratorForAppenders(); i.hasNext();) {
             Appender<ILoggingEvent> a = i.next();
@@ -75,29 +80,34 @@ public class LoggingHandlerTest {
         Unpooled.buffer();
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() {
         for (Appender<ILoggingEvent> a: oldAppenders) {
             rootLogger.addAppender(a);
         }
     }
 
-    @Before
+    @BeforeEach
     @SuppressWarnings("unchecked")
     public void setup() {
         appender = mock(Appender.class);
         logger.addAppender(appender);
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         logger.detachAppender(appender);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void shouldNotAcceptNullLogLevel() {
-        LogLevel level = null;
-        new LoggingHandler(level);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                LogLevel level = null;
+                new LoggingHandler(level);
+            }
+        });
     }
 
     @Test

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "io.netty.resolver.dns.DnsNameResolver$1",
+    "condition": {
+      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.resolver.dns.DnsNameResolver$3",
+    "condition": {
+      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$3"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler",
+    "condition": {
+      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler$1$1",
+    "condition": {
+      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler$1$1"
+    },
+    "queryAllPublicMethods": true
+  }
+]

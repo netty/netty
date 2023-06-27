@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-// (BSD License: http://www.opensource.org/licenses/bsd-license)
+// (BSD License: https://www.opensource.org/licenses/bsd-license)
 //
 // Copyright (c) 2011, Joe Walnes and contributors
 // All rights reserved.
@@ -57,10 +57,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 
@@ -82,7 +82,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     private static final byte OPCODE_PONG = 0xA;
 
     /**
-     * The size threshold for gathering writes. Non-Masked messages bigger than this size will be be sent fragmented as
+     * The size threshold for gathering writes. Non-Masked messages bigger than this size will be sent fragmented as
      * a header and a content ByteBuf whereas messages smaller than the size will be merged into a single buffer and
      * sent at once.<br>
      * Masked messages will always be sent at once.
@@ -105,7 +105,6 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final ByteBuf data = msg.content();
-        byte[] mask;
 
         byte opcode;
         if (msg instanceof TextWebSocketFrame) {
@@ -138,8 +137,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         b0 |= opcode % 128;
 
         if (opcode == OPCODE_PING && length > 125) {
-            throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was "
-                    + length);
+            throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was " + length);
         }
 
         boolean release = true;
@@ -147,10 +145,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         try {
             int maskLength = maskPayload ? 4 : 0;
             if (length <= 125) {
-                int size = 2 + maskLength;
-                if (maskPayload || length <= GATHERING_WRITE_THRESHOLD) {
-                    size += length;
-                }
+                int size = 2 + maskLength + length;
                 buf = ctx.alloc().buffer(size);
                 buf.writeByte(b0);
                 byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
@@ -167,7 +162,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 buf.writeByte(length & 0xFF);
             } else {
                 int size = 10 + maskLength;
-                if (maskPayload || length <= GATHERING_WRITE_THRESHOLD) {
+                if (maskPayload) {
                     size += length;
                 }
                 buf = ctx.alloc().buffer(size);
@@ -178,40 +173,43 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskPayload) {
-                int random = (int) (Math.random() * Integer.MAX_VALUE);
-                mask = ByteBuffer.allocate(4).putInt(random).array();
-                buf.writeBytes(mask);
+                int mask = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
+                buf.writeInt(mask);
 
-                ByteOrder srcOrder = data.order();
-                ByteOrder dstOrder = buf.order();
+                if (data.isReadable()) {
 
-                int counter = 0;
-                int i = data.readerIndex();
-                int end = data.writerIndex();
+                    ByteOrder srcOrder = data.order();
+                    ByteOrder dstOrder = buf.order();
 
-                if (srcOrder == dstOrder) {
-                    // Use the optimized path only when byte orders match
-                    // Remark: & 0xFF is necessary because Java will do signed expansion from
-                    // byte to int which we don't want.
-                    int intMask = ((mask[0] & 0xFF) << 24)
-                                | ((mask[1] & 0xFF) << 16)
-                                | ((mask[2] & 0xFF) << 8)
-                                | (mask[3] & 0xFF);
+                    int i = data.readerIndex();
+                    int end = data.writerIndex();
 
-                    // If the byte order of our buffers it little endian we have to bring our mask
-                    // into the same format, because getInt() and writeInt() will use a reversed byte order
-                    if (srcOrder == ByteOrder.LITTLE_ENDIAN) {
-                        intMask = Integer.reverseBytes(intMask);
+                    if (srcOrder == dstOrder) {
+                        // Use the optimized path only when byte orders match.
+                        // Avoid sign extension on widening primitive conversion
+                        long longMask = (long) mask & 0xFFFFFFFFL;
+                        longMask |= longMask << 32;
+
+                        // If the byte order of our buffers it little endian we have to bring our mask
+                        // into the same format, because getInt() and writeInt() will use a reversed byte order
+                        if (srcOrder == ByteOrder.LITTLE_ENDIAN) {
+                            longMask = Long.reverseBytes(longMask);
+                        }
+
+                        for (int lim = end - 7; i < lim; i += 8) {
+                            buf.writeLong(data.getLong(i) ^ longMask);
+                        }
+
+                        if (i < end - 3) {
+                            buf.writeInt(data.getInt(i) ^ (int) longMask);
+                            i += 4;
+                        }
                     }
-
-                    for (; i + 3 < end; i += 4) {
-                        int intData = data.getInt(i);
-                        buf.writeInt(intData ^ intMask);
+                    int maskOffset = 0;
+                    for (; i < end; i++) {
+                        byte byteData = data.getByte(i);
+                        buf.writeByte(byteData ^ WebSocketUtil.byteAtIndex(mask, maskOffset++ & 3));
                     }
-                }
-                for (; i < end; i++) {
-                    byte byteData = data.getByte(i);
-                    buf.writeByte(byteData ^ mask[counter++ % 4]);
                 }
                 out.add(buf);
             } else {

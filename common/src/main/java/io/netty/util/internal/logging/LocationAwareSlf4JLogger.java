@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,7 @@ import org.slf4j.spi.LocationAwareLogger;
 import static org.slf4j.spi.LocationAwareLogger.*;
 
 /**
- * <a href="http://www.slf4j.org/">SLF4J</a> logger which is location aware and so will log the correct origin of the
+ * <a href="https://www.slf4j.org/">SLF4J</a> logger which is location aware and so will log the correct origin of the
  * logging event by filter out the wrapper itself.
  */
 final class LocationAwareSlf4JLogger extends AbstractInternalLogger {

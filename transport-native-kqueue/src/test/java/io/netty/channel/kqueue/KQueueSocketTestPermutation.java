@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -30,8 +31,6 @@ import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,20 +46,17 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     static final EventLoopGroup KQUEUE_WORKER_GROUP =
             new KQueueEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-KQueue-worker", true));
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueSocketTestPermutation.class);
-
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
 
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                combo(serverSocket(), clientSocket());
+                combo(serverSocket(), clientSocketWithFastOpen());
 
         list.remove(list.size() - 1); // Exclude NIO x NIO test
 
         return list;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<BootstrapFactory<ServerBootstrap>>();
@@ -69,6 +65,15 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
                                             .channel(KQueueServerSocketChannel.class);
+            }
+        });
+        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
+                ServerBootstrap serverBootstrap = new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                                                                       .channel(KQueueServerSocketChannel.class);
+                serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 1);
+                return serverBootstrap;
             }
         });
 
@@ -83,30 +88,47 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         return toReturn;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class);
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
-                    }
-                }
-        );
+        List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<BootstrapFactory<Bootstrap>>();
+
+        toReturn.add(new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class);
+            }
+        });
+
+        toReturn.add(new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
+            }
+        });
+
+        return toReturn;
+    }
+
+    @Override
+    public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
+        List<BootstrapFactory<Bootstrap>> factories = clientSocket();
+
+        int insertIndex = factories.size() - 1; // Keep NIO fixture last.
+        factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class)
+                        .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
+            }
+        });
+
+        return factories;
     }
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
             final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
-        @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
@@ -135,10 +157,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
-
-        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                combo(serverDomainSocket(), clientDomainSocket());
-        return list;
+        return combo(serverDomainSocket(), clientDomainSocket());
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
@@ -175,7 +194,23 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 }
         );
     }
+
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> domainDatagram() {
+        return combo(domainDatagramSocket(), domainDatagramSocket());
+    }
+
+    public List<BootstrapFactory<Bootstrap>> domainDatagramSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainDatagramChannel.class);
+                    }
+                }
+        );
+    }
+
     public static DomainSocketAddress newSocketAddress() {
-        return UnixTestUtils.newSocketAddress();
+        return UnixTestUtils.newDomainSocketAddress();
     }
 }

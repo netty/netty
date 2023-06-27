@@ -5,7 +5,7 @@
 * version 2.0 (the "License"); you may not use this file except in compliance
 * with the License. You may obtain a copy of the License at:
 *
-*   http://www.apache.org/licenses/LICENSE-2.0
+*   https://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,30 +16,47 @@
 
 package io.netty.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SuppressWarnings("deprecation")
 public class DomainNameMappingTest {
 
     // Deprecated API
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullDefaultValueInDeprecatedApi() {
-        new DomainNameMapping<String>(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DomainNameMapping<String>(null);
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullDomainNamePatternsAreForbiddenInDeprecatedApi() {
-        new DomainNameMapping<String>("NotFound").add(null, "Some value");
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DomainNameMapping<String>("NotFound").add(null, "Some value");
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullValuesAreForbiddenInDeprecatedApi() {
-        new DomainNameMapping<String>("NotFound").add("Some key", null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DomainNameMapping<String>("NotFound").add("Some key", null);
+            }
+        });
     }
 
     @Test
@@ -105,19 +122,35 @@ public class DomainNameMappingTest {
 
     // Immutable DomainNameMapping Builder API
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullDefaultValue() {
-        new DomainNameMappingBuilder<String>(null);
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DomainNameMappingBuilder<String>(null);
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullDomainNamePatternsAreForbidden() {
-        new DomainNameMappingBuilder<String>("NotFound").add(null, "Some value");
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DomainNameMappingBuilder<String>("NotFound").add(null, "Some value");
+            }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullValuesAreForbidden() {
-        new DomainNameMappingBuilder<String>("NotFound").add("Some key", null);
+
+        assertThrows(NullPointerException.class, new Executable() {
+            @Override
+            public void execute() {
+                new DomainNameMappingBuilder<String>("NotFound").add("Some key", null);
+            }
+        });
     }
 
     @Test

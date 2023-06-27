@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,10 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
+
+import static io.netty.util.internal.StringUtil.COMMA;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Utility methods useful in the HTTP context.
@@ -36,6 +40,7 @@ public final class HttpUtil {
 
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
     private static final AsciiString SEMICOLON = AsciiString.cached(";");
+    private static final String COMMA_STRING = String.valueOf(COMMA);
 
     private HttpUtil() { }
 
@@ -44,8 +49,15 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isOriginForm(URI uri) {
-        return uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
-               uri.getHost() == null && uri.getAuthority() == null;
+        return isOriginForm(uri.toString());
+    }
+
+    /**
+     * Determine if a string uri is in origin-form according to
+     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     */
+    public static boolean isOriginForm(String uri) {
+        return uri.startsWith("/");
     }
 
     /**
@@ -53,10 +65,15 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isAsteriskForm(URI uri) {
-        return "*".equals(uri.getPath()) &&
-                uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
-                uri.getHost() == null && uri.getAuthority() == null && uri.getQuery() == null &&
-                uri.getFragment() == null;
+        return isAsteriskForm(uri.toString());
+    }
+
+    /**
+     * Determine if a string uri is in asterisk-form according to
+     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     */
+    public static boolean isAsteriskForm(String uri) {
+        return "*".equals(uri);
     }
 
     /**
@@ -191,8 +208,9 @@ public final class HttpUtil {
      * Get an {@code int} representation of {@link #getContentLength(HttpMessage, long)}.
      *
      * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header or its value is not
-     *         a number. Not to exceed the boundaries of integer.
+     *         not have the {@code "Content-Length"} header.
+     *
+     * @throws NumberFormatException if the {@code "Content-Length"} header does not parse as an int
      */
     public static int getContentLength(HttpMessage message, int defaultValue) {
         return (int) Math.min(Integer.MAX_VALUE, getContentLength(message, (long) defaultValue));
@@ -389,10 +407,15 @@ public final class HttpUtil {
      */
     public static Charset getCharset(CharSequence contentTypeValue, Charset defaultCharset) {
         if (contentTypeValue != null) {
-            CharSequence charsetCharSequence = getCharsetAsSequence(contentTypeValue);
-            if (charsetCharSequence != null) {
+            CharSequence charsetRaw = getCharsetAsSequence(contentTypeValue);
+            if (charsetRaw != null) {
+                if (charsetRaw.length() > 2) { // at least contains 2 quotes(")
+                    if (charsetRaw.charAt(0) == '"' && charsetRaw.charAt(charsetRaw.length() - 1) == '"') {
+                        charsetRaw = charsetRaw.subSequence(1, charsetRaw.length() - 1);
+                    }
+                }
                 try {
-                    return Charset.forName(charsetCharSequence.toString());
+                    return Charset.forName(charsetRaw.toString());
                 } catch (IllegalCharsetNameException ignored) {
                     // just return the default charset
                 } catch (UnsupportedCharsetException ignored) {
@@ -529,5 +552,81 @@ public final class HttpUtil {
             return '[' + hostString + ']';
         }
         return hostString;
+    }
+
+    /**
+     * Validates, and optionally extracts the content length from headers. This method is not intended for
+     * general use, but is here to be shared between HTTP/1 and HTTP/2 parsing.
+     *
+     * @param contentLengthFields the content-length header fields.
+     * @param isHttp10OrEarlier {@code true} if we are handling HTTP/1.0 or earlier
+     * @param allowDuplicateContentLengths {@code true}  if multiple, identical-value content lengths should be allowed.
+     * @return the normalized content length from the headers or {@code -1} if the fields were empty.
+     * @throws IllegalArgumentException if the content-length fields are not valid
+     */
+    @UnstableApi
+    public static long normalizeAndGetContentLength(
+            List<? extends CharSequence> contentLengthFields, boolean isHttp10OrEarlier,
+            boolean allowDuplicateContentLengths) {
+        if (contentLengthFields.isEmpty()) {
+            return -1;
+        }
+
+        // Guard against multiple Content-Length headers as stated in
+        // https://tools.ietf.org/html/rfc7230#section-3.3.2:
+        //
+        // If a message is received that has multiple Content-Length header
+        //   fields with field-values consisting of the same decimal value, or a
+        //   single Content-Length header field with a field value containing a
+        //   list of identical decimal values (e.g., "Content-Length: 42, 42"),
+        //   indicating that duplicate Content-Length header fields have been
+        //   generated or combined by an upstream message processor, then the
+        //   recipient MUST either reject the message as invalid or replace the
+        //   duplicated field-values with a single valid Content-Length field
+        //   containing that decimal value prior to determining the message body
+        //   length or forwarding the message.
+        String firstField = contentLengthFields.get(0).toString();
+        boolean multipleContentLengths =
+                contentLengthFields.size() > 1 || firstField.indexOf(COMMA) >= 0;
+
+        if (multipleContentLengths && !isHttp10OrEarlier) {
+            if (allowDuplicateContentLengths) {
+                // Find and enforce that all Content-Length values are the same
+                String firstValue = null;
+                for (CharSequence field : contentLengthFields) {
+                    String[] tokens = field.toString().split(COMMA_STRING, -1);
+                    for (String token : tokens) {
+                        String trimmed = token.trim();
+                        if (firstValue == null) {
+                            firstValue = trimmed;
+                        } else if (!trimmed.equals(firstValue)) {
+                            throw new IllegalArgumentException(
+                                    "Multiple Content-Length values found: " + contentLengthFields);
+                        }
+                    }
+                }
+                // Replace the duplicated field-values with a single valid Content-Length field
+                firstField = firstValue;
+            } else {
+                // Reject the message as invalid
+                throw new IllegalArgumentException(
+                        "Multiple Content-Length values found: " + contentLengthFields);
+            }
+        }
+        // Ensure we not allow sign as part of the content-length:
+        // See https://github.com/squid-cache/squid/security/advisories/GHSA-qf3v-rc95-96j5
+        if (firstField.isEmpty() || !Character.isDigit(firstField.charAt(0))) {
+            // Reject the message as invalid
+            throw new IllegalArgumentException(
+                    "Content-Length value is not a number: " + firstField);
+        }
+        try {
+            final long value = Long.parseLong(firstField);
+            return checkPositiveOrZero(value, "Content-Length value");
+        } catch (NumberFormatException e) {
+            // Reject the message as invalid
+            throw new IllegalArgumentException(
+                    "Content-Length value is not a number: " + firstField, e);
+        }
     }
 }

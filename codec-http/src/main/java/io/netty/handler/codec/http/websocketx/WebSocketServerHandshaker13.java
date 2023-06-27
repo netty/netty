@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,9 +21,11 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
+import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
@@ -101,7 +103,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi versions 13-17</a>. Versions 13-17
+     * "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi versions 13-17</a>. Versions 13-17
      * share the same wire protocol.
      * </p>
      *
@@ -134,9 +136,26 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      */
     @Override
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
-        CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
+        HttpMethod method = req.method();
+        if (!GET.equals(method)) {
+            throw new WebSocketServerHandshakeException("Invalid WebSocket handshake method: " + method, req);
+        }
+
+        HttpHeaders reqHeaders = req.headers();
+        if (!reqHeaders.contains(HttpHeaderNames.CONNECTION) ||
+            !reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+            throw new WebSocketServerHandshakeException(
+                    "not a WebSocket request: a |Connection| header must includes a token 'Upgrade'", req);
+        }
+
+        if (!reqHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true)) {
+            throw new WebSocketServerHandshakeException(
+                    "not a WebSocket request: a |Upgrade| header must containing the value 'websocket'", req);
+        }
+
+        CharSequence key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
-            throw new WebSocketHandshakeException("not a WebSocket request: missing key");
+            throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
 
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS,
@@ -157,7 +176,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                      .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                      .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
-        String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+        String subprotocols = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
@@ -165,7 +184,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                     logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
                 }
             } else {
-                res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
             }
         }
         return res;

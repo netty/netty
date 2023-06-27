@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -70,6 +70,11 @@ public final class HttpHeaderNames {
     public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN =
             AsciiString.cached("access-control-allow-origin");
     /**
+     * {@code "access-control-allow-origin"}
+     */
+    public static final AsciiString ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK =
+            AsciiString.cached("access-control-allow-private-network");
+    /**
      * {@code "access-control-expose-headers"}
      */
     public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS =
@@ -88,6 +93,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD =
             AsciiString.cached("access-control-request-method");
+    /**
+     * {@code "access-control-request-private-network"}
+     */
+    public static final AsciiString ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK =
+            AsciiString.cached("access-control-request-private-network");
     /**
      * {@code "age"}
      */
@@ -366,6 +376,11 @@ public final class HttpHeaderNames {
      * {@code "x-requested-with"}
      */
     public static final AsciiString X_REQUESTED_WITH = AsciiString.cached("x-requested-with");
+
+    /**
+     * {@code "alt-svc"}
+     */
+    public static final AsciiString ALT_SVC = AsciiString.cached("alt-svc");
 
     private HttpHeaderNames() { }
 }

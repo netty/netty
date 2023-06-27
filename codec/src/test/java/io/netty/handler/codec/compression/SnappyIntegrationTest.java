@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
@@ -64,7 +64,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
                 -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
                 -1,   -1
         };
-        testIdentity(data);
+        testIdentity(data, true);
     }
 
     // These tests were found using testRandom() with large RANDOM_RUNS.
@@ -104,7 +104,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
     private void testWithSeed(long seed) {
         byte[] data = new byte[16 * 1048576];
         new Random(seed).nextBytes(data);
-        testIdentity(data);
+        testIdentity(data, true);
     }
 
     private static void printSeedAsTest(long l) {

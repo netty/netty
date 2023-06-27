@@ -1,0 +1,8 @@
+[
+    {
+      "name": "io.netty.channel.socket.nio.NioDatagramChannel",
+      "methods": [
+        { "name": "<init>", "parameterTypes": [] }
+      ]
+    }
+]

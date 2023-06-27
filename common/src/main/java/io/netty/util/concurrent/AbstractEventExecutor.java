@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,9 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import org.jetbrains.annotations.Async.Execute;
+import org.jetbrains.annotations.Async.Schedule;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -161,20 +164,22 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
      */
     protected static void safeExecute(Runnable task) {
         try {
-            task.run();
+            runTask(task);
         } catch (Throwable t) {
             logger.warn("A task raised an exception. Task: {}", task, t);
         }
     }
 
+    protected static void runTask(@Execute Runnable task) {
+        task.run();
+    }
+
     /**
      * Like {@link #execute(Runnable)} but does not guarantee the task will be run until either
      * a non-lazy task is executed or the executor is shut down.
-     *
-     * This is equivalent to submitting a {@link EventExecutor.LazyRunnable} to
-     * {@link #execute(Runnable)} but for an arbitrary {@link Runnable}.
-     *
+     * <p>
      * The default implementation just delegates to {@link #execute(Runnable)}.
+     * </p>
      */
     @UnstableApi
     public void lazyExecute(Runnable task) {
@@ -182,9 +187,9 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     /**
-     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
-     * but does not need to run immediately.
+     *  @deprecated override {@link SingleThreadEventExecutor#wakesUpForTask} to re-create this behaviour
+     *
      */
-    @UnstableApi
+    @Deprecated
     public interface LazyRunnable extends Runnable { }
 }

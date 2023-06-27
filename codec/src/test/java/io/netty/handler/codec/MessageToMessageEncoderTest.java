@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,26 +21,34 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
-
 
 public class MessageToMessageEncoderTest {
 
     /**
      * Test-case for https://github.com/netty/netty/issues/1656
      */
-    @Test(expected = EncoderException.class)
+    @Test
     public void testException() {
-        EmbeddedChannel channel = new EmbeddedChannel(new MessageToMessageEncoder<Object>() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new MessageToMessageEncoder<Object>() {
             @Override
             protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
                 throw new Exception();
             }
         });
-        channel.writeOutbound(new Object());
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeOutbound(new Object());
+            }
+        });
     }
 
     @Test

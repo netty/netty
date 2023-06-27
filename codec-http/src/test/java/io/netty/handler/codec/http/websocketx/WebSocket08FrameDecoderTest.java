@@ -4,7 +4,7 @@
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the "License");
  * you may not use this file except in compliance with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is
  * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,16 +13,20 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -68,5 +72,26 @@ public class WebSocket08FrameDecoderTest {
                 outputFrame.release();
             }
         }
+    }
+
+    @Test
+    void protocolViolationWhenNegativeFrameLength() {
+        WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
+        final EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        final ByteBuf invalidFrame = Unpooled.buffer(10).writeByte(0x81)
+                                             .writeByte(0xFF).writeLong(-1L);
+
+        Throwable exception = assertThrows(CorruptedWebSocketFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(invalidFrame);
+            }
+        });
+        assertEquals("invalid data frame length (negative length)", exception.getMessage());
+
+        CloseWebSocketFrame closeFrame = channel.readOutbound();
+        assertEquals("invalid data frame length (negative length)", closeFrame.reasonText());
+        assertTrue(closeFrame.release());
+        assertFalse(channel.isActive());
     }
 }

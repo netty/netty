@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-// (BSD License: http://www.opensource.org/licenses/bsd-license)
+// (BSD License: https://www.opensource.org/licenses/bsd-license)
 //
 // Copyright (c) 2011, Joe Walnes and contributors
 // All rights reserved.
@@ -101,7 +101,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
-    private byte[] maskingKey;
+    private int mask;
     private int framePayloadLen1;
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
@@ -246,7 +246,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 }
 
                 // check opcode vs message fragmentation state 2/2
-                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
+                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT) {
                     protocolViolation(ctx, in,
                                       "received non-continuation data frame while inside fragmented message");
                     return;
@@ -271,8 +271,10 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                     return;
                 }
                 framePayloadLength = in.readLong();
-                // TODO: check if it's bigger than 0x7FFFFFFFFFFFFFFF, Maybe
-                // just check if it's negative?
+                if (framePayloadLength < 0) {
+                    protocolViolation(ctx, in, "invalid data frame length (negative length)");
+                    return;
+                }
 
                 if (framePayloadLength < 65536) {
                     protocolViolation(ctx, in, "invalid data frame length (not using minimal length encoding)");
@@ -298,10 +300,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 if (in.readableBytes() < 4) {
                     return;
                 }
-                if (maskingKey == null) {
-                    maskingKey = new byte[4];
-                }
-                in.readBytes(maskingKey);
+                mask = in.readInt();
             }
             state = State.PAYLOAD;
         case PAYLOAD:
@@ -309,16 +308,18 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 return;
             }
 
-            ByteBuf payloadBuffer = null;
+            ByteBuf payloadBuffer = Unpooled.EMPTY_BUFFER;
             try {
-                payloadBuffer = readBytes(ctx.alloc(), in, toFrameLength(framePayloadLength));
+                if (framePayloadLength > 0) {
+                    payloadBuffer = readBytes(ctx.alloc(), in, toFrameLength(framePayloadLength));
+                }
 
                 // Now we have all the data, the next checkpoint must be the next
                 // frame
                 state = State.READING_FIRST;
 
                 // Unmask data if needed
-                if (frameMasked) {
+                if (frameMasked & framePayloadLength > 0) {
                     unmask(payloadBuffer);
                 }
 
@@ -347,9 +348,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 if (frameFinalFlag) {
                     // Final frame of the sequence. Apparently ping frames are
                     // allowed in the middle of a fragmented message
-                    if (frameOpcode != OPCODE_PING) {
-                        fragmentedFramesCount = 0;
-                    }
+                    fragmentedFramesCount = 0;
                 } else {
                     // Increment counter
                     fragmentedFramesCount++;
@@ -396,25 +395,27 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
         ByteOrder order = frame.order();
 
-        // Remark: & 0xFF is necessary because Java will do signed expansion from
-        // byte to int which we don't want.
-        int intMask = ((maskingKey[0] & 0xFF) << 24)
-                    | ((maskingKey[1] & 0xFF) << 16)
-                    | ((maskingKey[2] & 0xFF) << 8)
-                    | (maskingKey[3] & 0xFF);
+        int intMask = mask;
+        // Avoid sign extension on widening primitive conversion
+        long longMask = (long) intMask & 0xFFFFFFFFL;
+        longMask |= longMask << 32;
 
-        // If the byte order of our buffers it little endian we have to bring our mask
-        // into the same format, because getInt() and writeInt() will use a reversed byte order
+        for (int lim = end - 7; i < lim; i += 8) {
+            frame.setLong(i, frame.getLong(i) ^ longMask);
+        }
+
+        if (i < end - 3) {
+            frame.setInt(i, frame.getInt(i) ^ (int) longMask);
+            i += 4;
+        }
+
         if (order == ByteOrder.LITTLE_ENDIAN) {
             intMask = Integer.reverseBytes(intMask);
         }
 
-        for (; i + 3 < end; i += 4) {
-            int unmasked = frame.getInt(i) ^ intMask;
-            frame.setInt(i, unmasked);
-        }
+        int maskOffset = 0;
         for (; i < end; i++) {
-            frame.setByte(i, frame.getByte(i) ^ maskingKey[i % 4]);
+            frame.setByte(i, frame.getByte(i) ^ WebSocketUtil.byteAtIndex(intMask, maskOffset++ & 3));
         }
     }
 
@@ -465,30 +466,23 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         if (buffer == null || !buffer.isReadable()) {
             return;
         }
-        if (buffer.readableBytes() == 1) {
+        if (buffer.readableBytes() < 2) {
             protocolViolation(ctx, buffer, WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "Invalid close frame body");
         }
 
-        // Save reader index
-        int idx = buffer.readerIndex();
-        buffer.readerIndex(0);
-
         // Must have 2 byte integer within the valid range
-        int statusCode = buffer.readShort();
+        int statusCode = buffer.getShort(buffer.readerIndex());
         if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
             protocolViolation(ctx, buffer, "Invalid close frame getStatus code: " + statusCode);
         }
 
         // May have UTF-8 message
-        if (buffer.isReadable()) {
+        if (buffer.readableBytes() > 2) {
             try {
-                new Utf8Validator().check(buffer);
+                new Utf8Validator().check(buffer, buffer.readerIndex() + 2, buffer.readableBytes() - 2);
             } catch (CorruptedWebSocketFrameException ex) {
                 protocolViolation(ctx, buffer, ex);
             }
         }
-
-        // Restore reader index
-        buffer.readerIndex(idx);
     }
 }

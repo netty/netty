@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,8 @@ import io.netty.handler.stream.ChunkedNioFile;
 import io.netty.handler.stream.ChunkedNioStream;
 import io.netty.handler.stream.ChunkedStream;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import org.junit.Test;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -33,7 +34,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpChunkedInputTest {
     private static final byte[] BYTES = new byte[1024 * 64];
@@ -46,7 +50,7 @@ public class HttpChunkedInputTest {
 
         FileOutputStream out = null;
         try {
-            TMP = File.createTempFile("netty-chunk-", ".tmp");
+            TMP = PlatformDependent.createTempFile("netty-chunk-", ".tmp", null);
             TMP.deleteOnExit();
             out = new FileOutputStream(TMP);
             out.write(BYTES);
@@ -138,7 +142,7 @@ public class HttpChunkedInputTest {
                 break;
             }
             if (lastHttpContent != null) {
-                assertTrue("Chunk must be DefaultHttpContent", lastHttpContent instanceof DefaultHttpContent);
+                assertTrue(lastHttpContent instanceof DefaultHttpContent, "Chunk must be DefaultHttpContent");
             }
 
             ByteBuf buffer = httpContent.content();
@@ -156,7 +160,7 @@ public class HttpChunkedInputTest {
         }
 
         assertEquals(BYTES.length * inputs.length, read);
-        assertSame("Last chunk must be LastHttpContent.EMPTY_LAST_CONTENT",
-                LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent);
+        assertSame(LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent,
+                "Last chunk must be LastHttpContent.EMPTY_LAST_CONTENT");
     }
 }

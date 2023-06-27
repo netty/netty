@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -74,17 +74,12 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     private ChannelConfig config;
 
-    private int readRequestCount;
+    private boolean shouldConsume;
 
     public FlowControlHandler() {
         this(true);
     }
 
-    /**
-     * @param releaseMessages If {@code false}, the handler won't release the buffered messages
-     *                        when the handler is removed.
-     *
-     */
     public FlowControlHandler(boolean releaseMessages) {
         this.releaseMessages = releaseMessages;
     }
@@ -145,7 +140,9 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             // It seems no messages were consumed. We need to read() some
             // messages from upstream and once one arrives it need to be
             // relayed to downstream to keep the flow going.
-            ++readRequestCount;
+            shouldConsume = true;
+            ctx.read();
+        } else if (config.isAutoRead()) {
             ctx.read();
         }
     }
@@ -161,8 +158,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         // We just received one message. Do we need to relay it regardless
         // of the auto reading configuration? The answer is yes if this
         // method was called as a result of a prior read() call.
-        int minConsume = Math.min(readRequestCount, queue.size());
-        readRequestCount -= minConsume;
+        int minConsume = shouldConsume ? 1 : 0;
+        shouldConsume = false;
 
         dequeue(ctx, minConsume);
     }

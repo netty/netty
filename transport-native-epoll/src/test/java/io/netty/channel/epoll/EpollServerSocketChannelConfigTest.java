@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,21 +19,26 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EpollServerSocketChannelConfigTest {
 
     private static EventLoopGroup group;
     private static EpollServerSocketChannel ch;
 
-    @BeforeClass
+    @BeforeAll
     public static void before() {
         group = new EpollEventLoopGroup(1);
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -43,7 +48,7 @@ public class EpollServerSocketChannelConfigTest {
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 
-    @AfterClass
+    @AfterAll
     public static void after() {
         try {
             ch.close().syncUninterruptibly();
@@ -58,7 +63,7 @@ public class EpollServerSocketChannelConfigTest {
         assertEquals(0, ch.config().getTcpDeferAccept());
         ch.config().setTcpDeferAccept(10);
         // The returned value may be bigger then what we set.
-        // See http://www.spinics.net/lists/netdev/msg117330.html
+        // See https://www.spinics.net/lists/netdev/msg117330.html
         assertTrue(10 <= ch.config().getTcpDeferAccept());
     }
 
@@ -82,5 +87,17 @@ public class EpollServerSocketChannelConfigTest {
     public void getGetOptions() {
         Map<ChannelOption<?>, Object> map = ch.config().getOptions();
         assertFalse(map.isEmpty());
+    }
+
+    @Test
+    public void testFastOpen() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.config().setTcpFastopen(-1);
+            }
+        });
+        ch.config().setTcpFastopen(10);
+        assertEquals(10, ch.config().getTcpFastopen());
     }
 }

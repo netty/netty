@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,8 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ScheduledFuture;
 
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
@@ -117,7 +121,59 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
         return null;
     }
 
+    protected final long handshakeTimeoutMillis;
+    private ScheduledFuture<?> timeoutFuture;
     private String hostname;
+
+    /**
+     * @param handshakeTimeoutMillis    the handshake timeout in milliseconds
+     */
+    protected AbstractSniHandler(long handshakeTimeoutMillis) {
+        this(0, handshakeTimeoutMillis);
+    }
+
+    /**
+     * @paramm maxClientHelloLength     the maximum length of the client hello message.
+     * @param handshakeTimeoutMillis    the handshake timeout in milliseconds
+     */
+    protected AbstractSniHandler(int maxClientHelloLength, long handshakeTimeoutMillis) {
+        super(maxClientHelloLength);
+        this.handshakeTimeoutMillis = checkPositiveOrZero(handshakeTimeoutMillis, "handshakeTimeoutMillis");
+    }
+
+    public AbstractSniHandler() {
+        this(0, 0L);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.channel().isActive()) {
+            checkStartTimeout(ctx);
+        }
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelActive();
+        checkStartTimeout(ctx);
+    }
+
+    private void checkStartTimeout(final ChannelHandlerContext ctx) {
+        if (handshakeTimeoutMillis <= 0 || timeoutFuture != null) {
+            return;
+        }
+        timeoutFuture = ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (ctx.channel().isActive()) {
+                    SslHandshakeTimeoutException exception = new SslHandshakeTimeoutException(
+                        "handshake timed out after " + handshakeTimeoutMillis + "ms");
+                    ctx.fireUserEventTriggered(new SniCompletionEvent(exception));
+                    ctx.close();
+                }
+            }
+        }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
 
     @Override
     protected Future<T> lookup(ChannelHandlerContext ctx, ByteBuf clientHello) throws Exception {
@@ -128,8 +184,14 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
     @Override
     protected void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception {
-        fireSniCompletionEvent(ctx, hostname, future);
-        onLookupComplete(ctx, hostname, future);
+        if (timeoutFuture != null) {
+            timeoutFuture.cancel(false);
+        }
+        try {
+            onLookupComplete(ctx, hostname, future);
+        } finally {
+            fireSniCompletionEvent(ctx, hostname, future);
+        }
     }
 
     /**
@@ -148,7 +210,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     protected abstract void onLookupComplete(ChannelHandlerContext ctx,
                                              String hostname, Future<T> future) throws Exception;
 
-    private void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<T> future) {
+    private static void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<?> future) {
         Throwable cause = future.cause();
         if (cause == null) {
             ctx.fireUserEventTriggered(new SniCompletionEvent(hostname));

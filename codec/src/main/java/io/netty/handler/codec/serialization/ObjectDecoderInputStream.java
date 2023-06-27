@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,7 +27,18 @@ import java.io.StreamCorruptedException;
 /**
  * An {@link ObjectInput} which is interoperable with {@link ObjectEncoder}
  * and {@link ObjectEncoderOutputStream}.
+ * <p>
+ * <strong>Security:</strong> serialization can be a security liability,
+ * and should not be used without defining a list of classes that are
+ * allowed to be desirialized. Such a list can be specified with the
+ * <tt>jdk.serialFilter</tt> system property, for instance.
+ * See the <a href="https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html">
+ * serialization filtering</a> article for more information.
+ *
+ * @deprecated This class has been deprecated with no replacement,
+ * because serialization can be a security liability
  */
+@Deprecated
 public class ObjectDecoderInputStream extends InputStream implements
         ObjectInput {
 
@@ -126,6 +137,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         in.close();
     }
 
+    // Suppress a warning since the class is not thread-safe
     @Override
     public void mark(int readlimit) {
         in.mark(readlimit);
@@ -136,6 +148,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         return in.markSupported();
     }
 
+    // Suppress a warning since the class is not thread-safe
     @Override
     public int read() throws IOException {
         return in.read();

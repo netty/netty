@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -98,6 +98,19 @@ public final class StringUtil {
         int pos = value.indexOf(delim);
         if (pos >= 0) {
             return value.substring(pos + 1);
+        }
+        return null;
+    }
+
+    /**
+     * Get the item before one char delim if the delim is found (else null).
+     * This operation is a simplified and optimized
+     * version of {@link String#split(String, int)}.
+     */
+    public static String substringBefore(String value, char delim) {
+        int pos = value.indexOf(delim);
+        if (pos >= 0) {
+            return value.substring(0, pos);
         }
         return null;
     }
@@ -240,11 +253,22 @@ public final class StringUtil {
      * given, or {@code -1} if the character is invalid.
      */
     public static int decodeHexNibble(final char c) {
-        assert HEX2B.length == (Character.MAX_VALUE + 1);
         // Character.digit() is not used here, as it addresses a larger
         // set of characters (both ASCII and full-width latin letters).
-        final int index = c;
-        return HEX2B[index];
+        return HEX2B[c];
+    }
+
+    /**
+     * Helper to decode half of a hexadecimal number from a string.
+     * @param b The ASCII character of the hexadecimal number to decode.
+     * Must be in the range {@code [0-9a-fA-F]}.
+     * @return The hexadecimal value represented in the ASCII character
+     * given, or {@code -1} if the character is invalid.
+     */
+    public static int decodeHexNibble(final byte b) {
+        // Character.digit() is not used here, as it addresses a larger
+        // set of characters (both ASCII and full-width latin letters).
+        return HEX2B[b];
     }
 
     /**
@@ -261,7 +285,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes part of a string with <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes part of a string with <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      *
      * @param hexDump a {@link CharSequence} which contains the hex dump
      * @param fromIndex start of hex dump in {@code hexDump}
@@ -282,7 +306,7 @@ public final class StringUtil {
     }
 
     /**
-     * Decodes a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * Decodes a <a href="https://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      */
     public static byte[] decodeHexDump(CharSequence hexDump) {
         return decodeHexDump(hexDump, 0, hexDump.length());
@@ -593,11 +617,11 @@ public final class StringUtil {
 
     /**
      * Determine if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
      *
      * @param c the character to check.
      * @return {@code true} if {@code c} lies within the range of values defined for
-     * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
+     * <a href="https://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>. {@code false} otherwise.
      */
     public static boolean isSurrogate(char c) {
         return c >= '\uD800' && c <= '\uDFFF';

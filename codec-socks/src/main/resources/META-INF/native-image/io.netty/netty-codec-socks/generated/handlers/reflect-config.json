@@ -1,0 +1,142 @@
+[
+  {
+    "name": "io.netty.handler.codec.socks.SocksAuthRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socks.SocksAuthRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socks.SocksAuthResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socks.SocksAuthResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socks.SocksCmdRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socks.SocksCmdRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socks.SocksCmdResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socks.SocksCmdResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socks.SocksInitRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socks.SocksInitRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socks.SocksInitResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socks.SocksInitResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socks.SocksMessageEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socks.SocksMessageEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.SocksPortUnificationServerHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.SocksPortUnificationServerHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v4.Socks4ClientDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v4.Socks4ClientDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v4.Socks4ClientEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v4.Socks4ClientEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v4.Socks4ServerDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v4.Socks4ServerDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v4.Socks4ServerEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v4.Socks4ServerEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5ClientEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5ClientEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5ServerEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5ServerEncoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

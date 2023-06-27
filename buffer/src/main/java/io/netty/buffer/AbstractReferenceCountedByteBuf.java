@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -42,11 +42,12 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     };
 
     // Value might not equal "real" reference count, all access should be via the updater
-    @SuppressWarnings("unused")
-    private volatile int refCnt = updater.initialValue();
+    @SuppressWarnings({"unused", "FieldMayBeFinal"})
+    private volatile int refCnt;
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
+        updater.setInitialValue(this);
     }
 
     @Override

@@ -7,7 +7,7 @@
  * as defined in and that are subject to the Apple Public Source License
  * Version 2.0 (the 'License'). You may not use this file except in
  * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
+ * https://www.opensource.apple.com/apsl/ and read it before using this
  * file.
  * 
  * The Original Code and all software distributed under the License are

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,24 +17,44 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.StringUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.util.AsciiString.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultHttp2HeadersTest {
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void nullHeaderNameNotAllowed() {
-        new DefaultHttp2Headers().add(null, "foo");
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttp2Headers().add(null, "foo");
+            }
+        });
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void emptyHeaderNameNotAllowed() {
-        new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+            }
+        });
     }
 
     @Test
@@ -126,11 +146,16 @@ public class DefaultHttp2HeadersTest {
         assertEquals("value2", headers.get("name2"));
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void testHeaderNameValidation() {
-        Http2Headers headers = newHeaders();
+        final Http2Headers headers = newHeaders();
 
-        headers.add(of("Foo"), of("foo"));
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.add(of("Foo"), of("foo"));
+            }
+        });
     }
 
     @Test
@@ -152,6 +177,48 @@ public class DefaultHttp2HeadersTest {
         assertFalse(headers.contains("2name", "Value3", false));
     }
 
+    @Test
+    public void testContainsName() {
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.add(CONTENT_LENGTH, "36");
+        assertFalse(headers.contains("Content-Length"));
+        assertTrue(headers.contains("content-length"));
+        assertTrue(headers.contains(CONTENT_LENGTH));
+        headers.remove(CONTENT_LENGTH);
+        assertFalse(headers.contains("Content-Length"));
+        assertFalse(headers.contains("content-length"));
+        assertFalse(headers.contains(CONTENT_LENGTH));
+
+        assertFalse(headers.contains("non-existent-name"));
+        assertFalse(headers.contains(new AsciiString("non-existent-name")));
+    }
+
+    @Test
+    void setMustOverwritePseudoHeaders() {
+        Http2Headers headers = newHeaders();
+        // The headers are already populated with pseudo headers.
+        headers.method(of("GET"));
+        headers.path(of("/index2.html"));
+        headers.status(of("101"));
+        headers.authority(of("github.com"));
+        headers.scheme(of("http"));
+        headers.set(of(":protocol"), of("http"));
+        assertEquals(of("GET"), headers.method());
+        assertEquals(of("/index2.html"), headers.path());
+        assertEquals(of("101"), headers.status());
+        assertEquals(of("github.com"), headers.authority());
+        assertEquals(of("http"), headers.scheme());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] name={0} value={1}")
+    @CsvSource(value = {"upgrade,protocol1", "connection,close", "keep-alive,timeout=5", "proxy-connection,close",
+            "transfer-encoding,chunked", "te,something-else"})
+    void possibleToAddConnectionHeaders(String name, String value) {
+        Http2Headers headers = newHeaders();
+        headers.add(name, value);
+        assertTrue(headers.contains(name, value));
+    }
+
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {
         for (PseudoHeaderName pseudoName : PseudoHeaderName.values()) {
             assertNotNull(headers.get(pseudoName.value()));
@@ -164,7 +231,7 @@ public class DefaultHttp2HeadersTest {
             if (entry.getKey().length() == 0 || entry.getKey().charAt(0) != ':') {
                 lastNonPseudoName = entry.getKey();
             } else if (lastNonPseudoName != null) {
-                fail("All pseudo headers must be fist in iteration. Pseudo header " + entry.getKey() +
+                fail("All pseudo headers must be first in iteration. Pseudo header " + entry.getKey() +
                         " is after a non pseudo header " + lastNonPseudoName);
             }
         }
@@ -180,6 +247,7 @@ public class DefaultHttp2HeadersTest {
         headers.authority(of("netty.io"));
         headers.add(of("name3"), of("value4"));
         headers.scheme(of("https"));
+        headers.add(of(":protocol"), of("websocket"));
         return headers;
     }
 }

@@ -1,7 +1,7 @@
 /*
    Stomp Over WebSocket http://www.jmesnil.net/stomp-websocket/doc/ | Apache License V2.0
    Copyright (C) 2010-2013 [Jeff Mesnil](http://jmesnil.net/)
-   Copyright (C) 2012 [FuseSource, Inc.](http://fusesource.com)
+   Copyright (C) 2012 [FuseSource, Inc.](https://fusesource.com)
  */
 (function () {
   var Byte, Client, Frame, Stomp,

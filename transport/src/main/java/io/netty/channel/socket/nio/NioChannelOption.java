@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -63,7 +63,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
         if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
-            // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+            // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return false;
         }
         try {
@@ -83,7 +83,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
         if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
             // Skip IP_TOS as a workaround for a JDK bug:
-            // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+            // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return null;
         }
         try {
@@ -104,7 +104,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
             for (java.net.SocketOption<?> opt : supportedOpts) {
                 if (opt == java.net.StandardSocketOptions.IP_TOS) {
                     // Skip IP_TOS as a workaround for a JDK bug:
-                    // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+                    // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
                     continue;
                 }
                 extraOpts.add(new NioChannelOption(opt));

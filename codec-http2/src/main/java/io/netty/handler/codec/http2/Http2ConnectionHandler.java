@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -77,6 +77,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private final Http2ConnectionEncoder encoder;
     private final Http2Settings initialSettings;
     private final boolean decoupleCloseAndGoAway;
+    private final boolean flushPreface;
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
@@ -88,10 +89,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings, boolean decoupleCloseAndGoAway) {
+        this(decoder, encoder, initialSettings, decoupleCloseAndGoAway, true);
+    }
+
+    protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                     Http2Settings initialSettings, boolean decoupleCloseAndGoAway,
+                                     boolean flushPreface) {
         this.initialSettings = checkNotNull(initialSettings, "initialSettings");
         this.decoder = checkNotNull(decoder, "decoder");
         this.encoder = checkNotNull(encoder, "encoder");
         this.decoupleCloseAndGoAway = decoupleCloseAndGoAway;
+        this.flushPreface = flushPreface;
         if (encoder.connection() != decoder.connection()) {
             throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
         }
@@ -250,6 +258,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             // The channel just became active - send the connection preface to the remote endpoint.
             sendPreface(ctx);
+
+            if (flushPreface) {
+                // As we don't know if any channelReadComplete() events will be triggered at all we need to ensure we
+                // also flush. Otherwise the remote peer might never see the preface / settings frame.
+                // See https://github.com/netty/netty/issues/12089
+                ctx.flush();
+            }
         }
 
         @Override
@@ -461,8 +476,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return;
         }
         promise = promise.unvoid();
-        // Avoid NotYetConnectedException
-        if (!ctx.channel().isActive()) {
+        // Avoid NotYetConnectedException and avoid sending before connection preface
+        if (!ctx.channel().isActive() || !prefaceSent()) {
             ctx.close(promise);
             return;
         }
@@ -610,15 +625,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void closeStream(final Http2Stream stream, ChannelFuture future) {
-        stream.close();
-
         if (future.isDone()) {
-            checkCloseConnection(future);
+            doCloseStream(stream, future);
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    checkCloseConnection(future);
+                public void operationComplete(ChannelFuture future) {
+                    doCloseStream(stream, future);
                 }
             });
         }
@@ -871,12 +884,21 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Close the remote endpoint with with a {@code GO_AWAY} frame. Does <strong>not</strong> flush
+     * Close the remote endpoint with a {@code GO_AWAY} frame. Does <strong>not</strong> flush
      * immediately, this is the responsibility of the caller.
      */
     private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause, ChannelPromise promise) {
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-        int lastKnownStream = connection().remote().lastStreamCreated();
+        int lastKnownStream;
+        if (cause != null && cause.shutdownHint() == Http2Exception.ShutdownHint.HARD_SHUTDOWN) {
+            // The hard shutdown could have been triggered during header processing, before updating
+            // lastStreamCreated(). Specifically, any connection errors encountered by Http2FrameReader or HPACK
+            // decoding will fail to update the last known stream. So we must be pessimistic.
+            // https://github.com/netty/netty/issues/10670
+            lastKnownStream = Integer.MAX_VALUE;
+        } else {
+            lastKnownStream = connection().remote().lastStreamCreated();
+        }
         return goAway(ctx, lastKnownStream, errorCode, Http2CodecUtil.toByteBuf(ctx, cause), promise);
     }
 
@@ -893,6 +915,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (!future.isSuccess()) {
             onConnectionError(ctx, true, future.cause(), null);
         }
+    }
+
+    private void doCloseStream(final Http2Stream stream, ChannelFuture future) {
+        stream.close();
+        checkCloseConnection(future);
     }
 
     /**
@@ -934,7 +961,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private static final class ClosingChannelFutureListener implements ChannelFutureListener {
         private final ChannelHandlerContext ctx;
         private final ChannelPromise promise;
-        private final ScheduledFuture<?> timeoutTask;
+        private final Future<?> timeoutTask;
         private boolean closed;
 
         ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise) {

@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * the License.
  */
 package io.netty.handler.codec.http.cors;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
@@ -75,6 +77,7 @@ public final class CorsConfigBuilder {
     final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<CharSequence, Callable<?>>();
     private boolean noPreflightHeaders;
     boolean shortCircuit;
+    boolean allowPrivateNetwork;
 
     /**
      * Creates a new Builder instance with the origin passed in.
@@ -351,6 +354,19 @@ public final class CorsConfigBuilder {
     }
 
     /**
+     * Web browsers may set the 'Access-Control-Request-Private-Network' request header if a resource is loaded
+     * from a local network.
+     * By default direct access to private network endpoints from public websites is not allowed.
+     * Calling this method will set the CORS 'Access-Control-Request-Private-Network' response header to true.
+     *
+     * @return {@link CorsConfigBuilder} to support method chaining.
+     */
+    public CorsConfigBuilder allowPrivateNetwork() {
+        allowPrivateNetwork = true;
+        return this;
+    }
+
+    /**
      * Builds a {@link CorsConfig} with settings specified by previous method calls.
      *
      * @return {@link CorsConfig} the configured CorsConfig instance.
@@ -378,10 +394,7 @@ public final class CorsConfigBuilder {
          * @param value the value that will be returned when the call method is invoked.
          */
         private ConstantValueGenerator(final Object value) {
-            if (value == null) {
-                throw new IllegalArgumentException("value must not be null");
-            }
-            this.value = value;
+            this.value = checkNotNullWithIAE(value, "value");
         }
 
         @Override

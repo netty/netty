@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,8 +18,7 @@ package io.netty.handler.ipfilter;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.SocketUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
 import java.util.concurrent.Callable;
@@ -28,6 +27,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class UniqueIpFilterTest {
 
@@ -42,8 +44,8 @@ public class UniqueIpFilterTest {
                 Future<EmbeddedChannel> future2 = newChannelAsync(barrier, executorService, ipFilter);
                 EmbeddedChannel ch1 = future1.get();
                 EmbeddedChannel ch2 = future2.get();
-                Assert.assertTrue(ch1.isActive() || ch2.isActive());
-                Assert.assertFalse(ch1.isActive() && ch2.isActive());
+                assertTrue(ch1.isActive() || ch2.isActive());
+                assertFalse(ch1.isActive() && ch2.isActive());
 
                 barrier.reset();
                 ch1.close().await();

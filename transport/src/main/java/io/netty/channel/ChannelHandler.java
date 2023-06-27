@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -89,7 +89,7 @@ import java.lang.annotation.Target;
  * </pre>
  * Because the handler instance has a state variable which is dedicated to
  * one connection, you have to create a new handler instance for each new
- * channel to avoid a race condition where a unauthenticated client can get
+ * channel to avoid a race condition where an unauthenticated client can get
  * the confidential information:
  * <pre>
  * // Create a new handler instance per channel.

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assert;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -28,6 +27,8 @@ import javax.net.ssl.SSLSession;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.BiFunction;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Special {@link SSLEngine} which allows to wrap a {@link ReferenceCountedOpenSslEngine} and verify that that
@@ -435,6 +436,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     }
 
     private static void assertErrorStackEmpty() {
-        Assert.assertEquals("SSL error stack non-empty", 0, SSL.getLastErrorNumber());
+        long error = SSL.getLastErrorNumber();
+        assertEquals(0, error, "SSL error stack non-empty: " + SSL.getErrorString(error));
     }
 }

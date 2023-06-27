@@ -1,0 +1,121 @@
+[
+  {
+    "name": "io.netty.bootstrap.ServerBootstrap$1",
+    "condition": {
+      "typeReachable": "io.netty.bootstrap.ServerBootstrap$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.bootstrap.ServerBootstrap$ServerBootstrapAcceptor",
+    "condition": {
+      "typeReachable": "io.netty.bootstrap.ServerBootstrap$ServerBootstrapAcceptor"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelDuplexHandler",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelDuplexHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelHandler",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelHandlerAdapter",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelHandlerAdapter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelInboundHandler",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelInboundHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelInboundHandlerAdapter",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelInboundHandlerAdapter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelInitializer",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelInitializer"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelOutboundHandler",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelOutboundHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.ChannelOutboundHandlerAdapter",
+    "condition": {
+      "typeReachable": "io.netty.channel.ChannelOutboundHandlerAdapter"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.CombinedChannelDuplexHandler",
+    "condition": {
+      "typeReachable": "io.netty.channel.CombinedChannelDuplexHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.DefaultChannelPipeline$HeadContext",
+    "condition": {
+      "typeReachable": "io.netty.channel.DefaultChannelPipeline$HeadContext"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.DefaultChannelPipeline$TailContext",
+    "condition": {
+      "typeReachable": "io.netty.channel.DefaultChannelPipeline$TailContext"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.embedded.EmbeddedChannel$2",
+    "condition": {
+      "typeReachable": "io.netty.channel.embedded.EmbeddedChannel$2"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.pool.SimpleChannelPool$1",
+    "condition": {
+      "typeReachable": "io.netty.channel.pool.SimpleChannelPool$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.SimpleChannelInboundHandler",
+    "condition": {
+      "typeReachable": "io.netty.channel.SimpleChannelInboundHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.channel.SimpleUserEventChannelHandler",
+    "condition": {
+      "typeReachable": "io.netty.channel.SimpleUserEventChannelHandler"
+    },
+    "queryAllPublicMethods": true
+  }
+]

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,26 +22,26 @@ import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 
 final class DatagramDnsQueryContext extends DnsQueryContext {
 
-    DatagramDnsQueryContext(DnsNameResolver parent, InetSocketAddress nameServerAddr, DnsQuestion question,
-                            DnsRecord[] additionals,
+    DatagramDnsQueryContext(Channel channel, Future<? extends Channel> channelReadyFuture,
+                            InetSocketAddress nameServerAddr,
+                            DnsQueryContextManager queryContextManager,
+                            int maxPayLoadSize, boolean recursionDesired,
+                            DnsQuestion question, DnsRecord[] additionals,
                             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-        super(parent, nameServerAddr, question, additionals, promise);
+        super(channel, channelReadyFuture, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
+                question, additionals, promise);
     }
 
     @Override
-    protected DnsQuery newQuery(int id) {
-        return new DatagramDnsQuery(null, nameServerAddr(), id);
-    }
-
-    @Override
-    protected Channel channel() {
-        return parent().ch;
+    protected DnsQuery newQuery(int id, InetSocketAddress nameServerAddr) {
+        return new DatagramDnsQuery(null, nameServerAddr, id);
     }
 
     @Override

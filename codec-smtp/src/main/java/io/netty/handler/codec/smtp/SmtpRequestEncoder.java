@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,7 +34,7 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
     private static final int CRLF_SHORT = ('\r' << 8) | '\n';
     private static final byte SP = ' ';
     private static final ByteBuf DOT_CRLF_BUFFER = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(3).writeByte('.').writeByte('\r').writeByte('\n'));
+            Unpooled.directBuffer(3).writeByte('.').writeByte('\r').writeByte('\n')).asReadOnly();
 
     private boolean contentExpected;
 

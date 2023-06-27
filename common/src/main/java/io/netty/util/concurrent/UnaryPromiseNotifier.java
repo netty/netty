@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,11 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+/**
+ *
+ * @deprecated use {@link PromiseNotifier#cascade(boolean, Future, Promise)}.
+ */
+@Deprecated
 public final class UnaryPromiseNotifier<T> implements FutureListener<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(UnaryPromiseNotifier.class);
     private final Promise<? super T> promise;

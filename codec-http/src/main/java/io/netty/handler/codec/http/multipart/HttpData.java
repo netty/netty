@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,12 +43,13 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     /**
      * Check if the new size is not reaching the max limit allowed.
-     * The limit is always computed in term of bytes.
+     * The limit is always computed in terms of bytes.
      */
     void checkSize(long newSize) throws IOException;
 
     /**
      * Set the content from the ChannelBuffer (erase any previous data)
+     * <p>{@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link HttpData}.
      *
      * @param buffer
      *            must be not null
@@ -58,6 +59,7 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     /**
      * Add the content from the ChannelBuffer
+     * <p>{@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link HttpData}.
      *
      * @param buffer
      *            must be not null except if last is set to False
@@ -121,7 +123,8 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     void delete();
 
     /**
-     * Returns the contents of the file item as an array of bytes.
+     * Returns the contents of the file item as an array of bytes.<br>
+     * Note: this method will allocate a lot of memory, if the data is currently stored on the file system.
      *
      * @return the contents of the file item as an array of bytes.
      * @throws IOException
@@ -129,7 +132,8 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     byte[] get() throws IOException;
 
     /**
-     * Returns the content of the file item as a ByteBuf
+     * Returns the content of the file item as a ByteBuf.<br>
+     * Note: this method will allocate a lot of memory, if the data is currently stored on the file system.
      *
      * @return the content of the file item as a ByteBuf
      * @throws IOException

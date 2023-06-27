@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,9 +26,9 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractDatagramTest;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -38,16 +38,17 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
-    @BeforeClass
+    @BeforeAll
     public static void assumeRecvmmsgSupported() {
-        Assume.assumeTrue(Native.IS_SUPPORTING_RECVMMSG);
+        assumeTrue(Native.IS_SUPPORTING_RECVMMSG);
     }
 
     @Override
@@ -56,8 +57,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringReadPartial() throws Throwable {
-        run();
+    public void testScatteringReadPartial(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringReadPartial(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringReadPartial(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -65,8 +71,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringRead() throws Throwable {
-        run();
+    public void testScatteringRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringRead(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringRead(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -74,8 +85,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringReadConnectedPartial() throws Throwable {
-        run();
+    public void testScatteringReadConnectedPartial(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringReadConnectedPartial(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringReadConnectedPartial(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -83,8 +99,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringConnectedRead() throws Throwable {
-        run();
+    public void testScatteringConnectedRead(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringConnectedRead(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringConnectedRead(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -92,12 +113,14 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     private void testScatteringRead(Bootstrap sb, Bootstrap cb, boolean connected, boolean partial) throws Throwable {
-        int packetSize = 512;
+        int packetSize = 8;
         int numPackets = 4;
 
         sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(
                 packetSize, packetSize * (partial ? numPackets / 2 : numPackets), 64 * 1024));
-        sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, packetSize);
+        // Set the MAX_DATAGRAM_PAYLOAD_SIZE to something bigger then the actual packet size.
+        // This will allow us to check if we correctly thread the received len.
+        sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, packetSize * 2);
 
         Channel sc = null;
         Channel cc = null;
@@ -113,11 +136,10 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             final SocketAddress ccAddress = cc.localAddress();
 
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
-            final byte[] bytes = new byte[packetSize];
-            PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
             final CountDownLatch latch = new CountDownLatch(numPackets);
             sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+                private long numRead;
                 private int counter;
                 @Override
                 public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -130,11 +152,10 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                 protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
                     assertEquals(ccAddress, msg.sender());
 
-                    assertEquals(bytes.length, msg.content().readableBytes());
-                    byte[] receivedBytes = new byte[bytes.length];
-                    msg.content().readBytes(receivedBytes);
-                    assertArrayEquals(bytes, receivedBytes);
-
+                    // Each packet contains a long which represent the write iteration.
+                    assertEquals(8, msg.content().readableBytes());
+                    assertEquals(numRead, msg.content().readLong());
+                    numRead++;
                     counter++;
                     latch.countDown();
                 }
@@ -156,7 +177,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
             List<ChannelFuture> futures = new ArrayList<ChannelFuture>(numPackets);
             for (int i = 0; i < numPackets; i++) {
-                futures.add(cc.write(new DatagramPacket(cc.alloc().directBuffer().writeBytes(bytes), addr)));
+                futures.add(cc.write(new DatagramPacket(cc.alloc().directBuffer().writeLong(i), addr)));
             }
 
             cc.flush();
@@ -186,8 +207,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringReadWithSmallBuffer() throws Throwable {
-        run();
+    public void testScatteringReadWithSmallBuffer(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringReadWithSmallBuffer(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringReadWithSmallBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {
@@ -195,8 +221,13 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     @Test
-    public void testScatteringConnectedReadWithSmallBuffer() throws Throwable {
-        run();
+    public void testScatteringConnectedReadWithSmallBuffer(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap, Bootstrap bootstrap2) throws Throwable {
+                testScatteringConnectedReadWithSmallBuffer(bootstrap, bootstrap2);
+            }
+        });
     }
 
     public void testScatteringConnectedReadWithSmallBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {

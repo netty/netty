@@ -4,7 +4,7 @@
 # version 2.0 (the "License"); you may not use this file except in compliance
 # with the License. You may obtain a copy of the License at:
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+# https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,14 +23,17 @@
 # LIB_NAME - the name of the native library
 
 SRC_DIR = src/main/c
+UTIL_SRC_DIR = target/netty-jni-util
 JNI_INCLUDE_DIR = $(JAVA_HOME)/include
 JNI_INCLUDES = -I$(JNI_INCLUDE_DIR) -I$(JNI_INCLUDE_DIR)/$(JNI_PLATFORM)
 LIB = $(LIB_DIR)/$(LIB_NAME).a
 
-CFLAGS += $(JNI_INCLUDES)
+CFLAGS += $(JNI_INCLUDES) -I$(UTIL_SRC_DIR)
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
-OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+UTIL_SRCS = $(wildcard $(UTIL_SRC_DIR)/*.c)
+
+OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) $(UTIL_SRCS:$(UTIL_SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 all: $(LIB)
 
@@ -41,6 +44,11 @@ $(LIB): $(OBJS)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(OBJ_DIR)
 	$(CC) -o $@ -c $< $(CFLAGS)
+
+$(OBJ_DIR)/%.o: $(UTIL_SRC_DIR)/%.c
+	mkdir -p $(OBJ_DIR)
+	$(CC) -o $@ -c $< $(CFLAGS)
+
 
 clean:
 	rm -rf $(LIB_DIR) $(OBJ_DIR)

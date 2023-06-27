@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,9 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.X509ExtendedKeyManager;
@@ -29,11 +27,13 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class OpenSslKeyMaterialManagerTest {
 
     @Test
     public void testChooseClientAliasReturnsNull() throws SSLException {
-        Assume.assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
 
         X509ExtendedKeyManager keyManager = new X509ExtendedKeyManager() {
             @Override
@@ -71,7 +71,7 @@ public class OpenSslKeyMaterialManagerTest {
                 new OpenSslKeyMaterialProvider(keyManager, null) {
             @Override
             OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
-                Assert.fail("Should not be called when alias is null");
+                fail("Should not be called when alias is null");
                 return null;
             }
         });

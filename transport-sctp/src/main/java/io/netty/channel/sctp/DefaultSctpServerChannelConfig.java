@@ -5,7 +5,7 @@
 * version 2.0 (the "License"); you may not use this file except in compliance
 * with the License. You may obtain a copy of the License at:
 *
-* http://www.apache.org/licenses/LICENSE-2.0
+* https://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -45,7 +46,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
      */
     public DefaultSctpServerChannelConfig(
             io.netty.channel.sctp.SctpServerChannel channel, SctpServerChannel javaChannel) {
-        super(channel);
+        super(channel, new ServerChannelRecvByteBufAllocator());
         this.javaChannel = ObjectUtil.checkNotNull(javaChannel, "javaChannel");
     }
 

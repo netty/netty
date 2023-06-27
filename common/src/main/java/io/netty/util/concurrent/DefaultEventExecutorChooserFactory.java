@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Default implementation which uses simple round-robin to choose next {@link EventExecutor}.
@@ -29,7 +30,6 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
     private DefaultEventExecutorChooserFactory() { }
 
-    @SuppressWarnings("unchecked")
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
         if (isPowerOfTwo(executors.length)) {
@@ -58,7 +58,10 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
     }
 
     private static final class GenericEventExecutorChooser implements EventExecutorChooser {
-        private final AtomicInteger idx = new AtomicInteger();
+        // Use a 'long' counter to avoid non-round-robin behaviour at the 32-bit overflow boundary.
+        // The 64-bit long solves this by placing the overflow so far into the future, that no system
+        // will encounter this in practice.
+        private final AtomicLong idx = new AtomicLong();
         private final EventExecutor[] executors;
 
         GenericEventExecutorChooser(EventExecutor[] executors) {
@@ -67,7 +70,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
         @Override
         public EventExecutor next() {
-            return executors[Math.abs(idx.getAndIncrement() % executors.length)];
+            return executors[(int) Math.abs(idx.getAndIncrement() % executors.length)];
         }
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,12 +17,15 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialProviderTest {
 
@@ -39,7 +42,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
 
     @Override
     protected void assertRelease(OpenSslKeyMaterial material) {
-        Assert.assertFalse(material.release());
+        assertFalse(material.release());
     }
 
     @Test

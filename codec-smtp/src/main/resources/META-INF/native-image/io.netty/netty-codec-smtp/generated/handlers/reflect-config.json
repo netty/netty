@@ -1,0 +1,16 @@
+[
+  {
+    "name": "io.netty.handler.codec.smtp.SmtpRequestEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.smtp.SmtpRequestEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.smtp.SmtpResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.smtp.SmtpResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

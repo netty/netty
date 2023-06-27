@@ -1,0 +1,471 @@
+[
+  {
+    "name": "io.netty.handler.codec.http.cors.CorsHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.cors.CorsHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpClientCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpClientCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpClientCodec$Decoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpClientCodec$Decoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpClientCodec$Encoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpClientCodec$Encoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpClientUpgradeHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpClientUpgradeHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpContentCompressor",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpContentCompressor"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpContentDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpContentDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpContentDecompressor",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpContentDecompressor"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpContentEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpContentEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpObjectAggregator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpObjectAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpObjectDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpObjectDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpObjectEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpObjectEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpRequestEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpRequestEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpResponseEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpResponseEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpServerCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpServerCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpServerCodec$HttpServerRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpServerCodec$HttpServerRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpServerCodec$HttpServerResponseEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpServerCodec$HttpServerResponseEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpServerExpectContinueHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpServerExpectContinueHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpServerKeepAliveHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpServerKeepAliveHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpServerUpgradeHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpServerUpgradeHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.DeflateEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.DeflateEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.PerFrameDeflateDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.PerFrameDeflateDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.PerFrameDeflateEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.PerFrameDeflateEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.Utf8FrameValidator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.Utf8FrameValidator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket00FrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket00FrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket00FrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket00FrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket07FrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket07FrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket07FrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket07FrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket08FrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket08FrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket08FrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket08FrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocket13FrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocket13FrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker$4",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker$4"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandshakeHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandshakeHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketFrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketFrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketProtocolHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketProtocolHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker$2",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker$2"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandshakeHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandshakeHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspObjectDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspObjectDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspObjectEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspObjectEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspRequestEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspRequestEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.rtsp.RtspResponseEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.rtsp.RtspResponseEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.spdy.SpdyFrameCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.spdy.SpdyFrameCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.spdy.SpdyHttpCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.spdy.SpdyHttpCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.spdy.SpdyHttpDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.spdy.SpdyHttpDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.spdy.SpdyHttpEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.spdy.SpdyHttpEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.spdy.SpdyHttpResponseStreamIdHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.spdy.SpdyHttpResponseStreamIdHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.spdy.SpdySessionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.spdy.SpdySessionHandler"
+    },
+    "queryAllPublicMethods": true
+  }
+]

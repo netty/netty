@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import org.hamcrest.core.IsEqual;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -480,6 +480,32 @@ public class CorsHandlerTest {
         assertValues(host2Response, ACCESS_CONTROL_ALLOW_METHODS.toString(), "POST", "GET", "OPTIONS");
         assertThat(host2Response.headers().getAsString(ACCESS_CONTROL_ALLOW_ORIGIN), equalTo("*"));
         assertThat(host2Response.headers().getAsString(ACCESS_CONTROL_MAX_AGE), equalTo("1800"));
+    }
+
+    @Test
+    public void simpleRequestAllowPrivateNetwork() {
+        final CorsConfig config = forOrigin("http://localhost:8888").allowPrivateNetwork().build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
+        request.headers().set(ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true");
+        assertThat(channel.writeInbound(request), is(false));
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK), equalTo("true"));
+        assertThat(ReferenceCountUtil.release(response), is(true));
+    }
+
+    @Test
+    public void simpleRequestDoNotAllowPrivateNetwork() {
+        final CorsConfig config = forOrigin("http://localhost:8888").build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
+        request.headers().set(ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true");
+        assertThat(channel.writeInbound(request), is(false));
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK), equalTo("false"));
+        assertThat(ReferenceCountUtil.release(response), is(true));
     }
 
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {

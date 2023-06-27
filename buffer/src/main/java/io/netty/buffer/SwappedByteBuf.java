@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -246,7 +246,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        return buf.getShort(index);
+        return buf.getShortLE(index);
     }
 
     @Override
@@ -266,7 +266,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int getMediumLE(int index) {
-        return buf.getMedium(index);
+        return buf.getMediumLE(index);
     }
 
     @Override
@@ -286,7 +286,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        return buf.getInt(index);
+        return buf.getIntLE(index);
     }
 
     @Override
@@ -306,7 +306,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        return buf.getLong(index);
+        return buf.getLongLE(index);
     }
 
     @Override
@@ -401,7 +401,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setShortLE(int index, int value) {
-        buf.setShort(index, (short) value);
+        buf.setShortLE(index, (short) value);
         return this;
     }
 
@@ -413,7 +413,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setMediumLE(int index, int value) {
-        buf.setMedium(index, value);
+        buf.setMediumLE(index, value);
         return this;
     }
 
@@ -425,7 +425,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setIntLE(int index, int value) {
-        buf.setInt(index, value);
+        buf.setIntLE(index, value);
         return this;
     }
 
@@ -437,7 +437,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setLongLE(int index, long value) {
-        buf.setLong(index, value);
+        buf.setLongLE(index, value);
         return this;
     }
 
@@ -543,7 +543,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public short readShortLE() {
-        return buf.readShort();
+        return buf.readShortLE();
     }
 
     @Override
@@ -563,7 +563,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int readMediumLE() {
-        return buf.readMedium();
+        return buf.readMediumLE();
     }
 
     @Override
@@ -583,7 +583,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int readIntLE() {
-        return buf.readInt();
+        return buf.readIntLE();
     }
 
     @Override
@@ -603,7 +603,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public long readLongLE() {
-        return buf.readLong();
+        return buf.readLongLE();
     }
 
     @Override
@@ -719,7 +719,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeShortLE(int value) {
-        buf.writeShort((short) value);
+        buf.writeShortLE((short) value);
         return this;
     }
 
@@ -731,7 +731,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeMediumLE(int value) {
-        buf.writeMedium(value);
+        buf.writeMediumLE(value);
         return this;
     }
 
@@ -743,7 +743,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeIntLE(int value) {
-        buf.writeInt(value);
+        buf.writeIntLE(value);
         return this;
     }
 
@@ -755,7 +755,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeLongLE(long value) {
-        buf.writeLong(value);
+        buf.writeLongLE(value);
         return this;
     }
 
@@ -1048,9 +1048,6 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
         if (obj instanceof ByteBuf) {
             return ByteBufUtil.equals(this, (ByteBuf) obj);
         }

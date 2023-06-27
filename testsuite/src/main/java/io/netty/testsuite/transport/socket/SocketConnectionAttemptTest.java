@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,26 +26,36 @@ import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_PORT;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     // See /etc/services
     private static final int UNASSIGNED_PORT = 4;
 
-    @Test(timeout = 30000)
-    public void testConnectTimeout() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testConnectTimeout(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testConnectTimeout(bootstrap);
+            }
+        });
     }
 
     public void testConnectTimeout(Bootstrap cb) throws Throwable {
@@ -58,18 +68,30 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         }
     }
 
-    @Test(timeout = 30000)
-    public void testConnectRefused() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testConnectRefused(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testConnectRefused(bootstrap);
+            }
+        });
     }
 
     public void testConnectRefused(Bootstrap cb) throws Throwable {
         testConnectRefused0(cb, false);
     }
 
-    @Test(timeout = 30000)
-    public void testConnectRefusedHalfClosure() throws Throwable {
-        run();
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testConnectRefusedHalfClosure(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testConnectRefusedHalfClosure(bootstrap);
+            }
+        });
     }
 
     public void testConnectRefusedHalfClosure(Bootstrap cb) throws Throwable {
@@ -93,7 +115,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
     }
 
     @Test
-    public void testConnectCancellation() throws Throwable {
+    public void testConnectCancellation(TestInfo testInfo) throws Throwable {
         // Check if the test can be executed or should be skipped because of no network/internet connection
         // See https://github.com/netty/netty/issues/1474
         boolean badHostTimedOut = true;
@@ -113,10 +135,14 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
         }
 
-        assumeThat("The connection attempt to " + BAD_HOST + " does not time out.",
-                badHostTimedOut, is(true));
+        assumeTrue(badHostTimedOut, "The connection attempt to " + BAD_HOST + " does not time out.");
 
-        run();
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testConnectCancellation(bootstrap);
+            }
+        });
     }
 
     public void testConnectCancellation(Bootstrap cb) throws Throwable {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,11 +32,11 @@ import java.util.List;
 @Sharable
 public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
     private static final ByteBuf _0X00 = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(1, 1).writeByte((byte) 0x00));
+            Unpooled.directBuffer(1, 1).writeByte((byte) 0x00)).asReadOnly();
     private static final ByteBuf _0XFF = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(1, 1).writeByte((byte) 0xFF));
+            Unpooled.directBuffer(1, 1).writeByte((byte) 0xFF)).asReadOnly();
     private static final ByteBuf _0XFF_0X00 = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte((byte) 0x00));
+            Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte((byte) 0x00)).asReadOnly();
 
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
@@ -69,12 +69,10 @@ public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 int b4 = dataLen & 0x7F;
                 if (b1 == 0) {
                     if (b2 == 0) {
-                        if (b3 == 0) {
-                            buf.writeByte(b4);
-                        } else {
+                        if (b3 != 0) {
                             buf.writeByte(b3 | 0x80);
-                            buf.writeByte(b4);
                         }
+                        buf.writeByte(b4);
                     } else {
                         buf.writeByte(b2 | 0x80);
                         buf.writeByte(b3 | 0x80);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,6 +38,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -82,18 +83,13 @@ public final class PlatformDependent {
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
-    private static final boolean IS_WINDOWS = isWindows0();
-    private static final boolean IS_OSX = isOsx0();
-    private static final boolean IS_J9_JVM = isJ9Jvm0();
-    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
-
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
-    private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
+    private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
     private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
@@ -110,6 +106,11 @@ public final class PlatformDependent {
     // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
     private static final String[] ALLOWED_LINUX_OS_CLASSIFIERS = {"fedora", "suse", "arch"};
     private static final Set<String> LINUX_OS_CLASSIFIERS;
+
+    private static final boolean IS_WINDOWS = isWindows0();
+    private static final boolean IS_OSX = isOsx0();
+    private static final boolean IS_J9_JVM = isJ9Jvm0();
+    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
 
     private static final int ADDRESS_SIZE = addressSize0();
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
@@ -218,6 +219,15 @@ public final class PlatformDependent {
         final Set<String> allowedClassifiers = Collections.unmodifiableSet(
                 new HashSet<String>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
         final Set<String> availableClassifiers = new LinkedHashSet<String>();
+
+        if (!addPropertyOsClassifiers(allowedClassifiers, availableClassifiers)) {
+            addFilesystemOsClassifiers(allowedClassifiers, availableClassifiers);
+        }
+        LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+    }
+
+    static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
+                                           final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final File file = new File(osReleaseFileName);
             boolean found = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
@@ -270,7 +280,41 @@ public final class PlatformDependent {
                 break;
             }
         }
-        LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+    }
+
+    static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
+        // empty: -Dio.netty.osClassifiers (no distro specific classifiers for native libs)
+        // single ID: -Dio.netty.osClassifiers=ubuntu
+        // pair ID, ID_LIKE: -Dio.netty.osClassifiers=ubuntu,debian
+        // illegal otherwise
+        String osClassifiersPropertyName = "io.netty.osClassifiers";
+        String osClassifiers = SystemPropertyUtil.get(osClassifiersPropertyName);
+        if (osClassifiers == null) {
+            return false;
+        }
+        if (osClassifiers.isEmpty()) {
+            // let users omit classifiers with just -Dio.netty.osClassifiers
+            return true;
+        }
+        String[] classifiers = osClassifiers.split(",");
+        if (classifiers.length == 0) {
+            throw new IllegalArgumentException(
+                    osClassifiersPropertyName + " property is not empty, but contains no classifiers: "
+                            + osClassifiers);
+        }
+        // at most ID, ID_LIKE classifiers
+        if (classifiers.length > 2) {
+            throw new IllegalArgumentException(
+                    osClassifiersPropertyName + " property contains more than 2 classifiers: " + osClassifiers);
+        }
+        for (String classifier : classifiers) {
+            addClassifier(allowedClassifiers, availableClassifiers, classifier);
+        }
+        return true;
+    }
+
+    public static long byteArrayBaseOffset() {
+        return BYTE_ARRAY_BASE_OFFSET;
     }
 
     public static boolean hasDirectBufferNoCleanerConstructor() {
@@ -343,7 +387,7 @@ public final class PlatformDependent {
     /**
      * {@code true} if and only if the platform supports unaligned access.
      *
-     * @see <a href="http://en.wikipedia.org/wiki/Segmentation_fault#Bus_error">Wikipedia on segfault</a>
+     * @see <a href="https://en.wikipedia.org/wiki/Segmentation_fault#Bus_error">Wikipedia on segfault</a>
      */
     public static boolean isUnaligned() {
         return PlatformDependent0.isUnaligned();
@@ -497,6 +541,18 @@ public final class PlatformDependent {
 
     public static int getInt(Object object, long fieldOffset) {
         return PlatformDependent0.getInt(object, fieldOffset);
+    }
+
+    static void safeConstructPutInt(Object object, long fieldOffset, int value) {
+        PlatformDependent0.safeConstructPutInt(object, fieldOffset, value);
+    }
+
+    public static int getIntVolatile(long address) {
+        return PlatformDependent0.getIntVolatile(address);
+    }
+
+    public static void putIntOrdered(long adddress, int newValue) {
+        PlatformDependent0.putIntOrdered(adddress, newValue);
     }
 
     public static byte getByte(long address) {
@@ -659,6 +715,10 @@ public final class PlatformDependent {
         PlatformDependent0.putByte(data, index, value);
     }
 
+    public static void putByte(Object data, long offset, byte value) {
+        PlatformDependent0.putByte(data, offset, value);
+    }
+
     public static void putShort(byte[] data, int index, short value) {
         PlatformDependent0.putShort(data, index, value);
     }
@@ -685,6 +745,11 @@ public final class PlatformDependent {
 
     public static void copyMemory(byte[] src, int srcIndex, long dstAddr, long length) {
         PlatformDependent0.copyMemory(src, BYTE_ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
+    }
+
+    public static void copyMemory(byte[] src, int srcIndex, byte[] dst, int dstIndex, long length) {
+        PlatformDependent0.copyMemory(src, BYTE_ARRAY_BASE_OFFSET + srcIndex,
+                                      dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, length);
     }
 
     public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
@@ -744,6 +809,32 @@ public final class PlatformDependent {
         int capacity = buffer.capacity();
         PlatformDependent0.freeMemory(PlatformDependent0.directBufferAddress(buffer));
         decrementMemoryCounter(capacity);
+    }
+
+    public static boolean hasAlignDirectByteBuffer() {
+        return hasUnsafe() || PlatformDependent0.hasAlignSliceMethod();
+    }
+
+    public static ByteBuffer alignDirectBuffer(ByteBuffer buffer, int alignment) {
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("Cannot get aligned slice of non-direct byte buffer.");
+        }
+        if (PlatformDependent0.hasAlignSliceMethod()) {
+            return PlatformDependent0.alignSlice(buffer, alignment);
+        }
+        if (hasUnsafe()) {
+            long address = directBufferAddress(buffer);
+            long aligned = align(address, alignment);
+            buffer.position((int) (aligned - address));
+            return buffer.slice();
+        }
+        // We don't have enough information to be able to align any buffers.
+        throw new UnsupportedOperationException("Cannot align direct buffer. " +
+                "Needs either Unsafe or ByteBuffer.alignSlice method available.");
+    }
+
+    public static long align(long value, int alignment) {
+        return Pow2.align(value, alignment);
     }
 
     private static void incrementMemoryCounter(int capacity) {
@@ -922,12 +1013,16 @@ public final class PlatformDependent {
         }
 
         static <T> Queue<T> newMpscQueue(final int maxCapacity) {
-            // Calculate the max capacity which can not be bigger then MAX_ALLOWED_MPSC_CAPACITY.
+            // Calculate the max capacity which can not be bigger than MAX_ALLOWED_MPSC_CAPACITY.
             // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
             // up to the next power of two and so will overflow otherwise.
             final int capacity = max(min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity)
-                                                : new MpscChunkedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
+            return newChunkedMpscQueue(MPSC_CHUNK_SIZE, capacity);
+        }
+
+        static <T> Queue<T> newChunkedMpscQueue(final int chunkSize, final int capacity) {
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(chunkSize, capacity)
+                    : new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
@@ -951,6 +1046,15 @@ public final class PlatformDependent {
      */
     public static <T> Queue<T> newMpscQueue(final int maxCapacity) {
         return Mpsc.newMpscQueue(maxCapacity);
+    }
+
+    /**
+     * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
+     * consumer (one thread!).
+     * The queue will grow and shrink its capacity in units of the given chunk size.
+     */
+    public static <T> Queue<T> newMpscQueue(final int chunkSize, final int maxCapacity) {
+        return Mpsc.newChunkedMpscQueue(chunkSize, maxCapacity);
     }
 
     /**
@@ -1010,7 +1114,7 @@ public final class PlatformDependent {
     }
 
     private static boolean isWindows0() {
-        boolean windows = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("win");
+        boolean windows = "windows".equals(NORMALIZED_OS);
         if (windows) {
             logger.debug("Platform: Windows");
         }
@@ -1018,10 +1122,7 @@ public final class PlatformDependent {
     }
 
     private static boolean isOsx0() {
-        String osname = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US)
-                .replaceAll("[^a-z0-9]+", "");
-        boolean osx = osname.startsWith("macosx") || osname.startsWith("osx");
-
+        boolean osx = "osx".equals(NORMALIZED_OS);
         if (osx) {
             logger.debug("Platform: MacOS");
         }
@@ -1089,7 +1190,16 @@ public final class PlatformDependent {
         return vmName.equals("IKVM.NET");
     }
 
-    private static long maxDirectMemory0() {
+    /**
+     * Compute an estimate of the maximum amount of direct memory available to this JVM.
+     * <p>
+     * The computation is not cached, so you probably want to use {@link #maxDirectMemory()} instead.
+     * <p>
+     * This will produce debug log output when called.
+     *
+     * @return The estimated max direct memory, in bytes.
+     */
+    public static long estimateMaxDirectMemory() {
         long maxDirectMemory = 0;
 
         ClassLoader systemClassLoader = null;
@@ -1145,6 +1255,8 @@ public final class PlatformDependent {
                         break;
                     case 'g': case 'G':
                         maxDirectMemory *= 1024 * 1024 * 1024;
+                        break;
+                    default:
                         break;
                 }
                 break;
@@ -1366,6 +1478,31 @@ public final class PlatformDependent {
         return LINUX_OS_CLASSIFIERS;
     }
 
+    @SuppressJava6Requirement(reason = "Guarded by version check")
+    public static File createTempFile(String prefix, String suffix, File directory) throws IOException {
+        if (javaVersion() >= 7) {
+            if (directory == null) {
+                return Files.createTempFile(prefix, suffix).toFile();
+            }
+            return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
+        }
+        final File file;
+        if (directory == null) {
+            file = File.createTempFile(prefix, suffix);
+        } else {
+            file = File.createTempFile(prefix, suffix, directory);
+        }
+
+        // Try to adjust the perms, if this fails there is not much else we can do...
+        if (!file.setReadable(false, false)) {
+            throw new IOException("Failed to set permissions on temporary file " + file);
+        }
+        if (!file.setReadable(true, true)) {
+            throw new IOException("Failed to set permissions on temporary file " + file);
+        }
+        return file;
+    }
+
     /**
      * Adds only those classifier strings to <tt>dest</tt> which are present in <tt>allowed</tt>.
      *
@@ -1428,6 +1565,9 @@ public final class PlatformDependent {
         if ("s390x".equals(value)) {
             return "s390_64";
         }
+        if ("loongarch64".equals(value)) {
+            return "loongarch_64";
+        }
 
         return "unknown";
     }
@@ -1449,7 +1589,7 @@ public final class PlatformDependent {
         if (value.startsWith("linux")) {
             return "linux";
         }
-        if (value.startsWith("macosx") || value.startsWith("osx")) {
+        if (value.startsWith("macosx") || value.startsWith("osx") || value.startsWith("darwin")) {
             return "osx";
         }
         if (value.startsWith("freebsd")) {

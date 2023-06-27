@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,13 +23,16 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +42,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpContentDecoderTest {
     private static final String HELLO_WORLD = "hello, world";
@@ -47,6 +56,16 @@ public class HttpContentDecoderTest {
             31, -117, 8, 8, 12, 3, -74, 84, 0, 3, 50, 0, -53, 72, -51, -55, -55,
             -41, 81, 40, -49, 47, -54, 73, 1, 0, 58, 114, -85, -1, 12, 0, 0, 0
     };
+    private static final byte[] SNAPPY_HELLO_WORLD = {
+            -1, 6, 0, 0, 115, 78, 97, 80, 112, 89, 1, 16, 0, 0, 11, -66, -63,
+            -22, 104, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100
+    };
+    private static final String SAMPLE_STRING = "Hello, I am Meow!. A small kitten. :)" +
+            "I sleep all day, and meow all night.";
+    private static final byte[] SAMPLE_BZ_BYTES = new byte[]{27, 72, 0, 0, -60, -102, 91, -86, 103, 20,
+            -28, -23, 54, -101, 11, -106, -16, -32, -95, -61, -37, 94, -16, 97, -40, -93, -56, 18, 21, 86,
+            -110, 82, -41, 102, -89, 20, 11, 10, -68, -31, 96, -116, -55, -80, -31, -91, 96, -64, 83, 51,
+            -39, 13, -21, 92, -16, -119, 124, -31, 18, 78, -1, 91, 82, 105, -116, -95, -22, -11, -70, -45, 0};
 
     @Test
     public void testBinaryDecompression() throws Exception {
@@ -114,13 +133,13 @@ public class HttpContentDecoderTest {
         assertThat(ob1, is(instanceOf(DefaultHttpResponse.class)));
 
         Object ob2 = channel.readInbound();
-        assertThat(ob1, is(instanceOf(DefaultHttpResponse.class)));
+        assertThat(ob2, is(instanceOf(HttpContent.class)));
         HttpContent content = (HttpContent) ob2;
         assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
         content.release();
 
         Object ob3 = channel.readInbound();
-        assertThat(ob1, is(instanceOf(DefaultHttpResponse.class)));
+        assertThat(ob3, is(instanceOf(LastHttpContent.class)));
         LastHttpContent lastContent = (LastHttpContent) ob3;
         assertNotNull(lastContent.decoderResult());
         assertTrue(lastContent.decoderResult().isSuccess());
@@ -132,7 +151,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testResponseDecompression() {
+    public void testSnappyResponseDecompression() {
         // baseline test: response decoder, content decompressor && request aggregator work as expected
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor();
@@ -140,9 +159,37 @@ public class HttpContentDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
 
         String headers = "HTTP/1.1 200 OK\r\n" +
-                         "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
-                         "Content-Encoding: gzip\r\n" +
+                         "Content-Length: " + SNAPPY_HELLO_WORLD.length + "\r\n" +
+                         "Content-Encoding: snappy\r\n" +
                          "\r\n";
+        ByteBuf buf = Unpooled.copiedBuffer(headers.getBytes(CharsetUtil.UTF_8), SNAPPY_HELLO_WORLD);
+        assertTrue(channel.writeInbound(buf));
+
+        Object o = channel.readInbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        FullHttpResponse resp = (FullHttpResponse) o;
+        assertEquals(HELLO_WORLD.length(), resp.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue());
+        assertEquals(HELLO_WORLD, resp.content().toString(CharsetUtil.UTF_8));
+        resp.release();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @Test
+    public void testResponseDecompression() {
+        // baseline test: response decoder, content decompressor && request aggregator work as expected
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
+
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
+                "Content-Encoding: gzip\r\n" +
+                "\r\n";
         ByteBuf buf = Unpooled.copiedBuffer(headers.getBytes(CharsetUtil.US_ASCII), GZ_HELLO_WORLD);
         assertTrue(channel.writeInbound(buf));
 
@@ -151,6 +198,77 @@ public class HttpContentDecoderTest {
         FullHttpResponse resp = (FullHttpResponse) o;
         assertEquals(HELLO_WORLD.length(), resp.headers().getInt(HttpHeaderNames.CONTENT_LENGTH).intValue());
         assertEquals(HELLO_WORLD, resp.content().toString(CharsetUtil.US_ASCII));
+        resp.release();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
+    @Test
+    public void testResponseBrotliDecompression() throws Throwable {
+        Brotli.ensureAvailability();
+
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+          "Content-Length: " + SAMPLE_BZ_BYTES.length + "\r\n" +
+          "Content-Encoding: br\r\n" +
+          "\r\n";
+        ByteBuf buf = Unpooled.wrappedBuffer(headers.getBytes(CharsetUtil.US_ASCII), SAMPLE_BZ_BYTES);
+        assertTrue(channel.writeInbound(buf));
+
+        Object o = channel.readInbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        FullHttpResponse resp = (FullHttpResponse) o;
+        assertNull(resp.headers().get(HttpHeaderNames.CONTENT_ENCODING), "Content-Encoding header should be removed");
+        assertEquals(SAMPLE_STRING, resp.content().toString(CharsetUtil.UTF_8),
+                "Response body should match uncompressed string");
+        resp.release();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @DisabledIf(value = "isNotSupported", disabledReason = "Brotli is not supported on this platform")
+    @Test
+    public void testResponseChunksBrotliDecompression() throws Throwable {
+        Brotli.ensureAvailability();
+
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+          "Content-Length: " + SAMPLE_BZ_BYTES.length + "\r\n" +
+          "Content-Encoding: br\r\n" +
+          "\r\n";
+
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(headers.getBytes(CharsetUtil.US_ASCII))));
+
+        int offset = 0;
+        while (offset < SAMPLE_BZ_BYTES.length) {
+            int len = Math.min(1500, SAMPLE_BZ_BYTES.length - offset);
+            boolean available = channel.writeInbound(Unpooled.wrappedBuffer(SAMPLE_BZ_BYTES, offset, len));
+            offset += 1500;
+            if (offset < SAMPLE_BZ_BYTES.length) {
+                assertFalse(available);
+            } else {
+                assertTrue(available);
+            }
+        }
+
+        Object o = channel.readInbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        FullHttpResponse resp = (FullHttpResponse) o;
+        assertEquals(SAMPLE_STRING, resp.content().toString(CharsetUtil.UTF_8),
+          "Response body should match uncompressed string");
         resp.release();
 
         assertHasInboundMessages(channel, false);
@@ -403,11 +521,11 @@ public class HttpContentDecoderTest {
         assertThat(o, is(instanceOf(HttpResponse.class)));
         HttpResponse r = (HttpResponse) o;
 
-        assertFalse("Content-Length header not removed.", r.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+        assertFalse(r.headers().contains(HttpHeaderNames.CONTENT_LENGTH), "Content-Length header not removed.");
 
         String transferEncoding = r.headers().get(HttpHeaderNames.TRANSFER_ENCODING);
-        assertNotNull("Content-length as well as transfer-encoding not set.", transferEncoding);
-        assertEquals("Unexpected transfer-encoding value.", HttpHeaderValues.CHUNKED.toString(), transferEncoding);
+        assertNotNull(transferEncoding, "Content-length as well as transfer-encoding not set.");
+        assertEquals(HttpHeaderValues.CHUNKED.toString(), transferEncoding, "Unexpected transfer-encoding value.");
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -748,5 +866,9 @@ public class HttpContentDecoderTest {
             o = channel.readOutbound();
             assertNull(o);
         }
+    }
+
+    static boolean isNotSupported() {
+        return PlatformDependent.isOsx() && "aarch_64".equals(PlatformDependent.normalizedArch());
     }
 }

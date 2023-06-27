@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,7 +32,7 @@ import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.BERTags;
-import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.DLTaggedObject;
 import org.bouncycastle.asn1.DLSequence;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.cert.ocsp.OCSPReq;
@@ -45,7 +45,7 @@ public final class OcspUtils {
     /**
      * The OID for OCSP responder URLs.
      *
-     * http://www.alvestrand.no/objectid/1.3.6.1.5.5.7.48.1.html
+     * https://www.alvestrand.no/objectid/1.3.6.1.5.5.7.48.1.html
      */
     private static final ASN1ObjectIdentifier OCSP_RESPONDER_OID
         = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.48.1").intern();
@@ -72,7 +72,7 @@ public final class OcspUtils {
         }
 
         DLSequence aiaSequence = (DLSequence) authorityInfoAccess;
-        DERTaggedObject taggedObject = findObject(aiaSequence, OCSP_RESPONDER_OID, DERTaggedObject.class);
+        DLTaggedObject taggedObject = findObject(aiaSequence, OCSP_RESPONDER_OID, DLTaggedObject.class);
         if (taggedObject == null) {
             return null;
         }

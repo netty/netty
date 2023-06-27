@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,7 @@
 
 /**
  * Encoder, decoder, handshakers and their related message types for
- * <a href="http://en.wikipedia.org/wiki/Web_Sockets">Web Socket</a> data frames.
+ * <a href="https://en.wikipedia.org/wiki/Web_Sockets">Web Socket</a> data frames.
  * <p>
  * This package supports different web socket specification versions (hence the X suffix).
  * The specification current supported are:

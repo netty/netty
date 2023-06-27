@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,13 +26,19 @@ import net.jpountz.lz4.LZ4FastDecompressor;
 import java.util.List;
 import java.util.zip.Checksum;
 
-import static io.netty.handler.codec.compression.Lz4Constants.*;
+import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
+import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_NON_COMPRESSED;
+import static io.netty.handler.codec.compression.Lz4Constants.COMPRESSION_LEVEL_BASE;
+import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
+import static io.netty.handler.codec.compression.Lz4Constants.HEADER_LENGTH;
+import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the LZ4 format.
  *
  * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
- * and <a href="http://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
+ * and <a href="https://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
  * for full description.
  *
  * Since the original LZ4 block format does not contains size of compressed block and size of original data

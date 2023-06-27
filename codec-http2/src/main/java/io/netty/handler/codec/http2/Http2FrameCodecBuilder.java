@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,18 @@ public class Http2FrameCodecBuilder extends
         AbstractHttp2ConnectionHandlerBuilder<Http2FrameCodec, Http2FrameCodecBuilder> {
 
     private Http2FrameWriter frameWriter;
+
+    /**
+     * Allows overriding behavior of existing builder.
+     * <p>
+     * Users of this constructor are responsible for invoking {@link #server(boolean)} method or overriding
+     * {@link #isServer()} method to give the builder information if the {@link Http2Connection}(s) it creates are in
+     * server or client mode.
+     *
+     * @see AbstractHttp2ConnectionHandlerBuilder
+     */
+    protected Http2FrameCodecBuilder() {
+    }
 
     Http2FrameCodecBuilder(boolean server) {
         server(server);
@@ -168,6 +180,11 @@ public class Http2FrameCodecBuilder extends
     }
 
     @Override
+    public Http2FrameCodecBuilder flushPreface(boolean flushPreface) {
+        return super.flushPreface(flushPreface);
+    }
+
+    @Override
     public int decoderEnforceMaxConsecutiveEmptyDataFrames() {
         return super.decoderEnforceMaxConsecutiveEmptyDataFrames();
     }
@@ -214,7 +231,8 @@ public class Http2FrameCodecBuilder extends
     @Override
     protected Http2FrameCodec build(
             Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
-        Http2FrameCodec codec = new Http2FrameCodec(encoder, decoder, initialSettings, decoupleCloseAndGoAway());
+        Http2FrameCodec codec = new Http2FrameCodec(encoder, decoder, initialSettings,
+                decoupleCloseAndGoAway(), flushPreface());
         codec.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis());
         return codec;
     }

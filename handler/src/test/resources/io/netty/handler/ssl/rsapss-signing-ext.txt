@@ -1,0 +1,21 @@
+[ ext ]
+extendedKeyUsage = clientAuth
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+#subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+
+
+[ exts ]
+extendedKeyUsage = serverAuth
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+#subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+#subjectAltName = @alt_names
+
+[ extca ]
+authorityKeyIdentifier = keyid,issuer
+basicConstraints=CA:TRUE
+subjectKeyIdentifier = hash
+
+[alt_names]
+DNS.1 = aws-dev-node.skylo.local

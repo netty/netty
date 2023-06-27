@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,41 +16,54 @@
 
 package io.netty.util.concurrent;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.security.Permission;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultThreadFactoryTest {
-    @Test(timeout = 2000)
+
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDescendantThreadGroups() throws InterruptedException {
         final SecurityManager current = System.getSecurityManager();
 
+        boolean securityManagerSet = false;
         try {
-            // install security manager that only allows parent thread groups to mess with descendant thread groups
-            System.setSecurityManager(new SecurityManager() {
-                @Override
-                public void checkAccess(ThreadGroup g) {
-                    final ThreadGroup source = Thread.currentThread().getThreadGroup();
+            try {
+                // install security manager that only allows parent thread groups to mess with descendant thread groups
+                System.setSecurityManager(new SecurityManager() {
+                    @Override
+                    public void checkAccess(ThreadGroup g) {
+                        final ThreadGroup source = Thread.currentThread().getThreadGroup();
 
-                    if (source != null) {
-                        if (!source.parentOf(g)) {
-                            throw new SecurityException("source group is not an ancestor of the target group");
+                        if (source != null) {
+                            if (!source.parentOf(g)) {
+                                throw new SecurityException("source group is not an ancestor of the target group");
+                            }
+                            super.checkAccess(g);
                         }
-                        super.checkAccess(g);
                     }
-                }
 
-                // so we can restore the security manager at the end of the test
-                @Override
-                public void checkPermission(Permission perm) {
-                }
-            });
+                    // so we can restore the security manager at the end of the test
+                    @Override
+                    public void checkPermission(Permission perm) {
+                    }
+                });
+            } catch (UnsupportedOperationException e) {
+                Assumptions.assumeFalse(true, "Setting SecurityManager not supported");
+            }
+            securityManagerSet = true;
 
             // holder for the thread factory, plays the role of a global singleton
             final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
@@ -109,13 +122,16 @@ public class DefaultThreadFactoryTest {
 
             assertEquals(2, counter.get());
         } finally {
-            System.setSecurityManager(current);
+            if (securityManagerSet) {
+                System.setSecurityManager(current);
+            }
         }
     }
 
     // test that when DefaultThreadFactory is constructed with a sticky thread group, threads
     // created by it have the sticky thread group
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDefaultThreadFactoryStickyThreadGroupConstructor() throws InterruptedException {
         final ThreadGroup sticky = new ThreadGroup("sticky");
         runStickyThreadGroupTest(
@@ -128,51 +144,33 @@ public class DefaultThreadFactoryTest {
                 sticky);
     }
 
-    // test that when DefaultThreadFactory is constructed it is sticky to the thread group from the thread group of the
-    // thread that created it
-    @Test(timeout = 2000)
-    public void testDefaultThreadFactoryInheritsThreadGroup() throws InterruptedException {
-        final ThreadGroup sticky = new ThreadGroup("sticky");
-
-        runStickyThreadGroupTest(
-                new Callable<DefaultThreadFactory>() {
-                    @Override
-                    public DefaultThreadFactory call() throws Exception {
-                        final AtomicReference<DefaultThreadFactory> factory =
-                                new AtomicReference<DefaultThreadFactory>();
-                        final Thread thread = new Thread(sticky, new Runnable() {
-                            @Override
-                            public void run() {
-                                factory.set(new DefaultThreadFactory("test"));
-                            }
-                        });
-                        thread.start();
-                        thread.join();
-                        return factory.get();
-                    }
-                },
-                sticky);
-    }
-
     // test that when a security manager is installed that provides a ThreadGroup, DefaultThreadFactory inherits from
     // the security manager
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDefaultThreadFactoryInheritsThreadGroupFromSecurityManager() throws InterruptedException {
         final SecurityManager current = System.getSecurityManager();
 
+        boolean securityManagerSet = false;
         try {
             final ThreadGroup sticky = new ThreadGroup("sticky");
-            System.setSecurityManager(new SecurityManager() {
-                @Override
-                public ThreadGroup getThreadGroup() {
-                    return sticky;
-                }
+            try {
+                System.setSecurityManager(new SecurityManager() {
+                    @Override
+                    public ThreadGroup getThreadGroup() {
+                        return sticky;
+                    }
 
-                // so we can restore the security manager at the end of the test
-                @Override
-                public void checkPermission(Permission perm) {
-                }
-            });
+                    // so we can restore the security manager at the end of the test
+                    @Override
+                    public void checkPermission(Permission perm) {
+                    }
+                });
+            } catch (UnsupportedOperationException e) {
+                Assumptions.assumeFalse(true, "Setting SecurityManager not supported");
+            }
+            securityManagerSet = true;
+
             runStickyThreadGroupTest(
                     new Callable<DefaultThreadFactory>() {
                         @Override
@@ -182,7 +180,9 @@ public class DefaultThreadFactoryTest {
                     },
                     sticky);
         } finally {
-            System.setSecurityManager(current);
+            if (securityManagerSet) {
+                System.setSecurityManager(current);
+            }
         }
     }
 
@@ -220,7 +220,8 @@ public class DefaultThreadFactoryTest {
 
     // test that when DefaultThreadFactory is constructed without a sticky thread group, threads
     // created by it inherit the correct thread group
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testDefaultThreadFactoryNonStickyThreadGroupConstructor() throws InterruptedException {
 
         final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
@@ -262,5 +263,37 @@ public class DefaultThreadFactoryTest {
         second.join();
 
         assertEquals(secondGroup, secondCaptured.get());
+    }
+
+    // test that when DefaultThreadFactory is constructed without a sticky thread group, threads
+    // created by it inherit the correct thread group
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
+    public void testCurrentThreadGroupIsUsed() throws InterruptedException {
+        final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
+        final AtomicReference<ThreadGroup> firstCaptured = new AtomicReference<ThreadGroup>();
+
+        final ThreadGroup group = new ThreadGroup("first");
+        final Thread first = new Thread(group, new Runnable() {
+            @Override
+            public void run() {
+                final Thread current = Thread.currentThread();
+                firstCaptured.set(current.getThreadGroup());
+                factory.set(new DefaultThreadFactory("sticky", false));
+            }
+        });
+        first.start();
+        first.join();
+        assertEquals(group, firstCaptured.get());
+
+        ThreadGroup currentThreadGroup = Thread.currentThread().getThreadGroup();
+        Thread second = factory.get().newThread(new Runnable() {
+            @Override
+            public void run() {
+                // NOOP.
+            }
+        });
+        second.join();
+        assertEquals(currentThreadGroup, currentThreadGroup);
     }
 }

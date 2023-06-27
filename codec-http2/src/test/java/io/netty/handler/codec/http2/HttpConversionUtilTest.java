@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,10 +16,14 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
@@ -31,13 +35,28 @@ import static io.netty.handler.codec.http.HttpHeaderNames.TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.UPGRADE;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpConversionUtilTest {
+
+    @Test
+    public void connectNoPath() throws Exception {
+        String authority = "netty.io:80";
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.authority(authority);
+        headers.method(HttpMethod.CONNECT.asciiName());
+        HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, true);
+        assertNotNull(request);
+        assertEquals(authority, request.uri());
+        assertEquals(authority, request.headers().get(HOST));
+    }
+
     @Test
     public void setHttp2AuthorityWithoutUserInfo() {
         Http2Headers headers = new DefaultHttp2Headers();
@@ -64,13 +83,30 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.setHttp2Authority(null, headers);
         assertNull(headers.authority());
 
-        HttpConversionUtil.setHttp2Authority("", headers);
-        assertSame(AsciiString.EMPTY_STRING, headers.authority());
+        // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+        // Clients that generate HTTP/2 requests directly MUST use the ":authority" pseudo-header
+        // field to convey authority information, unless there is no authority information to convey
+        // (in which case it MUST NOT generate ":authority").
+        // An intermediary that forwards a request over HTTP/2 MUST construct an ":authority" pseudo-header
+        // field using the authority information from the control data of the original request, unless the
+        // original request's target URI does not contain authority information
+        // (in which case it MUST NOT generate ":authority").
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() {
+                HttpConversionUtil.setHttp2Authority("", new DefaultHttp2Headers());
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setHttp2AuthorityWithEmptyAuthority() {
-        HttpConversionUtil.setHttp2Authority("info@", new DefaultHttp2Headers());
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                HttpConversionUtil.setHttp2Authority("info@", new DefaultHttp2Headers());
+            }
+        });
     }
 
     @Test
@@ -121,8 +157,8 @@ public class HttpConversionUtilTest {
 
     @Test
     public void stripTEHeadersAccountsForOWS() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders();
-        inHeaders.add(TE, " " + TRAILERS + " ");
+        HttpHeaders inHeaders = new DefaultHttpHeaders(false);
+        inHeaders.add(TE, " " + TRAILERS + ' ');
         Http2Headers out = new DefaultHttp2Headers();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertSame(TRAILERS, out.get(TE));
@@ -149,6 +185,39 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertEquals(1, out.size());
         assertSame("world", out.get("hello"));
+    }
+
+    @Test
+    public void handlesRequest() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path/to/something", validateHeaders);
+        HttpHeaders inHeaders = msg.headers();
+        inHeaders.add(CONNECTION, "foo,  bar");
+        inHeaders.add("hello", "world");
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+        assertEquals(new AsciiString("/path/to/something"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+        assertEquals(HttpMethod.GET.asciiName(), out.method());
+        assertEquals("world", out.get("hello"));
+    }
+
+    @Test
+    public void handlesRequestWithDoubleSlashPath() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "//path/to/something", validateHeaders);
+        HttpHeaders inHeaders = msg.headers();
+        inHeaders.add(CONNECTION, "foo,  bar");
+        inHeaders.add(HOST, "example.com");
+        inHeaders.add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+        inHeaders.add("hello", "world");
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+        assertEquals(new AsciiString("//path/to/something"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+        assertEquals(HttpMethod.GET.asciiName(), out.method());
     }
 
     @Test
@@ -188,5 +257,23 @@ public class HttpConversionUtilTest {
         assertFalse(outHeaders.contains(proxyConnection));
         assertFalse(outHeaders.contains(TRANSFER_ENCODING));
         assertFalse(outHeaders.contains(UPGRADE));
+    }
+
+    @Test
+    public void http2ToHttpHeaderTest() throws Exception {
+        Http2Headers http2Headers = new DefaultHttp2Headers();
+        http2Headers.status("200");
+        http2Headers.path("/meow"); // HTTP/2 Header response should not contain 'path' in response.
+        http2Headers.set("cat", "meow");
+
+        HttpHeaders httpHeaders = new DefaultHttpHeaders();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, true);
+        assertFalse(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
+
+        httpHeaders.clear();
+        HttpConversionUtil.addHttp2ToHttpHeaders(3, http2Headers, httpHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        assertEquals("meow", httpHeaders.get("cat"));
     }
 }

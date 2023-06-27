@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,26 +15,32 @@
  */
 package io.netty.util.internal;
 
-import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.function.Executable;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.UUID;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.condition.OS.LINUX;
 
-public class NativeLibraryLoaderTest {
+class NativeLibraryLoaderTest {
+
+    private static final String OS_ARCH = System.getProperty("os.arch");
+    private boolean is_x86_64() {
+        return "x86_64".equals(OS_ARCH) || "amd64".equals(OS_ARCH);
+    }
 
     @Test
-    public void testFileNotFound() {
+    void testFileNotFound() {
         try {
             NativeLibraryLoader.load(UUID.randomUUID().toString(), NativeLibraryLoaderTest.class.getClassLoader());
             fail();
@@ -47,7 +53,7 @@ public class NativeLibraryLoaderTest {
     }
 
     @Test
-    public void testFileNotFoundWithNullClassLoader() {
+    void testFileNotFoundWithNullClassLoader() {
         try {
             NativeLibraryLoader.load(UUID.randomUUID().toString(), null);
             fail();
@@ -57,6 +63,51 @@ public class NativeLibraryLoaderTest {
                 verifySuppressedException(error, ClassNotFoundException.class);
             }
         }
+    }
+
+    @Test
+    @EnabledOnOs(LINUX)
+    @EnabledIf("is_x86_64")
+    void testMultipleResourcesWithSameContentInTheClassLoader() throws MalformedURLException {
+        URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
+        URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
+        final URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
+        final String resourceName = "test3";
+
+        NativeLibraryLoader.load(resourceName, loader);
+        assertTrue(true);
+    }
+
+    @Test
+    @EnabledOnOs(LINUX)
+    @EnabledIf("is_x86_64")
+    void testMultipleResourcesInTheClassLoader() throws MalformedURLException {
+        URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
+        URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
+        final URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
+        final String resourceName = "test1";
+
+        Exception ise = assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                NativeLibraryLoader.load(resourceName, loader);
+            }
+        });
+        assertTrue(ise.getMessage()
+                    .contains("Multiple resources found for 'META-INF/native/lib" + resourceName + ".so'"));
+    }
+
+    @Test
+    @EnabledOnOs(LINUX)
+    @EnabledIf("is_x86_64")
+    void testSingleResourceInTheClassLoader() throws MalformedURLException {
+        URL url1 = new File("src/test/data/NativeLibraryLoader/1").toURI().toURL();
+        URL url2 = new File("src/test/data/NativeLibraryLoader/2").toURI().toURL();
+        URLClassLoader loader = new URLClassLoader(new URL[] {url1, url2});
+        String resourceName = "test2";
+
+        NativeLibraryLoader.load(resourceName, loader);
+        assertTrue(true);
     }
 
     @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
@@ -71,72 +122,6 @@ public class NativeLibraryLoaderTest {
             assertTrue(expectedSuppressedExceptionClass.isInstance(suppressed[0]));
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    @Test
-    public void testPatchingId() throws IOException {
-        testPatchingId0(true, false);
-    }
-
-    @Test
-    public void testPatchingIdWithOsArch() throws IOException {
-        testPatchingId0(true, true);
-    }
-
-    @Test
-    public void testPatchingIdNotMatch() throws IOException {
-        testPatchingId0(false, false);
-    }
-
-    @Test
-    public void testPatchingIdWithOsArchNotMatch() throws IOException {
-        testPatchingId0(false, true);
-    }
-
-    private static void testPatchingId0(boolean match, boolean withOsArch) throws IOException {
-        byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
-        byte[] idBytes = ("/workspace/netty-tcnative/boringssl-static/target/" +
-                "native-build/target/lib/libnetty_tcnative-2.0.20.Final.jnilib").getBytes(CharsetUtil.UTF_8);
-
-        String originalName;
-        if (match) {
-            originalName = "netty-tcnative";
-        } else {
-            originalName = "nonexist_tcnative";
-        }
-        String name = "shaded_" + originalName;
-        if (withOsArch) {
-            name += "_osx_x86_64";
-        }
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        out.write(bytes, 0, bytes.length);
-        out.write(idBytes, 0, idBytes.length);
-        out.write(bytes, 0 , bytes.length);
-
-        out.flush();
-        byte[] inBytes = out.toByteArray();
-        out.close();
-
-        InputStream inputStream = new ByteArrayInputStream(inBytes);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            assertEquals(match,
-                    NativeLibraryLoader.patchShadedLibraryId(inputStream, outputStream, originalName, name));
-
-            outputStream.flush();
-            byte[] outputBytes = outputStream.toByteArray();
-            assertArrayEquals(bytes, Arrays.copyOfRange(outputBytes, 0, bytes.length));
-            byte[] patchedId = Arrays.copyOfRange(outputBytes, bytes.length, bytes.length + idBytes.length);
-            assertEquals(!match, Arrays.equals(idBytes, patchedId));
-            assertArrayEquals(bytes,
-                    Arrays.copyOfRange(outputBytes, bytes.length + idBytes.length, outputBytes.length));
-            assertEquals(inBytes.length, outputBytes.length);
-        } finally {
-            inputStream.close();
-            outputStream.close();
         }
     }
 }

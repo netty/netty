@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
  *         broken in a non-major release!</li>
  * </ol>
  */
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.SOURCE) // TODO Retention policy needs to be CLASS in Netty 5.
 @Target({
         ElementType.ANNOTATION_TYPE,
         ElementType.CONSTRUCTOR,

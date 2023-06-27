@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,10 @@
  */
 package io.netty.testsuite.transport.socket;
 
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -35,5 +38,14 @@ public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
             return new InetSocketAddress(NetUtil.LOCALHOST4, serverAddress.getPort());
         }
         return serverAddress;
+    }
+
+    @Override
+    protected boolean disconnectMightFail(DatagramChannel channel) {
+        // See https://bugs.openjdk.org/browse/JDK-8285515
+        if (channel instanceof NioDatagramChannel && PlatformDependent.javaVersion() < 20) {
+            return true;
+        }
+        return super.disconnectMightFail(channel);
     }
 }

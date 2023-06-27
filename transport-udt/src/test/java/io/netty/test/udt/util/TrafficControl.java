@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,8 @@
 
 package io.netty.test.udt.util;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,7 +26,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * <p>
  * requires sudo setup for /sbin/tc under current account
  * <p>
- * see http://www.davidverhasselt.com/2008/01/27/passwordless-sudo/
+ * see https://www.davidverhasselt.com/2008/01/27/passwordless-sudo/
  */
 public final class TrafficControl {
 
@@ -62,9 +64,7 @@ public final class TrafficControl {
      * @param time - delay in milliseconds; use zero to remove delay.
      */
     public static void delay(final int time) throws Exception {
-        if (time < 0) {
-            throw new IllegalArgumentException("negative latency");
-        }
+        checkPositiveOrZero(time, "time");
         final int delay = time / 2;
         if (delay == 0) {
             UnitHelp.process(String.format(TC_RESET, "lo"));

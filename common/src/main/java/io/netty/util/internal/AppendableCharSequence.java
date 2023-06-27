@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import java.util.Arrays;
 
@@ -23,17 +25,11 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     private int pos;
 
     public AppendableCharSequence(int length) {
-        if (length < 1) {
-            throw new IllegalArgumentException("length: " + length + " (length: >= 1)");
-        }
-        chars = new char[length];
+        chars = new char[checkPositive(length, "length")];
     }
 
     private AppendableCharSequence(char[] chars) {
-        if (chars.length < 1) {
-            throw new IllegalArgumentException("length: " + chars.length + " (length: >= 1)");
-        }
-        this.chars = chars;
+        this.chars = checkNonEmpty(chars, "chars");
         pos = chars.length;
     }
 
@@ -98,7 +94,8 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     @Override
     public AppendableCharSequence append(CharSequence csq, int start, int end) {
         if (csq.length() < end) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("expected: csq.length() >= ("
+                    + end + "),but actual is (" + csq.length() + ")");
         }
         int length = end - start;
         if (length > chars.length - pos) {
@@ -138,7 +135,8 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
     public String substring(int start, int end) {
         int length = end - start;
         if (start > pos || length > pos) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("expected: start and length <= ("
+                    + pos + ")");
         }
         return new String(chars, start, length);
     }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,7 +22,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -37,7 +38,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class XmlFrameDecoderTest {
 
@@ -50,35 +52,60 @@ public class XmlFrameDecoderTest {
         );
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testConstructorWithIllegalArgs01() {
-        new XmlFrameDecoder(0);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new XmlFrameDecoder(0);
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testConstructorWithIllegalArgs02() {
-        new XmlFrameDecoder(-23);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new XmlFrameDecoder(-23);
+            }
+        });
     }
 
-    @Test(expected = TooLongFrameException.class)
+    @Test
     public void testDecodeWithFrameExceedingMaxLength() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(3);
-        EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        ch.writeInbound(Unpooled.copiedBuffer("<v/>", CharsetUtil.UTF_8));
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(Unpooled.copiedBuffer("<v/>", CharsetUtil.UTF_8));
+            }
+        });
     }
 
-    @Test(expected = CorruptedFrameException.class)
+    @Test
     public void testDecodeWithInvalidInput() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
-        EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        ch.writeInbound(Unpooled.copiedBuffer("invalid XML", CharsetUtil.UTF_8));
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(Unpooled.copiedBuffer("invalid XML", CharsetUtil.UTF_8));
+            }
+        });
     }
 
-    @Test(expected = CorruptedFrameException.class)
+    @Test
     public void testDecodeWithInvalidContentBeforeXml() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
-        EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        ch.writeInbound(Unpooled.copiedBuffer("invalid XML<foo/>", CharsetUtil.UTF_8));
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeInbound(Unpooled.copiedBuffer("invalid XML<foo/>", CharsetUtil.UTF_8));
+            }
+        });
     }
 
     @Test

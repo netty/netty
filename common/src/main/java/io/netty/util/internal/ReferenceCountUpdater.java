@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -59,6 +59,15 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         return 2;
     }
 
+    public void setInitialValue(T instance) {
+        final long offset = unsafeOffset();
+        if (offset == -1) {
+            updater().set(instance, initialValue());
+        } else {
+            PlatformDependent.safeConstructPutInt(instance, offset, initialValue());
+        }
+    }
+
     private static int realRefCnt(int rawCnt) {
         return rawCnt != 2 && rawCnt != 4 && (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
     }
@@ -103,7 +112,8 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
      * Resets the reference count to 1
      */
     public final void resetRefCnt(T instance) {
-        updater().set(instance, initialValue());
+        // no need of a volatile set, it should happen in a quiescent state
+        updater().lazySet(instance, initialValue());
     }
 
     public final T retain(T instance) {

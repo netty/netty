@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,7 +43,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <h3>Random Access Indexing</h3>
  *
  * Just like an ordinary primitive byte array, {@link ByteBuf} uses
- * <a href="http://en.wikipedia.org/wiki/Zero-based_numbering">zero-based indexing</a>.
+ * <a href="https://en.wikipedia.org/wiki/Zero-based_numbering">zero-based indexing</a>.
  * It means the index of the first byte is always {@code 0} and the index of the last byte is
  * always {@link #capacity() capacity - 1}.  For example, to iterate all bytes of a buffer, you
  * can do the following, regardless of its internal implementation:
@@ -245,7 +245,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
  */
-public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
+public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, ByteBufConvertible {
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.
@@ -274,7 +274,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBufAllocator alloc();
 
     /**
-     * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
+     * Returns the <a href="https://en.wikipedia.org/wiki/Endianness">endianness</a>
      * of this buffer.
      *
      * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
@@ -1175,7 +1175,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * the number of the transferred bytes while
      * {@link #setBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * the source buffer (i.e. {@code this}).
+     * this buffer (i.e. {@code this}).
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -1192,7 +1192,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * the number of the transferred bytes while
      * {@link #setBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * the source buffer (i.e. {@code this}).
+     * this buffer (i.e. {@code this}).
      *
      * @param length the number of bytes to transfer
      *
@@ -1274,7 +1274,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @param length the number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed.
+     *         {@code -1} if the specified {@link InputStream} reached EOF.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -1293,7 +1293,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed.
+     *         {@code -1} if the specified channel is closed or it reached EOF.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -1313,7 +1313,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed.
+     *         {@code -1} if the specified channel is closed or it reached EOF.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -1338,15 +1338,15 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf setZero(int index, int length);
 
     /**
-     * Writes the specified {@link CharSequence} at the current {@code writerIndex} and increases
-     * the {@code writerIndex} by the written bytes.
+     * Writes the specified {@link CharSequence} at the given {@code index}.
+     * The {@code writerIndex} is not modified by this method.
      *
      * @param index on which the sequence should be written
      * @param sequence to write
      * @param charset that should be used.
      * @return the written number of bytes.
      * @throws IndexOutOfBoundsException
-     *         if {@code this.writableBytes} is not large enough to write the whole sequence
+     *         if the sequence at the given index would be out of bounds of the buffer capacity
      */
     public abstract int setCharSequence(int index, CharSequence sequence, Charset charset);
 
@@ -1994,7 +1994,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *
      * @param length the number of bytes to transfer
      *
-     * @return the actual number of bytes read in from the specified stream
+     * @return the actual number of bytes read in from the specified channel.
+     *         {@code -1} if the specified {@link InputStream} reached EOF.
      *
      * @throws IOException if the specified stream threw an exception during I/O
      */
@@ -2009,7 +2010,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *
      * @param length the maximum number of bytes to transfer
      *
-     * @return the actual number of bytes read in from the specified channel
+     * @return the actual number of bytes read in from the specified channel.
+     *         {@code -1} if the specified channel is closed or it reached EOF.
      *
      * @throws IOException
      *         if the specified channel threw an exception during I/O
@@ -2027,7 +2029,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @param position the file position at which the transfer is to begin
      * @param length the maximum number of bytes to transfer
      *
-     * @return the actual number of bytes read in from the specified channel
+     * @return the actual number of bytes read in from the specified channel.
+     *         {@code -1} if the specified channel is closed or it reached EOF.
      *
      * @throws IOException
      *         if the specified channel threw an exception during I/O
@@ -2394,6 +2397,15 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      */
     public boolean isContiguous() {
         return false;
+    }
+
+    /**
+     * A {@code ByteBuf} can turn into itself.
+     * @return This {@code ByteBuf} instance.
+     */
+    @Override
+    public ByteBuf asByteBuf() {
+        return this;
     }
 
     /**

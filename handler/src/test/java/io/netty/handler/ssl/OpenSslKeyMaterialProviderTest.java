@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.X509KeyManager;
@@ -31,8 +31,11 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OpenSslKeyMaterialProviderTest {
 
@@ -40,9 +43,9 @@ public class OpenSslKeyMaterialProviderTest {
     static final String EXISTING_ALIAS = "1";
     private static final String NON_EXISTING_ALIAS = "nonexisting";
 
-    @BeforeClass
-    public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
+    @BeforeAll
+    static void checkOpenSsl() {
+        OpenSsl.ensureAvailability();
     }
 
     protected KeyManagerFactory newKeyManagerFactory() throws Exception {

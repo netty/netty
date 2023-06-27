@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,17 +19,18 @@ package io.netty.handler.codec.redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Verifies the correct functionality of the {@link RedisEncoder}.
@@ -38,12 +39,12 @@ public class RedisEncoderTest {
 
     private EmbeddedChannel channel;
 
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         channel = new EmbeddedChannel(new RedisEncoder());
     }
 
-    @After
+    @AfterEach
     public void teardown() throws Exception {
         assertFalse(channel.finish());
     }

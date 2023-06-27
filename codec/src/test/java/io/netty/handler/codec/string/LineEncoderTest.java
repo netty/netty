@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,11 +18,12 @@ package io.netty.handler.codec.string;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LineEncoderTest {
 
@@ -41,8 +42,8 @@ public class LineEncoderTest {
             byte[] data = new byte[buf.readableBytes()];
             buf.readBytes(data);
             byte[] expected = (msg + lineSeparator.value()).getBytes(CharsetUtil.UTF_8);
-            Assert.assertArrayEquals(expected, data);
-            Assert.assertNull(channel.readOutbound());
+            assertArrayEquals(expected, data);
+            assertNull(channel.readOutbound());
         } finally {
             buf.release();
             assertFalse(channel.finish());

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,11 +38,14 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.AbstractAddressResolver;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
@@ -51,12 +54,24 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BootstrapTest {
 
@@ -64,7 +79,7 @@ public class BootstrapTest {
     private static final EventLoopGroup groupB = new DefaultEventLoopGroup(1);
     private static final ChannelInboundHandler dummyHandler = new DummyHandler();
 
-    @AfterClass
+    @AfterAll
     public static void destroy() {
         groupA.shutdownGracefully();
         groupB.shutdownGracefully();
@@ -72,7 +87,49 @@ public class BootstrapTest {
         groupB.terminationFuture().syncUninterruptibly();
     }
 
-    @Test(timeout = 10000)
+    @Test
+    public void testOptionsCopied() {
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.option(ChannelOption.AUTO_READ, true);
+        Map.Entry<ChannelOption<?>, Object>[] channelOptions = bootstrapA.newOptionsArray();
+        bootstrapA.option(ChannelOption.AUTO_READ, false);
+        assertEquals(ChannelOption.AUTO_READ, channelOptions[0].getKey());
+        assertEquals(true, channelOptions[0].getValue());
+    }
+
+    @Test
+    public void testAttributesCopied() {
+        AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        String value = "value";
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.attr(key, value);
+        Map.Entry<AttributeKey<?>, Object>[] attributesArray = bootstrapA.newAttributesArray();
+        bootstrapA.attr(key, "value2");
+        assertEquals(key, attributesArray[0].getKey());
+        assertEquals(value, attributesArray[0].getValue());
+    }
+
+    @Test
+    public void optionsAndAttributesMustBeAvailableOnChannelInit() throws InterruptedException {
+        final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        new Bootstrap()
+                .group(groupA)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .attr(key, "value")
+                .handler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        assertEquals(4242, (int) option);
+                        assertEquals("value", ch.attr(key).get());
+                    }
+                })
+                .bind(LocalAddress.ANY).sync();
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testBindDeadLock() throws Exception {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
@@ -108,7 +165,8 @@ public class BootstrapTest {
         }
     }
 
-    @Test(timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testConnectDeadLock() throws Exception {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
@@ -221,7 +279,8 @@ public class BootstrapTest {
         }
     }
 
-    @Test(expected = ConnectException.class, timeout = 10000)
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testLateRegistrationConnect() throws Exception {
         EventLoopGroup group = new DelayedEventLoopGroup();
         try {
@@ -229,7 +288,12 @@ public class BootstrapTest {
             bootstrapA.group(group);
             bootstrapA.channel(LocalChannel.class);
             bootstrapA.handler(dummyHandler);
-            bootstrapA.connect(LocalAddress.ANY).syncUninterruptibly();
+            assertThrows(ConnectException.class, new Executable() {
+                @Override
+                public void execute() {
+                    bootstrapA.connect(LocalAddress.ANY).syncUninterruptibly();
+                }
+            });
         } finally {
             group.shutdownGracefully();
         }

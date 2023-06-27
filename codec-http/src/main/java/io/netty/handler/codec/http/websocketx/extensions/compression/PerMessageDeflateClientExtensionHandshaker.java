@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,7 +31,7 @@ import static io.netty.handler.codec.http.websocketx.extensions.compression.PerM
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
- * <a href="http://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">permessage-deflate</a>
+ * <a href="https://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">permessage-deflate</a>
  * handshake implementation.
  */
 public final class PerMessageDeflateClientExtensionHandshaker implements WebSocketClientExtensionHandshaker {
@@ -117,7 +117,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
     @Override
     public WebSocketExtensionData newRequestData() {
         HashMap<String, String> parameters = new HashMap<String, String>(4);
-        if (requestedServerWindowSize != MAX_WINDOW_SIZE) {
+        if (requestedServerNoContext) {
             parameters.put(SERVER_NO_CONTEXT, null);
         }
         if (allowClientNoContext) {
@@ -153,13 +153,16 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
                 // allowed client_window_size_bits
                 if (allowClientWindowSize) {
                     clientWindowSize = Integer.parseInt(parameter.getValue());
+                    if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                        succeed = false;
+                    }
                 } else {
                     succeed = false;
                 }
             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
                 // acknowledged server_window_size_bits
                 serverWindowSize = Integer.parseInt(parameter.getValue());
-                if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                if (serverWindowSize > MAX_WINDOW_SIZE || serverWindowSize < MIN_WINDOW_SIZE) {
                     succeed = false;
                 }
             } else if (CLIENT_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
@@ -171,11 +174,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
                 }
             } else if (SERVER_NO_CONTEXT.equalsIgnoreCase(parameter.getKey())) {
                 // acknowledged server_no_context_takeover
-                if (requestedServerNoContext) {
-                    serverNoContext = true;
-                } else {
-                    succeed = false;
-                }
+                serverNoContext = true;
             } else {
                 // unknown parameter
                 succeed = false;
@@ -183,7 +182,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
         }
 
         if ((requestedServerNoContext && !serverNoContext) ||
-                requestedServerWindowSize != serverWindowSize) {
+                requestedServerWindowSize < serverWindowSize) {
             succeed = false;
         }
 

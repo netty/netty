@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.validateAttributeValue;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
  * The default {@link Cookie} implementation.
@@ -40,11 +41,7 @@ public class DefaultCookie implements Cookie {
      * Creates a new cookie with the specified name and value.
      */
     public DefaultCookie(String name, String value) {
-        name = checkNotNull(name, "name").trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
-        this.name = name;
+        this.name = checkNonEmptyAfterTrim(name, "name");
         setValue(value);
     }
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,15 @@
  */
 package io.netty.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import io.netty.util.ByteProcessor.IndexOfProcessor;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the underlying memory methods for the {@link AsciiString} class.
@@ -36,9 +36,9 @@ public class AsciiStringMemoryTest {
     private int length = 100;
     private AsciiString aAsciiString;
     private AsciiString bAsciiString;
-    private Random r = new Random();
+    private final Random r = new Random();
 
-    @Before
+    @BeforeEach
     public void setup() {
         a = new byte[128];
         b = new byte[256];
@@ -84,8 +84,8 @@ public class AsciiStringMemoryTest {
         aAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
-            public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, bAsciiString.byteAt(i++));
+            public boolean process(byte value) {
+                assertEquals(value, bAsciiString.byteAt(i++), "failed at index: " + i);
                 aCount.set(aCount.get() + 1);
                 return true;
             }
@@ -93,8 +93,8 @@ public class AsciiStringMemoryTest {
         bAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
-            public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, aAsciiString.byteAt(i++));
+            public boolean process(byte value) {
+                assertEquals(value, aAsciiString.byteAt(i++), "failed at index: " + i);
                 bCount.set(bCount.get() + 1);
                 return true;
             }
@@ -122,8 +122,8 @@ public class AsciiStringMemoryTest {
         aAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
-            public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, bAsciiString.byteAt(bAsciiString.length() - (i++)));
+            public boolean process(byte value) {
+                assertEquals(value, bAsciiString.byteAt(bAsciiString.length() - (i++)), "failed at index: " + i);
                 aCount.set(aCount.get() + 1);
                 return true;
             }
@@ -131,8 +131,8 @@ public class AsciiStringMemoryTest {
         bAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
-            public boolean process(byte value) throws Exception {
-                assertEquals("failed at index: " + i, value, aAsciiString.byteAt(aAsciiString.length() - (i++)));
+            public boolean process(byte value) {
+                assertEquals(value, aAsciiString.byteAt(aAsciiString.length() - (i++)), "failed at index: " + i);
                 bCount.set(bCount.get() + 1);
                 return true;
             }

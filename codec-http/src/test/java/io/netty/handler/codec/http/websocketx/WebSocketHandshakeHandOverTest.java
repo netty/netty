@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,13 +29,20 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
-import org.junit.Before;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.List;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WebSocketHandshakeHandOverTest {
 
@@ -66,7 +73,7 @@ public class WebSocketHandshakeHandOverTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         serverReceivedHandshake = false;
         serverHandshakeComplete = null;
@@ -124,8 +131,8 @@ public class WebSocketHandshakeHandOverTest {
         assertTrue(clientReceivedMessage);
     }
 
-    @Test(expected = WebSocketHandshakeException.class)
-    public void testClientHandshakeTimeout() throws Exception {
+    @Test
+    public void testClientHandshakeTimeout() throws Throwable {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<Object>() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -164,7 +171,7 @@ public class WebSocketHandshakeHandOverTest {
         transferAllDataWithMerge(clientChannel, serverChannel);
         // Server do not send the response back
         // transferAllDataWithMerge(serverChannel, clientChannel);
-        WebSocketClientProtocolHandshakeHandler handshakeHandler =
+        final WebSocketClientProtocolHandshakeHandler handshakeHandler =
                 (WebSocketClientProtocolHandshakeHandler) clientChannel
                         .pipeline().get(WebSocketClientProtocolHandshakeHandler.class.getName());
 
@@ -178,13 +185,53 @@ public class WebSocketHandshakeHandOverTest {
         assertFalse(clientReceivedMessage);
         // Should throw WebSocketHandshakeException
         try {
-            handshakeHandler.getHandshakeFuture().syncUninterruptibly();
+            assertThrows(WebSocketHandshakeException.class, new Executable() {
+                @Override
+                public void execute() {
+                    handshakeHandler.getHandshakeFuture().syncUninterruptibly();
+                }
+            });
         } finally {
             serverChannel.finishAndReleaseAll();
         }
     }
 
-    @Test(timeout = 10000)
+    /**
+     * Tests a scenario when channel is closed while the handshake is in progress. Validates that the handshake
+     * future is notified in such cases.
+     */
+    @Test
+    public void testHandshakeFutureIsNotifiedOnChannelClose() throws Exception {
+        EmbeddedChannel clientChannel = createClientChannel(null);
+        EmbeddedChannel serverChannel = createServerChannel(null);
+
+        try {
+            // Start handshake from client to server but don't complete the handshake for the purpose of this test.
+            transferAllDataWithMerge(clientChannel, serverChannel);
+
+            final WebSocketClientProtocolHandler clientWsHandler =
+                    clientChannel.pipeline().get(WebSocketClientProtocolHandler.class);
+            final WebSocketClientProtocolHandshakeHandler clientWsHandshakeHandler =
+                    clientChannel.pipeline().get(WebSocketClientProtocolHandshakeHandler.class);
+
+            final ChannelHandlerContext ctx = clientChannel.pipeline().context(WebSocketClientProtocolHandler.class);
+
+            // Close the channel while the handshake is in progress. The channel could be closed before the handshake is
+            // complete due to a number of varied reasons. To reproduce the test scenario for this test case,
+            // we would manually close the channel.
+            clientWsHandler.close(ctx, ctx.newPromise());
+
+            // At this stage handshake is incomplete but the handshake future should be completed exceptionally since
+            // channel is closed.
+            assertTrue(clientWsHandshakeHandler.getHandshakeFuture().isDone());
+        } finally {
+            serverChannel.finishAndReleaseAll();
+            clientChannel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testClientHandshakerForceClose() throws Exception {
         final WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
                 new URI("ws://localhost:1234/test"), WebSocketVersion.V13, null, true,
@@ -308,9 +355,7 @@ public class WebSocketHandshakeHandOverTest {
     }
 
     private static EmbeddedChannel createServerChannel(ChannelHandler handler) {
-        return new EmbeddedChannel(
-                new HttpServerCodec(),
-                new HttpObjectAggregator(8192),
+        return createServerChannel(
                 new WebSocketServerProtocolHandler("/test", "test-proto-1, test-proto-2", false),
                 handler);
     }

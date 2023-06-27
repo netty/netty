@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,6 +23,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
@@ -35,7 +36,8 @@ import java.util.Queue;
  */
 public class LocalServerChannel extends AbstractServerChannel {
 
-    private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final ChannelConfig config =
+            new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
     private final Runnable shutdownHook = new Runnable() {
         @Override
@@ -156,7 +158,7 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             pipeline.fireChannelRead(m);
         } while (handle.continueReading());
-
+        handle.readComplete();
         pipeline.fireChannelReadComplete();
     }
 

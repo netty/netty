@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,10 +24,10 @@ public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07
 
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
-                                                      boolean absoluteUpgradeUrl) {
+                                                      boolean absoluteUpgradeUrl, boolean generateOriginHeader) {
         return new WebSocketClientHandshaker13(uri, WebSocketVersion.V13, subprotocol, false, headers,
           1024, true, true, 10000,
-          absoluteUpgradeUrl);
+          absoluteUpgradeUrl, generateOriginHeader);
     }
 
     @Override

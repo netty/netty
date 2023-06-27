@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.ThrowableUtil;
 
 public class SpdyProtocolException extends Exception {
 
@@ -48,11 +49,14 @@ public class SpdyProtocolException extends Exception {
         super(cause);
     }
 
-    static SpdyProtocolException newStatic(String message) {
+    static SpdyProtocolException newStatic(String message, Class<?> clazz, String method) {
+        final SpdyProtocolException exception;
         if (PlatformDependent.javaVersion() >= 7) {
-            return new SpdyProtocolException(message, true);
+            exception = new StacklessSpdyProtocolException(message, true);
+        } else {
+            exception = new StacklessSpdyProtocolException(message);
         }
-        return new SpdyProtocolException(message);
+        return ThrowableUtil.unknownStackTrace(exception, clazz, method);
     }
 
     @SuppressJava6Requirement(reason = "uses Java 7+ Exception.<init>(String, Throwable, boolean, boolean)" +
@@ -60,5 +64,24 @@ public class SpdyProtocolException extends Exception {
     private SpdyProtocolException(String message, boolean shared) {
         super(message, null, false, true);
         assert shared;
+    }
+
+    private static final class StacklessSpdyProtocolException extends SpdyProtocolException {
+        private static final long serialVersionUID = -6302754207557485099L;
+
+        StacklessSpdyProtocolException(String message) {
+            super(message);
+        }
+
+        StacklessSpdyProtocolException(String message, boolean shared) {
+            super(message, shared);
+        }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader.
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
     }
 }

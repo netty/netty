@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -159,10 +159,18 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
             inputPtr = 0;
         }
 
-        final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length);
+        // Estimate may apparently under-count by one in some cases.
+        final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length) + 1;
         out.ensureWritable(maxOutputLength);
-        final byte[] output = out.array();
-        final int outputPtr = out.arrayOffset() + out.writerIndex();
+        final byte[] output;
+        final int outputPtr;
+        if (out.hasArray()) {
+            output = out.array();
+            outputPtr = out.arrayOffset() + out.writerIndex();
+        } else {
+            output = new byte[maxOutputLength];
+            outputPtr = 0;
+        }
 
         final int outputLength;
         if (length >= compressThreshold) {
@@ -173,7 +181,12 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
             outputLength = encodeNonCompress(input, inputPtr, length, output, outputPtr);
         }
 
-        out.writerIndex(out.writerIndex() + outputLength);
+        if (out.hasArray()) {
+            out.writerIndex(out.writerIndex() + outputLength);
+        } else {
+            out.writeBytes(output, 0, outputLength);
+        }
+
         in.skipBytes(length);
 
         if (!in.hasArray()) {

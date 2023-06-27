@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -87,9 +88,11 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
                 I cast = (I) msg;
                 try {
                     encode(ctx, cast, out);
-                } finally {
-                    ReferenceCountUtil.release(cast);
+                } catch (Throwable th) {
+                    ReferenceCountUtil.safeRelease(cast);
+                    PlatformDependent.throwException(th);
                 }
+                ReferenceCountUtil.release(cast);
 
                 if (out.isEmpty()) {
                     throw new EncoderException(

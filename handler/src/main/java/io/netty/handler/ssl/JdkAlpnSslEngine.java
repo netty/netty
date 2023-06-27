@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,7 @@ import javax.net.ssl.SSLException;
 import java.nio.ByteBuffer;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
@@ -32,11 +33,11 @@ import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSele
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 
 @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-final class JdkAlpnSslEngine extends JdkSslEngine {
+class JdkAlpnSslEngine extends JdkSslEngine {
     private final ProtocolSelectionListener selectionListener;
     private final AlpnSelector alpnSelector;
 
-    private final class AlpnSelector implements BiFunction<SSLEngine, List<String>, String> {
+    final class AlpnSelector implements BiFunction<SSLEngine, List<String>, String> {
         private final ProtocolSelector selector;
         private boolean called;
 
@@ -55,7 +56,7 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
             } catch (Exception cause) {
                 // Returning null means we want to fail the handshake.
                 //
-                // See http://download.java.net/java/jdk9/docs/api/javax/net/ssl/
+                // See https://download.java.net/java/jdk9/docs/api/javax/net/ssl/
                 // SSLEngine.html#setHandshakeApplicationProtocolSelector-java.util.function.BiFunction-
                 return null;
             }
@@ -65,7 +66,7 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
             if (called) {
                 // ALPN message was received by peer and so apply(...) was called.
                 // See:
-                // http://hg.openjdk.java.net/jdk9/dev/jdk/file/65464a307408/src/
+                // https://hg.openjdk.java.net/jdk9/dev/jdk/file/65464a307408/src/
                 // java.base/share/classes/sun/security/ssl/ServerHandshaker.java#l933
                 return;
             }
@@ -81,19 +82,38 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
 
     JdkAlpnSslEngine(SSLEngine engine,
                      @SuppressWarnings("deprecation") JdkApplicationProtocolNegotiator applicationNegotiator,
-                     boolean isServer) {
+                     boolean isServer, BiConsumer<SSLEngine, AlpnSelector> setHandshakeApplicationProtocolSelector,
+                     BiConsumer<SSLEngine, List<String>> setApplicationProtocols) {
         super(engine);
         if (isServer) {
             selectionListener = null;
             alpnSelector = new AlpnSelector(applicationNegotiator.protocolSelectorFactory().
                     newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())));
-            JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(engine, alpnSelector);
+            setHandshakeApplicationProtocolSelector.accept(engine, alpnSelector);
         } else {
             selectionListener = applicationNegotiator.protocolListenerFactory()
                     .newListener(this, applicationNegotiator.protocols());
             alpnSelector = null;
-            JdkAlpnSslUtils.setApplicationProtocols(engine, applicationNegotiator.protocols());
+            setApplicationProtocols.accept(engine, applicationNegotiator.protocols());
         }
+    }
+
+    JdkAlpnSslEngine(SSLEngine engine,
+                     @SuppressWarnings("deprecation") JdkApplicationProtocolNegotiator applicationNegotiator,
+                     boolean isServer) {
+       this(engine, applicationNegotiator, isServer,
+               new BiConsumer<SSLEngine, AlpnSelector>() {
+                   @Override
+                   public void accept(SSLEngine e, AlpnSelector s) {
+                       JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(e, s);
+                   }
+               },
+               new BiConsumer<SSLEngine, List<String>>() {
+                   @Override
+                   public void accept(SSLEngine e, List<String> p) {
+                       JdkAlpnSslUtils.setApplicationProtocols(e, p);
+                   }
+               });
     }
 
     private SSLEngineResult verifyProtocolSelection(SSLEngineResult result) throws SSLException {
@@ -106,7 +126,7 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
                     if (protocol.isEmpty()) {
                         // If empty the server did not announce ALPN:
                         // See:
-                        // http://hg.openjdk.java.net/jdk9/dev/jdk/file/65464a307408/src/java.base/
+                        // https://hg.openjdk.java.net/jdk9/dev/jdk/file/65464a307408/src/java.base/
                         // share/classes/sun/security/ssl/ClientHandshaker.java#l741
                         selectionListener.unsupported();
                     } else {

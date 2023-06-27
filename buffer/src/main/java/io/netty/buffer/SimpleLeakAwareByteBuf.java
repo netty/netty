@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -140,12 +140,8 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
             // Update the parent to point to this buffer so we correctly close the ResourceLeakTracker.
             ((AbstractPooledDerivedByteBuf) unwrappedDerived).parent(this);
 
-            ResourceLeakTracker<ByteBuf> newLeak = AbstractByteBuf.leakDetector.track(derived);
-            if (newLeak == null) {
-                // No leak detection, just return the derived buffer.
-                return derived;
-            }
-            return newLeakAwareByteBuf(derived, newLeak);
+            // force tracking of derived buffers (see issue #13414)
+            return newLeakAwareByteBuf(derived, AbstractByteBuf.leakDetector.trackForcibly(derived));
         }
         return newSharedLeakAwareByteBuf(derived);
     }

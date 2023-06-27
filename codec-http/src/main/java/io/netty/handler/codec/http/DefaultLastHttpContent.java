@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,6 +21,8 @@ import io.netty.handler.codec.DefaultHeaders.NameValidator;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Map.Entry;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link LastHttpContent} implementation.
@@ -41,6 +43,12 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
         super(content);
         trailingHeaders = new TrailingHttpHeaders(validateHeaders);
         this.validateHeaders = validateHeaders;
+    }
+
+    public DefaultLastHttpContent(ByteBuf content, HttpHeaders trailingHeaders) {
+        super(content);
+        this.trailingHeaders = checkNotNull(trailingHeaders, "trailingHeaders");
+        this.validateHeaders = false;
     }
 
     @Override

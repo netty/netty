@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -52,7 +52,6 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
         }
-        boolean keepAlive = HttpUtil.isKeepAlive(req);
 
         ByteBuf content = ctx.alloc().buffer();
         content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
@@ -62,6 +61,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
+        boolean keepAlive = HttpUtil.isKeepAlive(req);
         if (keepAlive) {
             if (req.protocolVersion().equals(HTTP_1_0)) {
                 response.headers().set(CONNECTION, KEEP_ALIVE);

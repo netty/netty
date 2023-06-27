@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,10 +23,10 @@ public final class ConstantTimeUtils {
      * <p>
      * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
      * <pre>
-     *     int v1 = 1;
-     *     int v1 = 1;
-     *     int v1 = 1;
-     *     int v1 = 500;
+     *     int l1 = 1;
+     *     int l2 = 1;
+     *     int l3 = 1;
+     *     int l4 = 500;
      *     boolean equals = (equalsConstantTime(l1, l2) & equalsConstantTime(l3, l4)) != 0;
      * </pre>
      * @param x the first value.
@@ -34,7 +34,7 @@ public final class ConstantTimeUtils {
      * @return {@code 0} if not equal. {@code 1} if equal.
      */
     public static int equalsConstantTime(int x, int y) {
-        int z = -1 ^ (x ^ y);
+        int z = ~(x ^ y);
         z &= z >> 16;
         z &= z >> 8;
         z &= z >> 4;
@@ -48,10 +48,10 @@ public final class ConstantTimeUtils {
      * <p>
      * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
      * <pre>
-     *     long v1 = 1;
-     *     long v1 = 1;
-     *     long v1 = 1;
-     *     long v1 = 500;
+     *     long l1 = 1;
+     *     long l2 = 1;
+     *     long l3 = 1;
+     *     long l4 = 500;
      *     boolean equals = (equalsConstantTime(l1, l2) & equalsConstantTime(l3, l4)) != 0;
      * </pre>
      * @param x the first value.
@@ -59,7 +59,7 @@ public final class ConstantTimeUtils {
      * @return {@code 0} if not equal. {@code 1} if equal.
      */
     public static int equalsConstantTime(long x, long y) {
-        long z = -1L ^ (x ^ y);
+        long z = ~(x ^ y);
         z &= z >> 32;
         z &= z >> 16;
         z &= z >> 8;

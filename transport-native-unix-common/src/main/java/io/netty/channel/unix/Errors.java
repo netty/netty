@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,7 +26,20 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.*;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEAGAIN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEBADF;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoECONNRESET;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEINPROGRESS;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOTCONN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEPIPE;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEALREADY;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorECONNREFUSED;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEHOSTUNREACH;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorEISCONN;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorENETUNREACH;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.strError;
 
 /**
  * <strong>Internal usage only!</strong>
@@ -46,15 +59,17 @@ public final class Errors {
     public static final int ERROR_EISCONN_NEGATIVE = -errorEISCONN();
     public static final int ERROR_EALREADY_NEGATIVE = -errorEALREADY();
     public static final int ERROR_ENETUNREACH_NEGATIVE = -errorENETUNREACH();
+    public static final int ERROR_EHOSTUNREACH_NEGATIVE = -errorEHOSTUNREACH();
 
     /**
      * Holds the mappings for errno codes to String messages.
      * This eliminates the need to call back into JNI to get the right String message on an exception
      * and thus is faster.
      *
-     * The array length of 512 should be more then enough because errno.h only holds < 200 codes.
+     * Choose an array length which should give us enough space in the future even when more errno codes
+     * will be added.
      */
-    private static final String[] ERRORS = new String[512];
+    private static final String[] ERRORS = new String[2048];
 
     /**
      * <strong>Internal usage only!</strong>
@@ -69,7 +84,7 @@ public final class Errors {
         }
 
         public NativeIoException(String method, int expectedErr, boolean fillInStackTrace) {
-            super(method + "(..) failed: " + ERRORS[-expectedErr]);
+            super(method + "(..) failed: " + errnoString(-expectedErr));
             this.expectedErr = expectedErr;
             this.fillInStackTrace = fillInStackTrace;
         }
@@ -91,7 +106,7 @@ public final class Errors {
         private static final long serialVersionUID = -5532328671712318161L;
         private final int expectedErr;
         NativeConnectException(String method, int expectedErr) {
-            super(method + "(..) failed: " + ERRORS[-expectedErr]);
+            super(method + "(..) failed: " + errnoString(-expectedErr));
             this.expectedErr = expectedErr;
         }
 
@@ -107,21 +122,48 @@ public final class Errors {
         }
     }
 
-    static void throwConnectException(String method, int err)
-            throws IOException {
+    static boolean handleConnectErrno(String method, int err) throws IOException {
+        if (err == ERRNO_EINPROGRESS_NEGATIVE || err == ERROR_EALREADY_NEGATIVE) {
+            // connect not complete yet need to wait for EPOLLOUT event.
+            // EALREADY has been observed when using tcp fast open on centos8.
+            return false;
+        }
+        throw newConnectException0(method, err);
+    }
+
+    /**
+     * @deprecated Use {@link #handleConnectErrno(String, int)}.
+     * @param method The native method name which caused the errno.
+     * @param err the negative value of the errno.
+     * @throws IOException The errno translated into an exception.
+     */
+    @Deprecated
+    public static void throwConnectException(String method, int err) throws IOException {
         if (err == ERROR_EALREADY_NEGATIVE) {
             throw new ConnectionPendingException();
         }
-        if (err == ERROR_ENETUNREACH_NEGATIVE) {
-            throw new NoRouteToHostException();
+        throw newConnectException0(method, err);
+    }
+
+    private static String errnoString(int err) {
+        // Check first if we had it cached, if not we need to do a JNI call.
+        if (err < ERRORS.length - 1) {
+            return ERRORS[err];
+        }
+        return strError(err);
+    }
+
+    private static IOException newConnectException0(String method, int err) {
+        if (err == ERROR_ENETUNREACH_NEGATIVE || err == ERROR_EHOSTUNREACH_NEGATIVE) {
+            return new NoRouteToHostException();
         }
         if (err == ERROR_EISCONN_NEGATIVE) {
             throw new AlreadyConnectedException();
         }
         if (err == ERRNO_ENOENT_NEGATIVE) {
-            throw new FileNotFoundException();
+            return new FileNotFoundException();
         }
-        throw new ConnectException(method + "(..) failed: " + ERRORS[-err]);
+        return new ConnectException(method + "(..) failed: " + errnoString(-err));
     }
 
     public static NativeIoException newConnectionResetException(String method, int errnoNegative) {

@@ -52,7 +52,6 @@
         { "server": "" },
         { "set-cookie": "" },
         { "strict-transport-security": "" },
-        { "transfer-encoding": "" },
         { "user-agent": "" },
         { "vary": "" },
         { "via": "" },
@@ -62,7 +61,7 @@
         "8182 8384 8586 87 8f90",
         "9192 9394 9596 9798 999a 9b9c 9d9e 9fa0",
         "a1a2 a3a4 a5a6 a7a8 a9aa abac adae afb0",
-        "b1b2 b3b4 b5b6 b7b8 b9ba bbbc bd"
+        "b1b2 b3b4 b5b6 b7b8 babb bcbd"
       ],
       "dynamic_table": [
       ],

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,15 +21,17 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
+import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * <p>
  * Performs server side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10" >draft-ietf-hybi-thewebsocketprotocol-
+ * href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10" >draft-ietf-hybi-thewebsocketprotocol-
  * 10</a>
  * </p>
  */
@@ -102,7 +104,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi version 8 to 10</a>. Version 8, 9 and
+     * "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi version 8 to 10</a>. Version 8, 9 and
      * 10 share the same wire protocol.
      * </p>
      *
@@ -135,9 +137,14 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      */
     @Override
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
+        HttpMethod method = req.method();
+        if (!GET.equals(method)) {
+            throw new WebSocketServerHandshakeException("Invalid WebSocket handshake method: " + method, req);
+        }
+
         CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
-            throw new WebSocketHandshakeException("not a WebSocket request: missing key");
+            throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
 
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS,
@@ -167,7 +174,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
                     logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
                 }
             } else {
-                res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
             }
         }
         return res;

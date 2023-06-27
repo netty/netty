@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,8 +31,8 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
 import java.util.List;
@@ -41,8 +41,10 @@ import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
 
 final class HpackStaticTable {
 
+    static final int NOT_FOUND = -1;
+
     // Appendix A: Static Table
-    // http://tools.ietf.org/html/rfc7541#appendix-A
+    // https://tools.ietf.org/html/rfc7541#appendix-A
     private static final List<HpackHeaderField> STATIC_TABLE = Arrays.asList(
     /*  1 */ newEmptyHeaderField(":authority"),
     /*  2 */ newHeaderField(":method", "GET"),
@@ -115,7 +117,53 @@ final class HpackStaticTable {
         return new HpackHeaderField(AsciiString.cached(name), AsciiString.cached(value));
     }
 
-    private static final CharSequenceMap<Integer> STATIC_INDEX_BY_NAME = createMap();
+    // The table size and bit shift are chosen so that each hash bucket contains a single header name.
+    private static final int HEADER_NAMES_TABLE_SIZE = 1 << 9;
+
+    private static final int HEADER_NAMES_TABLE_SHIFT = PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? 22 : 18;
+
+    // A table mapping header names to their associated indexes.
+    private static final HeaderNameIndex[] HEADER_NAMES = new HeaderNameIndex[HEADER_NAMES_TABLE_SIZE];
+    static {
+        // Iterate through the static table in reverse order to
+        // save the smallest index for a given name in the table.
+        for (int index = STATIC_TABLE.size(); index > 0; index--) {
+            HpackHeaderField entry = getEntry(index);
+            int bucket = headerNameBucket(entry.name);
+            HeaderNameIndex tableEntry = HEADER_NAMES[bucket];
+            if (tableEntry != null && !equalsVariableTime(tableEntry.name, entry.name)) {
+                // Can happen if AsciiString.hashCode changes
+                throw new IllegalStateException("Hash bucket collision between " +
+                  tableEntry.name + " and " + entry.name);
+            }
+            HEADER_NAMES[bucket] = new HeaderNameIndex(entry.name, index, entry.value.length() == 0);
+        }
+    }
+
+    // The table size and bit shift are chosen so that each hash bucket contains a single header.
+    private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE = 1 << 6;
+
+    private static final int HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SHIFT =
+      PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? 0 : 6;
+
+    // A table mapping headers with non-empty values to their associated indexes.
+    private static final HeaderIndex[] HEADERS_WITH_NON_EMPTY_VALUES =
+      new HeaderIndex[HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE];
+    static {
+        for (int index = STATIC_TABLE.size(); index > 0; index--) {
+            HpackHeaderField entry = getEntry(index);
+            if (entry.value.length() > 0) {
+                int bucket = headerBucket(entry.value);
+                HeaderIndex tableEntry = HEADERS_WITH_NON_EMPTY_VALUES[bucket];
+                if (tableEntry != null) {
+                    // Can happen if AsciiString.hashCode changes
+                    throw new IllegalStateException("Hash bucket collision between " +
+                      tableEntry.value + " and " + entry.value);
+                }
+                HEADERS_WITH_NON_EMPTY_VALUES[bucket] = new HeaderIndex(entry.name, entry.value, index);
+            }
+        }
+    }
 
     /**
      * The number of header fields in the static table.
@@ -134,11 +182,8 @@ final class HpackStaticTable {
      * -1 if the header field name is not in the static table.
      */
     static int getIndex(CharSequence name) {
-        Integer index = STATIC_INDEX_BY_NAME.get(name);
-        if (index == null) {
-            return -1;
-        }
-        return index;
+        HeaderNameIndex entry = getEntry(name);
+        return entry == null ? NOT_FOUND : entry.index;
     }
 
     /**
@@ -146,37 +191,64 @@ final class HpackStaticTable {
      * header field is not in the static table.
      */
     static int getIndexInsensitive(CharSequence name, CharSequence value) {
-        int index = getIndex(name);
-        if (index == -1) {
-            return -1;
+        if (value.length() == 0) {
+            HeaderNameIndex entry = getEntry(name);
+            return entry == null || !entry.emptyValue ? NOT_FOUND : entry.index;
         }
-
-        // Note this assumes all entries for a given header field are sequential.
-        while (index <= length) {
-            HpackHeaderField entry = getEntry(index);
-            if (equalsVariableTime(name, entry.name) && equalsVariableTime(value, entry.value)) {
-                return index;
-            }
-            index++;
+        int bucket = headerBucket(value);
+        HeaderIndex header = HEADERS_WITH_NON_EMPTY_VALUES[bucket];
+        if (header == null) {
+            return NOT_FOUND;
         }
-
-        return -1;
+        if (equalsVariableTime(header.name, name) && equalsVariableTime(header.value, value)) {
+            return header.index;
+        }
+        return NOT_FOUND;
     }
 
-    // create a map CharSequenceMap header name to index value to allow quick lookup
-    private static CharSequenceMap<Integer> createMap() {
-        int length = STATIC_TABLE.size();
-        @SuppressWarnings("unchecked")
-        CharSequenceMap<Integer> ret = new CharSequenceMap<Integer>(true,
-                UnsupportedValueConverter.<Integer>instance(), length);
-        // Iterate through the static table in reverse order to
-        // save the smallest index for a given name in the map.
-        for (int index = length; index > 0; index--) {
-            HpackHeaderField entry = getEntry(index);
-            CharSequence name = entry.name;
-            ret.set(name, index);
+    private static HeaderNameIndex getEntry(CharSequence name) {
+        int bucket = headerNameBucket(name);
+        HeaderNameIndex entry = HEADER_NAMES[bucket];
+        if (entry == null) {
+            return null;
         }
-        return ret;
+        return equalsVariableTime(entry.name, name) ? entry : null;
+    }
+
+    private static int headerNameBucket(CharSequence name) {
+        return bucket(name, HEADER_NAMES_TABLE_SHIFT, HEADER_NAMES_TABLE_SIZE - 1);
+    }
+
+    private static int headerBucket(CharSequence value) {
+        return bucket(value, HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SHIFT, HEADERS_WITH_NON_EMPTY_VALUES_TABLE_SIZE - 1);
+    }
+
+    private static int bucket(CharSequence s, int shift, int mask) {
+        return (AsciiString.hashCode(s) >> shift) & mask;
+    }
+
+    private static final class HeaderNameIndex {
+        final CharSequence name;
+        final int index;
+        final boolean emptyValue;
+
+        HeaderNameIndex(CharSequence name, int index, boolean emptyValue) {
+            this.name = name;
+            this.index = index;
+            this.emptyValue = emptyValue;
+        }
+    }
+
+    private static final class HeaderIndex {
+        final CharSequence name;
+        final CharSequence value;
+        final int index;
+
+        HeaderIndex(CharSequence name, CharSequence value, int index) {
+            this.name = name;
+            this.value = value;
+            this.index = index;
+        }
     }
 
     // singleton

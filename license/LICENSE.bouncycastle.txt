@@ -1,7 +1,7 @@
 The MIT License (MIT)
 
 Copyright (c) 2000 - 2013 The Legion of the Bouncy Castle Inc.
-                          (http://www.bouncycastle.org) 
+                          (https://www.bouncycastle.org)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

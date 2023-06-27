@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final Handle<PooledByteBuf<T>> recyclerHandle;
+    private final EnhancedHandle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -36,30 +37,33 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     protected int offset;
     protected int length;
     int maxLength;
-    PoolThreadCache cache;
+    PoolArenasCache cache;
     ByteBuffer tmpNioBuf;
     private ByteBufAllocator allocator;
 
     @SuppressWarnings("unchecked")
     protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
+        this.recyclerHandle = (EnhancedHandle<PooledByteBuf<T>>) recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-              long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+              long handle, int offset, int length, int maxLength, PoolArenasCache cache) {
         init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
-        init0(chunk, null, 0, chunk.offset, length, length, null);
+        init0(chunk, null, 0, 0, length, length, null);
     }
 
     private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-                       long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+                       long handle, int offset, int length, int maxLength, PoolArenasCache cache) {
         assert handle >= 0;
         assert chunk != null;
+        assert !PoolChunk.isSubpage(handle) || chunk.arena.size2SizeIdx(maxLength) <= chunk.arena.smallMaxSizeIdx:
+                "Allocated small sub-page handle for a buffer size that isn't \"small.\"";
 
+        chunk.incrementPinnedMemory(maxLength);
         this.chunk = chunk;
         memory = chunk.memory;
         tmpNioBuf = nioBuffer;
@@ -115,6 +119,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         }
 
         // Reallocation required.
+        chunk.decrementPinnedMemory(maxLength);
         chunk.arena.reallocate(this, newCapacity, true);
         return this;
     }
@@ -168,15 +173,13 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
+            chunk.decrementPinnedMemory(maxLength);
             chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
             tmpNioBuf = null;
             chunk = null;
-            recycle();
+            cache = null;
+            this.recyclerHandle.unguardedRecycle(this);
         }
-    }
-
-    private void recycle() {
-        recyclerHandle.recycle(this);
     }
 
     protected final int idx(int index) {

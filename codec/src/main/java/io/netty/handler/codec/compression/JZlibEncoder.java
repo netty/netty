@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,8 +23,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 
@@ -39,6 +40,8 @@ public class JZlibEncoder extends ZlibEncoder {
     private final Deflater z = new Deflater();
     private volatile boolean finished;
     private volatile ChannelHandlerContext ctx;
+
+    private static final int THREAD_POOL_DELAY_SECONDS = 10;
 
     /**
      * Creates a new zlib encoder with the default compression level ({@code 6}),
@@ -117,21 +120,11 @@ public class JZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JZlibEncoder(ZlibWrapper wrapper, int compressionLevel, int windowBits, int memLevel) {
-
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel +
-                    " (expected: 0-9)");
-        }
-        if (windowBits < 9 || windowBits > 15) {
-            throw new IllegalArgumentException(
-                    "windowBits: " + windowBits + " (expected: 9-15)");
-        }
-        if (memLevel < 1 || memLevel > 9) {
-            throw new IllegalArgumentException(
-                    "memLevel: " + memLevel + " (expected: 1-9)");
-        }
+        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+        ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         ObjectUtil.checkNotNull(wrapper, "wrapper");
+
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -208,17 +201,9 @@ public class JZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
-        if (windowBits < 9 || windowBits > 15) {
-            throw new IllegalArgumentException(
-                    "windowBits: " + windowBits + " (expected: 9-15)");
-        }
-        if (memLevel < 1 || memLevel > 9) {
-            throw new IllegalArgumentException(
-                    "memLevel: " + memLevel + " (expected: 1-9)");
-        }
+        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+        ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
         ObjectUtil.checkNotNull(dictionary, "dictionary");
 
         int resultCode;
@@ -254,7 +239,7 @@ public class JZlibEncoder extends ZlibEncoder {
                 @Override
                 public void run() {
                     ChannelFuture f = finishEncode(ctx(), p);
-                    f.addListener(new ChannelPromiseNotifier(promise));
+                    PromiseNotifier.cascade(f, promise);
                 }
             });
             return p;
@@ -340,21 +325,30 @@ public class JZlibEncoder extends ZlibEncoder {
             final ChannelHandlerContext ctx,
             final ChannelPromise promise) {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
 
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
+            final Future<?> future = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    ctx.close(promise);
+                    if (!promise.isDone()) {
+                        ctx.close(promise);
+                    }
                 }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
+            }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
+
+            f.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture f) {
+                    // Cancel the scheduled timeout.
+                    future.cancel(true);
+                    if (!promise.isDone()) {
+                        ctx.close(promise);
+                    }
+                }
+            });
+        } else {
+            ctx.close(promise);
         }
     }
 
@@ -384,6 +378,8 @@ public class JZlibEncoder extends ZlibEncoder {
                 promise.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
                 return promise;
             } else if (z.next_out_index != 0) {
+                // Suppressed a warning above to be on the safe side
+                // even if z.next_out_index seems to be always 0 here
                 footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);
             } else {
                 footer = Unpooled.EMPTY_BUFFER;

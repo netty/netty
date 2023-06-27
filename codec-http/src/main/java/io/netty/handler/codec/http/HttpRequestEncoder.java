@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -44,7 +44,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
 
         if (uri.isEmpty()) {
             // Add " / " as absolute path if uri is not present.
-            // See http://tools.ietf.org/html/rfc2616#section-5.1.2
+            // See https://tools.ietf.org/html/rfc2616#section-5.1.2
             ByteBufUtil.writeMediumBE(buf, SPACE_SLASH_AND_SPACE_MEDIUM);
         } else {
             CharSequence uriCharSequence = uri;

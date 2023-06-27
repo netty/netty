@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,8 @@
 
 /**
  * Encoder and decoder which compresses and decompresses {@link io.netty.buffer.ByteBuf}s
- * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>,
- * <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>, and
+ * in a compression format such as <a href="https://en.wikipedia.org/wiki/Zlib">zlib</a>,
+ * <a href="https://en.wikipedia.org/wiki/Gzip">gzip</a>, and
  * <a href="https://github.com/google/snappy">Snappy</a>.
  */
 package io.netty.handler.codec.compression;

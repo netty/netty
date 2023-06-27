@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,6 +23,7 @@ import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
 import io.netty.example.http.snoop.HttpSnoopServerHandler;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.HttpContentCompressor;
@@ -129,7 +130,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
         ChannelPipeline p = ctx.pipeline();
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast("encoder", new HttpResponseEncoder());
-        p.addLast("deflater", new HttpContentCompressor());
+        p.addLast("deflater", new HttpContentCompressor((CompressionOptions[]) null));
         p.addLast("handler", new HttpSnoopServerHandler());
         p.remove(this);
     }

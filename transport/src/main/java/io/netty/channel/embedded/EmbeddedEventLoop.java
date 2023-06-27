@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,6 +30,22 @@ import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
+    /**
+     * When time is not {@link #timeFrozen frozen}, the base time to subtract from {@link System#nanoTime()}. When time
+     * is frozen, this variable is unused.
+     *
+     * Initialized to {@link #initialNanoTime()} so that until one of the time mutator methods is called,
+     * {@link #getCurrentTimeNanos()} matches the default behavior.
+     */
+    private long startTime = initialNanoTime();
+    /**
+     * When time is frozen, the timestamp returned by {@link #getCurrentTimeNanos()}. When unfrozen, this is unused.
+     */
+    private long frozenTimestamp;
+    /**
+     * Whether time is currently frozen.
+     */
+    private boolean timeFrozen;
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 
@@ -59,8 +75,12 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
         }
     }
 
+    boolean hasPendingNormalTasks() {
+        return !tasks.isEmpty();
+    }
+
     long runScheduledTasks() {
-        long time = AbstractScheduledEventExecutor.nanoTime();
+        long time = getCurrentTimeNanos();
         for (;;) {
             Runnable task = pollScheduledTask(time);
             if (task == null) {
@@ -73,6 +93,40 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     long nextScheduledTask() {
         return nextScheduledTaskNano();
+    }
+
+    @Override
+    protected long getCurrentTimeNanos() {
+        if (timeFrozen) {
+            return frozenTimestamp;
+        }
+        return System.nanoTime() - startTime;
+    }
+
+    void advanceTimeBy(long nanos) {
+        if (timeFrozen) {
+            frozenTimestamp += nanos;
+        } else {
+            // startTime is subtracted from nanoTime, so increasing the startTime will advance getCurrentTimeNanos
+            startTime -= nanos;
+        }
+    }
+
+    void freezeTime() {
+        if (!timeFrozen) {
+            frozenTimestamp = getCurrentTimeNanos();
+            timeFrozen = true;
+        }
+    }
+
+    void unfreezeTime() {
+        if (timeFrozen) {
+            // we want getCurrentTimeNanos to continue right where frozenTimestamp left off:
+            // getCurrentTimeNanos = nanoTime - startTime = frozenTimestamp
+            // then solve for startTime
+            startTime = System.nanoTime() - frozenTimestamp;
+            timeFrozen = false;
+        }
     }
 
     @Override

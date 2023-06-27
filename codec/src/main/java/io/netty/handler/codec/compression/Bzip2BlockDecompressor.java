@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,10 @@
  */
 package io.netty.handler.codec.compression;
 
-import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_DECODE_MAX_CODE_LENGTH;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RUNA;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RUNB;
+import static io.netty.handler.codec.compression.Bzip2Constants.MAX_BLOCK_LENGTH;
 
 /**
  * Reads and decompresses a single Bzip2 block.<br><br>
@@ -228,6 +231,11 @@ final class Bzip2BlockDecompressor {
                 bwtBlock[bwtBlockLength++] = nextByte;
             }
         }
+        if (bwtBlockLength > MAX_BLOCK_LENGTH) {
+            throw new DecompressionException("block length exceeds max block length: "
+                    + bwtBlockLength + " > " + MAX_BLOCK_LENGTH);
+        }
+
         this.bwtBlockLength = bwtBlockLength;
         initialiseInverseBWT();
         return true;

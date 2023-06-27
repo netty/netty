@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -14,20 +14,29 @@
  */
 package io.netty.handler.codec.http2;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 public class DecoratingHttp2ConnectionEncoderTest {
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testConsumeReceivedSettingsThrows() {
         Http2ConnectionEncoder encoder = mock(Http2ConnectionEncoder.class);
-        DecoratingHttp2ConnectionEncoder decoratingHttp2ConnectionEncoder =
+        final DecoratingHttp2ConnectionEncoder decoratingHttp2ConnectionEncoder =
                 new DecoratingHttp2ConnectionEncoder(encoder);
-        decoratingHttp2ConnectionEncoder.consumeReceivedSettings(Http2Settings.defaultSettings());
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                decoratingHttp2ConnectionEncoder.consumeReceivedSettings(Http2Settings.defaultSettings());
+            }
+        });
     }
 
     @Test

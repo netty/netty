@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,17 +15,26 @@
  */
 package io.netty.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class ResourceLeakDetectorTest {
+import static org.assertj.core.api.Assertions.assertThat;
 
-    @Test(timeout = 60000)
+public class ResourceLeakDetectorTest {
+    @SuppressWarnings("unused")
+    private static volatile int sink;
+
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testConcurrentUsage() throws Throwable {
         final AtomicBoolean finished = new AtomicBoolean();
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
@@ -34,7 +43,7 @@ public class ResourceLeakDetectorTest {
         final CyclicBarrier barrier = new CyclicBarrier(threads.length);
         for (int i = 0; i < threads.length; i++) {
             Thread t = new Thread(new Runnable() {
-                Queue<LeakAwareResource> resources = new ArrayDeque<LeakAwareResource>(100);
+                final Queue<LeakAwareResource> resources = new ArrayDeque<LeakAwareResource>(100);
 
                 @Override
                 public void run() {
@@ -95,6 +104,34 @@ public class ResourceLeakDetectorTest {
         assertNoErrors(error);
     }
 
+    @Timeout(10)
+    @Test
+    public void testLeakSetupHints() throws Throwable {
+        DefaultResource.detectorWithSetupHint.initialise();
+        leakResource();
+
+        do {
+            // Trigger GC.
+            System.gc();
+            // Track another resource to trigger refqueue visiting.
+            Resource resource2 = new DefaultResource();
+            DefaultResource.detectorWithSetupHint.track(resource2).close(resource2);
+            // Give the GC something to work on.
+            for (int i = 0; i < 1000; i++) {
+                sink = System.identityHashCode(new byte[10000]);
+            }
+        } while (DefaultResource.detectorWithSetupHint.getLeaksFound() < 1 && !Thread.interrupted());
+
+        assertThat(DefaultResource.detectorWithSetupHint.getLeaksFound()).isOne();
+        DefaultResource.detectorWithSetupHint.assertNoErrors();
+    }
+
+    private static void leakResource() {
+        Resource resource = new DefaultResource();
+        // We'll never close this ResourceLeakTracker.
+        DefaultResource.detectorWithSetupHint.track(resource);
+    }
+
     // Mimic the way how we implement our classes that should help with leak detection
     private static final  class LeakAwareResource implements Resource {
         private final Resource resource;
@@ -120,6 +157,8 @@ public class ResourceLeakDetectorTest {
         // Sample every allocation
         static final TestResourceLeakDetector<Resource> detector = new TestResourceLeakDetector<Resource>(
                 Resource.class, 1, Integer.MAX_VALUE);
+        static final CreationRecordLeakDetector<Resource> detectorWithSetupHint =
+                new CreationRecordLeakDetector<Resource>(Resource.class, 1);
 
         @Override
         public boolean close() {
@@ -163,6 +202,58 @@ public class ResourceLeakDetectorTest {
 
         private void reportError(AssertionError cause) {
             error.compareAndSet(null, cause);
+        }
+
+        void assertNoErrors() throws Throwable {
+            ResourceLeakDetectorTest.assertNoErrors(error);
+        }
+    }
+
+    private static final class CreationRecordLeakDetector<T> extends ResourceLeakDetector<T> {
+        private String canaryString;
+
+        private final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        private final AtomicInteger leaksFound = new AtomicInteger(0);
+
+        CreationRecordLeakDetector(Class<?> resourceType, int samplingInterval) {
+            super(resourceType, samplingInterval);
+        }
+
+        public void initialise() {
+            canaryString = "creation-canary-" + UUID.randomUUID();
+            leaksFound.set(0);
+        }
+
+        @Override
+        protected boolean needReport() {
+            return true;
+        }
+
+        @Override
+        protected void reportTracedLeak(String resourceType, String records) {
+            if (!records.contains(canaryString)) {
+                reportError(new AssertionError("Leak records did not contain canary string"));
+            }
+            leaksFound.incrementAndGet();
+        }
+
+        @Override
+        protected void reportUntracedLeak(String resourceType) {
+            reportError(new AssertionError("Got untraced leak w/o canary string"));
+            leaksFound.incrementAndGet();
+        }
+
+        private void reportError(AssertionError cause) {
+            error.compareAndSet(null, cause);
+        }
+
+        @Override
+        protected Object getInitialHint(String resourceType) {
+            return canaryString;
+        }
+
+        int getLeaksFound() {
+            return leaksFound.get();
         }
 
         void assertNoErrors() throws Throwable {

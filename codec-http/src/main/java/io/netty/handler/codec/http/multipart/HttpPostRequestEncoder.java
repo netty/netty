@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -89,7 +89,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
          * will be treated as distinct fields.
          *
          * Reference:
-         *   http://www.w3.org/TR/html5/forms.html#multipart-form-data
+         *   https://www.w3.org/TR/html5/forms.html#multipart-form-data
          */
         HTML5
     }
@@ -943,12 +943,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         // Set name=
         if (isKey) {
             String key = currentData.getName();
-            buffer = wrappedBuffer(key.getBytes());
+            buffer = wrappedBuffer(key.getBytes(charset));
             isKey = false;
             if (currentBuffer == null) {
-                currentBuffer = wrappedBuffer(buffer, wrappedBuffer("=".getBytes()));
+                currentBuffer = wrappedBuffer(buffer, wrappedBuffer("=".getBytes(charset)));
             } else {
-                currentBuffer = wrappedBuffer(currentBuffer, buffer, wrappedBuffer("=".getBytes()));
+                currentBuffer = wrappedBuffer(currentBuffer, buffer, wrappedBuffer("=".getBytes(charset)));
             }
             // continue
             size -= buffer.readableBytes() + 1;
@@ -969,7 +969,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         ByteBuf delimiter = null;
         if (buffer.readableBytes() < size) {
             isKey = true;
-            delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes()) : null;
+            delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes(charset)) : null;
         }
 
         // End for current InterfaceHttpData, need potentially more data

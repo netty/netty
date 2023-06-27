@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -55,6 +55,8 @@ public abstract class ObjectPool<T> {
         /**
          * Creates an returns a new {@link Object} that can be used and later recycled via
          * {@link Handle#recycle(Object)}.
+         *
+         * @param handle can NOT be null.
          */
         T newObject(Handle<T> handle);
     }

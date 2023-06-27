@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,24 +14,6 @@
  * under the License.
  */
 package io.netty.channel.embedded;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -51,6 +33,24 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class EmbeddedChannelTest {
 
@@ -87,7 +87,8 @@ public class EmbeddedChannelTest {
         assertFalse(channel.finish());
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void promiseDoesNotInfiniteLoop() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.closeFuture().addListener(new ChannelFutureListener() {
@@ -132,7 +133,7 @@ public class EmbeddedChannelTest {
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         final CountDownLatch latch = new CountDownLatch(2);
-        ScheduledFuture future = ch.eventLoop().schedule(new Runnable() {
+        Future future = ch.eventLoop().schedule(new Runnable() {
             @Override
             public void run() {
                 latch.countDown();
@@ -156,7 +157,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testScheduledCancelled() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
-        ScheduledFuture<?> future = ch.eventLoop().schedule(new Runnable() {
+        Future<?> future = ch.eventLoop().schedule(new Runnable() {
             @Override
             public void run() { }
         }, 1, TimeUnit.DAYS);
@@ -164,7 +165,8 @@ public class EmbeddedChannelTest {
         assertTrue(future.isCancelled());
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHandlerAddedExecutedInEventLoop() throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
@@ -209,7 +211,8 @@ public class EmbeddedChannelTest {
     }
 
     // See https://github.com/netty/netty/issues/4316.
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnClose() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(new Action() {
             @Override
@@ -225,7 +228,8 @@ public class EmbeddedChannelTest {
         });
     }
 
-    @Test(timeout = 2000)
+    @Test
+    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testFireChannelInactiveAndUnregisteredOnDisconnect() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(new Action() {
             @Override
@@ -407,7 +411,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testWriteScheduled() throws InterruptedException  {
+    public void testWriteScheduled() throws InterruptedException {
         final int delay = 500;
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
@@ -424,7 +428,7 @@ public class EmbeddedChannelTest {
         Object msg = new Object();
 
         assertFalse(channel.writeOutbound(msg));
-        Thread.sleep(delay  * 2);
+        Thread.sleep(delay * 2);
         assertTrue(channel.finish());
         assertSame(msg, channel.readOutbound());
         assertNull(channel.readOutbound());
@@ -436,7 +440,7 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-              latch.countDown();
+                latch.countDown();
             }
         });
 
@@ -449,33 +453,33 @@ public class EmbeddedChannelTest {
 
     @Test
     public void testWriteOneInbound() throws InterruptedException {
-      final CountDownLatch latch = new CountDownLatch(1);
-      final AtomicInteger flushCount = new AtomicInteger(0);
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger flushCount = new AtomicInteger(0);
 
-      EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
-          @Override
-          public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-              ReferenceCountUtil.release(msg);
-              latch.countDown();
-          }
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ReferenceCountUtil.release(msg);
+                latch.countDown();
+            }
 
-          @Override
-          public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-              flushCount.incrementAndGet();
-          }
-      });
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                flushCount.incrementAndGet();
+            }
+        });
 
-      channel.writeOneInbound("Hello, Netty!");
+        channel.writeOneInbound("Hello, Netty!");
 
-      if (!latch.await(1L, TimeUnit.SECONDS)) {
-          fail("Nobody called #channelRead() in time.");
-      }
+        if (!latch.await(1L, TimeUnit.SECONDS)) {
+            fail("Nobody called #channelRead() in time.");
+        }
 
-      channel.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
 
-      // There was no #flushInbound() call so nobody should have called
-      // #channelReadComplete()
-      assertEquals(0, flushCount.get());
+        // There was no #flushInbound() call so nobody should have called
+        // #channelReadComplete()
+        assertEquals(0, flushCount.get());
     }
 
     @Test
@@ -586,7 +590,8 @@ public class EmbeddedChannelTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testChannelInactiveFired() throws InterruptedException {
         final AtomicBoolean inactive = new AtomicBoolean();
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
@@ -603,6 +608,159 @@ public class EmbeddedChannelTest {
         channel.pipeline().fireExceptionCaught(new IllegalStateException());
 
         assertTrue(inactive.get());
+    }
+
+    @Test
+    public void testReRegisterEventLoop() throws Exception {
+        final CountDownLatch unregisteredLatch = new CountDownLatch(1);
+        final CountDownLatch registeredLatch = new CountDownLatch(2);
+        final EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelUnregistered(ChannelHandlerContext ctx) {
+                unregisteredLatch.countDown();
+            }
+
+            @Override
+            public void channelRegistered(ChannelHandlerContext ctx) {
+                registeredLatch.countDown();
+            }
+        });
+
+        final EmbeddedEventLoop embeddedEventLoop = new EmbeddedEventLoop();
+        channel.deregister().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                embeddedEventLoop.register(channel);
+            }
+        });
+
+        if (!unregisteredLatch.await(5, TimeUnit.SECONDS)) {
+            fail("Channel was not unregistered in time.");
+        }
+
+        if (!registeredLatch.await(5, TimeUnit.SECONDS)) {
+            fail("Channel was not registered in time.");
+        }
+
+        final CountDownLatch taskLatch = new CountDownLatch(1);
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                taskLatch.countDown();
+            }
+        });
+
+        channel.runPendingTasks();
+        if (!taskLatch.await(5, TimeUnit.SECONDS)) {
+            fail("Task was not executed in time.");
+        }
+    }
+
+    @Test
+    void testRunPendingTasksForNotRegisteredChannel() {
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false);
+        long nextScheduledTaskTime = 0;
+        try {
+            nextScheduledTaskTime = channel.runScheduledPendingTasks();
+            channel.checkException();
+        } catch (Throwable t) {
+            fail("Channel should not throw an exception for scheduled pending tasks if it is not registered", t);
+        }
+
+        assertEquals(-1L, nextScheduledTaskTime);
+
+        try {
+            channel.runPendingTasks();
+            channel.checkException();
+        } catch (Throwable t) {
+            fail("Channel should not throw an exception for pending tasks if it is not registered", t);
+        }
+    }
+
+    @Test
+    @Timeout(30) // generous timeout, just make sure we don't actually wait for the full 10 mins...
+    void testAdvanceTime() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+        ScheduledFuture<?> future10 = channel.eventLoop().schedule(runnable, 10, TimeUnit.MINUTES);
+        ScheduledFuture<?> future20 = channel.eventLoop().schedule(runnable, 20, TimeUnit.MINUTES);
+
+        channel.runPendingTasks();
+        assertFalse(future10.isDone());
+        assertFalse(future20.isDone());
+
+        channel.advanceTimeBy(10, TimeUnit.MINUTES);
+        channel.runPendingTasks();
+        assertTrue(future10.isDone());
+        assertFalse(future20.isDone());
+    }
+
+    @Test
+    @Timeout(30) // generous timeout, just make sure we don't actually wait for the full 10 mins...
+    void testFreezeTime() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        channel.freezeTime();
+        // this future will complete after 10min
+        ScheduledFuture<?> future10 = channel.eventLoop().schedule(runnable, 10, TimeUnit.MINUTES);
+        // this future will complete after 10min + 1ns
+        ScheduledFuture<?> future101 = channel.eventLoop().schedule(runnable,
+                TimeUnit.MINUTES.toNanos(10) + 1, TimeUnit.NANOSECONDS);
+        // this future will complete after 20min
+        ScheduledFuture<?> future20 = channel.eventLoop().schedule(runnable, 20, TimeUnit.MINUTES);
+
+        channel.runPendingTasks();
+        assertFalse(future10.isDone());
+        assertFalse(future101.isDone());
+        assertFalse(future20.isDone());
+
+        channel.advanceTimeBy(10, TimeUnit.MINUTES);
+        channel.runPendingTasks();
+        assertTrue(future10.isDone());
+        assertFalse(future101.isDone());
+        assertFalse(future20.isDone());
+
+        channel.unfreezeTime();
+        channel.runPendingTasks();
+        assertTrue(future101.isDone());
+        assertFalse(future20.isDone());
+    }
+
+    @Test
+    void testHasPendingTasks() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.freezeTime();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        // simple execute
+        assertFalse(channel.hasPendingTasks());
+        channel.eventLoop().execute(runnable);
+        assertTrue(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
+
+        // schedule in the future (note: time is frozen above)
+        channel.eventLoop().schedule(runnable, 1, TimeUnit.SECONDS);
+        assertFalse(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
+        channel.advanceTimeBy(1, TimeUnit.SECONDS);
+        assertTrue(channel.hasPendingTasks());
+        channel.runPendingTasks();
+        assertFalse(channel.hasPendingTasks());
     }
 
     private static void release(ByteBuf... buffers) {

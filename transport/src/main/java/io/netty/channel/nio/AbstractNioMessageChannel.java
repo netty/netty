@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -55,6 +55,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         super.doBeginRead();
     }
 
+    protected boolean continueReading(RecvByteBufAllocator.Handle allocHandle) {
+        return allocHandle.continueReading();
+    }
+
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
 
         private final List<Object> readBuf = new ArrayList<Object>();
@@ -82,7 +86,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                         }
 
                         allocHandle.incMessagesRead(localRead);
-                    } while (allocHandle.continueReading());
+                    } while (continueReading(allocHandle));
                 } catch (Throwable t) {
                     exception = t;
                 }
@@ -127,13 +131,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
 
-        for (;;) {
+        int maxMessagesPerWrite = maxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
             if (msg == null) {
-                // Wrote all messages.
-                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-                }
                 break;
             }
             try {
@@ -146,20 +147,29 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
 
                 if (done) {
+                    maxMessagesPerWrite--;
                     in.remove();
                 } else {
-                    // Did not write all messages.
-                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                    }
                     break;
                 }
             } catch (Exception e) {
                 if (continueOnWriteError()) {
+                    maxMessagesPerWrite--;
                     in.remove(e);
                 } else {
                     throw e;
                 }
+            }
+        }
+        if (in.isEmpty()) {
+            // Wrote all messages.
+            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+            }
+        } else {
+            // Did not write all messages.
+            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                key.interestOps(interestOps | SelectionKey.OP_WRITE);
             }
         }
     }

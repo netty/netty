@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -406,6 +406,16 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     @Override
     public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         return wrapped.forEachByteDesc(index, length, processor);
+    }
+
+    @Override
+    protected int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
+        return wrapped.forEachByteAsc0(start, end, processor);
+    }
+
+    @Override
+    protected int forEachByteDesc0(int rStart, int rEnd, ByteProcessor processor) throws Exception {
+        return wrapped.forEachByteDesc0(rStart, rEnd, processor);
     }
 
     @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,28 +15,32 @@
  */
 package io.netty.channel.unix.tests;
 
+import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Socket;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class SocketTest<T extends Socket> {
     protected T socket;
 
     protected abstract T newSocket();
 
-    @Before
+    @BeforeEach
     public void setup() {
         socket = newSocket();
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         socket.close();
     }
@@ -95,5 +99,38 @@ public abstract class SocketTest<T extends Socket> {
         final int value = 0x08;
         socket.setTrafficClass(value);
         assertEquals(value, socket.getTrafficClass());
+    }
+
+    @Test
+    public void testIntOpt() throws IOException {
+        socket.setReuseAddress(false);
+        socket.setIntOpt(level(), optname(), 1);
+        // Anything which is != 0 is considered enabled
+        assertNotEquals(0, socket.getIntOpt(level(), optname()));
+        socket.setIntOpt(level(), optname(), 0);
+        // This should be disabled again
+        assertEquals(0, socket.getIntOpt(level(), optname()));
+    }
+
+    @Test
+    public void testRawOpt() throws IOException {
+        ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(4);
+        buffer.putInt(1).flip();
+        socket.setRawOpt(level(), optname(), buffer);
+
+        ByteBuffer out = ByteBuffer.allocate(4);
+        socket.getRawOpt(level(), optname(), out);
+        assertFalse(out.hasRemaining());
+
+        out.flip();
+        assertNotEquals(ByteBuffer.allocate(0), out);
+    }
+
+    protected int level() {
+        throw new TestAbortedException("Not supported");
+    }
+
+    protected int optname() {
+        throw new TestAbortedException("Not supported");
     }
 }

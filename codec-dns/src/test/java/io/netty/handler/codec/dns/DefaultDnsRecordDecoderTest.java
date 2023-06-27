@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,9 +18,10 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class DefaultDnsRecordDecoderTest {
 
@@ -145,13 +146,13 @@ public class DefaultDnsRecordDecoderTest {
         try {
             cnameRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
                     "netty.github.io", DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
-            assertEquals("The rdata of CNAME-type record should be decompressed in advance",
-                         0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), cnameRecord.content()));
+            assertEquals(0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), cnameRecord.content()),
+                "The rdata of CNAME-type record should be decompressed in advance");
             assertEquals("netty.io.", DnsCodecUtil.decodeDomainName(cnameRecord.content()));
             nsRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
                     "netty.github.io", DnsRecordType.NS, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
-            assertEquals("The rdata of NS-type record should be decompressed in advance",
-                         0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), nsRecord.content()));
+            assertEquals(0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), nsRecord.content()),
+                        "The rdata of NS-type record should be decompressed in advance");
             assertEquals("netty.io.", DnsCodecUtil.decodeDomainName(nsRecord.content()));
         } finally {
             buffer.release();

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -19,11 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link DefaultHttp2HeadersEncoder}.
@@ -32,7 +34,7 @@ public class DefaultHttp2HeadersEncoderTest {
 
     private DefaultHttp2HeadersEncoder encoder;
 
-    @Before
+    @BeforeEach
     public void setup() {
         encoder = new DefaultHttp2HeadersEncoder(Http2HeadersEncoder.NEVER_SENSITIVE, newTestEncoder());
     }
@@ -49,11 +51,16 @@ public class DefaultHttp2HeadersEncoderTest {
         }
     }
 
-    @Test(expected = StreamException.class)
+    @Test
     public void headersExceedMaxSetSizeShouldFail() throws Http2Exception {
-        Http2Headers headers = headers();
+        final Http2Headers headers = headers();
         encoder.maxHeaderListSize(2);
-        encoder.encodeHeaders(3 /* randomly chosen */, headers, Unpooled.buffer());
+        assertThrows(StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                encoder.encodeHeaders(3 /* randomly chosen */, headers, Unpooled.buffer());
+            }
+        });
     }
 
     private static Http2Headers headers() {

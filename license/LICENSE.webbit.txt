@@ -1,4 +1,4 @@
-(BSD License: http://www.opensource.org/licenses/bsd-license)
+(BSD License: https://www.opensource.org/licenses/bsd-license)
 
 Copyright (c) 2011, Joe Walnes, Aslak Hellesøy and contributors
 All rights reserved.

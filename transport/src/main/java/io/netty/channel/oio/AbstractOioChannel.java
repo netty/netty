@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,7 +34,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     protected static final int SO_TIMEOUT = 1000;
 
     boolean readPending;
-    private final Runnable readTask = new Runnable() {
+    boolean readWhenInactive;
+    final Runnable readTask = new Runnable() {
         @Override
         public void run() {
             doRead();
@@ -101,6 +102,10 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     @Override
     protected void doBeginRead() throws Exception {
         if (readPending) {
+            return;
+        }
+        if (!isActive()) {
+            readWhenInactive = true;
             return;
         }
 

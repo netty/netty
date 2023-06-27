@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,8 +32,8 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
-import org.hamcrest.core.IsInstanceOf;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -50,7 +50,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NioEventLoopTest extends AbstractEventLoopTest {
 
@@ -155,7 +161,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testSelectableChannel() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         NioEventLoop loop = (NioEventLoop) group.next();
@@ -222,7 +229,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
-            assertThat(error.get(), IsInstanceOf.instanceOf(RejectedExecutionException.class));
+            assertThat(error.get(), instanceOf(RejectedExecutionException.class));
             error.set(null);
         }
     }
@@ -268,7 +275,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Test(timeout = 3000L)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testChannelsRegistered() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();

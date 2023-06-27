@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,6 +28,16 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
+        // JDK type checks vs non-implemented interfaces costs O(N), where
+        // N is the number of interfaces already implemented by the concrete type that's being tested.
+        // !(msg instanceof HttpRequest) is supposed to always be true (and meaning that msg isn't a HttpRequest),
+        // but sadly was part of the original behaviour of this method and cannot be removed.
+        // We place here exact checks vs DefaultHttpResponse and DefaultFullHttpResponse because bad users can
+        // extends such types and make them to implement HttpRequest (non-sense, but still possible).
+        final Class<?> msgClass = msg.getClass();
+        if (msgClass == DefaultFullHttpResponse.class || msgClass == DefaultHttpResponse.class) {
+            return true;
+        }
         return super.acceptOutboundMessage(msg) && !(msg instanceof HttpRequest);
     }
 

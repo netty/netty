@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Expose metrics for an arena.
  */
-public interface PoolArenaMetric {
+public interface PoolArenaMetric extends SizeClassesMetric {
 
     /**
      * Returns the number of thread caches backed by this arena.
@@ -30,7 +30,10 @@ public interface PoolArenaMetric {
 
     /**
      * Returns the number of tiny sub-pages for the arena.
+     *
+     * @deprecated Tiny sub-pages have been merged into small sub-pages.
      */
+    @Deprecated
     int numTinySubpages();
 
     /**
@@ -45,7 +48,10 @@ public interface PoolArenaMetric {
 
     /**
      * Returns an unmodifiable {@link List} which holds {@link PoolSubpageMetric}s for tiny sub-pages.
+     *
+     * @deprecated Tiny sub-pages have been merged into small sub-pages.
      */
+    @Deprecated
     List<PoolSubpageMetric> tinySubpages();
 
     /**
@@ -65,7 +71,10 @@ public interface PoolArenaMetric {
 
     /**
      * Return the number of tiny allocations done via the arena.
+     *
+     * @deprecated Tiny allocations have been merged into small allocations.
      */
+    @Deprecated
     long numTinyAllocations();
 
     /**
@@ -90,7 +99,10 @@ public interface PoolArenaMetric {
 
     /**
      * Return the number of tiny deallocations done via the arena.
+     *
+     * @deprecated Tiny deallocations have been merged into small deallocations.
      */
+    @Deprecated
     long numTinyDeallocations();
 
     /**
@@ -115,7 +127,10 @@ public interface PoolArenaMetric {
 
     /**
      * Return the number of currently active tiny allocations.
+     *
+     * @deprecated Tiny allocations have been merged into small allocations.
      */
+    @Deprecated
     long numActiveTinyAllocations();
 
     /**

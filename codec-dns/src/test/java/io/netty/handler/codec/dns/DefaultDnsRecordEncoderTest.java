@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,11 +21,11 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultDnsRecordEncoderTest {
 
@@ -97,7 +97,7 @@ public class DefaultDnsRecordEncoderTest {
             // Pad the leftover of the last byte with zeros.
             int idx = addressPart.writerIndex() - 1;
             byte lastByte = addressPart.getByte(idx);
-            int paddingMask = ~((1 << (8 - lowOrderBitsToPreserve)) - 1);
+            int paddingMask = -1 << 8 - lowOrderBitsToPreserve;
             addressPart.setByte(idx, lastByte & paddingMask);
         }
 

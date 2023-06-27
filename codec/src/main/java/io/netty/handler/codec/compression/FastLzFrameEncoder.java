@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,7 +22,20 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
-import static io.netty.handler.codec.compression.FastLz.*;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_TYPE_COMPRESSED;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_TYPE_NON_COMPRESSED;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_WITHOUT_CHECKSUM;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_WITH_CHECKSUM;
+import static io.netty.handler.codec.compression.FastLz.CHECKSUM_OFFSET;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_1;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_2;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_AUTO;
+import static io.netty.handler.codec.compression.FastLz.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.FastLz.MAX_CHUNK_LENGTH;
+import static io.netty.handler.codec.compression.FastLz.MIN_LENGTH_TO_COMPRESSION;
+import static io.netty.handler.codec.compression.FastLz.OPTIONS_OFFSET;
+import static io.netty.handler.codec.compression.FastLz.calculateOutputBufferLength;
+import static io.netty.handler.codec.compression.FastLz.compress;
 
 /**
  * Compresses a {@link ByteBuf} using the FastLZ algorithm.
@@ -38,7 +51,7 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Underlying checksum calculator in use.
      */
-    private final Checksum checksum;
+    private final ByteBufChecksum checksum;
 
     /**
      * Creates a FastLZ encoder without checksum calculator and with auto detection of compression level.
@@ -85,18 +98,17 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        You may set {@code null} if you don't want to validate checksum of each block.
      */
     public FastLzFrameEncoder(int level, Checksum checksum) {
-        super(false);
         if (level != LEVEL_AUTO && level != LEVEL_1 && level != LEVEL_2) {
             throw new IllegalArgumentException(String.format(
                     "level: %d (expected: %d or %d or %d)", level, LEVEL_AUTO, LEVEL_1, LEVEL_2));
         }
         this.level = level;
-        this.checksum = checksum;
+        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
     }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        final Checksum checksum = this.checksum;
+        final ByteBufChecksum checksum = this.checksum;
 
         for (;;) {
             if (!in.isReadable()) {
@@ -115,54 +127,28 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 blockType = BLOCK_TYPE_NON_COMPRESSED;
 
                 out.ensureWritable(outputOffset + 2 + length);
-                final byte[] output = out.array();
-                final int outputPtr = out.arrayOffset() + outputOffset + 2;
+                final int outputPtr = outputOffset + 2;
 
                 if (checksum != null) {
-                    final byte[] input;
-                    final int inputPtr;
-                    if (in.hasArray()) {
-                        input = in.array();
-                        inputPtr = in.arrayOffset() + idx;
-                    } else {
-                        input = new byte[length];
-                        in.getBytes(idx, input);
-                        inputPtr = 0;
-                    }
-
                     checksum.reset();
-                    checksum.update(input, inputPtr, length);
+                    checksum.update(in, idx, length);
                     out.setInt(outputIdx + CHECKSUM_OFFSET, (int) checksum.getValue());
-
-                    System.arraycopy(input, inputPtr, output, outputPtr, length);
-                } else {
-                    in.getBytes(idx, output, outputPtr, length);
                 }
+                out.setBytes(outputPtr, in, idx, length);
                 chunkLength = length;
             } else {
                 // try to compress
-                final byte[] input;
-                final int inputPtr;
-                if (in.hasArray()) {
-                    input = in.array();
-                    inputPtr = in.arrayOffset() + idx;
-                } else {
-                    input = new byte[length];
-                    in.getBytes(idx, input);
-                    inputPtr = 0;
-                }
-
                 if (checksum != null) {
                     checksum.reset();
-                    checksum.update(input, inputPtr, length);
+                    checksum.update(in, idx, length);
                     out.setInt(outputIdx + CHECKSUM_OFFSET, (int) checksum.getValue());
                 }
 
                 final int maxOutputLength = calculateOutputBufferLength(length);
                 out.ensureWritable(outputOffset + 4 + maxOutputLength);
-                final byte[] output = out.array();
-                final int outputPtr = out.arrayOffset() + outputOffset + 4;
-                final int compressedLength = compress(input, inputPtr, length, output, outputPtr, level);
+                final int outputPtr = outputOffset + 4;
+                final int compressedLength = compress(in, in.readerIndex(), length, out, outputPtr, level);
+
                 if (compressedLength < length) {
                     blockType = BLOCK_TYPE_COMPRESSED;
                     chunkLength = compressedLength;
@@ -171,7 +157,7 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                     outputOffset += 2;
                 } else {
                     blockType = BLOCK_TYPE_NON_COMPRESSED;
-                    System.arraycopy(input, inputPtr, output, outputPtr - 2, length);
+                    out.setBytes(outputOffset + 2, in, idx, length);
                     chunkLength = length;
                 }
             }

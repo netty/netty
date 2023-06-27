@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.nio.ByteOrder;
@@ -29,7 +29,9 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class Base64Test {
 
@@ -149,8 +151,9 @@ public class Base64Test {
         ByteBuf decoded = Base64.decode(encoded);
         ByteBuf expectedBuf = Unpooled.wrappedBuffer(bytes);
         try {
-            assertEquals(StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
-                         StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded), expectedBuf, decoded);
+            assertEquals(expectedBuf, decoded,
+                        StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
+                         StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded));
         } finally {
             src.release();
             encoded.release();

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,11 +25,16 @@ import io.netty.util.internal.StringUtil;
 public final class MqttTopicSubscription {
 
     private final String topicFilter;
-    private final MqttQoS qualityOfService;
+    private final MqttSubscriptionOption option;
 
     public MqttTopicSubscription(String topicFilter, MqttQoS qualityOfService) {
         this.topicFilter = topicFilter;
-        this.qualityOfService = qualityOfService;
+        this.option = MqttSubscriptionOption.onlyFromQos(qualityOfService);
+    }
+
+    public MqttTopicSubscription(String topicFilter, MqttSubscriptionOption option) {
+        this.topicFilter = topicFilter;
+        this.option = option;
     }
 
     public String topicName() {
@@ -37,7 +42,11 @@ public final class MqttTopicSubscription {
     }
 
     public MqttQoS qualityOfService() {
-        return qualityOfService;
+        return option.qos();
+    }
+
+    public MqttSubscriptionOption option() {
+        return option;
     }
 
     @Override
@@ -45,7 +54,7 @@ public final class MqttTopicSubscription {
         return new StringBuilder(StringUtil.simpleClassName(this))
             .append('[')
             .append("topicFilter=").append(topicFilter)
-            .append(", qualityOfService=").append(qualityOfService)
+            .append(", option=").append(this.option)
             .append(']')
             .toString();
     }
