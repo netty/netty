@@ -986,28 +986,26 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 sslTaskExecutor == ImmediateEventExecutor.INSTANCE;
     }
 
-    private void runAllTaskSend(Executor sslTaskExecutor, Runnable task) {
-        sslTaskExecutor.execute(decorateTaskSend(sslTaskExecutor, task));
+    private void runAllTaskSend(Runnable task) {
+        sslTaskExecutor.execute(decorateTaskSend(task));
     }
 
-    private Runnable decorateTaskSend(Executor sslTaskExecutor, Runnable task) {
+    private void runAll(Runnable task) {
+        do {
+            task.run();
+        } while ((task = connection.sslTask()) != null);
+    }
+
+    private Runnable decorateTaskSend(Runnable task) {
         return () -> {
             try {
-                task.run();
+                runAll(task);
             } finally {
                 // Move back to the EventLoop.
                 eventLoop().execute(() -> {
-                    if (connection != null) {
-                        Runnable nextTask = connection.sslTask();
-                        // Consume all tasks before moving back to the EventLoop.
-                        if (nextTask == null) {
-                            // Call connection send to continue handshake if needed.
-                            if (connectionSend()) {
-                                forceFlushParent();
-                            }
-                        } else {
-                            sslTaskExecutor.execute(decorateTaskSend(sslTaskExecutor, nextTask));
-                        }
+                    // Call connection send to continue handshake if needed.
+                    if (connectionSend()) {
+                        forceFlushParent();
                     }
                 });
             }
@@ -1268,7 +1266,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // Let's try again sending after we did process all tasks.
                     return packetWasWritten | connectionSend();
                 } else {
-                    runAllTaskSend(sslTaskExecutor, task);
+                    runAllTaskSend(task);
                 }
             } else {
                 // Notify about early data ready if needed.
@@ -1442,7 +1440,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 } while ((task = connection.sslTask()) != null);
                                 processReceived(connAddr);
                             } else {
-                                runAllTaskRecv(sslTaskExecutor, task);
+                                runAllTaskRecv(task);
                             }
                         } else {
                             processReceived(connAddr);
@@ -1507,29 +1505,23 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
         }
 
-        private void runAllTaskRecv(Executor sslTaskExecutor, Runnable task) {
-            sslTaskExecutor.execute(decorateTaskRecv(sslTaskExecutor, task));
+        private void runAllTaskRecv(Runnable task) {
+            sslTaskExecutor.execute(decorateTaskRecv(task));
         }
 
-        private Runnable decorateTaskRecv(Executor sslTaskExecutor, Runnable task) {
+        private Runnable decorateTaskRecv(Runnable task) {
             return () -> {
                 try {
-                    task.run();
+                    runAll(task);
                 } finally {
                     // Move back to the EventLoop.
                     eventLoop().execute(() -> {
                         if (connection != null) {
-                            Runnable nextTask = connection.sslTask();
-                            // Consume all tasks before moving back to the EventLoop.
-                            if (nextTask == null) {
-                                processReceived(connection.address());
+                            processReceived(connection.address());
 
-                                // Call connection send to continue handshake if needed.
-                                if (connectionSend()) {
-                                    forceFlushParent();
-                                }
-                            } else {
-                                sslTaskExecutor.execute(decorateTaskRecv(sslTaskExecutor, nextTask));
+                            // Call connection send to continue handshake if needed.
+                            if (connectionSend()) {
+                                forceFlushParent();
                             }
                         }
                     });
