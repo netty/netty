@@ -575,15 +575,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testConnectWith0RTT(Executor executor) throws Throwable {
-        if (executor != ImmediateExecutor.INSTANCE) {
-            // Disable 0RTT test when offloading for now as it sometimes timeout. This is just a workaround and will
-            // need a proper fix.
-            // See https://github.com/netty/netty-incubator-codec-quic/issues/544
-            //
-            // TODO: remove once fixed.
-            shutdown(executor);
-            return;
-        }
         final CountDownLatch readLatch = new CountDownLatch(1);
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(
@@ -646,6 +637,16 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .remoteAddress(address)
                     .connect()
                     .get();
+
+            QuicClientSessionCache cache = ((QuicheQuicSslContext) sslContext).getSessionCache();
+
+            // Let's spin until the session shows up in the cache. This is needed as this might happen a bit after
+            // the connection is already established.
+            // See https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_CTX_sess_set_new_cb
+            while (!cache.hasSession("localhost", 9999)) {
+                // Check again in 100ms.
+                Thread.sleep(100);
+            }
 
             quicChannel.close().sync();
 

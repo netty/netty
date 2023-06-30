@@ -71,6 +71,17 @@ final class QuicClientSessionCache {
         }
     }
 
+    // Only used for testing.
+    boolean hasSession(String host, int port) {
+        HostPort hostPort = keyFor(host, port);
+        if (hostPort != null) {
+            synchronized (sessions) {
+                return sessions.containsKey(hostPort);
+            }
+        }
+        return false;
+    }
+
     byte[] getSession(String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort != null) {
