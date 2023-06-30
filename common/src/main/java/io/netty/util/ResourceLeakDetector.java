@@ -172,6 +172,11 @@ public class ResourceLeakDetector<T> {
     private final int samplingInterval;
 
     /**
+     * Will be notified once a leak is detected.
+     */
+    private volatile LeakListener leakListener;
+
+    /**
      * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
      */
     @Deprecated
@@ -315,6 +320,11 @@ public class ResourceLeakDetector<T> {
                 } else {
                     reportTracedLeak(resourceType, records);
                 }
+
+                LeakListener listener = leakListener;
+                if (listener != null) {
+                    listener.onLeak(resourceType, records);
+                }
             }
         }
     }
@@ -357,6 +367,21 @@ public class ResourceLeakDetector<T> {
      */
     protected Object getInitialHint(String resourceType) {
         return null;
+    }
+
+    /**
+     * Set leak listener. Previous listener will be replaced.
+     */
+    public void setLeakListener(LeakListener leakListener) {
+        this.leakListener = leakListener;
+    }
+
+    public interface LeakListener {
+
+        /**
+         * Will be called once a leak is detected.
+         */
+        void onLeak(String resourceType, String records);
     }
 
     @SuppressWarnings("deprecation")

@@ -1463,4 +1463,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
     final void discardMarks() {
         markedReaderIndex = markedWriterIndex = 0;
     }
+
+    /**
+     * Set leakDetector's LeakListener.
+     *
+     * @param leakListener If leakListener is not null, it will be notified once a ByteBuf leak is detected.
+     */
+    public static void setLeakListener(ResourceLeakDetector.LeakListener leakListener) {
+        leakDetector.setLeakListener(leakListener);
+    }
 }
