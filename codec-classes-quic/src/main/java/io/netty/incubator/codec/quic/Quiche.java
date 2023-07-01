@@ -259,6 +259,19 @@ final class Quiche {
     static final int QUICHE_ERR_STREAM_STOPPED =
             QuicheNativeStaticallyReferencedJniMethods.quiche_err_stream_stopped();
 
+
+    // Too many identifiers were provided.
+    static final int QUICHE_ERR_ID_LIMIT =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_err_id_limit();
+
+    // Not enough available identifiers.
+    static final int QUICHE_ERR_OUT_OF_IDENTIFIERS =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_err_out_of_identifiers();
+
+    // Error in key update.
+    static final int QUICHE_ERR_KEY_UPDATE =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_err_key_update();
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L176">
      *     QUICHE_CC_RENO</a>.

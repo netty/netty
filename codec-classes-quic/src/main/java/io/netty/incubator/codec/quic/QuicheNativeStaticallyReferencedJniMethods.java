@@ -38,6 +38,9 @@ final class QuicheNativeStaticallyReferencedJniMethods {
     static native int quiche_err_stream_stopped();
     static native int quiche_err_stream_reset();
     static native int quiche_err_congestion_control();
+    static native int quiche_err_id_limit();
+    static native int quiche_err_out_of_identifiers();
+    static native int quiche_err_key_update();
 
     static native int quiche_cc_reno();
     static native int quiche_cc_cubic();
