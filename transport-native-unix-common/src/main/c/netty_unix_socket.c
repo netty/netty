@@ -61,7 +61,7 @@ extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int fl
 // see sys/un.h#SUN_LEN, this is modified to allow nul bytes
 #define _UNIX_ADDR_LENGTH(path_len) ((uintptr_t) offsetof(struct sockaddr_un, sun_path) + (uintptr_t) path_len)
 
-static int nettyNonBlockingSocket(int domain, int type, int protocol) {
+int nettyNonBlockingSocket(int domain, int type, int protocol) {
 #ifdef SOCK_NONBLOCK
     return socket(domain, type | SOCK_NONBLOCK, protocol);
 #else

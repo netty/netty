@@ -122,7 +122,7 @@ public final class Errors {
         }
     }
 
-    static boolean handleConnectErrno(String method, int err) throws IOException {
+    public static boolean handleConnectErrno(String method, int err) throws IOException {
         if (err == ERRNO_EINPROGRESS_NEGATIVE || err == ERROR_EALREADY_NEGATIVE) {
             // connect not complete yet need to wait for EPOLLOUT event.
             // EALREADY has been observed when using tcp fast open on centos8.
