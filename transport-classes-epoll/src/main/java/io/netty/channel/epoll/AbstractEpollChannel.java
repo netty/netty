@@ -58,7 +58,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    final LinuxSocket socket;
+    protected final LinuxSocket socket;
     /**
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
@@ -110,7 +110,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
     }
 
-    void setFlag(int flag) throws IOException {
+    protected void setFlag(int flag) throws IOException {
         if (!isFlagSet(flag)) {
             flags |= flag;
             modifyEvents();
