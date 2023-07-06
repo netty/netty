@@ -1038,7 +1038,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             for (;;) {
-                ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
+                // Use toByteBuffer(...) which might be able to return the internal ByteBuffer and so reduce
+                // allocations.
+                ByteBuffer out0 = toByteBuffer(out, out.writerIndex(), out.writableBytes());
                 SSLEngineResult result = engine.wrap(in0, out0);
                 in.skipBytes(result.bytesConsumed());
                 out.writerIndex(out.writerIndex() + result.bytesProduced());
